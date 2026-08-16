@@ -14,19 +14,19 @@
      TOKEN DI DESIGN — un solo posto da cambiare per il tema
   ============================================================ */
   :root {
-    --bg: #15120e;
-    --surface: #1e1810;
-    --surface-2: #292115;
-    --border: #392e1e;
-    --brass: #c89550;
-    --brass-soft: rgba(200, 149, 80, .14);
-    --slate: #7ba7ab;
-    --slate-soft: rgba(123, 167, 171, .14);
-    --oxblood: #a6503f;
-    --oxblood-soft: rgba(166, 80, 63, .14);
-    --ink: #ede7db;
-    --ink-muted: #9c9284;
-    --ink-faint: #6b6255;
+    --bg: #f7f4ec;
+    --surface: #ffffff;
+    --surface-2: #f0ead9;
+    --border: #e3dac9;
+    --brass: #9c6b2e;
+    --brass-soft: rgba(156, 107, 46, .10);
+    --slate: #3e7377;
+    --slate-soft: rgba(62, 115, 119, .10);
+    --oxblood: #8b3d2e;
+    --oxblood-soft: rgba(139, 61, 46, .10);
+    --ink: #2a2318;
+    --ink-muted: #6b6255;
+    --ink-faint: #9c9284;
     --font-display: 'Fraunces', Georgia, serif;
     --font-body: 'Inter', system-ui, -apple-system, sans-serif;
     --font-mono: 'JetBrains Mono', ui-monospace, monospace;
@@ -37,8 +37,8 @@
   body {
     margin: 0;
     background:
-      radial-gradient(ellipse 900px 500px at 15% -10%, rgba(200,149,80,.08), transparent),
-      radial-gradient(ellipse 700px 500px at 100% 10%, rgba(123,167,171,.06), transparent),
+      radial-gradient(ellipse 900px 500px at 15% -10%, rgba(156,107,46,.04), transparent),
+      radial-gradient(ellipse 700px 500px at 100% 10%, rgba(62,115,119,.03), transparent),
       var(--bg);
     color: var(--ink);
     font-family: var(--font-body);
@@ -197,9 +197,10 @@
     padding: 22px;
     opacity: 0;
     animation: comparsa .5s ease forwards;
-    transition: border-color .2s ease, transform .2s ease;
+    transition: border-color .2s ease, transform .2s ease, box-shadow .2s ease;
+    box-shadow: 0 1px 2px rgba(42,35,24,.05);
   }
-  .lotto:hover { border-color: var(--ink-faint); transform: translateY(-2px); }
+  .lotto:hover { border-color: var(--ink-faint); transform: translateY(-2px); box-shadow: 0 6px 16px rgba(42,35,24,.08); }
 
   @keyframes comparsa {
     from { opacity: 0; transform: translateY(8px); }
@@ -227,7 +228,7 @@
     font-weight: 600;
     font-size: 1.05rem;
     transform: rotate(-4deg);
-    box-shadow: inset 0 2px 5px rgba(0,0,0,.3), 0 2px 6px rgba(0,0,0,.25);
+    box-shadow: inset 0 2px 4px rgba(42,35,24,.25), 0 2px 5px rgba(42,35,24,.15);
     border: 1.5px solid;
   }
   .sigillo.alto   { background: radial-gradient(circle at 34% 28%, #dcae72, #b67f3d); border-color: #e6bd85; color: #241905; }
@@ -478,7 +479,7 @@
   // pubblicato in CSV (Google Sheet -> File -> Condividi ->
   // Pubblica sul web -> scegli il foglio giusto -> formato CSV).
   // ==========================================================
-  const CSV_URL = "https://docs.google.com/spreadsheets/d/e/2PACX-1vRhWMNfMFaIKJjJ1UYA7qYl7XnMkst04fr8LZj_c40OthHSyws8KuWHFJVfnRsEtOTahqFnDnDuCSVh/pub?gid=0&single=true&output=csv";
+  const CSV_URL = "INCOLLA_QUI_IL_TUO_LINK_CSV";
 
   let ASTE = [];
 
