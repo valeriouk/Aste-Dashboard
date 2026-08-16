@@ -478,7 +478,7 @@
   // pubblicato in CSV (Google Sheet -> File -> Condividi ->
   // Pubblica sul web -> scegli il foglio giusto -> formato CSV).
   // ==========================================================
-  const CSV_URL = "https://docs.google.com/spreadsheets/d/e/2PACX-1vRhWMNfMFaIKJjJ1UYA7qYl7XnMkst04fr8LZj_c40OthHSyws8KuWHFJVfnRsEtOTahqFnDnDuCSVh/pubhtml?gid=0&single=true";
+  const CSV_URL = "https://docs.google.com/spreadsheets/d/e/2PACX-1vRhWMNfMFaIKJjJ1UYA7qYl7XnMkst04fr8LZj_c40OthHSyws8KuWHFJVfnRsEtOTahqFnDnDuCSVh/pub?gid=0&single=true&output=csv";
 
   let ASTE = [];
 
@@ -529,7 +529,7 @@
   // CARICAMENTO DATI
   // ==========================================================
   function avvia() {
-    if (!CSV_URL || CSV_URL.indexOf("https://docs.google.com/spreadsheets/d/e/2PACX-1vRhWMNfMFaIKJjJ1UYA7qYl7XnMkst04fr8LZj_c40OthHSyws8KuWHFJVfnRsEtOTahqFnDnDuCSVh/pubhtml?gid=0&single=true") > -1) {
+    if (!CSV_URL || CSV_URL.indexOf("INCOLLA_QUI") > -1) {
       mostraStato("stato-non-configurato");
       return;
     }
