@@ -1,0 +1,714 @@
+<!DOCTYPE html>
+<html lang="it">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Registro Opportunità · Aste Immobiliari</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,400..700&family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500;600&display=swap" rel="stylesheet">
+<script src="https://cdnjs.cloudflare.com/ajax/libs/PapaParse/5.4.1/papaparse.min.js"></script>
+<style>
+
+  /* ============================================================
+     TOKEN DI DESIGN — un solo posto da cambiare per il tema
+  ============================================================ */
+  :root {
+    --bg: #15120e;
+    --surface: #1e1810;
+    --surface-2: #292115;
+    --border: #392e1e;
+    --brass: #c89550;
+    --brass-soft: rgba(200, 149, 80, .14);
+    --slate: #7ba7ab;
+    --slate-soft: rgba(123, 167, 171, .14);
+    --oxblood: #a6503f;
+    --oxblood-soft: rgba(166, 80, 63, .14);
+    --ink: #ede7db;
+    --ink-muted: #9c9284;
+    --ink-faint: #6b6255;
+    --font-display: 'Fraunces', Georgia, serif;
+    --font-body: 'Inter', system-ui, -apple-system, sans-serif;
+    --font-mono: 'JetBrains Mono', ui-monospace, monospace;
+  }
+
+  * { box-sizing: border-box; }
+
+  body {
+    margin: 0;
+    background:
+      radial-gradient(ellipse 900px 500px at 15% -10%, rgba(200,149,80,.08), transparent),
+      radial-gradient(ellipse 700px 500px at 100% 10%, rgba(123,167,171,.06), transparent),
+      var(--bg);
+    color: var(--ink);
+    font-family: var(--font-body);
+    line-height: 1.5;
+    -webkit-font-smoothing: antialiased;
+  }
+
+  a { color: var(--slate); }
+
+  ::selection { background: var(--brass-soft); color: var(--ink); }
+
+  :focus-visible {
+    outline: 2px solid var(--brass);
+    outline-offset: 3px;
+    border-radius: 4px;
+  }
+
+  .contenitore {
+    max-width: 1180px;
+    margin: 0 auto;
+    padding: 48px 24px 96px;
+  }
+
+  /* ============================================================
+     INTESTAZIONE
+  ============================================================ */
+  .intestazione {
+    display: flex;
+    justify-content: space-between;
+    align-items: flex-end;
+    flex-wrap: wrap;
+    gap: 16px;
+    padding-bottom: 32px;
+    margin-bottom: 40px;
+    border-bottom: 1px solid var(--border);
+  }
+
+  .eyebrow {
+    font-family: var(--font-mono);
+    font-size: .72rem;
+    letter-spacing: .12em;
+    text-transform: uppercase;
+    color: var(--brass);
+    margin: 0 0 10px;
+  }
+
+  h1 {
+    font-family: var(--font-display);
+    font-weight: 600;
+    font-size: clamp(2.1rem, 4vw, 3rem);
+    letter-spacing: -.01em;
+    margin: 0 0 8px;
+    color: var(--ink);
+  }
+
+  .sottotitolo {
+    color: var(--ink-muted);
+    font-size: .98rem;
+    margin: 0;
+    max-width: 46ch;
+  }
+
+  .aggiornato {
+    text-align: right;
+    font-family: var(--font-mono);
+    font-size: .8rem;
+    color: var(--ink-faint);
+  }
+  .aggiornato strong { color: var(--ink-muted); font-weight: 500; display: block; margin-bottom: 3px;}
+
+  /* ============================================================
+     STATISTICHE
+  ============================================================ */
+  .statistiche {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
+    gap: 1px;
+    background: var(--border);
+    border: 1px solid var(--border);
+    border-radius: 10px;
+    overflow: hidden;
+    margin-bottom: 32px;
+  }
+
+  .stat {
+    background: var(--surface);
+    padding: 20px 22px;
+  }
+
+  .stat-etichetta {
+    font-size: .78rem;
+    color: var(--ink-muted);
+    margin: 0 0 8px;
+  }
+
+  .stat-valore {
+    font-family: var(--font-mono);
+    font-size: 1.6rem;
+    font-weight: 500;
+    color: var(--brass);
+    margin: 0;
+  }
+
+  /* ============================================================
+     CONTROLLI
+  ============================================================ */
+  .controlli {
+    display: flex;
+    gap: 12px;
+    flex-wrap: wrap;
+    margin-bottom: 28px;
+  }
+
+  .controlli input,
+  .controlli select {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    color: var(--ink);
+    font-family: var(--font-body);
+    font-size: .9rem;
+    padding: 11px 14px;
+    border-radius: 8px;
+  }
+
+  .controlli input { flex: 1 1 220px; min-width: 180px; }
+  .controlli select { flex: 0 1 190px; cursor: pointer; }
+  .controlli input::placeholder { color: var(--ink-faint); }
+
+  /* ============================================================
+     GRIGLIA CARTELLE / LOTTI
+  ============================================================ */
+  .griglia {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(320px, 1fr));
+    gap: 16px;
+  }
+
+  .lotto {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 12px;
+    padding: 22px;
+    opacity: 0;
+    animation: comparsa .5s ease forwards;
+    transition: border-color .2s ease, transform .2s ease;
+  }
+  .lotto:hover { border-color: var(--ink-faint); transform: translateY(-2px); }
+
+  @keyframes comparsa {
+    from { opacity: 0; transform: translateY(8px); }
+    to { opacity: 1; transform: translateY(0); }
+  }
+
+  .lotto-testata {
+    display: flex;
+    gap: 14px;
+    align-items: flex-start;
+    margin-bottom: 16px;
+  }
+
+  /* Il sigillo: elemento distintivo della pagina — un timbro leggermente
+     irregolare, come un vero sigillo ceralacca su un documento ufficiale. */
+  .sigillo {
+    width: 58px;
+    height: 58px;
+    flex-shrink: 0;
+    border-radius: 48% 52% 51% 49% / 52% 48% 53% 47%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-family: var(--font-mono);
+    font-weight: 600;
+    font-size: 1.05rem;
+    transform: rotate(-4deg);
+    box-shadow: inset 0 2px 5px rgba(0,0,0,.3), 0 2px 6px rgba(0,0,0,.25);
+    border: 1.5px solid;
+  }
+  .sigillo.alto   { background: radial-gradient(circle at 34% 28%, #dcae72, #b67f3d); border-color: #e6bd85; color: #241905; }
+  .sigillo.medio  { background: radial-gradient(circle at 34% 28%, #8fbdc0, #5a8b8e); border-color: #a3cdd0; color: #0c2021; }
+  .sigillo.basso  { background: radial-gradient(circle at 34% 28%, #c17d6d, #8f4433); border-color: #d19484; color: #2a0f09; }
+  .sigillo.non-valutato {
+    background: transparent;
+    border: 1.5px dashed var(--ink-faint);
+    color: var(--ink-faint);
+    font-size: .56rem;
+    line-height: 1.15;
+    text-align: center;
+    font-family: var(--font-body);
+    padding: 4px;
+  }
+
+  .lotto-id {
+    font-family: var(--font-mono);
+    font-size: .72rem;
+    color: var(--ink-faint);
+    text-transform: uppercase;
+    letter-spacing: .06em;
+    margin: 0 0 4px;
+  }
+
+  .lotto-comune {
+    font-family: var(--font-display);
+    font-size: 1.15rem;
+    font-weight: 500;
+    margin: 0 0 4px;
+    line-height: 1.3;
+  }
+
+  .lotto-meta {
+    font-size: .82rem;
+    color: var(--ink-muted);
+    margin: 0;
+  }
+
+  .lotto-cifre {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 10px 16px;
+    padding: 14px 0;
+    border-top: 1px solid var(--border);
+    border-bottom: 1px solid var(--border);
+    margin-bottom: 14px;
+  }
+
+  .cifra-etichetta {
+    font-size: .72rem;
+    color: var(--ink-faint);
+    margin: 0 0 2px;
+  }
+  .cifra-valore {
+    font-family: var(--font-mono);
+    font-size: .95rem;
+    color: var(--ink);
+    margin: 0;
+  }
+  .cifra-valore.brass { color: var(--brass); }
+
+  .bottone-dettagli {
+    background: none;
+    border: none;
+    color: var(--slate);
+    font-family: var(--font-body);
+    font-size: .85rem;
+    font-weight: 500;
+    cursor: pointer;
+    padding: 4px 0;
+    display: flex;
+    align-items: center;
+    gap: 6px;
+  }
+  .bottone-dettagli .freccia { transition: transform .2s ease; }
+  .bottone-dettagli[aria-expanded="true"] .freccia { transform: rotate(180deg); }
+
+  .lotto-dettagli {
+    display: none;
+    margin-top: 16px;
+    padding-top: 16px;
+    border-top: 1px solid var(--border);
+    font-size: .85rem;
+  }
+  .lotto-dettagli.aperto { display: block; }
+
+  .dettaglio-riga {
+    display: flex;
+    justify-content: space-between;
+    gap: 12px;
+    padding: 6px 0;
+    color: var(--ink-muted);
+  }
+  .dettaglio-riga span:first-child { color: var(--ink-faint); }
+  .dettaglio-riga span:last-child { text-align: right; color: var(--ink); }
+
+  .lotto-note {
+    background: var(--surface-2);
+    border-radius: 8px;
+    padding: 12px 14px;
+    margin: 12px 0;
+    font-size: .84rem;
+    color: var(--ink-muted);
+    font-style: italic;
+  }
+
+  .lotto-link {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    background: var(--brass-soft);
+    color: var(--brass);
+    text-decoration: none;
+    font-size: .82rem;
+    font-weight: 500;
+    padding: 8px 14px;
+    border-radius: 7px;
+    margin: 4px 8px 0 0;
+  }
+  .lotto-link:hover { background: rgba(200,149,80,.24); }
+  .lotto-link.secondario { background: var(--slate-soft); color: var(--slate); }
+  .lotto-link.secondario:hover { background: rgba(123,167,171,.24); }
+
+  /* ============================================================
+     STATI: caricamento / vuoto / errore
+  ============================================================ */
+  .stato-pagina {
+    text-align: center;
+    padding: 80px 24px;
+    color: var(--ink-muted);
+  }
+  .stato-pagina h2 {
+    font-family: var(--font-display);
+    font-weight: 500;
+    color: var(--ink);
+    font-size: 1.4rem;
+    margin: 0 0 10px;
+  }
+  .stato-pagina p { max-width: 46ch; margin: 0 auto; font-size: .92rem; }
+  .stato-pagina code {
+    background: var(--surface-2);
+    padding: 2px 7px;
+    border-radius: 5px;
+    font-family: var(--font-mono);
+    font-size: .85em;
+  }
+
+  .nascosto { display: none !important; }
+
+  footer {
+    text-align: center;
+    margin-top: 56px;
+    font-size: .78rem;
+    color: var(--ink-faint);
+  }
+
+  @media (max-width: 640px) {
+    .contenitore { padding: 32px 16px 64px; }
+    .intestazione { flex-direction: column; align-items: flex-start; }
+    .aggiornato { text-align: left; }
+    .lotto-cifre { grid-template-columns: 1fr; }
+  }
+
+  @media (prefers-reduced-motion: reduce) {
+    * { animation: none !important; transition: none !important; }
+  }
+</style>
+</head>
+<body>
+
+<div class="contenitore">
+
+  <div class="intestazione">
+    <div>
+      <p class="eyebrow">Scansione Aste Giudiziarie</p>
+      <h1>Registro Opportunità</h1>
+      <p class="sottotitolo">Aste residenziali filtrate per prezzo, distanza e margine potenziale stimato.</p>
+    </div>
+    <div class="aggiornato">
+      <strong id="testo-aggiornato">—</strong>
+      aggiornamento pagina
+    </div>
+  </div>
+
+  <div class="statistiche" id="blocco-statistiche">
+    <div class="stat">
+      <p class="stat-etichetta">Aste nel registro</p>
+      <p class="stat-valore" id="stat-totale">—</p>
+    </div>
+    <div class="stat">
+      <p class="stat-etichetta">Punteggio più alto</p>
+      <p class="stat-valore" id="stat-punteggio">—</p>
+    </div>
+    <div class="stat">
+      <p class="stat-etichetta">Margine massimo stimato</p>
+      <p class="stat-valore" id="stat-margine">—</p>
+    </div>
+  </div>
+
+  <div class="controlli">
+    <input type="text" id="ricerca" placeholder="Cerca per comune...">
+    <select id="filtro-tipologia"><option value="">Tutte le tipologie</option></select>
+    <select id="ordinamento">
+      <option value="punteggio-desc">Punteggio (alto → basso)</option>
+      <option value="margine-desc">Margine (alto → basso)</option>
+      <option value="prezzo-asc">Offerta minima (bassa → alta)</option>
+      <option value="data-asc">Data vendita (vicina → lontana)</option>
+      <option value="distanza-asc">Distanza (vicina → lontana)</option>
+    </select>
+  </div>
+
+  <div id="stato-caricamento" class="stato-pagina">
+    <h2>Apertura del registro…</h2>
+    <p>Lettura del foglio in corso.</p>
+  </div>
+
+  <div id="stato-non-configurato" class="stato-pagina nascosto">
+    <h2>Registro non collegato</h2>
+    <p>Apri il file <code>index.html</code> e incolla l'indirizzo CSV del tuo Google Sheet nella costante <code>CSV_URL</code>, in cima allo script.</p>
+  </div>
+
+  <div id="stato-errore" class="stato-pagina nascosto">
+    <h2>Non riesco a leggere il registro</h2>
+    <p>Controlla che il foglio sia pubblicato sul web in formato CSV e che l'indirizzo in <code>CSV_URL</code> sia corretto.</p>
+  </div>
+
+  <div id="stato-vuoto" class="stato-pagina nascosto">
+    <h2>Il registro è vuoto</h2>
+    <p>Nessuna asta trovata finora. Torna dopo la prossima esecuzione dello scanner.</p>
+  </div>
+
+  <div id="stato-nessun-risultato" class="stato-pagina nascosto">
+    <h2>Nessuna corrispondenza</h2>
+    <p>Nessuna asta soddisfa questi criteri di ricerca — prova ad ampliarli.</p>
+  </div>
+
+  <div class="griglia" id="griglia-lotti"></div>
+
+  <footer>Aggiornato leggendo direttamente il Google Sheet · dati raccolti dal Portale delle Vendite Pubbliche</footer>
+
+</div>
+
+<script>
+  // ==========================================================
+  // CONFIGURAZIONE — sostituisci con l'indirizzo del tuo foglio
+  // pubblicato in CSV (Google Sheet -> File -> Condividi ->
+  // Pubblica sul web -> scegli il foglio giusto -> formato CSV).
+  // ==========================================================
+  const CSV_URL = "INCOLLA_QUI_IL_TUO_LINK_CSV";
+
+  let ASTE = [];
+
+  function numeroSicuro(valore, predefinito = 0) {
+    if (valore === null || valore === undefined) return predefinito;
+    let s = String(valore).trim();
+    if (s === "" || s.toUpperCase() === "N/D") return predefinito;
+    s = s.replace(/[€\s]/g, "");
+    const ultimoPunto = s.lastIndexOf(".");
+    const ultimaVirgola = s.lastIndexOf(",");
+    if (ultimoPunto > -1 && ultimaVirgola > -1) {
+      s = ultimaVirgola > ultimoPunto
+        ? s.replace(/\./g, "").replace(",", ".")
+        : s.replace(/,/g, "");
+    } else if (ultimaVirgola > -1) {
+      s = (s.length - ultimaVirgola - 1) <= 2 ? s.replace(",", ".") : s.replace(/,/g, "");
+    }
+    const n = parseFloat(s);
+    return isNaN(n) ? predefinito : n;
+  }
+
+  function formattaEuro(n) {
+    if (n === null || n === undefined || isNaN(n)) return "—";
+    return "€ " + n.toLocaleString("it-IT", { minimumFractionDigits: 0, maximumFractionDigits: 0 });
+  }
+
+  function escapeHtml(testo) {
+    const d = document.createElement("div");
+    d.textContent = testo === null || testo === undefined ? "" : String(testo);
+    return d.innerHTML;
+  }
+
+  function formattaData(iso) {
+    if (!iso) return "N/D";
+    const parti = String(iso).slice(0, 10).split("-");
+    if (parti.length !== 3) return iso;
+    return `${parti[2]}/${parti[1]}/${parti[0]}`;
+  }
+
+  function livelloPunteggio(punteggio, valoreStima) {
+    if (!valoreStima || valoreStima <= 0) return "non-valutato";
+    if (punteggio >= 70) return "alto";
+    if (punteggio >= 40) return "medio";
+    return "basso";
+  }
+
+  // ==========================================================
+  // CARICAMENTO DATI
+  // ==========================================================
+  function avvia() {
+    if (!CSV_URL || CSV_URL.indexOf("INCOLLA_QUI") > -1) {
+      mostraStato("stato-non-configurato");
+      return;
+    }
+
+    Papa.parse(CSV_URL, {
+      download: true,
+      header: true,
+      skipEmptyLines: true,
+      complete: function (risultato) {
+        ASTE = (risultato.data || []).filter(r => r["ID Annuncio"]).map(normalizzaRiga);
+        document.getElementById("testo-aggiornato").textContent =
+          new Date().toLocaleTimeString("it-IT", { hour: "2-digit", minute: "2-digit" });
+        popolaFiltroTipologia();
+        applicaFiltri();
+      },
+      error: function () {
+        mostraStato("stato-errore");
+      }
+    });
+  }
+
+  function normalizzaRiga(r) {
+    const valoreStima = numeroSicuro(r["Valore Stima Perito"]);
+    return {
+      id: r["ID Annuncio"] || "",
+      comune: r["Comune / Indirizzo"] || "N/D",
+      distanza: numeroSicuro(r["Distanza (km)"], null),
+      tipologia: r["Tipologia"] || "N/D",
+      tribunale: r["Tribunale"] || "N/D",
+      lotto: r["N. Lotto"] || "",
+      disponibilita: r["Disponibilità (PVP)"] || "N/D",
+      offertaMinima: numeroSicuro(r["Offerta Minima"]),
+      prezzoBase: numeroSicuro(r["Prezzo Base"]),
+      rilancioMinimo: numeroSicuro(r["Rilancio Minimo"]),
+      valoreStima: valoreStima,
+      margine: r["Margine Stimato"] !== "" ? numeroSicuro(r["Margine Stimato"], null) : null,
+      punteggio: numeroSicuro(r["Score Flipping"]),
+      statoOccupazione: r["Stato Occupazione"] || "N/D",
+      speseSanatoria: numeroSicuro(r["Spese Sanatoria"]),
+      abusiEdilizi: r["Abusi Edilizi"] || "N/D",
+      note: r["Note & Rischi"] || "",
+      descrizione: r["Descrizione Lotto"] || "",
+      dataVendita: r["Data Vendita"] || "",
+      urlAsta: r["Link Asta"] || "",
+      urlPdf: r["Link PDF"] || "",
+      fonteDocumento: r["Fonte Documento"] || "",
+    };
+  }
+
+  function popolaFiltroTipologia() {
+    const select = document.getElementById("filtro-tipologia");
+    const tipologie = [...new Set(ASTE.map(a => a.tipologia).filter(Boolean))].sort();
+    tipologie.forEach(t => {
+      const opt = document.createElement("option");
+      opt.value = t;
+      opt.textContent = t;
+      select.appendChild(opt);
+    });
+  }
+
+  // ==========================================================
+  // FILTRI, ORDINAMENTO, RENDER
+  // ==========================================================
+  function applicaFiltri() {
+    if (ASTE.length === 0) {
+      mostraStato("stato-vuoto");
+      return;
+    }
+
+    const ricerca = document.getElementById("ricerca").value.trim().toLowerCase();
+    const tipologia = document.getElementById("filtro-tipologia").value;
+    const ordine = document.getElementById("ordinamento").value;
+
+    let filtrate = ASTE.filter(a => {
+      const passaRicerca = !ricerca || a.comune.toLowerCase().includes(ricerca);
+      const passaTipologia = !tipologia || a.tipologia === tipologia;
+      return passaRicerca && passaTipologia;
+    });
+
+    const comparatori = {
+      "punteggio-desc": (a, b) => b.punteggio - a.punteggio,
+      "margine-desc": (a, b) => (b.margine ?? -Infinity) - (a.margine ?? -Infinity),
+      "prezzo-asc": (a, b) => a.offertaMinima - b.offertaMinima,
+      "data-asc": (a, b) => (a.dataVendita || "9999").localeCompare(b.dataVendita || "9999"),
+      "distanza-asc": (a, b) => (a.distanza ?? 9999) - (b.distanza ?? 9999),
+    };
+    filtrate.sort(comparatori[ordine] || comparatori["punteggio-desc"]);
+
+    renderizza(filtrate);
+  }
+
+  function renderizza(elenco) {
+    const griglia = document.getElementById("griglia-lotti");
+
+    document.getElementById("stat-totale").textContent = ASTE.length;
+    const analizzate = ASTE.filter(a => a.valoreStima > 0);
+    document.getElementById("stat-punteggio").textContent =
+      analizzate.length ? Math.max(...analizzate.map(a => a.punteggio)) + "/100" : "—";
+    document.getElementById("stat-margine").textContent =
+      analizzate.length ? formattaEuro(Math.max(...analizzate.map(a => a.margine ?? -Infinity))) : "—";
+
+    nascondiTuttiGliStati();
+
+    if (elenco.length === 0) {
+      mostraStato("stato-nessun-risultato");
+      griglia.innerHTML = "";
+      return;
+    }
+
+    griglia.innerHTML = elenco.map((a, i) => cartellaLotto(a, i)).join("");
+  }
+
+  function cartellaLotto(a, indice) {
+    const livello = livelloPunteggio(a.punteggio, a.valoreStima);
+    const contenutoSigillo = livello === "non-valutato" ? "Non<br>valutato" : a.punteggio;
+    const distanzaTesto = a.distanza !== null ? `${a.distanza} km` : "distanza N/D";
+    const idDom = "dett-" + indice;
+
+    return `
+      <article class="lotto" style="animation-delay:${Math.min(indice * 45, 500)}ms">
+        <div class="lotto-testata">
+          <div class="sigillo ${livello}">${contenutoSigillo}</div>
+          <div>
+            <p class="lotto-id">${a.lotto ? "Lotto " + escapeHtml(a.lotto) + " · " : ""}${escapeHtml(a.tipologia)}</p>
+            <p class="lotto-comune">${escapeHtml(a.comune)}</p>
+            <p class="lotto-meta">${escapeHtml(distanzaTesto)} · vendita ${formattaData(a.dataVendita)}</p>
+          </div>
+        </div>
+
+        <div class="lotto-cifre">
+          <div>
+            <p class="cifra-etichetta">Offerta minima</p>
+            <p class="cifra-valore">${formattaEuro(a.offertaMinima)}</p>
+          </div>
+          <div>
+            <p class="cifra-etichetta">Valore stima</p>
+            <p class="cifra-valore">${a.valoreStima > 0 ? formattaEuro(a.valoreStima) : "—"}</p>
+          </div>
+          <div>
+            <p class="cifra-etichetta">Margine stimato</p>
+            <p class="cifra-valore brass">${a.margine !== null ? formattaEuro(a.margine) : "—"}</p>
+          </div>
+          <div>
+            <p class="cifra-etichetta">Stato occupazione</p>
+            <p class="cifra-valore">${escapeHtml(a.statoOccupazione)}</p>
+          </div>
+        </div>
+
+        <button class="bottone-dettagli" aria-expanded="false" aria-controls="${idDom}" onclick="alternaDettagli(this, '${idDom}')">
+          Vedi dettagli <span class="freccia">▾</span>
+        </button>
+
+        <div class="lotto-dettagli" id="${idDom}">
+          <div class="dettaglio-riga"><span>Tribunale</span><span>${escapeHtml(a.tribunale)}</span></div>
+          <div class="dettaglio-riga"><span>Disponibilità (PVP)</span><span>${escapeHtml(a.disponibilita)}</span></div>
+          <div class="dettaglio-riga"><span>Prezzo base</span><span>${formattaEuro(a.prezzoBase)}</span></div>
+          <div class="dettaglio-riga"><span>Rilancio minimo</span><span>${formattaEuro(a.rilancioMinimo)}</span></div>
+          <div class="dettaglio-riga"><span>Spese sanatoria</span><span>${formattaEuro(a.speseSanatoria)}</span></div>
+          <div class="dettaglio-riga"><span>Abusi edilizi</span><span>${escapeHtml(a.abusiEdilizi)}</span></div>
+          <div class="dettaglio-riga"><span>Fonte analisi</span><span>${escapeHtml(a.fonteDocumento || "nessuna")}</span></div>
+          ${a.note ? `<div class="lotto-note">${escapeHtml(a.note)}</div>` : ""}
+          ${a.descrizione ? `<div class="lotto-note">${escapeHtml(a.descrizione)}</div>` : ""}
+          <div style="margin-top:12px">
+            ${a.urlAsta ? `<a class="lotto-link" href="${escapeHtml(a.urlAsta)}" target="_blank" rel="noopener">Apri annuncio PVP</a>` : ""}
+            ${a.urlPdf ? `<a class="lotto-link secondario" href="${escapeHtml(a.urlPdf)}" target="_blank" rel="noopener">Apri documento</a>` : ""}
+          </div>
+        </div>
+      </article>
+    `;
+  }
+
+  function alternaDettagli(bottone, idDom) {
+    const pannello = document.getElementById(idDom);
+    const aperto = pannello.classList.toggle("aperto");
+    bottone.setAttribute("aria-expanded", aperto ? "true" : "false");
+    bottone.innerHTML = (aperto ? "Chiudi dettagli " : "Vedi dettagli ") + '<span class="freccia">▾</span>';
+  }
+
+  function mostraStato(idStato) {
+    nascondiTuttiGliStati();
+    document.getElementById(idStato).classList.remove("nascosto");
+  }
+
+  function nascondiTuttiGliStati() {
+    ["stato-caricamento", "stato-non-configurato", "stato-errore", "stato-vuoto", "stato-nessun-risultato"]
+      .forEach(id => document.getElementById(id).classList.add("nascosto"));
+  }
+
+  document.getElementById("ricerca").addEventListener("input", applicaFiltri);
+  document.getElementById("filtro-tipologia").addEventListener("change", applicaFiltri);
+  document.getElementById("ordinamento").addEventListener("change", applicaFiltri);
+
+  avvia();
+</script>
+
+</body>
+</html>
