@@ -325,6 +325,7 @@
   }
   .dettaglio-riga span:first-child { color: var(--ink-faint); }
   .dettaglio-riga span:last-child { text-align: right; color: var(--ink); }
+  .dettaglio-riga.avviso span:last-child { color: var(--oxblood); font-weight: 500; }
 
   .lotto-note {
     background: var(--surface-2);
@@ -479,7 +480,7 @@
   // pubblicato in CSV (Google Sheet -> File -> Condividi ->
   // Pubblica sul web -> scegli il foglio giusto -> formato CSV).
   // ==========================================================
-  const CSV_URL = "https://docs.google.com/spreadsheets/d/e/2PACX-1vRhWMNfMFaIKJjJ1UYA7qYl7XnMkst04fr8LZj_c40OthHSyws8KuWHFJVfnRsEtOTahqFnDnDuCSVh/pub?gid=0&single=true&output=csv";
+  const CSV_URL = "INCOLLA_QUI_IL_TUO_LINK_CSV";
 
   let ASTE = [];
 
@@ -567,6 +568,9 @@
       rilancioMinimo: numeroSicuro(r["Rilancio Minimo"]),
       valoreStima: valoreStima,
       margine: r["Margine Stimato"] !== "" ? numeroSicuro(r["Margine Stimato"], null) : null,
+      superficieMq: numeroSicuro(r["Superficie (mq)"], null),
+      euroMq: numeroSicuro(r["€/mq Offerta Minima"], null),
+      formalitaPregiudizievoli: r["Formalità Pregiudizievoli"] || "N/D",
       punteggio: numeroSicuro(r["Score Flipping"]),
       statoOccupazione: r["Stato Occupazione"] || "N/D",
       speseSanatoria: numeroSicuro(r["Spese Sanatoria"]),
@@ -650,6 +654,25 @@
     const distanzaTesto = a.distanza !== null ? `${a.distanza} km` : "distanza N/D";
     const idDom = "dett-" + indice;
 
+    // Celle superficie/€ al mq: solo se il dato è presente nel foglio (potrebbe
+    // non esserci ancora se Code.gs non è stato ridistribuito, o se Gemini
+    // non ha trovato la superficie in quella specifica perizia).
+    const rigaSuperficie = a.superficieMq !== null ? `
+          <div>
+            <p class="cifra-etichetta">Superficie</p>
+            <p class="cifra-valore">${a.superficieMq.toFixed(0)} mq</p>
+          </div>
+          <div>
+            <p class="cifra-etichetta">€/mq (offerta)</p>
+            <p class="cifra-valore">${a.euroMq !== null ? formattaEuro(a.euroMq) + "/mq" : "—"}</p>
+          </div>` : "";
+
+    // Evidenzia la riga solo se il testo segnala qualcosa fuori dall'ordinario
+    // (non semplicemente "N/D" o l'ipoteca standard già prevista dal prompt).
+    const formalitaTesto = a.formalitaPregiudizievoli;
+    const formalitaConAvviso = formalitaTesto && formalitaTesto !== "N/D"
+      && formalitaTesto.toLowerCase().indexOf("nessuna criticità") !== 0;
+
     return `
       <article class="lotto" style="animation-delay:${Math.min(indice * 45, 500)}ms">
         <div class="lotto-testata">
@@ -669,7 +692,7 @@
           <div>
             <p class="cifra-etichetta">Valore stima</p>
             <p class="cifra-valore">${a.valoreStima > 0 ? formattaEuro(a.valoreStima) : "—"}</p>
-          </div>
+          </div>${rigaSuperficie}
           <div>
             <p class="cifra-etichetta">Margine stimato</p>
             <p class="cifra-valore brass">${a.margine !== null ? formattaEuro(a.margine) : "—"}</p>
@@ -691,6 +714,7 @@
           <div class="dettaglio-riga"><span>Rilancio minimo</span><span>${formattaEuro(a.rilancioMinimo)}</span></div>
           <div class="dettaglio-riga"><span>Spese sanatoria</span><span>${formattaEuro(a.speseSanatoria)}</span></div>
           <div class="dettaglio-riga"><span>Abusi edilizi</span><span>${escapeHtml(a.abusiEdilizi)}</span></div>
+          <div class="dettaglio-riga${formalitaConAvviso ? ' avviso' : ''}"><span>Formalità pregiudizievoli</span><span>${escapeHtml(formalitaTesto)}</span></div>
           <div class="dettaglio-riga"><span>Fonte analisi</span><span>${escapeHtml(a.fonteDocumento || "nessuna")}</span></div>
           <div class="dettaglio-riga"><span>ID Annuncio</span><span>${escapeHtml(a.id)}</span></div>
           ${a.note ? `<div class="lotto-note">${escapeHtml(a.note)}</div>` : ""}
