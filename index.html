@@ -167,6 +167,20 @@
   .controlli select { flex: 0 1 190px; cursor: pointer; }
   .controlli input::placeholder { color: var(--ink-faint); }
 
+  .bottone-toggle-tutti {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    color: var(--ink-muted);
+    font-family: var(--font-body);
+    font-size: .85rem;
+    font-weight: 500;
+    padding: 11px 16px;
+    border-radius: 8px;
+    cursor: pointer;
+    white-space: nowrap;
+  }
+  .bottone-toggle-tutti:hover { color: var(--brass); border-color: var(--brass); }
+
   /* ============================================================
      GRIGLIA CARTELLE / LOTTI
   ============================================================ */
@@ -417,6 +431,7 @@
   <div class="controlli">
     <input type="text" id="ricerca" placeholder="Cerca per comune...">
     <select id="filtro-tipologia"><option value="">Tutte le tipologie</option></select>
+    <button id="bottone-mostra-tutti" class="bottone-toggle-tutti" onclick="alternaTuttiIDettagli()">Mostra tutti i dettagli</button>
     <select id="ordinamento">
       <option value="punteggio-desc">Punteggio (alto → basso)</option>
       <option value="margine-desc">Margine (alto → basso)</option>
@@ -463,7 +478,7 @@
   // pubblicato in CSV (Google Sheet -> File -> Condividi ->
   // Pubblica sul web -> scegli il foglio giusto -> formato CSV).
   // ==========================================================
-  const CSV_URL = "https://docs.google.com/spreadsheets/d/e/2PACX-1vRhWMNfMFaIKJjJ1UYA7qYl7XnMkst04fr8LZj_c40OthHSyws8KuWHFJVfnRsEtOTahqFnDnDuCSVh/pub?gid=0&single=true&output=csv";
+  const CSV_URL = "INCOLLA_QUI_IL_TUO_LINK_CSV";
 
   let ASTE = [];
 
@@ -625,6 +640,7 @@
     }
 
     griglia.innerHTML = elenco.map((a, i) => cartellaLotto(a, i)).join("");
+    document.getElementById("bottone-mostra-tutti").textContent = "Mostra tutti i dettagli";
   }
 
   function cartellaLotto(a, indice) {
@@ -675,6 +691,7 @@
           <div class="dettaglio-riga"><span>Spese sanatoria</span><span>${formattaEuro(a.speseSanatoria)}</span></div>
           <div class="dettaglio-riga"><span>Abusi edilizi</span><span>${escapeHtml(a.abusiEdilizi)}</span></div>
           <div class="dettaglio-riga"><span>Fonte analisi</span><span>${escapeHtml(a.fonteDocumento || "nessuna")}</span></div>
+          <div class="dettaglio-riga"><span>ID Annuncio</span><span>${escapeHtml(a.id)}</span></div>
           ${a.note ? `<div class="lotto-note">${escapeHtml(a.note)}</div>` : ""}
           ${a.descrizione ? `<div class="lotto-note">${escapeHtml(a.descrizione)}</div>` : ""}
           <div style="margin-top:12px">
@@ -691,6 +708,17 @@
     const aperto = pannello.classList.toggle("aperto");
     bottone.setAttribute("aria-expanded", aperto ? "true" : "false");
     bottone.innerHTML = (aperto ? "Chiudi dettagli " : "Vedi dettagli ") + '<span class="freccia">▾</span>';
+  }
+
+  function alternaTuttiIDettagli() {
+    const bottoneGlobale = document.getElementById("bottone-mostra-tutti");
+    const daAprire = bottoneGlobale.textContent.indexOf("Mostra") === 0;
+    document.querySelectorAll(".lotto-dettagli").forEach(pannello => pannello.classList.toggle("aperto", daAprire));
+    document.querySelectorAll(".bottone-dettagli").forEach(bottone => {
+      bottone.setAttribute("aria-expanded", daAprire ? "true" : "false");
+      bottone.innerHTML = (daAprire ? "Chiudi dettagli " : "Vedi dettagli ") + '<span class="freccia">▾</span>';
+    });
+    bottoneGlobale.textContent = daAprire ? "Nascondi tutti i dettagli" : "Mostra tutti i dettagli";
   }
 
   function mostraStato(idStato) {
