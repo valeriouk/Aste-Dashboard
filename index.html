@@ -540,7 +540,9 @@
       download: true,
       header: true,
       skipEmptyLines: true,
+      transformHeader: h => h.trim(),
       complete: function (risultato) {
+        console.log("Intestazioni lette dal CSV:", risultato.meta.fields);
         ASTE = (risultato.data || []).filter(r => r["ID Annuncio"]).map(normalizzaRiga);
         document.getElementById("testo-aggiornato").textContent =
           new Date().toLocaleTimeString("it-IT", { hour: "2-digit", minute: "2-digit" });
