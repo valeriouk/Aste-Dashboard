@@ -480,7 +480,7 @@
   // pubblicato in CSV (Google Sheet -> File -> Condividi ->
   // Pubblica sul web -> scegli il foglio giusto -> formato CSV).
   // ==========================================================
-  const CSV_URL = "https://docs.google.com/spreadsheets/d/e/2PACX-1vRhWMNfMFaIKJjJ1UYA7qYl7XnMkst04fr8LZj_c40OthHSyws8KuWHFJVfnRsEtOTahqFnDnDuCSVh/pub?gid=0&single=true&output=csv";
+  const CSV_URL = "INCOLLA_QUI_IL_TUO_LINK_CSV";
 
   let ASTE = [];
 
@@ -521,7 +521,12 @@
   }
 
   function livelloPunteggio(punteggio, valoreStima) {
-    if (!valoreStima || valoreStima <= 0) return "non-valutato";
+    // "Non valutato" solo se mancano ENTRAMBI i segnali — prima bastava che
+    // mancasse solo valoreStima, il che rompeva il caso di un punteggio
+    // inserito a mano senza il valore di stima completo (es. per test).
+    const nessunPunteggio = !punteggio || punteggio <= 0;
+    const nessunValore = !valoreStima || valoreStima <= 0;
+    if (nessunPunteggio && nessunValore) return "non-valutato";
     if (punteggio >= 70) return "alto";
     if (punteggio >= 40) return "medio";
     return "basso";
@@ -583,6 +588,7 @@
       urlAsta: r["Link Asta"] || "",
       urlPdf: r["Link PDF"] || "",
       fonteDocumento: r["Fonte Documento"] || "",
+      modelloUsato: r["Modello AI Usato"] || "",
     };
   }
 
@@ -632,11 +638,16 @@
     const griglia = document.getElementById("griglia-lotti");
 
     document.getElementById("stat-totale").textContent = ASTE.length;
-    const analizzate = ASTE.filter(a => a.valoreStima > 0);
+    // Filtri separati apposta: punteggio e margine dipendono da dati diversi.
+    // Un'asta con solo il punteggio inserito (senza valore di stima) ha un
+    // punteggio valido ma nessun margine calcolabile — un filtro unico
+    // farebbe apparire "-Infinity" invece di "—" in quel caso.
+    const conPunteggio = ASTE.filter(a => a.punteggio > 0);
+    const conMargine = ASTE.filter(a => a.margine !== null);
     document.getElementById("stat-punteggio").textContent =
-      analizzate.length ? Math.max(...analizzate.map(a => a.punteggio)) + "/100" : "—";
+      conPunteggio.length ? Math.max(...conPunteggio.map(a => a.punteggio)) + "/100" : "—";
     document.getElementById("stat-margine").textContent =
-      analizzate.length ? formattaEuro(Math.max(...analizzate.map(a => a.margine ?? -Infinity))) : "—";
+      conMargine.length ? formattaEuro(Math.max(...conMargine.map(a => a.margine))) : "—";
 
     nascondiTuttiGliStati();
 
@@ -718,6 +729,7 @@
           <div class="dettaglio-riga"><span>Abusi edilizi</span><span>${escapeHtml(a.abusiEdilizi)}</span></div>
           <div class="dettaglio-riga${formalitaConAvviso ? ' avviso' : ''}"><span>Formalità pregiudizievoli</span><span>${escapeHtml(formalitaTesto)}</span></div>
           <div class="dettaglio-riga"><span>Fonte analisi</span><span>${escapeHtml(a.fonteDocumento || "nessuna")}</span></div>
+          <div class="dettaglio-riga"><span>Modello AI</span><span>${escapeHtml(a.modelloUsato || "N/D")}</span></div>
           <div class="dettaglio-riga"><span>ID Annuncio</span><span>${escapeHtml(a.id)}</span></div>
           ${a.note ? `<div class="lotto-note">${escapeHtml(a.note)}</div>` : ""}
           ${a.descrizione ? `<div class="lotto-note">${escapeHtml(a.descrizione)}</div>` : ""}
