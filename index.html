@@ -268,6 +268,17 @@
     margin: 0;
   }
 
+  .badge-zona {
+    display: inline-block;
+    background: var(--oxblood-soft);
+    color: var(--oxblood);
+    font-size: .72rem;
+    font-weight: 600;
+    padding: 3px 9px;
+    border-radius: 5px;
+    margin: 4px 0 6px;
+  }
+
   .lotto-cifre {
     display: grid;
     grid-template-columns: 1fr 1fr;
@@ -578,6 +589,7 @@
       superficieMq: numeroSicuro(r["Superficie (mq)"], null),
       euroMq: numeroSicuro(r["€/mq Offerta Minima"], null),
       formalitaPregiudizievoli: r["Formalità Pregiudizievoli"] || "N/D",
+      zonaSegnalata: r["Zona Segnalata"] || "",
       punteggio: numeroSicuro(r["Score Flipping"]),
       statoOccupazione: r["Stato Occupazione"] || "N/D",
       speseSanatoria: numeroSicuro(r["Spese Sanatoria"]),
@@ -693,6 +705,7 @@
           <div>
             <p class="lotto-id">${a.lotto ? "Lotto " + escapeHtml(a.lotto) + " · " : ""}${escapeHtml(a.tipologia)}</p>
             <p class="lotto-comune">${escapeHtml(a.comune)}</p>
+            ${a.zonaSegnalata ? `<span class="badge-zona">🚩 ${escapeHtml(a.zonaSegnalata)}</span>` : ""}
             <p class="lotto-meta">${escapeHtml(distanzaTesto)} · vendita ${formattaData(a.dataVendita)}</p>
           </div>
         </div>
