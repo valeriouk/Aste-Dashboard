@@ -444,6 +444,7 @@
   <div class="controlli">
     <input type="text" id="ricerca" placeholder="Cerca per comune...">
     <select id="filtro-tipologia"><option value="">Tutte le tipologie</option></select>
+    <select id="filtro-occupazione"><option value="">Libero o occupato: tutti</option></select>
     <button id="bottone-mostra-tutti" class="bottone-toggle-tutti" onclick="alternaTuttiIDettagli()">Mostra tutti i dettagli</button>
     <select id="ordinamento">
       <option value="punteggio-desc">Punteggio (alto → basso)</option>
@@ -563,6 +564,7 @@
         document.getElementById("testo-aggiornato").textContent =
           new Date().toLocaleTimeString("it-IT", { hour: "2-digit", minute: "2-digit" });
         popolaFiltroTipologia();
+        popolaFiltroOccupazione();
         applicaFiltri();
       },
       error: function () {
@@ -615,6 +617,17 @@
     });
   }
 
+  function popolaFiltroOccupazione() {
+    const select = document.getElementById("filtro-occupazione");
+    const stati = [...new Set(ASTE.map(a => a.statoOccupazione).filter(Boolean))].sort();
+    stati.forEach(s => {
+      const opt = document.createElement("option");
+      opt.value = s;
+      opt.textContent = s;
+      select.appendChild(opt);
+    });
+  }
+
   // ==========================================================
   // FILTRI, ORDINAMENTO, RENDER
   // ==========================================================
@@ -626,12 +639,14 @@
 
     const ricerca = document.getElementById("ricerca").value.trim().toLowerCase();
     const tipologia = document.getElementById("filtro-tipologia").value;
+    const occupazione = document.getElementById("filtro-occupazione").value;
     const ordine = document.getElementById("ordinamento").value;
 
     let filtrate = ASTE.filter(a => {
       const passaRicerca = !ricerca || a.comune.toLowerCase().includes(ricerca);
       const passaTipologia = !tipologia || a.tipologia === tipologia;
-      return passaRicerca && passaTipologia;
+      const passaOccupazione = !occupazione || a.statoOccupazione === occupazione;
+      return passaRicerca && passaTipologia && passaOccupazione;
     });
 
     const comparatori = {
@@ -785,6 +800,7 @@
 
   document.getElementById("ricerca").addEventListener("input", applicaFiltri);
   document.getElementById("filtro-tipologia").addEventListener("change", applicaFiltri);
+  document.getElementById("filtro-occupazione").addEventListener("change", applicaFiltri);
   document.getElementById("ordinamento").addEventListener("change", applicaFiltri);
 
   avvia();
