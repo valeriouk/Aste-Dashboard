@@ -163,9 +163,31 @@
     border-radius: 8px;
   }
 
-  .controlli input { flex: 1 1 220px; min-width: 180px; }
+  .controlli input { flex: 0 1 150px; min-width: 110px; }
   .controlli select { flex: 0 1 190px; cursor: pointer; }
   .controlli input::placeholder { color: var(--ink-faint); }
+
+  .gruppo-pillole {
+    display: inline-flex;
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    overflow: hidden;
+    flex: 0 0 auto;
+  }
+  .pillola {
+    background: var(--surface);
+    border: none;
+    border-right: 1px solid var(--border);
+    color: var(--ink-muted);
+    font-family: var(--font-body);
+    font-size: .85rem;
+    font-weight: 500;
+    padding: 11px 16px;
+    cursor: pointer;
+  }
+  .pillola:last-child { border-right: none; }
+  .pillola:hover { color: var(--ink); }
+  .pillola.attiva { background: var(--brass-soft); color: var(--brass); font-weight: 600; }
 
   .bottone-toggle-tutti {
     background: var(--surface);
@@ -444,7 +466,10 @@
   <div class="controlli">
     <input type="text" id="ricerca" placeholder="Cerca per comune...">
     <select id="filtro-tipologia"><option value="">Tutte le tipologie</option></select>
-    <select id="filtro-occupazione"><option value="">Libero o occupato: tutti</option></select>
+    <div class="gruppo-pillole" id="gruppo-occupazione">
+      <button type="button" class="pillola" data-stato="libero" onclick="attivaFiltroOccupazione('libero')">Libero</button>
+      <button type="button" class="pillola" data-stato="occupato" onclick="attivaFiltroOccupazione('occupato')">Occupato</button>
+    </div>
     <button id="bottone-mostra-tutti" class="bottone-toggle-tutti" onclick="alternaTuttiIDettagli()">Mostra tutti i dettagli</button>
     <select id="ordinamento">
       <option value="punteggio-desc">Punteggio (alto → basso)</option>
@@ -564,7 +589,6 @@
         document.getElementById("testo-aggiornato").textContent =
           new Date().toLocaleTimeString("it-IT", { hour: "2-digit", minute: "2-digit" });
         popolaFiltroTipologia();
-        popolaFiltroOccupazione();
         applicaFiltri();
       },
       error: function () {
@@ -617,15 +641,34 @@
     });
   }
 
-  function popolaFiltroOccupazione() {
-    const select = document.getElementById("filtro-occupazione");
-    const stati = [...new Set(ASTE.map(a => a.statoOccupazione).filter(Boolean))].sort();
-    stati.forEach(s => {
-      const opt = document.createElement("option");
-      opt.value = s;
-      opt.textContent = s;
-      select.appendChild(opt);
+  // Stato del filtro libero/occupato: null (tutti), 'libero' oppure 'occupato'.
+  let filtroOccupazioneAttivo = null;
+
+  // Il campo statoOccupazione è testo libero generato da Gemini (frasi come
+  // "Occupato dall'esecutato e da terzi" o "Lotto 1 libero, Lotto 2
+  // occupato"), non un elenco fisso — un menu con ogni valore distinto
+  // diventa presto ingestibile. Questa classificazione è deliberatamente
+  // PRUDENTE: nei casi misti o ambigui non assegna nessuna delle due
+  // categorie (l'asta resta comunque visibile con "tutti", solo non
+  // comparirà filtrando specificamente per Libero o Occupato) — meglio
+  // lasciare un'asta fuori da un filtro specifico che rischiare di
+  // etichettarla nel modo sbagliato.
+  function classificaOccupazione(testo) {
+    const t = (testo || "").toLowerCase().trim();
+    if (!t || t === "n/d") return null;
+    const contieneOccupato = t.includes("occupat");
+    const iniziaLibero = t.startsWith("libero");
+    if (iniziaLibero && !contieneOccupato) return "libero";
+    if (contieneOccupato && !iniziaLibero) return "occupato";
+    return null;
+  }
+
+  function attivaFiltroOccupazione(stato) {
+    filtroOccupazioneAttivo = (filtroOccupazioneAttivo === stato) ? null : stato;
+    document.querySelectorAll("#gruppo-occupazione .pillola").forEach(p => {
+      p.classList.toggle("attiva", p.dataset.stato === filtroOccupazioneAttivo);
     });
+    applicaFiltri();
   }
 
   // ==========================================================
@@ -639,13 +682,12 @@
 
     const ricerca = document.getElementById("ricerca").value.trim().toLowerCase();
     const tipologia = document.getElementById("filtro-tipologia").value;
-    const occupazione = document.getElementById("filtro-occupazione").value;
     const ordine = document.getElementById("ordinamento").value;
 
     let filtrate = ASTE.filter(a => {
       const passaRicerca = !ricerca || a.comune.toLowerCase().includes(ricerca);
       const passaTipologia = !tipologia || a.tipologia === tipologia;
-      const passaOccupazione = !occupazione || a.statoOccupazione === occupazione;
+      const passaOccupazione = !filtroOccupazioneAttivo || classificaOccupazione(a.statoOccupazione) === filtroOccupazioneAttivo;
       return passaRicerca && passaTipologia && passaOccupazione;
     });
 
@@ -800,7 +842,6 @@
 
   document.getElementById("ricerca").addEventListener("input", applicaFiltri);
   document.getElementById("filtro-tipologia").addEventListener("change", applicaFiltri);
-  document.getElementById("filtro-occupazione").addEventListener("change", applicaFiltri);
   document.getElementById("ordinamento").addEventListener("change", applicaFiltri);
 
   avvia();
