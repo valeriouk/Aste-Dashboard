@@ -147,7 +147,7 @@
   ============================================================ */
   .controlli {
     display: flex;
-    gap: 12px;
+    gap: 8px;
     flex-wrap: wrap;
     margin-bottom: 28px;
   }
@@ -158,13 +158,30 @@
     border: 1px solid var(--border);
     color: var(--ink);
     font-family: var(--font-body);
-    font-size: .9rem;
-    padding: 11px 14px;
+    font-size: .85rem;
+    padding: 11px 10px;
     border-radius: 8px;
   }
 
-  .controlli input { flex: 0 1 150px; min-width: 110px; }
-  .controlli select { flex: 0 1 190px; cursor: pointer; }
+  /* flex-grow diverso per elemento, non uniforme: la ricerca beneficia
+     di più spazio su schermi larghi (più comodo leggere/scrivere un
+     comune), le select un po' meno (oltre una certa larghezza sarebbe
+     solo spazio vuoto dentro il menu) — per questo hanno un max-width.
+     Così la riga intera si allarga o restringe con lo schermo, ma le
+     select restano comunque compatte "di base" e non si gonfiano più in
+     base all'opzione più lunga al loro interno (il problema di ieri):
+     il menu APERTO, gestito dal browser e non da questo CSS, mostra
+     comunque il testo per intero in tutti i browser principali. */
+  .controlli input { flex: 2 1 90px; min-width: 90px; }
+  .controlli select {
+    flex: 1 1 100px;
+    cursor: pointer;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+  }
+  #filtro-tipologia { max-width: 200px; }
+  #ordinamento { flex-basis: 130px; max-width: 230px; }
   .controlli input::placeholder { color: var(--ink-faint); }
 
   .gruppo-pillole {
@@ -182,12 +199,19 @@
     font-family: var(--font-body);
     font-size: .85rem;
     font-weight: 500;
-    padding: 11px 16px;
+    padding: 11px 12px;
     cursor: pointer;
   }
   .pillola:last-child { border-right: none; }
   .pillola:hover { color: var(--ink); }
   .pillola.attiva { background: var(--brass-soft); color: var(--brass); font-weight: 600; }
+
+  .conteggio-filtrati {
+    font-family: var(--font-mono);
+    font-size: .78rem;
+    color: var(--ink-faint);
+    margin: 0 0 14px;
+  }
 
   .bottone-toggle-tutti {
     background: var(--surface);
@@ -196,7 +220,7 @@
     font-family: var(--font-body);
     font-size: .85rem;
     font-weight: 500;
-    padding: 11px 16px;
+    padding: 11px 12px;
     border-radius: 8px;
     cursor: pointer;
     white-space: nowrap;
@@ -505,6 +529,8 @@
     <p>Nessuna asta soddisfa questi criteri di ricerca — prova ad ampliarli.</p>
   </div>
 
+  <p class="conteggio-filtrati" id="conteggio-filtrati"></p>
+
   <div class="griglia" id="griglia-lotti"></div>
 
   <footer>Aggiornato leggendo direttamente il Google Sheet · dati raccolti dal Portale delle Vendite Pubbliche</footer>
@@ -719,6 +745,7 @@
       conMargine.length ? formattaEuro(Math.max(...conMargine.map(a => a.margine))) : "—";
 
     nascondiTuttiGliStati();
+    document.getElementById("conteggio-filtrati").textContent = `${elenco.length} di ${ASTE.length} aste mostrate`;
 
     if (elenco.length === 0) {
       mostraStato("stato-nessun-risultato");
