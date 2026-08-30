@@ -1,0 +1,695 @@
+<!DOCTYPE html>
+<html lang="it">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Configurazione · Registro Opportunità</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,400..700&family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500;600&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/leaflet.min.css">
+<script src="https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/leaflet.js"></script>
+<style>
+
+  /* ============================================================
+     TOKEN DI DESIGN — identici a index.html, per coerenza visiva
+  ============================================================ */
+  :root {
+    --bg: #f7f4ec;
+    --surface: #ffffff;
+    --surface-2: #f0ead9;
+    --border: #e3dac9;
+    --brass: #9c6b2e;
+    --brass-soft: rgba(156, 107, 46, .10);
+    --slate: #3e7377;
+    --slate-soft: rgba(62, 115, 119, .10);
+    --oxblood: #8b3d2e;
+    --oxblood-soft: rgba(139, 61, 46, .10);
+    --ink: #2a2318;
+    --ink-muted: #6b6255;
+    --ink-faint: #9c9284;
+    --font-display: 'Fraunces', Georgia, serif;
+    --font-body: 'Inter', system-ui, -apple-system, sans-serif;
+    --font-mono: 'JetBrains Mono', ui-monospace, monospace;
+  }
+
+  * { box-sizing: border-box; }
+
+  body {
+    margin: 0;
+    background-color: var(--bg);
+    background-image:
+      url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='g'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.85' numOctaves='3' stitchTiles='stitch'/%3E%3CfeColorMatrix type='matrix' values='0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0.05 0'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23g)'/%3E%3C/svg%3E"),
+      radial-gradient(ellipse 900px 500px at 15% -10%, rgba(156,107,46,.04), transparent),
+      radial-gradient(ellipse 700px 500px at 100% 10%, rgba(62,115,119,.03), transparent);
+    background-repeat: repeat, no-repeat, no-repeat;
+    background-size: 180px 180px, auto, auto;
+    color: var(--ink);
+    font-family: var(--font-body);
+    line-height: 1.5;
+    -webkit-font-smoothing: antialiased;
+  }
+
+  a { color: var(--slate); }
+  ::selection { background: var(--brass-soft); color: var(--ink); }
+  :focus-visible { outline: 2px solid var(--brass); outline-offset: 3px; border-radius: 4px; }
+
+  .contenitore { max-width: 760px; margin: 0 auto; padding: 48px 24px 96px; }
+
+  .intestazione {
+    display: flex;
+    justify-content: space-between;
+    align-items: flex-end;
+    flex-wrap: wrap;
+    gap: 16px;
+    padding-bottom: 32px;
+    margin-bottom: 40px;
+    border-bottom: 1px solid var(--border);
+  }
+  .eyebrow {
+    font-family: var(--font-mono);
+    font-size: .72rem;
+    letter-spacing: .12em;
+    text-transform: uppercase;
+    color: var(--brass);
+    margin: 0 0 10px;
+  }
+  h1 {
+    font-family: var(--font-display);
+    font-weight: 600;
+    font-size: clamp(1.9rem, 4vw, 2.6rem);
+    letter-spacing: -.01em;
+    margin: 0 0 8px;
+  }
+  .sottotitolo { color: var(--ink-muted); font-size: .95rem; margin: 0; max-width: 46ch; }
+  .link-torna {
+    font-family: var(--font-body);
+    font-size: .85rem;
+    font-weight: 500;
+    color: var(--ink-muted);
+    text-decoration: none;
+    white-space: nowrap;
+  }
+  .link-torna:hover { color: var(--brass); }
+
+  /* ============================================================
+     SCHERMATA PASSWORD
+  ============================================================ */
+  .riquadro-gate {
+    max-width: 380px;
+    margin: 40px auto;
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 12px;
+    padding: 32px;
+    text-align: center;
+    box-shadow: 0 1px 2px rgba(42,35,24,.05);
+  }
+  .riquadro-gate h2 {
+    font-family: var(--font-display);
+    font-weight: 500;
+    font-size: 1.3rem;
+    margin: 0 0 8px;
+  }
+  .riquadro-gate p { color: var(--ink-muted); font-size: .88rem; margin: 0 0 20px; }
+  .riquadro-gate input[type="password"] {
+    width: 100%;
+    background: var(--bg);
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    padding: 12px 14px;
+    font-family: var(--font-body);
+    font-size: .95rem;
+    color: var(--ink);
+    margin-bottom: 12px;
+    text-align: center;
+  }
+  .bottone-primario {
+    width: 100%;
+    background: var(--ink);
+    color: var(--surface);
+    border: none;
+    border-radius: 8px;
+    padding: 12px 14px;
+    font-family: var(--font-body);
+    font-size: .9rem;
+    font-weight: 600;
+    cursor: pointer;
+    transition: background .2s ease;
+  }
+  .bottone-primario:hover { background: var(--brass); }
+  .messaggio-errore { color: var(--oxblood); font-size: .85rem; margin-top: 12px; }
+  .messaggio-ok { color: var(--slate); font-size: .85rem; margin-top: 12px; font-weight: 600; }
+  .messaggio-attesa { color: var(--ink-faint); font-size: .85rem; margin-top: 12px; }
+
+  /* ============================================================
+     FORM DI CONFIGURAZIONE
+  ============================================================ */
+  .stato-caricamento-config {
+    text-align: center;
+    color: var(--ink-muted);
+    padding: 60px 24px;
+    font-size: .92rem;
+  }
+
+  .blocco-config {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 12px;
+    padding: 24px;
+    margin-bottom: 20px;
+    box-shadow: 0 1px 2px rgba(42,35,24,.05);
+  }
+  .blocco-config h2 {
+    font-family: var(--font-display);
+    font-weight: 500;
+    font-size: 1.1rem;
+    margin: 0 0 18px;
+    padding-bottom: 12px;
+    border-bottom: 1px solid var(--border);
+  }
+
+  .campo-form { margin-bottom: 16px; }
+  .campo-form:last-child { margin-bottom: 0; }
+  .campo-form label {
+    display: block;
+    font-size: .82rem;
+    font-weight: 500;
+    color: var(--ink-muted);
+    margin-bottom: 6px;
+  }
+  .campo-form input[type="text"],
+  .campo-form input[type="number"],
+  .campo-form select {
+    width: 100%;
+    background: var(--bg);
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    padding: 10px 12px;
+    font-family: var(--font-body);
+    font-size: .9rem;
+    color: var(--ink);
+  }
+  .campo-form input:disabled { color: var(--ink-faint); cursor: not-allowed; }
+  .campo-form input[type="number"] { font-family: var(--font-mono); }
+  .nota-campo { font-size: .78rem; color: var(--ink-faint); margin: 6px 0 0; line-height: 1.4; }
+
+  .etichetta-checkbox {
+    display: flex !important;
+    align-items: center;
+    gap: 8px;
+    margin-top: 8px;
+    font-size: .82rem !important;
+    font-weight: 500 !important;
+    color: var(--ink-muted) !important;
+    cursor: pointer;
+  }
+  .etichetta-checkbox input { width: auto !important; }
+
+  .riga-ricerca-indirizzo { display: flex; gap: 8px; margin-bottom: 14px; }
+  .riga-ricerca-indirizzo input {
+    flex: 1;
+    background: var(--bg);
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    padding: 10px 12px;
+    font-family: var(--font-body);
+    font-size: .9rem;
+  }
+  .riga-ricerca-indirizzo button {
+    background: var(--slate-soft);
+    color: var(--slate);
+    border: none;
+    border-radius: 8px;
+    padding: 10px 16px;
+    font-family: var(--font-body);
+    font-size: .85rem;
+    font-weight: 600;
+    cursor: pointer;
+    white-space: nowrap;
+  }
+  .riga-ricerca-indirizzo button:hover { background: rgba(123,167,171,.24); }
+  .messaggio-ricerca { font-size: .78rem; color: var(--oxblood); margin: -6px 0 14px; }
+
+  .contenitore-mappa {
+    height: 360px;
+    border-radius: 10px;
+    border: 1px solid var(--border);
+    margin-bottom: 16px;
+    overflow: hidden;
+  }
+
+  .controllo-raggio label {
+    display: block;
+    font-size: .82rem;
+    font-weight: 500;
+    color: var(--ink-muted);
+    margin-bottom: 8px;
+  }
+  .controllo-raggio input[type="range"] {
+    width: 100%;
+    accent-color: var(--brass);
+  }
+  .nota-coordinate {
+    font-family: var(--font-mono);
+    font-size: .78rem;
+    color: var(--ink-faint);
+    margin: 10px 0 0;
+  }
+
+  .riga-salvataggio {
+    display: flex;
+    align-items: center;
+    gap: 16px;
+    flex-wrap: wrap;
+    margin-top: 8px;
+  }
+  .bottone-salva {
+    background: var(--brass);
+    color: var(--surface);
+    border: none;
+    border-radius: 8px;
+    padding: 13px 24px;
+    font-family: var(--font-body);
+    font-size: .92rem;
+    font-weight: 600;
+    cursor: pointer;
+    transition: background .2s ease;
+  }
+  .bottone-salva:hover { background: #86591f; }
+  #messaggio-salvataggio { font-size: .85rem; }
+
+  .nascosto { display: none !important; }
+
+  @media (max-width: 640px) {
+    .contenitore { padding: 32px 16px 64px; }
+    .contenitore-mappa { height: 280px; }
+  }
+</style>
+</head>
+<body>
+
+<div class="contenitore">
+
+  <div class="intestazione">
+    <div>
+      <p class="eyebrow">Pannello di controllo</p>
+      <h1>Configurazione Scanner</h1>
+      <p class="sottotitolo">Modifica i parametri di ricerca letti da app.py a ogni run, senza toccare il codice.</p>
+    </div>
+    <a href="index.html" class="link-torna">← Torna al registro</a>
+  </div>
+
+  <div id="schermata-password" class="riquadro-gate">
+    <h2>Accesso protetto</h2>
+    <p>Inserisci la password per modificare la configurazione.</p>
+    <input type="password" id="campo-password" placeholder="Password" onkeydown="if(event.key==='Enter') sblocca()">
+    <button class="bottone-primario" onclick="sblocca()">Sblocca</button>
+    <p id="errore-gate" class="messaggio-errore nascosto"></p>
+  </div>
+
+  <div id="schermata-config" class="nascosto">
+
+    <div id="stato-caricamento-config" class="stato-caricamento-config">Lettura della configurazione attuale…</div>
+
+    <form id="modulo-config" class="nascosto" onsubmit="return false;">
+
+      <section class="blocco-config">
+        <h2>Area di ricerca</h2>
+        <div class="riga-ricerca-indirizzo">
+          <input type="text" id="campo-indirizzo" placeholder="Cerca un indirizzo o una città..." onkeydown="if(event.key==='Enter') cercaIndirizzo()">
+          <button type="button" onclick="cercaIndirizzo()">Cerca</button>
+        </div>
+        <p id="messaggio-ricerca" class="messaggio-ricerca nascosto"></p>
+        <div id="mappa" class="contenitore-mappa"></div>
+        <div class="controllo-raggio">
+          <label>Raggio di ricerca: <span id="etichetta-raggio">22</span> km</label>
+          <input type="range" id="campo-raggio" min="1" max="300" value="22">
+        </div>
+        <p class="nota-coordinate">Punto selezionato: <span id="etichetta-coordinate">—</span> · clicca sulla mappa o trascina il segnaposto per spostarlo</p>
+      </section>
+
+      <section class="blocco-config">
+        <h2>Filtri di prezzo</h2>
+        <div class="campo-form">
+          <label for="campo-prezzo-min">Prezzo base minimo (€)</label>
+          <input type="number" id="campo-prezzo-min" min="0" max="5000000" step="1000">
+        </div>
+        <div class="campo-form">
+          <label for="campo-prezzo-max">Prezzo base massimo (€)</label>
+          <input type="number" id="campo-prezzo-max" min="0" max="5000000" step="1000">
+          <label class="etichetta-checkbox">
+            <input type="checkbox" id="campo-prezzo-illimitato" onchange="alternaPrezzoIllimitato()">
+            Nessun limite massimo
+          </label>
+        </div>
+      </section>
+
+      <section class="blocco-config">
+        <h2>Altri filtri</h2>
+        <div class="campo-form">
+          <label for="campo-residenziale">Categoria immobili</label>
+          <select id="campo-residenziale">
+            <option value="false">Tutte le categorie</option>
+            <option value="true">Solo residenziale</option>
+          </select>
+        </div>
+        <div class="campo-form">
+          <label for="campo-solo-future">Aste da includere</label>
+          <select id="campo-solo-future">
+            <option value="true">Solo aste future</option>
+            <option value="false">Includi anche concluse (analisi storiche)</option>
+          </select>
+        </div>
+        <div class="campo-form">
+          <label for="campo-astegiudiziarie">Perizia da astegiudiziarie.it</label>
+          <select id="campo-astegiudiziarie">
+            <option value="true">Attiva</option>
+            <option value="false">Disattiva</option>
+          </select>
+          <p class="nota-campo">Le condizioni d'uso di astegiudiziarie.it vietano lo scraping automatico — attivala solo se è già una scelta consapevole tua, non cambiarla per abitudine.</p>
+        </div>
+        <div class="campo-form">
+          <label for="campo-pausa">Pausa tra un'asta e l'altra (secondi)</label>
+          <input type="number" id="campo-pausa" min="0" max="60" step="1">
+        </div>
+        <div class="campo-form">
+          <label for="campo-solo-conteggio">Modalità di esecuzione</label>
+          <select id="campo-solo-conteggio">
+            <option value="false">Normale</option>
+            <option value="true">Solo conteggio (nessuna notifica né scrittura)</option>
+          </select>
+        </div>
+      </section>
+
+      <section class="blocco-config">
+        <h2>Modelli Gemini</h2>
+        <div class="campo-form">
+          <label for="campo-modelli">Cascata modelli, in ordine di priorità (separati da virgola)</label>
+          <input type="text" id="campo-modelli" placeholder="gemini-3.6-flash, gemini-3.5-flash, gemini-3.5-flash-lite">
+        </div>
+      </section>
+
+      <div class="riga-salvataggio">
+        <button type="button" class="bottone-salva" onclick="salvaConfigurazione()">Salva le modifiche</button>
+        <span id="messaggio-salvataggio"></span>
+      </div>
+
+    </form>
+  </div>
+
+</div>
+
+<script>
+  // ==========================================================
+  // CONFIGURAZIONE — incolla qui l'URL della tua WebApp (lo stesso usato
+  // come GOOGLE_SHEET_WEBAPP_URL nei secret di GitHub Actions).
+  // ==========================================================
+  const WEBAPP_URL = "INCOLLA_QUI_URL_WEBAPP";
+
+  // Deve essere IDENTICO a SALE_PASSWORD in Code.gs, altrimenti gli hash
+  // calcolati qui e quelli attesi lato server non combaceranno mai. Non è
+  // un segreto (per questo può stare qui, in un file pubblico) — serve
+  // solo a rendere inutile un attacco con hash precalcolati.
+  const SALE_PASSWORD = "aste-ct-8f3k2-sale";
+
+  let mappa, segnaposto, cerchio;
+  let hashPasswordCorrente = null;
+
+  // ==========================================================
+  // UTILITY: hash e chiamate alla WebApp
+  // ==========================================================
+  async function calcolaHash(testo) {
+    const dati = new TextEncoder().encode(SALE_PASSWORD + testo);
+    const bufferHash = await crypto.subtle.digest("SHA-256", dati);
+    return Array.from(new Uint8Array(bufferHash)).map(b => b.toString(16).padStart(2, "0")).join("");
+  }
+
+  // NIENT'ALTRO oltre a "body" nella richiesta: niente header Content-Type
+  // esplicito. È voluto — impostare "application/json" farebbe scattare
+  // una preflight CORS che le WebApp di Apps Script non gestiscono, e la
+  // richiesta fallirebbe prima ancora di partire. Code.gs legge comunque
+  // correttamente il corpo come JSON indipendentemente dall'header.
+  async function chiamaWebApp(azione, extra) {
+    const risposta = await fetch(WEBAPP_URL, {
+      method: "POST",
+      body: JSON.stringify({azione, ...extra})
+    });
+    return risposta.json();
+  }
+
+  // ==========================================================
+  // GATE PASSWORD — la verifica vera è lato server (vedi Code.gs); questo
+  // è solo lo schermo che decide se mostrare il modulo. L'hash calcolato
+  // qui viene tenuto in memoria e riusato al salvataggio, senza richiederlo
+  // una seconda volta.
+  // ==========================================================
+  async function sblocca() {
+    const password = document.getElementById("campo-password").value;
+    const erroreEl = document.getElementById("errore-gate");
+    erroreEl.classList.add("nascosto");
+    if (!password) return;
+
+    const hash = await calcolaHash(password);
+    let risultato;
+    try {
+      risultato = await chiamaWebApp("verifica_password", {hash_password: hash});
+    } catch (e) {
+      erroreEl.textContent = "Impossibile contattare la WebApp. Controlla WEBAPP_URL in cima a questo file.";
+      erroreEl.classList.remove("nascosto");
+      return;
+    }
+
+    if (risultato.valida) {
+      hashPasswordCorrente = hash;
+      document.getElementById("schermata-password").classList.add("nascosto");
+      document.getElementById("schermata-config").classList.remove("nascosto");
+      inizializzaMappa();
+      caricaConfigurazioneAttuale();
+    } else {
+      erroreEl.textContent = "Password errata.";
+      erroreEl.classList.remove("nascosto");
+    }
+  }
+
+  // ==========================================================
+  // MAPPA
+  // ==========================================================
+  function inizializzaMappa() {
+    mappa = L.map("mappa").setView([37.5078836, 15.0830032], 10);
+    L.tileLayer("https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png", {
+      attribution: '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a>',
+      maxZoom: 18
+    }).addTo(mappa);
+
+    segnaposto = L.marker([37.5078836, 15.0830032], {draggable: true}).addTo(mappa);
+    cerchio = L.circle([37.5078836, 15.0830032], {
+      radius: 22000, color: "#9c6b2e", fillColor: "#9c6b2e", fillOpacity: 0.08, weight: 1.5
+    }).addTo(mappa);
+
+    mappa.on("click", e => spostaPunto(e.latlng.lat, e.latlng.lng));
+    segnaposto.on("dragend", () => {
+      const p = segnaposto.getLatLng();
+      spostaPunto(p.lat, p.lng);
+    });
+
+    document.getElementById("campo-raggio").addEventListener("input", e => {
+      const km = Number(e.target.value);
+      document.getElementById("etichetta-raggio").textContent = km;
+      cerchio.setRadius(km * 1000);
+    });
+  }
+
+  function spostaPunto(lat, lon) {
+    segnaposto.setLatLng([lat, lon]);
+    cerchio.setLatLng([lat, lon]);
+    document.getElementById("etichetta-coordinate").textContent = `${lat.toFixed(7)}, ${lon.toFixed(7)}`;
+  }
+
+  function impostaPuntoMappa(lat, lon, raggioKm) {
+    mappa.setView([lat, lon], stimaZoomDaRaggio(raggioKm));
+    spostaPunto(lat, lon);
+    cerchio.setRadius(raggioKm * 1000);
+  }
+
+  function stimaZoomDaRaggio(km) {
+    // Stima grezza solo per la vista iniziale, non un calcolo esatto.
+    if (km <= 10) return 11;
+    if (km <= 25) return 10;
+    if (km <= 50) return 9;
+    if (km <= 100) return 8;
+    return 7;
+  }
+
+  async function cercaIndirizzo() {
+    const query = document.getElementById("campo-indirizzo").value.trim();
+    const msgEl = document.getElementById("messaggio-ricerca");
+    msgEl.classList.add("nascosto");
+    if (!query) return;
+
+    try {
+      const risposta = await fetch(`https://nominatim.openstreetmap.org/search?format=json&limit=1&q=${encodeURIComponent(query)}`, {
+        headers: {"Accept-Language": "it"}
+      });
+      const risultati = await risposta.json();
+      if (risultati.length === 0) {
+        msgEl.textContent = "Nessun risultato per questo indirizzo.";
+        msgEl.classList.remove("nascosto");
+        return;
+      }
+      const lat = Number(risultati[0].lat);
+      const lon = Number(risultati[0].lon);
+      mappa.setView([lat, lon], 12);
+      spostaPunto(lat, lon);
+    } catch (e) {
+      msgEl.textContent = "Ricerca non riuscita — posiziona il punto direttamente sulla mappa.";
+      msgEl.classList.remove("nascosto");
+    }
+  }
+
+  // ==========================================================
+  // CARICAMENTO CONFIGURAZIONE ATTUALE (lettura libera, nessuna password)
+  // ==========================================================
+  async function caricaConfigurazioneAttuale() {
+    const statoEl = document.getElementById("stato-caricamento-config");
+    try {
+      const risposta = await fetch(`${WEBAPP_URL}?action=get_config`);
+      const config = await risposta.json();
+
+      document.getElementById("campo-prezzo-min").value = config.prezzo_base_min ?? 15000;
+
+      const maxGrezzo = config.prezzo_base_max;
+      const maxIllimitato = maxGrezzo === undefined || maxGrezzo === "" ||
+        String(maxGrezzo).trim().toLowerCase() === "illimitato";
+      document.getElementById("campo-prezzo-illimitato").checked = maxIllimitato;
+      document.getElementById("campo-prezzo-max").disabled = maxIllimitato;
+      document.getElementById("campo-prezzo-max").value = maxIllimitato ? "" : maxGrezzo;
+
+      const lat = Number(config.lat_riferimento ?? 37.5078836);
+      const lon = Number(config.lon_riferimento ?? 15.0830032);
+      const raggio = Number(config.raggio_km ?? 22);
+      document.getElementById("campo-raggio").value = raggio;
+      document.getElementById("etichetta-raggio").textContent = raggio;
+      impostaPuntoMappa(lat, lon, raggio);
+
+      document.getElementById("campo-residenziale").value = String(config.solo_residenziale ?? false).toLowerCase();
+      document.getElementById("campo-solo-future").value = String(config.solo_aste_future ?? true).toLowerCase();
+      document.getElementById("campo-astegiudiziarie").value = String(config.usa_astegiudiziarie_perizia ?? true).toLowerCase();
+      document.getElementById("campo-pausa").value = config.pausa_tra_aste_secondi ?? 3;
+      document.getElementById("campo-solo-conteggio").value = String(config.solo_conteggio ?? false).toLowerCase();
+
+      let modelli = ["gemini-3.6-flash", "gemini-3.5-flash", "gemini-3.5-flash-lite"];
+      if (config.cascata_modelli_gemini) {
+        try {
+          const parsed = JSON.parse(config.cascata_modelli_gemini);
+          if (Array.isArray(parsed) && parsed.length > 0) modelli = parsed;
+        } catch (e) { /* tiene il default sopra */ }
+      }
+      document.getElementById("campo-modelli").value = modelli.join(", ");
+
+      statoEl.classList.add("nascosto");
+      document.getElementById("modulo-config").classList.remove("nascosto");
+    } catch (e) {
+      statoEl.textContent = "Impossibile leggere la configurazione attuale. Controlla WEBAPP_URL in cima a questo file.";
+    }
+  }
+
+  function alternaPrezzoIllimitato() {
+    const illimitato = document.getElementById("campo-prezzo-illimitato").checked;
+    const campo = document.getElementById("campo-prezzo-max");
+    campo.disabled = illimitato;
+    if (illimitato) campo.value = "";
+  }
+
+  // ==========================================================
+  // VALIDAZIONE E SALVATAGGIO — stessi limiti della validazione server-side
+  // in Code.gs (validaConfigurazione). Questa qui evita un giro a vuoto per
+  // un errore banale; quella lì è quella che conta davvero, perché una
+  // pagina web si può sempre aggirare.
+  // ==========================================================
+  function validaForm() {
+    const errori = [];
+
+    const prezzoMinTesto = document.getElementById("campo-prezzo-min").value;
+    const prezzoMin = Number(prezzoMinTesto);
+    if (prezzoMinTesto === "" || isNaN(prezzoMin) || prezzoMin < 0 || prezzoMin > 5000000) {
+      errori.push("Il prezzo minimo deve essere un numero tra 0 e 5.000.000 €.");
+    }
+
+    const illimitato = document.getElementById("campo-prezzo-illimitato").checked;
+    let prezzoMax = null;
+    if (!illimitato) {
+      const prezzoMaxTesto = document.getElementById("campo-prezzo-max").value;
+      prezzoMax = Number(prezzoMaxTesto);
+      if (prezzoMaxTesto === "" || isNaN(prezzoMax) || prezzoMax < 0 || prezzoMax > 5000000) {
+        errori.push('Il prezzo massimo deve essere un numero tra 0 e 5.000.000 €, oppure spunta "Nessun limite".');
+      } else if (prezzoMax < prezzoMin) {
+        errori.push("Il prezzo massimo non può essere inferiore al minimo.");
+      }
+    }
+
+    const raggio = Number(document.getElementById("campo-raggio").value);
+    if (isNaN(raggio) || raggio < 1 || raggio > 300) {
+      errori.push("Il raggio deve essere tra 1 e 300 km.");
+    }
+
+    const pausaTesto = document.getElementById("campo-pausa").value;
+    const pausa = Number(pausaTesto);
+    if (pausaTesto === "" || isNaN(pausa) || pausa < 0 || pausa > 60) {
+      errori.push("La pausa tra le aste deve essere tra 0 e 60 secondi.");
+    }
+
+    const modelli = document.getElementById("campo-modelli").value.trim().split(",").map(m => m.trim()).filter(Boolean);
+    if (modelli.length === 0) {
+      errori.push("Serve almeno un modello Gemini nella cascata.");
+    }
+
+    return {errori, prezzoMin, prezzoMax, raggio, pausa, modelli, illimitato};
+  }
+
+  async function salvaConfigurazione() {
+    const messaggioEl = document.getElementById("messaggio-salvataggio");
+    const {errori, prezzoMin, prezzoMax, raggio, pausa, modelli, illimitato} = validaForm();
+
+    if (errori.length > 0) {
+      messaggioEl.textContent = errori[0];
+      messaggioEl.className = "messaggio-errore";
+      return;
+    }
+
+    const punto = segnaposto.getLatLng();
+    const nuovaConfig = {
+      prezzo_base_min: prezzoMin,
+      prezzo_base_max: illimitato ? "illimitato" : prezzoMax,
+      lat_riferimento: punto.lat,
+      lon_riferimento: punto.lng,
+      raggio_km: raggio,
+      solo_residenziale: document.getElementById("campo-residenziale").value,
+      solo_aste_future: document.getElementById("campo-solo-future").value,
+      usa_astegiudiziarie_perizia: document.getElementById("campo-astegiudiziarie").value,
+      pausa_tra_aste_secondi: pausa,
+      solo_conteggio: document.getElementById("campo-solo-conteggio").value,
+      cascata_modelli_gemini: JSON.stringify(modelli)
+    };
+
+    messaggioEl.textContent = "Salvataggio in corso…";
+    messaggioEl.className = "messaggio-attesa";
+
+    try {
+      const risultato = await chiamaWebApp("set_config", {hash_password: hashPasswordCorrente, config: nuovaConfig});
+      if (risultato.result === "success") {
+        messaggioEl.textContent = "Salvato — verrà applicato dal prossimo giro dello scanner.";
+        messaggioEl.className = "messaggio-ok";
+      } else {
+        messaggioEl.textContent = risultato.message || "Errore sconosciuto durante il salvataggio.";
+        messaggioEl.className = "messaggio-errore";
+      }
+    } catch (e) {
+      messaggioEl.textContent = "Richiesta non riuscita. Controlla la connessione e riprova.";
+      messaggioEl.className = "messaggio-errore";
+    }
+  }
+</script>
+
+</body>
+</html>
