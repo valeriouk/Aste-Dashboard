@@ -193,6 +193,19 @@
   .campo-form input:disabled { color: var(--ink-faint); cursor: not-allowed; }
   .campo-form input[type="number"] { font-family: var(--font-mono); }
   .nota-campo { font-size: .78rem; color: var(--ink-faint); margin: 6px 0 0; line-height: 1.4; }
+  .bottone-secondario {
+    background: var(--slate-soft);
+    color: var(--slate);
+    border: none;
+    border-radius: 8px;
+    padding: 8px 14px;
+    font-family: var(--font-body);
+    font-size: .8rem;
+    font-weight: 600;
+    cursor: pointer;
+    margin-top: 8px;
+  }
+  .bottone-secondario:hover { background: rgba(123,167,171,.24); }
 
   .etichetta-checkbox {
     display: flex !important;
@@ -387,6 +400,8 @@
         <div class="campo-form">
           <label for="campo-modelli">Cascata modelli, in ordine di priorità (separati da virgola)</label>
           <input type="text" id="campo-modelli" placeholder="gemini-3.6-flash, gemini-3.5-flash, gemini-3.5-flash-lite">
+          <button type="button" class="bottone-secondario" onclick="ripristinaCascataConsigliata()">↺ Ripristina cascata consigliata</button>
+          <p class="nota-campo">La cascata consigliata esclude di proposito i modelli appena rilasciati (quota di lancio ristretta, più soggetti a errori 503 finché non maturano) — vedi il commento accanto a CASCATA_MODELLI_GEMINI in app.py per il dettaglio.</p>
         </div>
       </section>
 
@@ -606,6 +621,19 @@
     const campo = document.getElementById("campo-prezzo-max");
     campo.disabled = illimitato;
     if (illimitato) campo.value = "";
+  }
+
+  // Deve restare IDENTICA alla CASCATA_MODELLI_GEMINI di default in
+  // app.py — se un giorno cambi quella lì con una motivazione nuova,
+  // aggiorna anche questa riga, altrimenti "ripristina" riporterebbe a
+  // una cascata vecchia invece di quella davvero consigliata.
+  const CASCATA_CONSIGLIATA = ["gemini-3.6-flash", "gemini-3.5-flash", "gemini-3.5-flash-lite"];
+
+  function ripristinaCascataConsigliata() {
+    // Scrive solo nel campo di testo — non salva nulla da sola, esattamente
+    // come qualunque altra modifica al modulo: serve comunque "Salva le
+    // modifiche" per renderla effettiva.
+    document.getElementById("campo-modelli").value = CASCATA_CONSIGLIATA.join(", ");
   }
 
   // ==========================================================
