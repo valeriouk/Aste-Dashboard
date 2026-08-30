@@ -253,11 +253,12 @@
   }
   .lotto:hover { border-color: var(--ink-faint); transform: translateY(-2px); box-shadow: 0 6px 16px rgba(42,35,24,.08); }
 
-  /* Asta con data vendita già passata: attenuata di default (vedi
-     mostraConcluse in JS) così anche quando visibile insieme alle attive
-     resta distinguibile a colpo d'occhio, non solo leggendo il badge. */
-  .lotto.conclusa { opacity: .6; }
-  .lotto.conclusa:hover { opacity: .85; }
+  /* La classe "conclusa" viene comunque assegnata (vedi cartellaLotto in
+     JS) ma qui non applichiamo più un'attenuazione: da quando la vista è
+     esclusiva (Attive OPPURE Concluse, mai le due insieme) non c'è più
+     nulla accanto a cui l'opacità ridotta serva da contrasto — attenuare
+     un'intera griglia di sole concluse la renderebbe solo meno leggibile.
+     Il badge sotto resta comunque il segnale, per chi scorre la lista. */
 
   @keyframes comparsa {
     from { opacity: 0; transform: translateY(8px); }
@@ -517,7 +518,7 @@
       <button type="button" class="pillola" data-stato="occupato" onclick="attivaFiltroOccupazione('occupato')">Occupato</button>
     </div>
     <div class="gruppo-pillole" id="gruppo-concluse">
-      <button type="button" class="pillola" id="pillola-concluse" onclick="alternaMostraConcluse()">Mostra concluse</button>
+      <button type="button" class="pillola" id="pillola-concluse" onclick="alternaMostraConcluse()">Concluse</button>
     </div>
     <button id="bottone-mostra-tutti" class="bottone-toggle-tutti" onclick="alternaTuttiIDettagli()">Mostra tutti i dettagli</button>
     <select id="ordinamento">
@@ -628,6 +629,22 @@
   function astaConclusa(dataVendita) {
     if (!dataVendita) return false;
     return String(dataVendita).slice(0, 10) < dataOggiISO();
+  }
+
+  // Distanza assoluta in giorni tra una data ISO e oggi, indipendentemente
+  // dal verso (prima o dopo). Serve al comparatore "vicina → lontana": con
+  // le due viste ora separate (Attive / Concluse), "vicina" deve poter
+  // significare sia "il più presto possibile" sia "la più di recente
+  // conclusa", a seconda della vista. Uso Date.UTC su entrambi i lati solo
+  // come aritmetica di differenza tra giorni di calendario — non è un
+  // controllo di fuso orario come astaConclusa, quindi qui non serve
+  // evitarlo: essendo una differenza, un identico offset su entrambi i
+  // lati si annulla da solo.
+  function distanzaGiorni(dataISO) {
+    if (!dataISO) return Infinity;
+    const [aa, mm, gg] = String(dataISO).slice(0, 10).split("-").map(Number);
+    const [oaa, omm, ogg] = dataOggiISO().split("-").map(Number);
+    return Math.abs(Date.UTC(aa, mm - 1, gg) - Date.UTC(oaa, omm - 1, ogg));
   }
 
   function livelloPunteggio(punteggio, valoreStima) {
@@ -746,8 +763,9 @@
 
   // Di default le aste con data vendita già passata restano NASCOSTE (il
   // registro resta focalizzato sulle opportunità ancora aperte), ma non
-  // vengono mai tolte dal foglio: bottone per rivederle tutte quando serve
-  // consultare lo storico.
+  // vengono mai tolte dal foglio. Il pulsante non le aggiunge alle attive:
+  // scambia la vista — mostra SOLO le concluse invece di mischiarle alle
+  // attive — così la griglia resta pulita sia prima sia dopo il clic.
   let mostraConcluse = false;
 
   function alternaMostraConcluse() {
@@ -773,7 +791,7 @@
       const passaRicerca = !ricerca || a.comune.toLowerCase().includes(ricerca);
       const passaTipologia = !tipologia || a.tipologia === tipologia;
       const passaOccupazione = !filtroOccupazioneAttivo || classificaOccupazione(a.statoOccupazione) === filtroOccupazioneAttivo;
-      const passaConcluse = mostraConcluse || !astaConclusa(a.dataVendita);
+      const passaConcluse = mostraConcluse ? astaConclusa(a.dataVendita) : !astaConclusa(a.dataVendita);
       return passaRicerca && passaTipologia && passaOccupazione && passaConcluse;
     });
 
@@ -781,7 +799,7 @@
       "punteggio-desc": (a, b) => b.punteggio - a.punteggio,
       "margine-desc": (a, b) => (b.margine ?? -Infinity) - (a.margine ?? -Infinity),
       "prezzo-asc": (a, b) => a.offertaMinima - b.offertaMinima,
-      "data-asc": (a, b) => (a.dataVendita || "9999").localeCompare(b.dataVendita || "9999"),
+      "data-asc": (a, b) => distanzaGiorni(a.dataVendita) - distanzaGiorni(b.dataVendita),
       "distanza-asc": (a, b) => (a.distanza ?? 9999) - (b.distanza ?? 9999),
     };
     filtrate.sort(comparatori[ordine] || comparatori["punteggio-desc"]);
