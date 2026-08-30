@@ -464,7 +464,6 @@
       hashPasswordCorrente = hash;
       document.getElementById("schermata-password").classList.add("nascosto");
       document.getElementById("schermata-config").classList.remove("nascosto");
-      inizializzaMappa();
       caricaConfigurazioneAttuale();
     } else {
       erroreEl.textContent = "Password errata.";
@@ -565,13 +564,6 @@
       document.getElementById("campo-prezzo-max").disabled = maxIllimitato;
       document.getElementById("campo-prezzo-max").value = maxIllimitato ? "" : maxGrezzo;
 
-      const lat = Number(config.lat_riferimento ?? 37.5078836);
-      const lon = Number(config.lon_riferimento ?? 15.0830032);
-      const raggio = Number(config.raggio_km ?? 22);
-      document.getElementById("campo-raggio").value = raggio;
-      document.getElementById("etichetta-raggio").textContent = raggio;
-      impostaPuntoMappa(lat, lon, raggio);
-
       document.getElementById("campo-residenziale").value = String(config.solo_residenziale ?? false).toLowerCase();
       document.getElementById("campo-solo-future").value = String(config.solo_aste_future ?? true).toLowerCase();
       document.getElementById("campo-astegiudiziarie").value = String(config.usa_astegiudiziarie_perizia ?? true).toLowerCase();
@@ -587,8 +579,23 @@
       }
       document.getElementById("campo-modelli").value = modelli.join(", ");
 
+      // Il modulo (quindi anche il contenitore della mappa) diventa
+      // visibile QUI, PRIMA di creare la mappa — non dopo. Leaflet misura
+      // le proprie dimensioni sul contenitore nell'istante esatto in cui
+      // viene creato: crearla mentre è ancora dentro un antenato con
+      // display:none la blocca piccola in un angolo per sempre, anche
+      // quando il contenitore torna visibile subito dopo.
       statoEl.classList.add("nascosto");
       document.getElementById("modulo-config").classList.remove("nascosto");
+
+      const lat = Number(config.lat_riferimento ?? 37.5078836);
+      const lon = Number(config.lon_riferimento ?? 15.0830032);
+      const raggio = Number(config.raggio_km ?? 22);
+      document.getElementById("campo-raggio").value = raggio;
+      document.getElementById("etichetta-raggio").textContent = raggio;
+      inizializzaMappa();
+      impostaPuntoMappa(lat, lon, raggio);
+      mappa.invalidateSize();
     } catch (e) {
       statoEl.textContent = "Impossibile leggere la configurazione attuale. Controlla WEBAPP_URL in cima a questo file.";
     }
