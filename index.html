@@ -907,6 +907,8 @@
       urlPdf: r["Link PDF"] || "",
       fonteDocumento: r["Fonte Documento"] || "",
       modelloUsato: r["Modello AI Usato"] || "",
+      lat: numeroSicuro(r["Latitudine"], null),
+      lon: numeroSicuro(r["Longitudine"], null),
     };
   }
 
@@ -1073,11 +1075,15 @@
     gruppoMarcatori = L.layerGroup().addTo(mappaLotti);
   }
 
-  function popupLotto(a) {
+  function popupLotto(a, precisa) {
     const margine = a.margine !== null ? formattaEuro(a.margine) : "—";
+    const notaPosizione = precisa
+      ? ""
+      : `<div style="font-style:italic;color:var(--ink-faint)">Posizione approssimata (centro comune)</div>`;
     return `
       <div class="popup-lotto">
         <strong>${escapeHtml(a.comune)}</strong>
+        ${notaPosizione}
         <div>Offerta minima: ${formattaEuro(a.offertaMinima)}</div>
         <div>Margine stimato: ${margine}</div>
         <div>Punteggio: ${a.punteggio > 0 ? a.punteggio + "/100" : "—"}</div>
@@ -1096,15 +1102,30 @@
     let senzaCoordinate = 0;
 
     elenco.forEach(a => {
-      const base = trovaCoordinateComune(a.comune);
+      // Preferisce sempre la coordinata reale (colonne Latitudine/
+      // Longitudine, salvate da app.py per le aste raccolte da qui in poi
+      // o recuperate dal backfill) — ricade sul centro del comune solo
+      // quando manca, es. per le righe più vecchie non ancora recuperate.
+      let base, precisa;
+      if (a.lat !== null && a.lon !== null) {
+        base = [a.lat, a.lon];
+        precisa = true;
+      } else {
+        base = trovaCoordinateComune(a.comune);
+        precisa = false;
+      }
       if (!base) { senzaCoordinate++; return; }
-      const [lat, lon] = jitterDeterministico(a.id, base);
+
+      // Il jitter serve solo per l'approssimazione per comune (più aste
+      // che altrimenti cadrebbero sullo stesso punto) — una coordinata
+      // reale non ne ha bisogno, ogni immobile ha già la sua posizione.
+      const [lat, lon] = precisa ? base : jitterDeterministico(a.id, base);
       const livello = livelloPunteggio(a.punteggio, a.valoreStima);
       const colore = COLORI_LIVELLO[livello] || COLORI_LIVELLO["non-valutato"];
 
       L.circleMarker([lat, lon], {
         radius: 8, color: colore.bordo, fillColor: colore.riempimento, fillOpacity: 0.85, weight: 1.5
-      }).bindPopup(popupLotto(a)).addTo(gruppoMarcatori);
+      }).bindPopup(popupLotto(a, precisa)).addTo(gruppoMarcatori);
 
       puntiValidi.push([lat, lon]);
     });
