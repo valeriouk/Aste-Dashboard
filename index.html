@@ -141,6 +141,11 @@
     color: var(--brass);
     margin: 0;
   }
+  .stat-nota {
+    font-size: .85rem;
+    font-weight: 500;
+    color: var(--ink-faint);
+  }
 
   /* ============================================================
      CONTROLLI
@@ -248,6 +253,12 @@
   }
   .lotto:hover { border-color: var(--ink-faint); transform: translateY(-2px); box-shadow: 0 6px 16px rgba(42,35,24,.08); }
 
+  /* Asta con data vendita già passata: attenuata di default (vedi
+     mostraConcluse in JS) così anche quando visibile insieme alle attive
+     resta distinguibile a colpo d'occhio, non solo leggendo il badge. */
+  .lotto.conclusa { opacity: .6; }
+  .lotto.conclusa:hover { opacity: .85; }
+
   @keyframes comparsa {
     from { opacity: 0; transform: translateY(8px); }
     to { opacity: 1; transform: translateY(0); }
@@ -312,6 +323,17 @@
     font-size: .82rem;
     color: var(--ink-muted);
     margin: 0;
+  }
+
+  .badge-conclusa {
+    display: inline-block;
+    background: var(--surface-2);
+    color: var(--ink-muted);
+    font-size: .72rem;
+    font-weight: 600;
+    padding: 3px 9px;
+    border-radius: 5px;
+    margin: 4px 6px 6px 0;
   }
 
   .badge-zona {
@@ -494,6 +516,9 @@
       <button type="button" class="pillola" data-stato="libero" onclick="attivaFiltroOccupazione('libero')">Libero</button>
       <button type="button" class="pillola" data-stato="occupato" onclick="attivaFiltroOccupazione('occupato')">Occupato</button>
     </div>
+    <div class="gruppo-pillole" id="gruppo-concluse">
+      <button type="button" class="pillola" id="pillola-concluse" onclick="alternaMostraConcluse()">Mostra concluse</button>
+    </div>
     <button id="bottone-mostra-tutti" class="bottone-toggle-tutti" onclick="alternaTuttiIDettagli()">Mostra tutti i dettagli</button>
     <select id="ordinamento">
       <option value="punteggio-desc">Punteggio (alto → basso)</option>
@@ -581,6 +606,28 @@
     const parti = String(iso).slice(0, 10).split("-");
     if (parti.length !== 3) return iso;
     return `${parti[2]}/${parti[1]}/${parti[0]}`;
+  }
+
+  // Data di oggi in locale, come stringa ISO YYYY-MM-DD. Costruita a mano
+  // (non new Date().toISOString(), che è in UTC) per evitare che nelle ore
+  // vicine alla mezzanotte un'asta di oggi risulti erroneamente "conclusa"
+  // o viceversa a seconda del fuso orario del browser.
+  function dataOggiISO() {
+    const oggi = new Date();
+    const anno = oggi.getFullYear();
+    const mese = String(oggi.getMonth() + 1).padStart(2, "0");
+    const giorno = String(oggi.getDate()).padStart(2, "0");
+    return `${anno}-${mese}-${giorno}`;
+  }
+
+  // Confronto tra stringhe "YYYY-MM-DD", non tra oggetti Date: essendo ISO,
+  // l'ordine lessicografico coincide con l'ordine cronologico (stesso
+  // trucco già usato nel comparatore di ordinamento "data-asc" più sotto),
+  // quindi zero rischio di parsing/fuso orario. Data mancante = non conclusa,
+  // per non nascondere righe con dato assente.
+  function astaConclusa(dataVendita) {
+    if (!dataVendita) return false;
+    return String(dataVendita).slice(0, 10) < dataOggiISO();
   }
 
   function livelloPunteggio(punteggio, valoreStima) {
@@ -697,6 +744,18 @@
     applicaFiltri();
   }
 
+  // Di default le aste con data vendita già passata restano NASCOSTE (il
+  // registro resta focalizzato sulle opportunità ancora aperte), ma non
+  // vengono mai tolte dal foglio: bottone per rivederle tutte quando serve
+  // consultare lo storico.
+  let mostraConcluse = false;
+
+  function alternaMostraConcluse() {
+    mostraConcluse = !mostraConcluse;
+    document.getElementById("pillola-concluse").classList.toggle("attiva", mostraConcluse);
+    applicaFiltri();
+  }
+
   // ==========================================================
   // FILTRI, ORDINAMENTO, RENDER
   // ==========================================================
@@ -714,7 +773,8 @@
       const passaRicerca = !ricerca || a.comune.toLowerCase().includes(ricerca);
       const passaTipologia = !tipologia || a.tipologia === tipologia;
       const passaOccupazione = !filtroOccupazioneAttivo || classificaOccupazione(a.statoOccupazione) === filtroOccupazioneAttivo;
-      return passaRicerca && passaTipologia && passaOccupazione;
+      const passaConcluse = mostraConcluse || !astaConclusa(a.dataVendita);
+      return passaRicerca && passaTipologia && passaOccupazione && passaConcluse;
     });
 
     const comparatori = {
@@ -732,7 +792,13 @@
   function renderizza(elenco) {
     const griglia = document.getElementById("griglia-lotti");
 
-    document.getElementById("stat-totale").textContent = ASTE.length;
+    // "Attive" = stesso criterio del badge/filtro concluse (astaConclusa),
+    // non del filtro "Mostra concluse" attualmente selezionato: così il
+    // numero resta un riferimento stabile, indipendente da cosa si sta
+    // guardando in un dato momento nella griglia sottostante.
+    const attive = ASTE.filter(a => !astaConclusa(a.dataVendita)).length;
+    document.getElementById("stat-totale").innerHTML =
+      `${attive} attive<span class="stat-nota"> di ${ASTE.length}</span>`;
     // Filtri separati apposta: punteggio e margine dipendono da dati diversi.
     // Un'asta con solo il punteggio inserito (senza valore di stima) ha un
     // punteggio valido ma nessun margine calcolabile — un filtro unico
@@ -762,6 +828,7 @@
     const contenutoSigillo = livello === "non-valutato" ? "Non<br>valutato" : a.punteggio;
     const distanzaTesto = a.distanza !== null ? `${a.distanza} km` : "distanza N/D";
     const idDom = "dett-" + indice;
+    const conclusa = astaConclusa(a.dataVendita);
 
     // Celle superficie/€ al mq: solo se il dato è presente nel foglio (potrebbe
     // non esserci ancora se Code.gs non è stato ridistribuito, o se Gemini
@@ -783,12 +850,13 @@
       && formalitaTesto.toLowerCase().indexOf("nessuna criticità") !== 0;
 
     return `
-      <article class="lotto" style="animation-delay:${Math.min(indice * 45, 500)}ms">
+      <article class="lotto${conclusa ? ' conclusa' : ''}" style="animation-delay:${Math.min(indice * 45, 500)}ms">
         <div class="lotto-testata">
           <div class="sigillo ${livello}">${contenutoSigillo}</div>
           <div>
             <p class="lotto-id">${a.lotto ? "Lotto " + escapeHtml(a.lotto) + " · " : ""}${escapeHtml(a.tipologia)}</p>
             <p class="lotto-comune">${escapeHtml(a.comune)}</p>
+            ${conclusa ? `<span class="badge-conclusa">🏁 Conclusa</span>` : ""}
             ${a.zonaSegnalata ? `<span class="badge-zona">🚩 ${escapeHtml(a.zonaSegnalata)}</span>` : ""}
             <p class="lotto-meta">${escapeHtml(distanzaTesto)} · vendita ${formattaData(a.dataVendita)}</p>
           </div>
