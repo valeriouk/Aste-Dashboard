@@ -852,13 +852,15 @@
   function renderizza(elenco) {
     const griglia = document.getElementById("griglia-lotti");
 
-    // "Attive" = stesso criterio del badge/filtro concluse (astaConclusa),
-    // non del filtro "Mostra concluse" attualmente selezionato: così il
-    // numero resta un riferimento stabile, indipendente da cosa si sta
-    // guardando in un dato momento nella griglia sottostante.
-    const attive = ASTE.filter(a => !astaConclusa(a.dataVendita)).length;
-    document.getElementById("stat-totale").innerHTML =
-      `${attive} attive<span class="stat-nota"> di ${ASTE.length}</span>`;
+    // Ora segue la vista corrente (Attive/Concluse) invece di restare
+    // fissa sulle attive: utile soprattutto quando si guardano le
+    // concluse, per sapere subito quante sono sul totale senza contarle
+    // a mano nella griglia sottostante.
+    const totaleAttive = ASTE.filter(a => !astaConclusa(a.dataVendita)).length;
+    const totaleConcluse = ASTE.length - totaleAttive;
+    document.getElementById("stat-totale").innerHTML = mostraConcluse
+      ? `${totaleConcluse} concluse<span class="stat-nota"> di ${ASTE.length}</span>`
+      : `${totaleAttive} attive<span class="stat-nota"> di ${ASTE.length}</span>`;
     // Filtri separati apposta: punteggio e margine dipendono da dati diversi.
     // Un'asta con solo il punteggio inserito (senza valore di stima) ha un
     // punteggio valido ma nessun margine calcolabile — un filtro unico
