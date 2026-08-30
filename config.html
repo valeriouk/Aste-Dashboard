@@ -206,6 +206,7 @@
     margin-top: 8px;
   }
   .bottone-secondario:hover { background: rgba(123,167,171,.24); }
+  .barra-ripristino { margin-bottom: 20px; }
 
   .etichetta-checkbox {
     display: flex !important;
@@ -326,6 +327,11 @@
     <div id="stato-caricamento-config" class="stato-caricamento-config">Lettura della configurazione attuale…</div>
 
     <form id="modulo-config" class="nascosto" onsubmit="return false;">
+
+      <div class="barra-ripristino">
+        <button type="button" class="bottone-secondario" onclick="ripristinaValoriPredefiniti()">↺ Ripristina tutti i valori predefiniti</button>
+        <p class="nota-campo">Riporta ogni campo qui sotto ai valori con cui hai avviato il progetto — utile dopo aver sperimentato. Non salva da sola: serve comunque "Salva le modifiche".</p>
+      </div>
 
       <section class="blocco-config">
         <h2>Area di ricerca</h2>
@@ -634,6 +640,52 @@
     // come qualunque altra modifica al modulo: serve comunque "Salva le
     // modifiche" per renderla effettiva.
     document.getElementById("campo-modelli").value = CASCATA_CONSIGLIATA.join(", ");
+  }
+
+  // Valori con cui il progetto è partito (gli stessi della prima scheda
+  // Config mai caricata). Tenuta SEPARATA da CASCATA_CONSIGLIATA sopra
+  // anche se oggi coincidono: quella è una scelta tecnica motivata (vedi
+  // il commento in app.py) che potrebbe evolvere da sola in futuro (es.
+  // quando un modello nuovo matura); questa è solo un punto di riferimento
+  // personale a cui tornare — non è detto restino sempre uguali.
+  const VALORI_PREDEFINITI = {
+    prezzoMin: 15000,
+    prezzoMax: 85000,
+    lat: 37.5078836,
+    lon: 15.0830032,
+    raggio: 22,
+    residenziale: "false",
+    soloFuture: "true",
+    astegiudiziarie: "true",
+    pausa: 3,
+    soloConteggio: "false"
+  };
+
+  function ripristinaValoriPredefiniti() {
+    document.getElementById("campo-prezzo-min").value = VALORI_PREDEFINITI.prezzoMin;
+
+    document.getElementById("campo-prezzo-illimitato").checked = false;
+    document.getElementById("campo-prezzo-max").disabled = false;
+    document.getElementById("campo-prezzo-max").value = VALORI_PREDEFINITI.prezzoMax;
+
+    document.getElementById("campo-raggio").value = VALORI_PREDEFINITI.raggio;
+    document.getElementById("etichetta-raggio").textContent = VALORI_PREDEFINITI.raggio;
+    impostaPuntoMappa(VALORI_PREDEFINITI.lat, VALORI_PREDEFINITI.lon, VALORI_PREDEFINITI.raggio);
+
+    document.getElementById("campo-residenziale").value = VALORI_PREDEFINITI.residenziale;
+    document.getElementById("campo-solo-future").value = VALORI_PREDEFINITI.soloFuture;
+    document.getElementById("campo-astegiudiziarie").value = VALORI_PREDEFINITI.astegiudiziarie;
+    document.getElementById("campo-pausa").value = VALORI_PREDEFINITI.pausa;
+    document.getElementById("campo-solo-conteggio").value = VALORI_PREDEFINITI.soloConteggio;
+
+    ripristinaCascataConsigliata();
+
+    // Stesso avviso mostrato dopo il salvataggio, riusato qui per
+    // ricordare — proprio dove poi guarderai per salvare — che questo
+    // ripristino è ancora solo nel modulo, non sul foglio.
+    const messaggioEl = document.getElementById("messaggio-salvataggio");
+    messaggioEl.textContent = 'Campi ripristinati ai valori predefiniti — premi "Salva le modifiche" per renderlo effettivo.';
+    messaggioEl.className = "messaggio-attesa";
   }
 
   // ==========================================================
