@@ -36,10 +36,20 @@
 
   body {
     margin: 0;
-    background:
+    background-color: var(--bg);
+    /* Tre livelli, dal più vicino al più lontano: grana carta finissima
+       (SVG feTurbulence, puro CSS, zero JS e zero immagini esterne) sopra
+       i due lavaggi di colore già esistenti, invariati. La grana è
+       generata in scala di grigi con l'alpha modulata al 5% massimo
+       tramite feColorMatrix — abbastanza sottile da non intaccare mai il
+       contrasto testo/sfondo, visibile solo nei margini e dietro le zone
+       senza una superficie bianca sopra (le card restano opache). */
+    background-image:
+      url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='g'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.85' numOctaves='3' stitchTiles='stitch'/%3E%3CfeColorMatrix type='matrix' values='0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0.05 0'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23g)'/%3E%3C/svg%3E"),
       radial-gradient(ellipse 900px 500px at 15% -10%, rgba(156,107,46,.04), transparent),
-      radial-gradient(ellipse 700px 500px at 100% 10%, rgba(62,115,119,.03), transparent),
-      var(--bg);
+      radial-gradient(ellipse 700px 500px at 100% 10%, rgba(62,115,119,.03), transparent);
+    background-repeat: repeat, no-repeat, no-repeat;
+    background-size: 180px 180px, auto, auto;
     color: var(--ink);
     font-family: var(--font-body);
     line-height: 1.5;
@@ -152,8 +162,13 @@
   ============================================================ */
   .controlli {
     display: flex;
+    align-items: center;
     gap: 8px;
     flex-wrap: wrap;
+    background: var(--surface-2);
+    border: 1px solid var(--border);
+    border-radius: 10px;
+    padding: 10px;
     margin-bottom: 28px;
   }
 
@@ -348,15 +363,32 @@
     margin: 4px 0 6px;
   }
 
+  .lotto-margine {
+    padding: 14px 0 2px;
+    border-top: 1px solid var(--border);
+  }
+  .lotto-margine .cifra-etichetta { margin-bottom: 4px; }
+  .lotto-margine-valore {
+    font-family: var(--font-mono);
+    font-size: 1.5rem;
+    font-weight: 600;
+    color: var(--brass);
+    margin: 0;
+  }
+
   .lotto-cifre {
     display: grid;
     grid-template-columns: 1fr 1fr;
     gap: 10px 16px;
-    padding: 14px 0;
-    border-top: 1px solid var(--border);
+    padding: 10px 0 14px;
     border-bottom: 1px solid var(--border);
     margin-bottom: 14px;
   }
+  /* Per celle testuali più lunghe della media (es. Stato occupazione, che
+     arriva a essere una frase intera generata da Gemini) — occupare
+     l'intera riga invece di forzarle nella metà colonna è insieme più
+     ordinato e più leggibile. */
+  .cifra-larga { grid-column: 1 / -1; }
 
   .cifra-etichetta {
     font-size: .72rem;
@@ -369,7 +401,6 @@
     color: var(--ink);
     margin: 0;
   }
-  .cifra-valore.brass { color: var(--brass); }
 
   .bottone-dettagli {
     background: none;
@@ -388,13 +419,24 @@
   .bottone-dettagli[aria-expanded="true"] .freccia { transform: rotate(180deg); }
 
   .lotto-dettagli {
-    display: none;
+    display: grid;
+    grid-template-rows: 0fr;
+    transition: grid-template-rows .3s ease;
+  }
+  .lotto-dettagli.aperto { grid-template-rows: 1fr; }
+  /* L'overflow:hidden qui (non sull'elemento esterno) è ciò che permette
+     alla riga della grid di collassare davvero a 0 invece di restare
+     bloccata all'altezza minima del contenuto — margin/padding/bordo sono
+     stati spostati qui apposta, così spariscono insieme al contenuto
+     invece di lasciare un vuoto fisso quando il pannello è chiuso. */
+  .lotto-dettagli-inner {
+    overflow: hidden;
+    min-height: 0;
     margin-top: 16px;
     padding-top: 16px;
     border-top: 1px solid var(--border);
     font-size: .85rem;
   }
-  .lotto-dettagli.aperto { display: block; }
 
   .dettaglio-riga {
     display: flex;
@@ -880,6 +922,11 @@
           </div>
         </div>
 
+        <div class="lotto-margine">
+          <p class="cifra-etichetta">Margine stimato</p>
+          <p class="lotto-margine-valore">${a.margine !== null ? formattaEuro(a.margine) : "—"}</p>
+        </div>
+
         <div class="lotto-cifre">
           <div>
             <p class="cifra-etichetta">Offerta minima</p>
@@ -889,11 +936,7 @@
             <p class="cifra-etichetta">Valore stima</p>
             <p class="cifra-valore">${a.valoreStima > 0 ? formattaEuro(a.valoreStima) : "—"}</p>
           </div>${rigaSuperficie}
-          <div>
-            <p class="cifra-etichetta">Margine stimato</p>
-            <p class="cifra-valore brass">${a.margine !== null ? formattaEuro(a.margine) : "—"}</p>
-          </div>
-          <div>
+          <div class="cifra-larga">
             <p class="cifra-etichetta">Stato occupazione</p>
             <p class="cifra-valore">${escapeHtml(a.statoOccupazione)}</p>
           </div>
@@ -904,21 +947,23 @@
         </button>
 
         <div class="lotto-dettagli" id="${idDom}">
-          <div class="dettaglio-riga"><span>Tribunale</span><span>${escapeHtml(a.tribunale)}</span></div>
-          <div class="dettaglio-riga"><span>Disponibilità (PVP)</span><span>${escapeHtml(a.disponibilita)}</span></div>
-          <div class="dettaglio-riga"><span>Prezzo base</span><span>${formattaEuro(a.prezzoBase)}</span></div>
-          <div class="dettaglio-riga"><span>Rilancio minimo</span><span>${formattaEuro(a.rilancioMinimo)}</span></div>
-          <div class="dettaglio-riga"><span>Spese sanatoria</span><span>${formattaEuro(a.speseSanatoria)}</span></div>
-          <div class="dettaglio-riga"><span>Abusi edilizi</span><span>${escapeHtml(a.abusiEdilizi)}</span></div>
-          <div class="dettaglio-riga${formalitaConAvviso ? ' avviso' : ''}"><span>Formalità pregiudizievoli</span><span>${escapeHtml(formalitaTesto)}</span></div>
-          <div class="dettaglio-riga"><span>Fonte analisi</span><span>${escapeHtml(a.fonteDocumento || "nessuna")}</span></div>
-          <div class="dettaglio-riga"><span>Modello AI</span><span>${escapeHtml(a.modelloUsato || "N/D")}</span></div>
-          <div class="dettaglio-riga"><span>ID Annuncio</span><span>${escapeHtml(a.id)}</span></div>
-          ${a.note ? `<div class="lotto-note">${escapeHtml(a.note)}</div>` : ""}
-          ${a.descrizione ? `<div class="lotto-note">${escapeHtml(a.descrizione)}</div>` : ""}
-          <div style="margin-top:12px">
-            ${a.urlAsta ? `<a class="lotto-link" href="${escapeHtml(a.urlAsta)}" target="_blank" rel="noopener">Apri annuncio PVP</a>` : ""}
-            ${a.urlPdf ? `<a class="lotto-link secondario" href="${escapeHtml(a.urlPdf)}" target="_blank" rel="noopener">Apri documento</a>` : ""}
+          <div class="lotto-dettagli-inner">
+            <div class="dettaglio-riga"><span>Tribunale</span><span>${escapeHtml(a.tribunale)}</span></div>
+            <div class="dettaglio-riga"><span>Disponibilità (PVP)</span><span>${escapeHtml(a.disponibilita)}</span></div>
+            <div class="dettaglio-riga"><span>Prezzo base</span><span>${formattaEuro(a.prezzoBase)}</span></div>
+            <div class="dettaglio-riga"><span>Rilancio minimo</span><span>${formattaEuro(a.rilancioMinimo)}</span></div>
+            <div class="dettaglio-riga"><span>Spese sanatoria</span><span>${formattaEuro(a.speseSanatoria)}</span></div>
+            <div class="dettaglio-riga"><span>Abusi edilizi</span><span>${escapeHtml(a.abusiEdilizi)}</span></div>
+            <div class="dettaglio-riga${formalitaConAvviso ? ' avviso' : ''}"><span>Formalità pregiudizievoli</span><span>${escapeHtml(formalitaTesto)}</span></div>
+            <div class="dettaglio-riga"><span>Fonte analisi</span><span>${escapeHtml(a.fonteDocumento || "nessuna")}</span></div>
+            <div class="dettaglio-riga"><span>Modello AI</span><span>${escapeHtml(a.modelloUsato || "N/D")}</span></div>
+            <div class="dettaglio-riga"><span>ID Annuncio</span><span>${escapeHtml(a.id)}</span></div>
+            ${a.note ? `<div class="lotto-note">${escapeHtml(a.note)}</div>` : ""}
+            ${a.descrizione ? `<div class="lotto-note">${escapeHtml(a.descrizione)}</div>` : ""}
+            <div style="margin-top:12px">
+              ${a.urlAsta ? `<a class="lotto-link" href="${escapeHtml(a.urlAsta)}" target="_blank" rel="noopener">Apri annuncio PVP</a>` : ""}
+              ${a.urlPdf ? `<a class="lotto-link secondario" href="${escapeHtml(a.urlPdf)}" target="_blank" rel="noopener">Apri documento</a>` : ""}
+            </div>
           </div>
         </div>
       </article>
