@@ -291,6 +291,19 @@
     transition: background .2s ease;
   }
   .bottone-salva:hover { background: #86591f; }
+  .bottone-avvia {
+    background: var(--slate);
+    color: var(--surface);
+    border: none;
+    border-radius: 8px;
+    padding: 13px 24px;
+    font-family: var(--font-body);
+    font-size: .92rem;
+    font-weight: 600;
+    cursor: pointer;
+    transition: background .2s ease;
+  }
+  .bottone-avvia:hover { background: #336063; }
   #messaggio-salvataggio { font-size: .85rem; }
 
   .nascosto { display: none !important; }
@@ -413,6 +426,7 @@
 
       <div class="riga-salvataggio">
         <button type="button" class="bottone-salva" onclick="salvaConfigurazione()">Salva le modifiche</button>
+        <button type="button" class="bottone-avvia" id="bottone-avvia-scanner" onclick="avviaScanner()">▶ Avvia scanner ora</button>
         <span id="messaggio-salvataggio"></span>
       </div>
 
@@ -426,7 +440,7 @@
   // CONFIGURAZIONE — incolla qui l'URL della tua WebApp (lo stesso usato
   // come GOOGLE_SHEET_WEBAPP_URL nei secret di GitHub Actions).
   // ==========================================================
-  const WEBAPP_URL = "https://script.google.com/macros/s/AKfycbyhdfcO-W-ioPxkwRrmK6sMsR-k9Oc65PLvvr-fcUbSj5No72-5NqU397btrBFHqNzG/exec";
+  const WEBAPP_URL = "https://script.google.com/macros/s/AKfycbxinBOCGv4QC3EJwlnyQQ4Xh_DdcP6CtpMXJTlUVtw7WFQMvHrUICgCmK-THmWULxRK/exec";
 
   // Deve essere IDENTICO a SALE_PASSWORD in Code.gs, altrimenti gli hash
   // calcolati qui e quelli attesi lato server non combaceranno mai. Non è
@@ -769,6 +783,50 @@
         messaggioEl.className = "messaggio-ok";
       } else {
         messaggioEl.textContent = risultato.message || "Errore sconosciuto durante il salvataggio.";
+        messaggioEl.className = "messaggio-errore";
+      }
+    } catch (e) {
+      messaggioEl.textContent = "Richiesta non riuscita. Controlla la connessione e riprova.";
+      messaggioEl.className = "messaggio-errore";
+    }
+  }
+
+  // Conferma a due tocchi invece di un dialogo nativo del browser (fuori
+  // stile rispetto al resto della pagina): il primo clic arma il
+  // pulsante per pochi secondi, il secondo clic entro quella finestra
+  // avvia davvero. Un clic isolato, o nessun secondo clic in tempo, non
+  // fa nulla — protegge da un avvio per errore senza un popup invadente.
+  let confermaAvvioInCorso = false;
+  let timeoutConfermaAvvio = null;
+
+  async function avviaScanner() {
+    const bottone = document.getElementById("bottone-avvia-scanner");
+    const messaggioEl = document.getElementById("messaggio-salvataggio");
+
+    if (!confermaAvvioInCorso) {
+      confermaAvvioInCorso = true;
+      bottone.textContent = "Conferma avvio?";
+      timeoutConfermaAvvio = setTimeout(() => {
+        confermaAvvioInCorso = false;
+        bottone.textContent = "▶ Avvia scanner ora";
+      }, 4000);
+      return;
+    }
+
+    clearTimeout(timeoutConfermaAvvio);
+    confermaAvvioInCorso = false;
+    bottone.textContent = "▶ Avvia scanner ora";
+
+    messaggioEl.textContent = "Avvio in corso…";
+    messaggioEl.className = "messaggio-attesa";
+
+    try {
+      const risultato = await chiamaWebApp("avvia_scanner", {hash_password: hashPasswordCorrente});
+      if (risultato.result === "success") {
+        messaggioEl.textContent = "Scanner avviato — segui l'esecuzione dalla scheda Actions su GitHub.";
+        messaggioEl.className = "messaggio-ok";
+      } else {
+        messaggioEl.textContent = risultato.message || "Errore sconosciuto durante l'avvio.";
         messaggioEl.className = "messaggio-errore";
       }
     } catch (e) {
