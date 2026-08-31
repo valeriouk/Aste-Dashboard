@@ -440,7 +440,7 @@
   // CONFIGURAZIONE — incolla qui l'URL della tua WebApp (lo stesso usato
   // come GOOGLE_SHEET_WEBAPP_URL nei secret di GitHub Actions).
   // ==========================================================
-  const WEBAPP_URL = "https://script.google.com/macros/s/AKfycbxVehAqYYTq0-BbvKrxI_WkHTi4DePsalYX4UgBak3VA8C0DHUSZ44Obz5NKVWADQMZ/exec";
+  const WEBAPP_URL = "https://script.google.com/macros/s/AKfycbwP8xNVBjDAhCVlXTf5G2_KtBzMqD1Nbsr_IB1iqC16vK3ZNsMN_w89q7IqMoBGQ-EX/exec";
 
   // Deve essere IDENTICO a SALE_PASSWORD in Code.gs, altrimenti gli hash
   // calcolati qui e quelli attesi lato server non combaceranno mai. Non è
@@ -454,6 +454,12 @@
   // ==========================================================
   // UTILITY: hash e chiamate alla WebApp
   // ==========================================================
+  function escapeHtml(testo) {
+    const d = document.createElement("div");
+    d.textContent = testo === null || testo === undefined ? "" : String(testo);
+    return d.innerHTML;
+  }
+
   async function calcolaHash(testo) {
     const dati = new TextEncoder().encode(SALE_PASSWORD + testo);
     const bufferHash = await crypto.subtle.digest("SHA-256", dati);
@@ -823,10 +829,12 @@
     try {
       const risultato = await chiamaWebApp("avvia_scanner", {hash_password: hashPasswordCorrente});
       if (risultato.result === "success") {
-        messaggioEl.textContent = "Scanner avviato — segui l'esecuzione dalla scheda Actions su GitHub.";
+        messaggioEl.innerHTML = escapeHtml(risultato.message || "Scanner avviato.")
+          + (risultato.url ? ` <a href="${escapeHtml(risultato.url)}" target="_blank" rel="noopener">Apri esecuzione</a>` : "");
         messaggioEl.className = "messaggio-ok";
       } else {
-        messaggioEl.textContent = risultato.message || "Errore sconosciuto durante l'avvio.";
+        messaggioEl.innerHTML = escapeHtml(risultato.message || "Errore sconosciuto durante l'avvio.")
+          + (risultato.url ? ` <a href="${escapeHtml(risultato.url)}" target="_blank" rel="noopener">Apri esecuzione</a>` : "");
         messaggioEl.className = "messaggio-errore";
       }
     } catch (e) {
