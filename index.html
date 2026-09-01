@@ -202,7 +202,6 @@
     overflow: hidden;
     text-overflow: ellipsis;
   }
-  #filtro-tipologia { max-width: 200px; }
   #ordinamento { flex-basis: 130px; max-width: 230px; }
   .controlli input::placeholder { color: var(--ink-faint); }
 
@@ -227,6 +226,41 @@
   .pillola:last-child { border-right: none; }
   .pillola:hover { color: var(--ink); }
   .pillola.attiva { background: var(--brass-soft); color: var(--brass); font-weight: 600; }
+
+  /* Menu a comparsa per il filtro tipologia: un pulsante dall'ingombro
+     fisso (non cresce con quante categorie esistono) che apre un
+     pannello con le spunte — pensato apposta per restare compatto su
+     mobile, dove 7 pillole in fila avrebbero occupato più righe di
+     spazio verticale a scapito delle aste stesse. */
+  .contenitore-filtro-tipologia { position: relative; flex: 0 0 auto; }
+  .freccia-tipologia { transition: transform .2s ease; display: inline-block; }
+  #bottone-filtro-tipologia[aria-expanded="true"] .freccia-tipologia { transform: rotate(180deg); }
+  .menu-tipologia {
+    position: absolute;
+    top: calc(100% + 6px);
+    left: 0;
+    z-index: 20;
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 10px;
+    padding: 8px;
+    width: max-content;
+    min-width: 220px;
+    max-width: min(280px, calc(100vw - 48px));
+    box-shadow: 0 8px 24px rgba(42,35,24,.12);
+  }
+  .voce-menu-tipologia {
+    display: flex;
+    align-items: center;
+    gap: 9px;
+    padding: 9px 10px;
+    border-radius: 6px;
+    font-size: .85rem;
+    color: var(--ink);
+    cursor: pointer;
+  }
+  .voce-menu-tipologia:hover { background: var(--surface-2); }
+  .voce-menu-tipologia input[type="checkbox"] { accent-color: var(--brass); cursor: pointer; }
 
   .conteggio-filtrati {
     font-family: var(--font-mono);
@@ -594,7 +628,14 @@
 
   <div class="controlli">
     <input type="text" id="ricerca" placeholder="Cerca per comune...">
-    <select id="filtro-tipologia"><option value="">Tutte le tipologie</option></select>
+    <div class="contenitore-filtro-tipologia">
+      <div class="gruppo-pillole">
+        <button type="button" class="pillola" id="bottone-filtro-tipologia" onclick="alternaMenuTipologia(event)" aria-expanded="false" aria-haspopup="true">
+          Tipologia <span class="freccia-tipologia">▾</span>
+        </button>
+      </div>
+      <div class="menu-tipologia nascosto" id="menu-tipologia"></div>
+    </div>
     <div class="gruppo-pillole" id="gruppo-occupazione">
       <button type="button" class="pillola" data-stato="libero" onclick="attivaFiltroOccupazione('libero')">Libero</button>
       <button type="button" class="pillola" data-stato="occupato" onclick="attivaFiltroOccupazione('occupato')">Occupato</button>
@@ -912,15 +953,98 @@
     };
   }
 
+  // ==========================================================
+  // AGGREGAZIONE TIPOLOGIE — PVP restituisce fino a più codici
+  // categoriaBene per annuncio, uniti da app.py in un'unica stringa (es.
+  // "ABITAZIONE_TIPO_ECO, GARAGE_AUTORIMESSA") — filtrare sui valori
+  // grezzi esplode in decine di combinazioni quasi tutte uniche, un menu
+  // di fatto inutile. Ogni codice grezzo viene mappato qui su una delle
+  // poche macro-categorie sotto; un codice MAI VISTO PRIMA (es. se PVP ne
+  // introduce uno nuovo domani) ricade sempre su "Altro" — non sparisce
+  // mai dai filtri, semplicemente non è ancora catalogato con precisione.
+  const MACROCATEGORIE_TIPOLOGIA = [
+    "Abitazioni", "Garage e posti auto", "Negozi e uffici", "Terreni",
+    "Depositi e magazzini", "Fabbricati e complessi", "Altro"
+  ];
+
+  const MAPPA_TIPOLOGIA = {
+    "ABITAZIONE_TIPO_CIV": "Abitazioni",
+    "ABITAZIONE_TIPO_ECO": "Abitazioni",
+    "ABITAZIONE_TIPO_POP": "Abitazioni",
+    "ABITAZIONE_TIPO_UPOP": "Abitazioni",
+    "ABITAZIONE_IN_VILLINI": "Abitazioni",
+    "APPARTAMENTO": "Abitazioni",
+    "GARAGE_AUTORIMESSA": "Garage e posti auto",
+    "POSTO_AUTO": "Garage e posti auto",
+    "NEGOZIO": "Negozi e uffici",
+    "NEGOZI_BOTTEGHE": "Negozi e uffici",
+    "UFFICIO": "Negozi e uffici",
+    "LABORATORI_ARTI": "Negozi e uffici",
+    "TERRENO": "Terreni",
+    "DEPOSITO": "Depositi e magazzini",
+    "MAGAZZINI_E_DEPOSITO": "Depositi e magazzini",
+    "STALLE_SCUDERIE_RIMESSE": "Depositi e magazzini",
+    "FABBRICATI_COSTRUITI_PER_ESIGENZE_IND": "Depositi e magazzini",
+    "FABBRICATO": "Fabbricati e complessi",
+    "FABBRICATO_IN_COSTR": "Fabbricati e complessi",
+    "COMPENDIO_PIGNORATO": "Fabbricati e complessi"
+  };
+
+  // Un annuncio può appartenere a più di una macro-categoria insieme (es.
+  // "abitazione + garage") — così filtrando per Garage non sparisce
+  // dall'elenco di Abitazioni, e viceversa: mai nascosto per errore da un
+  // filtro che comunque lo riguarda. Un Set toglie da solo eventuali
+  // duplicati (capita che PVP ripeta lo stesso codice più volte).
+  function categorieDiAsta(tipologiaGrezza) {
+    const token = (tipologiaGrezza || "").split(",").map(t => t.trim()).filter(Boolean);
+    if (token.length === 0) return ["Altro"];
+    return [...new Set(token.map(t => MAPPA_TIPOLOGIA[t] || "Altro"))];
+  }
+
   function popolaFiltroTipologia() {
-    const select = document.getElementById("filtro-tipologia");
-    const tipologie = [...new Set(ASTE.map(a => a.tipologia).filter(Boolean))].sort();
-    tipologie.forEach(t => {
-      const opt = document.createElement("option");
-      opt.value = t;
-      opt.textContent = t;
-      select.appendChild(opt);
-    });
+    const menu = document.getElementById("menu-tipologia");
+    menu.innerHTML = MACROCATEGORIE_TIPOLOGIA.map(categoria => `
+      <label class="voce-menu-tipologia">
+        <input type="checkbox" value="${escapeHtml(categoria)}" onchange="aggiornaFiltroTipologia()">
+        ${escapeHtml(categoria)}
+      </label>
+    `).join("");
+  }
+
+  // Nessuna spunta = nessun filtro (mostra tutto), stesso principio già
+  // usato altrove sulla pagina. Con una o più spuntate, un'asta passa se
+  // appartiene ad ALMENO UNA delle categorie scelte — non deve
+  // appartenere a tutte insieme.
+  let categorieTipologiaAttive = new Set();
+
+  function alternaMenuTipologia(evento) {
+    if (evento) evento.stopPropagation(); // non far scattare subito la chiusura "clic fuori" qui sotto
+    const menu = document.getElementById("menu-tipologia");
+    const bottone = document.getElementById("bottone-filtro-tipologia");
+    const apri = menu.classList.contains("nascosto");
+    menu.classList.toggle("nascosto", !apri);
+    bottone.setAttribute("aria-expanded", apri ? "true" : "false");
+  }
+
+  document.addEventListener("click", evento => {
+    const contenitore = document.querySelector(".contenitore-filtro-tipologia");
+    const menu = document.getElementById("menu-tipologia");
+    if (menu && !menu.classList.contains("nascosto") && contenitore && !contenitore.contains(evento.target)) {
+      menu.classList.add("nascosto");
+      document.getElementById("bottone-filtro-tipologia").setAttribute("aria-expanded", "false");
+    }
+  });
+
+  function aggiornaFiltroTipologia() {
+    const spuntate = document.querySelectorAll('#menu-tipologia input[type="checkbox"]:checked');
+    categorieTipologiaAttive = new Set([...spuntate].map(c => c.value));
+
+    const bottone = document.getElementById("bottone-filtro-tipologia");
+    const n = categorieTipologiaAttive.size;
+    bottone.innerHTML = (n > 0 ? `Tipologia (${n})` : "Tipologia") + ' <span class="freccia-tipologia">▾</span>';
+    bottone.classList.toggle("attiva", n > 0);
+
+    applicaFiltri();
   }
 
   // Stato del filtro libero/occupato: null (tutti), 'libero' oppure 'occupato'.
@@ -976,12 +1100,12 @@
     }
 
     const ricerca = document.getElementById("ricerca").value.trim().toLowerCase();
-    const tipologia = document.getElementById("filtro-tipologia").value;
     const ordine = document.getElementById("ordinamento").value;
 
     let filtrate = ASTE.filter(a => {
       const passaRicerca = !ricerca || a.comune.toLowerCase().includes(ricerca);
-      const passaTipologia = !tipologia || a.tipologia === tipologia;
+      const passaTipologia = categorieTipologiaAttive.size === 0
+        || categorieDiAsta(a.tipologia).some(c => categorieTipologiaAttive.has(c));
       const passaOccupazione = !filtroOccupazioneAttivo || classificaOccupazione(a.statoOccupazione) === filtroOccupazioneAttivo;
       const passaConcluse = mostraConcluse ? astaConclusa(a.dataVendita) : !astaConclusa(a.dataVendita);
       return passaRicerca && passaTipologia && passaOccupazione && passaConcluse;
@@ -1258,7 +1382,6 @@
   }
 
   document.getElementById("ricerca").addEventListener("input", applicaFiltri);
-  document.getElementById("filtro-tipologia").addEventListener("change", applicaFiltri);
   document.getElementById("ordinamento").addEventListener("change", applicaFiltri);
 
   avvia();
