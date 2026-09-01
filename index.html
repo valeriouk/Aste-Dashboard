@@ -244,14 +244,15 @@
     border: 1px solid var(--border);
     border-radius: 10px;
     padding: 8px;
-    width: max-content;
-    min-width: 220px;
-    max-width: min(280px, calc(100vw - 48px));
+    width: 240px;
+    max-width: calc(100vw - 48px);
     box-shadow: 0 8px 24px rgba(42,35,24,.12);
   }
   .voce-menu-tipologia {
     display: flex;
     align-items: center;
+    justify-content: flex-start;
+    width: 100%;
     gap: 9px;
     padding: 9px 10px;
     border-radius: 6px;
@@ -260,7 +261,8 @@
     cursor: pointer;
   }
   .voce-menu-tipologia:hover { background: var(--surface-2); }
-  .voce-menu-tipologia input[type="checkbox"] { accent-color: var(--brass); cursor: pointer; }
+  .voce-menu-tipologia input[type="checkbox"] { accent-color: var(--brass); cursor: pointer; flex-shrink: 0; margin: 0; }
+  .voce-menu-tipologia span { flex: 1; }
 
   .conteggio-filtrati {
     font-family: var(--font-mono);
@@ -1003,12 +1005,9 @@
 
   function popolaFiltroTipologia() {
     const menu = document.getElementById("menu-tipologia");
-    menu.innerHTML = MACROCATEGORIE_TIPOLOGIA.map(categoria => `
-      <label class="voce-menu-tipologia">
-        <input type="checkbox" value="${escapeHtml(categoria)}" onchange="aggiornaFiltroTipologia()">
-        ${escapeHtml(categoria)}
-      </label>
-    `).join("");
+    menu.innerHTML = MACROCATEGORIE_TIPOLOGIA.map(categoria =>
+      `<label class="voce-menu-tipologia"><input type="checkbox" value="${escapeHtml(categoria)}" onchange="aggiornaFiltroTipologia()"><span>${escapeHtml(categoria)}</span></label>`
+    ).join("");
   }
 
   // Nessuna spunta = nessun filtro (mostra tutto), stesso principio già
