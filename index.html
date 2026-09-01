@@ -269,17 +269,41 @@
     cursor: pointer;
   }
   .voce-menu-tipologia:hover { background: var(--surface-2); }
-  /* Dimensione fissa esplicita: le checkbox native variano di misura (e
-     hanno margini di default diversi) da browser a browser — su Windows
-     e su Android non-Safari risultavano più larghe dei 20px della
-     colonna, sconfinando sul testo accanto. Un valore fisso, uguale
-     ovunque, chiude la questione invece di inseguire ogni browser. */
+  /* Checkbox disegnata interamente via CSS (appearance:none) invece che
+     affidata al rendering nativo del browser/sistema operativo: anche
+     dopo aver fissato width/height esplicite, il controllo nativo
+     restava comunque incoerente tra Windows/Chrome, Android non-Safari e
+     iOS Safari (sconfinava sul testo su alcuni, perfetto su altri). Con
+     appearance:none non resta più nulla di nativo che possa variare —
+     stesso quadratino ovunque, spunta disegnata a mano con un pseudo-
+     elemento invece dell'icona di sistema. */
   .voce-menu-tipologia input[type="checkbox"] {
-    accent-color: var(--brass);
-    cursor: pointer;
-    margin: 0;
+    appearance: none;
+    -webkit-appearance: none;
     width: 16px;
     height: 16px;
+    margin: 0;
+    border: 1.5px solid var(--border);
+    border-radius: 4px;
+    background: var(--surface);
+    cursor: pointer;
+    position: relative;
+    flex-shrink: 0;
+  }
+  .voce-menu-tipologia input[type="checkbox"]:checked {
+    background: var(--brass);
+    border-color: var(--brass);
+  }
+  .voce-menu-tipologia input[type="checkbox"]:checked::after {
+    content: "";
+    position: absolute;
+    left: 4px;
+    top: 1px;
+    width: 5px;
+    height: 9px;
+    border: solid var(--surface);
+    border-width: 0 2px 2px 0;
+    transform: rotate(45deg);
   }
 
   .conteggio-filtrati {
