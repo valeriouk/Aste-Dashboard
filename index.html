@@ -235,15 +235,16 @@
   .contenitore-filtro-tipologia { position: relative; flex: 0 0 auto; }
   .freccia-tipologia { transition: transform .2s ease; display: inline-block; }
   #bottone-filtro-tipologia[aria-expanded="true"] .freccia-tipologia { transform: rotate(180deg); }
-  /* position:fixed con coordinate calcolate in JS (vedi
-     posizionaMenuTipologia) invece di un ancoraggio CSS fisso: con più
-     controlli che vanno a capo su mobile il pulsante può finire ovunque
-     nella riga, quindi la posizione va misurata quando si apre, non
-     indovinata in anticipo. z-index molto più alto del solito: Leaflet
-     usa internamente valori fino a ~700 per i suoi livelli, qui serve
-     restare sopra anche a quello. */
+  /* position:absolute (non fixed): segue il pulsante quando la pagina
+     scorre, comportamento normale di un menu a comparsa — le coordinate
+     restano comunque calcolate in JS (vedi posizionaMenuTipologia) per
+     tenerlo dentro i bordi dello schermo sia in orizzontale sia in
+     verticale, ma espresse relative al pulsante, non alla finestra.
+     z-index molto più alto del solito: Leaflet usa internamente valori
+     fino a ~700 per i suoi livelli, qui serve restare sopra anche a
+     quello. */
   .menu-tipologia {
-    position: fixed;
+    position: absolute;
     z-index: 1000;
     background: var(--surface);
     border: 1px solid var(--border);
@@ -268,7 +269,18 @@
     cursor: pointer;
   }
   .voce-menu-tipologia:hover { background: var(--surface-2); }
-  .voce-menu-tipologia input[type="checkbox"] { accent-color: var(--brass); cursor: pointer; margin: 0; }
+  /* Dimensione fissa esplicita: le checkbox native variano di misura (e
+     hanno margini di default diversi) da browser a browser — su Windows
+     e su Android non-Safari risultavano più larghe dei 20px della
+     colonna, sconfinando sul testo accanto. Un valore fisso, uguale
+     ovunque, chiude la questione invece di inseguire ogni browser. */
+  .voce-menu-tipologia input[type="checkbox"] {
+    accent-color: var(--brass);
+    cursor: pointer;
+    margin: 0;
+    width: 16px;
+    height: 16px;
+  }
 
   .conteggio-filtrati {
     font-family: var(--font-mono);
@@ -1027,32 +1039,55 @@
     const menu = document.getElementById("menu-tipologia");
     const bottone = document.getElementById("bottone-filtro-tipologia");
     const apri = menu.classList.contains("nascosto");
-    if (apri) posizionaMenuTipologia();
-    menu.classList.toggle("nascosto", !apri);
+
+    if (apri) {
+      // Va mostrato PRIMA di calcolare la posizione: un pannello nascosto
+      // (display:none) non è misurabile, l'altezza vera serve per il
+      // contenimento verticale qui sotto. Il browser dipinge solo a fine
+      // funzione, quindi non si vede mai la posizione intermedia sbagliata.
+      menu.classList.remove("nascosto");
+      posizionaMenuTipologia();
+    } else {
+      menu.classList.add("nascosto");
+    }
     bottone.setAttribute("aria-expanded", apri ? "true" : "false");
   }
 
-  // Calcola la posizione in coordinate di finestra partendo da sotto il
-  // pulsante — se il pannello sforerebbe il bordo destro dello schermo si
-  // sposta abbastanza a sinistra da restare tutto visibile, qualunque sia
-  // la posizione del pulsante nella riga di controlli (che su mobile può
-  // finire ovunque, a seconda di cosa va a capo prima di lui).
+  // Calcola dove aprire il pannello: parte da sotto il pulsante, ma se
+  // sforerebbe il bordo destro o inferiore dello schermo si sposta
+  // abbastanza da restare tutto visibile — qualunque sia la posizione
+  // del pulsante nella riga di controlli (che su mobile può finire
+  // ovunque, a seconda di cosa va a capo prima di lui) e qualunque sia
+  // lo scroll della pagina in quel momento. Il calcolo dei limiti usa
+  // coordinate di finestra (getBoundingClientRect), ma il risultato
+  // viene convertito in coordinate relative al pulsante perché il
+  // pannello resta position:absolute — così segue il pulsante durante lo
+  // scroll invece di restare fisso rispetto allo schermo.
   function posizionaMenuTipologia() {
     const menu = document.getElementById("menu-tipologia");
+    const contenitore = document.querySelector(".contenitore-filtro-tipologia");
     const bottone = document.getElementById("bottone-filtro-tipologia");
-    const rettangolo = bottone.getBoundingClientRect();
+    const rettBottone = bottone.getBoundingClientRect();
+    const rettContenitore = contenitore.getBoundingClientRect();
     const margine = 12;
     const larghezza = Math.min(240, window.innerWidth - margine * 2);
-
-    let sinistra = rettangolo.left;
-    if (sinistra + larghezza > window.innerWidth - margine) {
-      sinistra = window.innerWidth - larghezza - margine;
-    }
-    if (sinistra < margine) sinistra = margine;
-
     menu.style.width = larghezza + "px";
-    menu.style.left = sinistra + "px";
-    menu.style.top = (rettangolo.bottom + 6) + "px";
+
+    let sinistraFinestra = rettBottone.left;
+    if (sinistraFinestra + larghezza > window.innerWidth - margine) {
+      sinistraFinestra = window.innerWidth - larghezza - margine;
+    }
+    if (sinistraFinestra < margine) sinistraFinestra = margine;
+    menu.style.left = (sinistraFinestra - rettContenitore.left) + "px";
+
+    // Altezza vera, leggibile solo ora che il pannello è visibile.
+    const altezzaMenu = menu.offsetHeight;
+    let altoFinestra = rettBottone.bottom + 6;
+    if (altoFinestra + altezzaMenu > window.innerHeight - margine) {
+      altoFinestra = window.innerHeight - altezzaMenu - margine;
+    }
+    if (altoFinestra < margine) altoFinestra = margine;
+    menu.style.top = (altoFinestra - rettContenitore.top) + "px";
   }
 
   document.addEventListener("click", evento => {
