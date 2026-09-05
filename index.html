@@ -123,6 +123,15 @@
     max-width: 46ch;
   }
 
+  .versione-pagina {
+    font-family: var(--font-mono);
+    font-size: .78rem;
+    color: var(--ink-faint);
+    margin: 10px 0 0;
+  }
+  .versione-pagina a { color: inherit; text-decoration: none; }
+  .versione-pagina a:hover { color: var(--brass); }
+
   .aggiornato {
     text-align: right;
     font-family: var(--font-mono);
@@ -663,6 +672,7 @@
       <p class="eyebrow">Scansione Aste Giudiziarie</p>
       <h1>Registro Opportunità</h1>
       <p class="sottotitolo">Aste residenziali filtrate per prezzo, distanza e margine potenziale stimato.</p>
+      <p class="versione-pagina">v1.0 · <a href="config.html">Configurazione</a></p>
     </div>
     <div class="aggiornato">
       <strong id="testo-aggiornato">—</strong>
@@ -756,7 +766,7 @@
     <p class="nota-mappa" id="nota-comuni-mancanti"></p>
   </div>
 
-  <footer>Aggiornato leggendo direttamente il Google Sheet · dati raccolti dal Portale delle Vendite Pubbliche <a href="config.html" style="color:inherit;text-decoration:none;">·</a></footer>
+  <footer>Aggiornato leggendo direttamente il Google Sheet · dati raccolti dal Portale delle Vendite Pubbliche</footer>
 
 </div>
 
