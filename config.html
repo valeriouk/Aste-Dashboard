@@ -170,6 +170,7 @@
     padding: 24px;
     margin-bottom: 20px;
     box-shadow: 0 1px 2px rgba(42,35,24,.05);
+    transition: opacity .2s ease;
   }
   .blocco-config h2 {
     font-family: var(--font-display);
@@ -180,7 +181,7 @@
     border-bottom: 1px solid var(--border);
   }
 
-  .campo-form { margin-bottom: 16px; }
+  .campo-form { margin-bottom: 16px; transition: opacity .2s ease; }
   .campo-form:last-child { margin-bottom: 0; }
   .campo-form label {
     display: block;
@@ -201,7 +202,8 @@
     font-size: .9rem;
     color: var(--ink);
   }
-  .campo-form input:disabled { color: var(--ink-faint); cursor: not-allowed; }
+  .campo-form input:disabled,
+  .campo-form select:disabled { color: var(--ink-faint); cursor: not-allowed; }
   .campo-form input[type="number"] { font-family: var(--font-mono); }
   .nota-campo { font-size: .78rem; color: var(--ink-faint); margin: 6px 0 0; line-height: 1.4; }
   .bottone-secondario {
@@ -230,6 +232,19 @@
     cursor: pointer;
   }
   .etichetta-checkbox input { width: auto !important; }
+  .etichetta-checkbox input:disabled { cursor: not-allowed; }
+
+  /* Lista tipologia: stesse etichette-checkbox già usate per "nessun
+     limite", solo impilate — niente CSS nuovo da inventare, la prima
+     perde il margin-top per non avere un vuoto sopra la label del blocco. */
+  #lista-tipologia .etichetta-checkbox:first-child { margin-top: 0; }
+
+  /* Applicata ai blocchi sezione (o ai singoli campo-form) quando la
+     modalità catch-up è attiva: attenua visivamente E la disattivazione
+     vera dei singoli controlli (vedi aggiornaStatoCatchup) è quella che
+     impedisce davvero l'interazione — pointer-events qui è la rete di
+     sicurezza per elementi non nativamente disattivabili, come la mappa. */
+  .sezione-disattivata { opacity: .45; pointer-events: none; }
 
   .riga-ricerca-indirizzo { display: flex; gap: 8px; margin-bottom: 14px; }
   .riga-ricerca-indirizzo input {
@@ -334,7 +349,7 @@
       <p class="eyebrow">Pannello di controllo</p>
       <h1>Configurazione Scanner</h1>
       <p class="sottotitolo">Modifica i parametri di ricerca letti da app.py a ogni run, senza toccare il codice.</p>
-      <p class="versione-pagina">v1.0</p>
+      <p class="versione-pagina">v1.1</p>
     </div>
     <a href="index.html" class="link-torna">← Torna al registro</a>
   </div>
@@ -358,7 +373,7 @@
         <p class="nota-campo">Riporta ogni campo qui sotto ai valori con cui hai avviato il progetto — utile dopo aver sperimentato. Non salva da sola: serve comunque "Salva le modifiche".</p>
       </div>
 
-      <section class="blocco-config">
+      <section class="blocco-config" id="blocco-area-ricerca">
         <h2>Area di ricerca</h2>
         <div class="riga-ricerca-indirizzo">
           <input type="text" id="campo-indirizzo" placeholder="Cerca un indirizzo o una città..." onkeydown="if(event.key==='Enter') cercaIndirizzo()">
@@ -373,11 +388,15 @@
         <p class="nota-coordinate">Punto selezionato: <span id="etichetta-coordinate">—</span> · clicca sulla mappa o trascina il segnaposto per spostarlo</p>
       </section>
 
-      <section class="blocco-config">
+      <section class="blocco-config" id="blocco-prezzo">
         <h2>Filtri di prezzo</h2>
         <div class="campo-form">
           <label for="campo-prezzo-min">Prezzo base minimo (€)</label>
           <input type="number" id="campo-prezzo-min" min="0" max="5000000" step="1000">
+          <label class="etichetta-checkbox">
+            <input type="checkbox" id="campo-prezzo-minimo-illimitato" onchange="alternaPrezzoMinimoIllimitato()">
+            Nessun limite minimo
+          </label>
         </div>
         <div class="campo-form">
           <label for="campo-prezzo-max">Prezzo base massimo (€)</label>
@@ -389,16 +408,18 @@
         </div>
       </section>
 
+      <section class="blocco-config" id="blocco-tipologia">
+        <h2>Tipologia immobili</h2>
+        <div class="campo-form">
+          <label>Categorie da includere nella ricerca</label>
+          <div id="lista-tipologia"></div>
+          <p class="nota-campo">Nessuna spunta = cerca tutte le tipologie. Spuntane una o più per restringere — es. solo "Garage e posti auto", o "Garage e posti auto" insieme a "Negozi e uffici".</p>
+        </div>
+      </section>
+
       <section class="blocco-config">
         <h2>Altri filtri</h2>
-        <div class="campo-form">
-          <label for="campo-residenziale">Categoria immobili</label>
-          <select id="campo-residenziale">
-            <option value="false">Tutte le categorie</option>
-            <option value="true">Solo residenziale</option>
-          </select>
-        </div>
-        <div class="campo-form">
+        <div class="campo-form" id="blocco-solo-future">
           <label for="campo-solo-future">Aste da includere</label>
           <select id="campo-solo-future">
             <option value="true">Solo aste future</option>
@@ -424,15 +445,23 @@
             <option value="true">Solo conteggio (nessuna notifica né scrittura)</option>
           </select>
         </div>
+        <div class="campo-form">
+          <label for="campo-catchup">Modalità catch-up</label>
+          <select id="campo-catchup" onchange="aggiornaStatoCatchup()">
+            <option value="false">Disattiva</option>
+            <option value="true">Attiva</option>
+          </select>
+          <p class="nota-campo">Ignora area di ricerca, prezzo e tipologia (campi disattivati qui sotto quando attiva): prova invece a completare le aste già presenti nel registro ma senza un'analisi riuscita in precedenza, anche se ormai concluse. Un solo messaggio di riepilogo Telegram a fine esecuzione, non una notifica per asta. Con "Solo conteggio" sopra attivo insieme, mostra solo quante aste sono da recuperare senza avviare il catch-up vero.</p>
+        </div>
       </section>
 
       <section class="blocco-config">
         <h2>Modelli Gemini</h2>
         <div class="campo-form">
           <label for="campo-modelli">Cascata modelli, in ordine di priorità (separati da virgola)</label>
-          <input type="text" id="campo-modelli" placeholder="gemini-3.6-flash, gemini-3.5-flash, gemini-3.5-flash-lite">
+          <input type="text" id="campo-modelli" placeholder="gemini-3.7-flash, gemini-3.6-flash, gemini-3.5-flash, gemini-3.5-flash-lite">
           <button type="button" class="bottone-secondario" onclick="ripristinaCascataConsigliata()">↺ Ripristina cascata consigliata</button>
-          <p class="nota-campo">La cascata consigliata esclude di proposito i modelli appena rilasciati (quota di lancio ristretta, più soggetti a errori 503 finché non maturano) — vedi il commento accanto a CASCATA_MODELLI_GEMINI in app.py per il dettaglio.</p>
+          <p class="nota-campo">Con la fatturazione a consumo attiva sul progetto Gemini, la cascata consigliata include anche gemini-3.7-flash in testa — vedi il commento accanto a CASCATA_MODELLI_GEMINI in app.py per il dettaglio.</p>
         </div>
       </section>
 
@@ -600,15 +629,46 @@
   }
 
   // ==========================================================
+  // TIPOLOGIA — stesse macro-categorie di index.html (MAPPA_TIPOLOGIA),
+  // qui però senza "Altro": per il filtro di RICERCA non ha senso,
+  // non esiste un insieme di codici PVP per "tutto il resto" da passare
+  // allo scanner — vedi il commento su CODICI_PER_MACROCATEGORIA in
+  // app.py. Deve restare in sincrono con le chiavi di quel dizionario.
+  // ==========================================================
+  const MACROCATEGORIE_TIPOLOGIA = [
+    "Abitazioni", "Garage e posti auto", "Negozi e uffici", "Terreni",
+    "Depositi e magazzini", "Fabbricati e complessi"
+  ];
+
+  function popolaListaTipologia() {
+    const contenitore = document.getElementById("lista-tipologia");
+    contenitore.innerHTML = MACROCATEGORIE_TIPOLOGIA.map(categoria => `
+      <label class="etichetta-checkbox">
+        <input type="checkbox" value="${escapeHtml(categoria)}" class="checkbox-tipologia">
+        ${escapeHtml(categoria)}
+      </label>
+    `).join("");
+  }
+
+  // ==========================================================
   // CARICAMENTO CONFIGURAZIONE ATTUALE (lettura libera, nessuna password)
   // ==========================================================
   async function caricaConfigurazioneAttuale() {
     const statoEl = document.getElementById("stato-caricamento-config");
+    popolaListaTipologia();
     try {
       const risposta = await fetch(`${WEBAPP_URL}?action=get_config`);
       const config = await risposta.json();
 
-      document.getElementById("campo-prezzo-min").value = config.prezzo_base_min ?? 15000;
+      // "0" è la sentinella di nessun minimo (già supportata da app.py
+      // ancora prima di questa modifica — vedi il commento accanto a
+      // PREZZO_BASE_MIN nel file), diversa da "illimitato" usata per il
+      // massimo qui sotto: due campi, due convenzioni diverse già in uso.
+      const minGrezzo = config.prezzo_base_min;
+      const minIllimitato = minGrezzo !== undefined && Number(minGrezzo) === 0;
+      document.getElementById("campo-prezzo-minimo-illimitato").checked = minIllimitato;
+      document.getElementById("campo-prezzo-min").disabled = minIllimitato;
+      document.getElementById("campo-prezzo-min").value = minIllimitato ? "" : (minGrezzo ?? 15000);
 
       const maxGrezzo = config.prezzo_base_max;
       const maxIllimitato = maxGrezzo === undefined || maxGrezzo === "" ||
@@ -617,13 +677,24 @@
       document.getElementById("campo-prezzo-max").disabled = maxIllimitato;
       document.getElementById("campo-prezzo-max").value = maxIllimitato ? "" : maxGrezzo;
 
-      document.getElementById("campo-residenziale").value = String(config.solo_residenziale ?? false).toLowerCase();
+      let tipologieSelezionate = [];
+      if (config.tipologie_incluse) {
+        try {
+          const parsed = JSON.parse(config.tipologie_incluse);
+          if (Array.isArray(parsed)) tipologieSelezionate = parsed;
+        } catch (e) { /* nessuna selezione valida trovata: tratta come "tutte" */ }
+      }
+      document.querySelectorAll("#lista-tipologia .checkbox-tipologia").forEach(cb => {
+        cb.checked = tipologieSelezionate.includes(cb.value);
+      });
+
       document.getElementById("campo-solo-future").value = String(config.solo_aste_future ?? true).toLowerCase();
       document.getElementById("campo-astegiudiziarie").value = String(config.usa_astegiudiziarie_perizia ?? true).toLowerCase();
       document.getElementById("campo-pausa").value = config.pausa_tra_aste_secondi ?? 3;
       document.getElementById("campo-solo-conteggio").value = String(config.solo_conteggio ?? false).toLowerCase();
+      document.getElementById("campo-catchup").value = String(config.catchup_attivo ?? false).toLowerCase();
 
-      let modelli = ["gemini-3.6-flash", "gemini-3.5-flash", "gemini-3.5-flash-lite"];
+      let modelli = ["gemini-3.7-flash", "gemini-3.6-flash", "gemini-3.5-flash", "gemini-3.5-flash-lite"];
       if (config.cascata_modelli_gemini) {
         try {
           const parsed = JSON.parse(config.cascata_modelli_gemini);
@@ -649,6 +720,13 @@
       inizializzaMappa();
       impostaPuntoMappa(lat, lon, raggio);
       mappa.invalidateSize();
+
+      // Applicato per ultimo, DOPO aver popolato tutti i campi sopra
+      // (compresi quelli prezzo): se il catch-up risulta attivo, questo è
+      // ciò che li disattiva e li attenua visivamente — deve girare a
+      // valle, mai prima, altrimenti disattiverebbe campi vuoti anziché
+      // i valori appena letti dalla configurazione remota.
+      aggiornaStatoCatchup();
     } catch (e) {
       statoEl.textContent = "Impossibile leggere la configurazione attuale. Controlla WEBAPP_URL in cima a questo file.";
     }
@@ -661,11 +739,57 @@
     if (illimitato) campo.value = "";
   }
 
+  function alternaPrezzoMinimoIllimitato() {
+    const illimitato = document.getElementById("campo-prezzo-minimo-illimitato").checked;
+    const campo = document.getElementById("campo-prezzo-min");
+    campo.disabled = illimitato;
+    if (illimitato) campo.value = "";
+  }
+
+  // ==========================================================
+  // MODALITÀ CATCH-UP — disattiva E attenua visivamente i campi che non
+  // hanno senso quando è attiva (vedi nota accanto al campo in HTML).
+  // pointer-events (via .sezione-disattivata, in CSS) copre anche la
+  // mappa, che non è un controllo nativamente disattivabile con
+  // .disabled — tutto il resto lo è, e viene disattivato esplicitamente
+  // qui sotto per bloccare pure la tastiera, non solo il puntatore.
+  // ==========================================================
+  const CAMPI_DISATTIVATI_DA_CATCHUP = [
+    "campo-indirizzo", "campo-raggio",
+    "campo-prezzo-min", "campo-prezzo-minimo-illimitato",
+    "campo-prezzo-max", "campo-prezzo-illimitato",
+    "campo-solo-future"
+  ];
+
+  function aggiornaStatoCatchup() {
+    const attivo = document.getElementById("campo-catchup").value === "true";
+
+    CAMPI_DISATTIVATI_DA_CATCHUP.forEach(id => {
+      const el = document.getElementById(id);
+      if (el) el.disabled = attivo;
+    });
+    document.querySelectorAll("#lista-tipologia .checkbox-tipologia").forEach(cb => cb.disabled = attivo);
+
+    ["blocco-area-ricerca", "blocco-prezzo", "blocco-tipologia", "blocco-solo-future"].forEach(id => {
+      const el = document.getElementById(id);
+      if (el) el.classList.toggle("sezione-disattivata", attivo);
+    });
+
+    // Tornando a "Disattiva": i due campi prezzo dipendono anche dal
+    // proprio checkbox "nessun limite", non basta togliere .disabled qui
+    // sopra — bisogna rileggerne lo stato per non riabilitare per errore
+    // un campo che deve restare vuoto e bloccato.
+    if (!attivo) {
+      alternaPrezzoIllimitato();
+      alternaPrezzoMinimoIllimitato();
+    }
+  }
+
   // Deve restare IDENTICA alla CASCATA_MODELLI_GEMINI di default in
   // app.py — se un giorno cambi quella lì con una motivazione nuova,
   // aggiorna anche questa riga, altrimenti "ripristina" riporterebbe a
   // una cascata vecchia invece di quella davvero consigliata.
-  const CASCATA_CONSIGLIATA = ["gemini-3.6-flash", "gemini-3.5-flash", "gemini-3.5-flash-lite"];
+  const CASCATA_CONSIGLIATA = ["gemini-3.7-flash", "gemini-3.6-flash", "gemini-3.5-flash", "gemini-3.5-flash-lite"];
 
   function ripristinaCascataConsigliata() {
     // Scrive solo nel campo di testo — non salva nulla da sola, esattamente
@@ -686,14 +810,16 @@
     lat: 37.5078836,
     lon: 15.0830032,
     raggio: 22,
-    residenziale: "false",
     soloFuture: "true",
     astegiudiziarie: "true",
     pausa: 3,
-    soloConteggio: "false"
+    soloConteggio: "false",
+    catchup: "false"
   };
 
   function ripristinaValoriPredefiniti() {
+    document.getElementById("campo-prezzo-minimo-illimitato").checked = false;
+    document.getElementById("campo-prezzo-min").disabled = false;
     document.getElementById("campo-prezzo-min").value = VALORI_PREDEFINITI.prezzoMin;
 
     document.getElementById("campo-prezzo-illimitato").checked = false;
@@ -704,11 +830,14 @@
     document.getElementById("etichetta-raggio").textContent = VALORI_PREDEFINITI.raggio;
     impostaPuntoMappa(VALORI_PREDEFINITI.lat, VALORI_PREDEFINITI.lon, VALORI_PREDEFINITI.raggio);
 
-    document.getElementById("campo-residenziale").value = VALORI_PREDEFINITI.residenziale;
+    document.querySelectorAll("#lista-tipologia .checkbox-tipologia").forEach(cb => cb.checked = false);
+
     document.getElementById("campo-solo-future").value = VALORI_PREDEFINITI.soloFuture;
     document.getElementById("campo-astegiudiziarie").value = VALORI_PREDEFINITI.astegiudiziarie;
     document.getElementById("campo-pausa").value = VALORI_PREDEFINITI.pausa;
     document.getElementById("campo-solo-conteggio").value = VALORI_PREDEFINITI.soloConteggio;
+    document.getElementById("campo-catchup").value = VALORI_PREDEFINITI.catchup;
+    aggiornaStatoCatchup();
 
     ripristinaCascataConsigliata();
 
@@ -729,10 +858,14 @@
   function validaForm() {
     const errori = [];
 
-    const prezzoMinTesto = document.getElementById("campo-prezzo-min").value;
-    const prezzoMin = Number(prezzoMinTesto);
-    if (prezzoMinTesto === "" || isNaN(prezzoMin) || prezzoMin < 0 || prezzoMin > 5000000) {
-      errori.push("Il prezzo minimo deve essere un numero tra 0 e 5.000.000 €.");
+    const illimitatoMin = document.getElementById("campo-prezzo-minimo-illimitato").checked;
+    let prezzoMin = 0;
+    if (!illimitatoMin) {
+      const prezzoMinTesto = document.getElementById("campo-prezzo-min").value;
+      prezzoMin = Number(prezzoMinTesto);
+      if (prezzoMinTesto === "" || isNaN(prezzoMin) || prezzoMin < 0 || prezzoMin > 5000000) {
+        errori.push('Il prezzo minimo deve essere un numero tra 0 e 5.000.000 €, oppure spunta "Nessun limite".');
+      }
     }
 
     const illimitato = document.getElementById("campo-prezzo-illimitato").checked;
@@ -776,6 +909,8 @@
       return;
     }
 
+    const tipologieSelezionate = [...document.querySelectorAll("#lista-tipologia .checkbox-tipologia:checked")].map(cb => cb.value);
+
     const punto = segnaposto.getLatLng();
     const nuovaConfig = {
       prezzo_base_min: prezzoMin,
@@ -783,11 +918,12 @@
       lat_riferimento: punto.lat,
       lon_riferimento: punto.lng,
       raggio_km: raggio,
-      solo_residenziale: document.getElementById("campo-residenziale").value,
+      tipologie_incluse: JSON.stringify(tipologieSelezionate),
       solo_aste_future: document.getElementById("campo-solo-future").value,
       usa_astegiudiziarie_perizia: document.getElementById("campo-astegiudiziarie").value,
       pausa_tra_aste_secondi: pausa,
       solo_conteggio: document.getElementById("campo-solo-conteggio").value,
+      catchup_attivo: document.getElementById("campo-catchup").value,
       cascata_modelli_gemini: JSON.stringify(modelli)
     };
 
