@@ -664,11 +664,16 @@
       // ancora prima di questa modifica — vedi il commento accanto a
       // PREZZO_BASE_MIN nel file), diversa da "illimitato" usata per il
       // massimo qui sotto: due campi, due convenzioni diverse già in uso.
+      // minGrezzo === undefined (nessuna configurazione ancora salvata)
+      // conta come illimitato allo stesso modo di uno 0 esplicito: il
+      // default è "nessun limite minimo", non più un numero specifico —
+      // vedi VALORI_PREDEFINITI più sotto per lo stesso principio
+      // applicato al pulsante di ripristino.
       const minGrezzo = config.prezzo_base_min;
-      const minIllimitato = minGrezzo !== undefined && Number(minGrezzo) === 0;
+      const minIllimitato = minGrezzo === undefined || Number(minGrezzo) === 0;
       document.getElementById("campo-prezzo-minimo-illimitato").checked = minIllimitato;
       document.getElementById("campo-prezzo-min").disabled = minIllimitato;
-      document.getElementById("campo-prezzo-min").value = minIllimitato ? "" : (minGrezzo ?? 15000);
+      document.getElementById("campo-prezzo-min").value = minIllimitato ? "" : minGrezzo;
 
       const maxGrezzo = config.prezzo_base_max;
       const maxIllimitato = maxGrezzo === undefined || maxGrezzo === "" ||
@@ -805,7 +810,6 @@
   // quando un modello nuovo matura); questa è solo un punto di riferimento
   // personale a cui tornare — non è detto restino sempre uguali.
   const VALORI_PREDEFINITI = {
-    prezzoMin: 15000,
     prezzoMax: 85000,
     lat: 37.5078836,
     lon: 15.0830032,
@@ -818,9 +822,11 @@
   };
 
   function ripristinaValoriPredefiniti() {
-    document.getElementById("campo-prezzo-minimo-illimitato").checked = false;
-    document.getElementById("campo-prezzo-min").disabled = false;
-    document.getElementById("campo-prezzo-min").value = VALORI_PREDEFINITI.prezzoMin;
+    // Default: nessun limite minimo (checkbox spuntata, campo vuoto e
+    // disattivato) — non più un valore numerico specifico.
+    document.getElementById("campo-prezzo-minimo-illimitato").checked = true;
+    document.getElementById("campo-prezzo-min").disabled = true;
+    document.getElementById("campo-prezzo-min").value = "";
 
     document.getElementById("campo-prezzo-illimitato").checked = false;
     document.getElementById("campo-prezzo-max").disabled = false;
