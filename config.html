@@ -239,13 +239,6 @@
      perde il margin-top per non avere un vuoto sopra la label del blocco. */
   #lista-tipologia .etichetta-checkbox:first-child { margin-top: 0; }
 
-  /* Applicata ai blocchi sezione (o ai singoli campo-form) quando la
-     modalità catch-up è attiva: attenua visivamente E la disattivazione
-     vera dei singoli controlli (vedi aggiornaStatoCatchup) è quella che
-     impedisce davvero l'interazione — pointer-events qui è la rete di
-     sicurezza per elementi non nativamente disattivabili, come la mappa. */
-  .sezione-disattivata { opacity: .45; pointer-events: none; }
-
   .riga-ricerca-indirizzo { display: flex; gap: 8px; margin-bottom: 14px; }
   .riga-ricerca-indirizzo input {
     flex: 1;
@@ -330,6 +323,19 @@
     transition: background .2s ease;
   }
   .bottone-avvia:hover { background: #336063; }
+  .bottone-elimina {
+    background: var(--oxblood-soft);
+    color: var(--oxblood);
+    border: 1px solid var(--oxblood);
+    border-radius: 8px;
+    padding: 10px 18px;
+    font-family: var(--font-body);
+    font-size: .88rem;
+    font-weight: 600;
+    cursor: pointer;
+    transition: background .2s ease, color .2s ease;
+  }
+  .bottone-elimina:hover { background: var(--oxblood); color: var(--surface); }
   #messaggio-salvataggio { font-size: .85rem; }
 
   .nascosto { display: none !important; }
@@ -373,7 +379,7 @@
         <p class="nota-campo">Riporta ogni campo qui sotto ai valori con cui hai avviato il progetto — utile dopo aver sperimentato. Non salva da sola: serve comunque "Salva le modifiche".</p>
       </div>
 
-      <section class="blocco-config" id="blocco-area-ricerca">
+      <section class="blocco-config">
         <h2>Area di ricerca</h2>
         <div class="riga-ricerca-indirizzo">
           <input type="text" id="campo-indirizzo" placeholder="Cerca un indirizzo o una città..." onkeydown="if(event.key==='Enter') cercaIndirizzo()">
@@ -388,7 +394,7 @@
         <p class="nota-coordinate">Punto selezionato: <span id="etichetta-coordinate">—</span> · clicca sulla mappa o trascina il segnaposto per spostarlo</p>
       </section>
 
-      <section class="blocco-config" id="blocco-prezzo">
+      <section class="blocco-config">
         <h2>Filtri di prezzo</h2>
         <div class="campo-form">
           <label for="campo-prezzo-min">Prezzo base minimo (€)</label>
@@ -408,7 +414,7 @@
         </div>
       </section>
 
-      <section class="blocco-config" id="blocco-tipologia">
+      <section class="blocco-config">
         <h2>Tipologia immobili</h2>
         <div class="campo-form">
           <label>Categorie da includere nella ricerca</label>
@@ -419,7 +425,7 @@
 
       <section class="blocco-config">
         <h2>Altri filtri</h2>
-        <div class="campo-form" id="blocco-solo-future">
+        <div class="campo-form">
           <label for="campo-solo-future">Aste da includere</label>
           <select id="campo-solo-future">
             <option value="true">Solo aste future</option>
@@ -440,18 +446,14 @@
         </div>
         <div class="campo-form">
           <label for="campo-solo-conteggio">Modalità di esecuzione</label>
-          <select id="campo-solo-conteggio">
+          <select id="campo-solo-conteggio" onchange="aggiornaStatoConteggiaNonAnalizzate()">
             <option value="false">Normale</option>
             <option value="true">Solo conteggio (nessuna notifica né scrittura)</option>
           </select>
-        </div>
-        <div class="campo-form">
-          <label for="campo-catchup">Modalità catch-up</label>
-          <select id="campo-catchup" onchange="aggiornaStatoCatchup()">
-            <option value="false">Disattiva</option>
-            <option value="true">Attiva</option>
-          </select>
-          <p class="nota-campo">Ignora area di ricerca, prezzo e tipologia (campi disattivati qui sotto quando attiva): prova invece a completare le aste già presenti nel registro ma senza un'analisi riuscita in precedenza, anche se ormai concluse. Un solo messaggio di riepilogo Telegram a fine esecuzione, non una notifica per asta. Con "Solo conteggio" sopra attivo insieme, mostra solo quante aste sono da recuperare senza avviare il catch-up vero.</p>
+          <label class="etichetta-checkbox">
+            <input type="checkbox" id="campo-conteggia-non-analizzate" disabled>
+            Conteggia anche le aste non analizzate (tutto il foglio, non solo i filtri qui sopra)
+          </label>
         </div>
       </section>
 
@@ -462,6 +464,15 @@
           <input type="text" id="campo-modelli" placeholder="gemini-3.7-flash, gemini-3.6-flash, gemini-3.5-flash, gemini-3.5-flash-lite">
           <button type="button" class="bottone-secondario" onclick="ripristinaCascataConsigliata()">↺ Ripristina cascata consigliata</button>
           <p class="nota-campo">Con la fatturazione a consumo attiva sul progetto Gemini, la cascata consigliata include anche gemini-3.7-flash in testa — vedi il commento accanto a CASCATA_MODELLI_GEMINI in app.py per il dettaglio.</p>
+        </div>
+      </section>
+
+      <section class="blocco-config">
+        <h2>Manutenzione</h2>
+        <div class="campo-form">
+          <label>Aste scadute</label>
+          <p class="nota-campo">Elimina dal foglio tutte le righe con data vendita già passata. Operazione irreversibile — lo storico di quelle aste va perso, quindi chiede conferma prima di procedere (stesso doppio tocco di "Avvia scanner ora").</p>
+          <button type="button" class="bottone-elimina" id="bottone-elimina-scadute" onclick="eliminaAsteScadute()">🗑 Elimina aste scadute</button>
         </div>
       </section>
 
@@ -481,7 +492,7 @@
   // CONFIGURAZIONE — incolla qui l'URL della tua WebApp (lo stesso usato
   // come GOOGLE_SHEET_WEBAPP_URL nei secret di GitHub Actions).
   // ==========================================================
-  const WEBAPP_URL = "https://script.google.com/macros/s/AKfycbxAZJ6d0IoeIKZs67SaLvySQ73ITJmkU4s6i3KmMzJcJMu7ALkFTQNuJZ1nlWhO7hsk/exec";
+  const WEBAPP_URL = "https://script.google.com/macros/s/AKfycbwP8xNVBjDAhCVlXTf5G2_KtBzMqD1Nbsr_IB1iqC16vK3ZNsMN_w89q7IqMoBGQ-EX/exec";
 
   // Deve essere IDENTICO a SALE_PASSWORD in Code.gs, altrimenti gli hash
   // calcolati qui e quelli attesi lato server non combaceranno mai. Non è
@@ -697,7 +708,8 @@
       document.getElementById("campo-astegiudiziarie").value = String(config.usa_astegiudiziarie_perizia ?? true).toLowerCase();
       document.getElementById("campo-pausa").value = config.pausa_tra_aste_secondi ?? 3;
       document.getElementById("campo-solo-conteggio").value = String(config.solo_conteggio ?? false).toLowerCase();
-      document.getElementById("campo-catchup").value = String(config.catchup_attivo ?? false).toLowerCase();
+      document.getElementById("campo-conteggia-non-analizzate").checked =
+        String(config.conteggia_non_analizzate ?? false).toLowerCase() === "true";
 
       let modelli = ["gemini-3.7-flash", "gemini-3.6-flash", "gemini-3.5-flash", "gemini-3.5-flash-lite"];
       if (config.cascata_modelli_gemini) {
@@ -726,12 +738,11 @@
       impostaPuntoMappa(lat, lon, raggio);
       mappa.invalidateSize();
 
-      // Applicato per ultimo, DOPO aver popolato tutti i campi sopra
-      // (compresi quelli prezzo): se il catch-up risulta attivo, questo è
-      // ciò che li disattiva e li attenua visivamente — deve girare a
-      // valle, mai prima, altrimenti disattiverebbe campi vuoti anziché
-      // i valori appena letti dalla configurazione remota.
-      aggiornaStatoCatchup();
+      // Applicato per ultimo, DOPO aver impostato "Modalità di esecuzione"
+      // appena sopra: abilita o disabilita la checkbox "Conteggia aste non
+      // analizzate" in base al valore di solo_conteggio appena caricato,
+      // non a quello di default del select.
+      aggiornaStatoConteggiaNonAnalizzate();
     } catch (e) {
       statoEl.textContent = "Impossibile leggere la configurazione attuale. Controlla WEBAPP_URL in cima a questo file.";
     }
@@ -752,42 +763,15 @@
   }
 
   // ==========================================================
-  // MODALITÀ CATCH-UP — disattiva E attenua visivamente i campi che non
-  // hanno senso quando è attiva (vedi nota accanto al campo in HTML).
-  // pointer-events (via .sezione-disattivata, in CSS) copre anche la
-  // mappa, che non è un controllo nativamente disattivabile con
-  // .disabled — tutto il resto lo è, e viene disattivato esplicitamente
-  // qui sotto per bloccare pure la tastiera, non solo il puntatore.
+  // "Conteggia aste non analizzate" ha senso solo insieme a "Solo
+  // conteggio" (Modalità di esecuzione): disabilitata finché quella non
+  // è attiva. Non forza mai lo stato spuntato — se la spunti, poi torni
+  // su "Normale" e infine di nuovo su "Solo conteggio", la tua scelta
+  // resta quella, semplicemente inerte nel mezzo.
   // ==========================================================
-  const CAMPI_DISATTIVATI_DA_CATCHUP = [
-    "campo-indirizzo", "campo-raggio",
-    "campo-prezzo-min", "campo-prezzo-minimo-illimitato",
-    "campo-prezzo-max", "campo-prezzo-illimitato",
-    "campo-solo-future"
-  ];
-
-  function aggiornaStatoCatchup() {
-    const attivo = document.getElementById("campo-catchup").value === "true";
-
-    CAMPI_DISATTIVATI_DA_CATCHUP.forEach(id => {
-      const el = document.getElementById(id);
-      if (el) el.disabled = attivo;
-    });
-    document.querySelectorAll("#lista-tipologia .checkbox-tipologia").forEach(cb => cb.disabled = attivo);
-
-    ["blocco-area-ricerca", "blocco-prezzo", "blocco-tipologia", "blocco-solo-future"].forEach(id => {
-      const el = document.getElementById(id);
-      if (el) el.classList.toggle("sezione-disattivata", attivo);
-    });
-
-    // Tornando a "Disattiva": i due campi prezzo dipendono anche dal
-    // proprio checkbox "nessun limite", non basta togliere .disabled qui
-    // sopra — bisogna rileggerne lo stato per non riabilitare per errore
-    // un campo che deve restare vuoto e bloccato.
-    if (!attivo) {
-      alternaPrezzoIllimitato();
-      alternaPrezzoMinimoIllimitato();
-    }
+  function aggiornaStatoConteggiaNonAnalizzate() {
+    const soloConteggioAttivo = document.getElementById("campo-solo-conteggio").value === "true";
+    document.getElementById("campo-conteggia-non-analizzate").disabled = !soloConteggioAttivo;
   }
 
   // Deve restare IDENTICA alla CASCATA_MODELLI_GEMINI di default in
@@ -817,8 +801,7 @@
     soloFuture: "true",
     astegiudiziarie: "true",
     pausa: 3,
-    soloConteggio: "false",
-    catchup: "false"
+    soloConteggio: "false"
   };
 
   function ripristinaValoriPredefiniti() {
@@ -842,8 +825,8 @@
     document.getElementById("campo-astegiudiziarie").value = VALORI_PREDEFINITI.astegiudiziarie;
     document.getElementById("campo-pausa").value = VALORI_PREDEFINITI.pausa;
     document.getElementById("campo-solo-conteggio").value = VALORI_PREDEFINITI.soloConteggio;
-    document.getElementById("campo-catchup").value = VALORI_PREDEFINITI.catchup;
-    aggiornaStatoCatchup();
+    document.getElementById("campo-conteggia-non-analizzate").checked = false;
+    aggiornaStatoConteggiaNonAnalizzate();
 
     ripristinaCascataConsigliata();
 
@@ -929,7 +912,7 @@
       usa_astegiudiziarie_perizia: document.getElementById("campo-astegiudiziarie").value,
       pausa_tra_aste_secondi: pausa,
       solo_conteggio: document.getElementById("campo-solo-conteggio").value,
-      catchup_attivo: document.getElementById("campo-catchup").value,
+      conteggia_non_analizzate: document.getElementById("campo-conteggia-non-analizzate").checked ? "true" : "false",
       cascata_modelli_gemini: JSON.stringify(modelli)
     };
 
@@ -989,6 +972,49 @@
       } else {
         messaggioEl.innerHTML = escapeHtml(risultato.message || "Errore sconosciuto durante l'avvio.")
           + (risultato.url ? ` <a href="${escapeHtml(risultato.url)}" target="_blank" rel="noopener">Apri esecuzione</a>` : "");
+        messaggioEl.className = "messaggio-errore";
+      }
+    } catch (e) {
+      messaggioEl.textContent = "Richiesta non riuscita. Controlla la connessione e riprova.";
+      messaggioEl.className = "messaggio-errore";
+    }
+  }
+
+  // Stessa conferma a due tocchi di avviaScanner() sopra, stesso motivo:
+  // un'azione distruttiva (qui, irreversibile — niente "esecuzione in
+  // corso" da poter guardare o annullare) non merita un dialogo nativo
+  // del browser, ma nemmeno di partire al primo clic.
+  let confermaEliminazioneInCorso = false;
+  let timeoutConfermaEliminazione = null;
+
+  async function eliminaAsteScadute() {
+    const bottone = document.getElementById("bottone-elimina-scadute");
+    const messaggioEl = document.getElementById("messaggio-salvataggio");
+
+    if (!confermaEliminazioneInCorso) {
+      confermaEliminazioneInCorso = true;
+      bottone.textContent = "Confermi l'eliminazione?";
+      timeoutConfermaEliminazione = setTimeout(() => {
+        confermaEliminazioneInCorso = false;
+        bottone.textContent = "🗑 Elimina aste scadute";
+      }, 4000);
+      return;
+    }
+
+    clearTimeout(timeoutConfermaEliminazione);
+    confermaEliminazioneInCorso = false;
+    bottone.textContent = "🗑 Elimina aste scadute";
+
+    messaggioEl.textContent = "Eliminazione in corso…";
+    messaggioEl.className = "messaggio-attesa";
+
+    try {
+      const risultato = await chiamaWebApp("elimina_aste_scadute", {hash_password: hashPasswordCorrente});
+      if (risultato.result === "success") {
+        messaggioEl.textContent = `Eliminate ${risultato.righe_eliminate} aste scadute dal foglio.`;
+        messaggioEl.className = "messaggio-ok";
+      } else {
+        messaggioEl.textContent = risultato.message || "Errore sconosciuto durante l'eliminazione.";
         messaggioEl.className = "messaggio-errore";
       }
     } catch (e) {
