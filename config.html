@@ -234,10 +234,21 @@
   .etichetta-checkbox input { width: auto !important; }
   .etichetta-checkbox input:disabled { cursor: not-allowed; }
 
+  /* Applicata al blocco di area/raggio locale quando "tutta Italia" è
+     spuntato: attenua visivamente. pointer-events copre anche la mappa,
+     che non è un controllo nativamente disattivabile con .disabled — gli
+     altri campi dentro lo stesso blocco lo sono comunque esplicitamente
+     via JS, per bloccare pure la tastiera, non solo il puntatore. */
+  .sezione-disattivata { opacity: .45; pointer-events: none; }
+
   /* Lista tipologia: stesse etichette-checkbox già usate per "nessun
      limite", solo impilate — niente CSS nuovo da inventare, la prima
      perde il margin-top per non avere un vuoto sopra la label del blocco. */
   #lista-tipologia .etichetta-checkbox:first-child { margin-top: 0; }
+  /* "Cerca su tutta Italia": prima cosa nella sezione, niente margine
+     sopra; un po' di spazio sotto per staccarla dal blocco locale che
+     attenua quando è spuntata. */
+  .etichetta-tutta-italia { margin-top: 0; margin-bottom: 16px; }
 
   .riga-ricerca-indirizzo { display: flex; gap: 8px; margin-bottom: 14px; }
   .riga-ricerca-indirizzo input {
@@ -381,17 +392,23 @@
 
       <section class="blocco-config">
         <h2>Area di ricerca</h2>
-        <div class="riga-ricerca-indirizzo">
-          <input type="text" id="campo-indirizzo" placeholder="Cerca un indirizzo o una città..." onkeydown="if(event.key==='Enter') cercaIndirizzo()">
-          <button type="button" onclick="cercaIndirizzo()">Cerca</button>
+        <label class="etichetta-checkbox etichetta-tutta-italia">
+          <input type="checkbox" id="campo-tutta-italia" onchange="aggiornaStatoTuttaItalia()">
+          Cerca su tutta Italia (ignora punto e raggio qui sotto)
+        </label>
+        <div id="blocco-area-locale">
+          <div class="riga-ricerca-indirizzo">
+            <input type="text" id="campo-indirizzo" placeholder="Cerca un indirizzo o una città..." onkeydown="if(event.key==='Enter') cercaIndirizzo()">
+            <button type="button" onclick="cercaIndirizzo()">Cerca</button>
+          </div>
+          <p id="messaggio-ricerca" class="messaggio-ricerca nascosto"></p>
+          <div id="mappa" class="contenitore-mappa"></div>
+          <div class="controllo-raggio">
+            <label>Raggio di ricerca: <span id="etichetta-raggio">22</span> km</label>
+            <input type="range" id="campo-raggio" min="1" max="300" value="22">
+          </div>
+          <p class="nota-coordinate">Punto selezionato: <span id="etichetta-coordinate">—</span> · clicca sulla mappa o trascina il segnaposto per spostarlo</p>
         </div>
-        <p id="messaggio-ricerca" class="messaggio-ricerca nascosto"></p>
-        <div id="mappa" class="contenitore-mappa"></div>
-        <div class="controllo-raggio">
-          <label>Raggio di ricerca: <span id="etichetta-raggio">22</span> km</label>
-          <input type="range" id="campo-raggio" min="1" max="300" value="22">
-        </div>
-        <p class="nota-coordinate">Punto selezionato: <span id="etichetta-coordinate">—</span> · clicca sulla mappa o trascina il segnaposto per spostarlo</p>
       </section>
 
       <section class="blocco-config">
@@ -492,7 +509,7 @@
   // CONFIGURAZIONE — incolla qui l'URL della tua WebApp (lo stesso usato
   // come GOOGLE_SHEET_WEBAPP_URL nei secret di GitHub Actions).
   // ==========================================================
-  const WEBAPP_URL = "https://script.google.com/macros/s/AKfycbxAZJ6d0IoeIKZs67SaLvySQ73ITJmkU4s6i3KmMzJcJMu7ALkFTQNuJZ1nlWhO7hsk/exec";
+  const WEBAPP_URL = "https://script.google.com/macros/s/AKfycbwP8xNVBjDAhCVlXTf5G2_KtBzMqD1Nbsr_IB1iqC16vK3ZNsMN_w89q7IqMoBGQ-EX/exec";
 
   // Deve essere IDENTICO a SALE_PASSWORD in Code.gs, altrimenti gli hash
   // calcolati qui e quelli attesi lato server non combaceranno mai. Non è
@@ -693,6 +710,9 @@
       document.getElementById("campo-prezzo-max").disabled = maxIllimitato;
       document.getElementById("campo-prezzo-max").value = maxIllimitato ? "" : maxGrezzo;
 
+      document.getElementById("campo-tutta-italia").checked =
+        String(config.cerca_tutta_italia ?? false).toLowerCase() === "true";
+
       let tipologieSelezionate = [];
       if (config.tipologie_incluse) {
         try {
@@ -738,11 +758,11 @@
       impostaPuntoMappa(lat, lon, raggio);
       mappa.invalidateSize();
 
-      // Applicato per ultimo, DOPO aver impostato "Modalità di esecuzione"
-      // appena sopra: abilita o disabilita la checkbox "Conteggia aste non
-      // analizzate" in base al valore di solo_conteggio appena caricato,
-      // non a quello di default del select.
+      // Applicati per ultimi, DOPO aver impostato i rispettivi campi
+      // sopra: attivano lo stato disattivato/attenuato corretto in base
+      // ai valori appena caricati, non a quelli di default dei controlli.
       aggiornaStatoConteggiaNonAnalizzate();
+      aggiornaStatoTuttaItalia();
     } catch (e) {
       statoEl.textContent = "Impossibile leggere la configurazione attuale. Controlla WEBAPP_URL in cima a questo file.";
     }
@@ -760,6 +780,20 @@
     const campo = document.getElementById("campo-prezzo-min");
     campo.disabled = illimitato;
     if (illimitato) campo.value = "";
+  }
+
+  // ==========================================================
+  // "Cerca su tutta Italia": disattiva E attenua visivamente il blocco
+  // indirizzo/mappa/raggio, che in quel caso non ha alcun effetto (vedi
+  // nota accanto al campo in HTML e il commento su CERCA_TUTTA_ITALIA in
+  // app.py). Non tocca i valori sottostanti — se rispunti la modalità
+  // locale, ritrovi punto e raggio esattamente come li avevi lasciati.
+  // ==========================================================
+  function aggiornaStatoTuttaItalia() {
+    const attivo = document.getElementById("campo-tutta-italia").checked;
+    document.getElementById("blocco-area-locale").classList.toggle("sezione-disattivata", attivo);
+    document.getElementById("campo-indirizzo").disabled = attivo;
+    document.getElementById("campo-raggio").disabled = attivo;
   }
 
   // ==========================================================
@@ -818,6 +852,9 @@
     document.getElementById("campo-raggio").value = VALORI_PREDEFINITI.raggio;
     document.getElementById("etichetta-raggio").textContent = VALORI_PREDEFINITI.raggio;
     impostaPuntoMappa(VALORI_PREDEFINITI.lat, VALORI_PREDEFINITI.lon, VALORI_PREDEFINITI.raggio);
+
+    document.getElementById("campo-tutta-italia").checked = false;
+    aggiornaStatoTuttaItalia();
 
     document.querySelectorAll("#lista-tipologia .checkbox-tipologia").forEach(cb => cb.checked = false);
 
@@ -907,6 +944,7 @@
       lat_riferimento: punto.lat,
       lon_riferimento: punto.lng,
       raggio_km: raggio,
+      cerca_tutta_italia: document.getElementById("campo-tutta-italia").checked ? "true" : "false",
       tipologie_incluse: JSON.stringify(tipologieSelezionate),
       solo_aste_future: document.getElementById("campo-solo-future").value,
       usa_astegiudiziarie_perizia: document.getElementById("campo-astegiudiziarie").value,
