@@ -9,7 +9,7 @@
 <link rel="manifest" href="manifest.json">
 <link rel="icon" href="favicon-32.png" sizes="32x32">
 <link rel="apple-touch-icon" href="apple-touch-icon.png">
-<meta name="theme-color" content="#2a2318">
+<meta name="theme-color" content="#1e2320">
 <meta name="apple-mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-status-bar-style" content="default">
 <meta name="apple-mobile-web-app-title" content="Registro Opp.">
@@ -25,19 +25,21 @@
      TOKEN DI DESIGN — identici a index.html, per coerenza visiva
   ============================================================ */
   :root {
-    --bg: #f7f4ec;
+    /* Stessa palette "Registro" di index.html — vedi i commenti lì per
+       il ragionamento completo. */
+    --bg: #eef1ec;
     --surface: #ffffff;
-    --surface-2: #f0ead9;
-    --border: #e3dac9;
-    --brass: #9c6b2e;
-    --brass-soft: rgba(156, 107, 46, .10);
-    --slate: #3e7377;
-    --slate-soft: rgba(62, 115, 119, .10);
-    --oxblood: #8b3d2e;
-    --oxblood-soft: rgba(139, 61, 46, .10);
-    --ink: #2a2318;
-    --ink-muted: #6b6255;
-    --ink-faint: #9c9284;
+    --surface-2: #e3e7e0;
+    --border: #d5dad1;
+    --primary: #234c6a;
+    --primary-soft: rgba(35, 76, 106, .10);
+    --secondary: #a15c3e;
+    --secondary-soft: rgba(161, 92, 62, .10);
+    --danger: #8b3d2e;
+    --danger-soft: rgba(139, 61, 46, .10);
+    --ink: #1e2320;
+    --ink-muted: #5b615a;
+    --ink-faint: #8c9289;
     --font-display: 'Fraunces', Georgia, serif;
     --font-body: 'Inter', system-ui, -apple-system, sans-serif;
     --font-mono: 'JetBrains Mono', ui-monospace, monospace;
@@ -50,8 +52,8 @@
     background-color: var(--bg);
     background-image:
       url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='g'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.85' numOctaves='3' stitchTiles='stitch'/%3E%3CfeColorMatrix type='matrix' values='0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0.05 0'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23g)'/%3E%3C/svg%3E"),
-      radial-gradient(ellipse 900px 500px at 15% -10%, rgba(156,107,46,.04), transparent),
-      radial-gradient(ellipse 700px 500px at 100% 10%, rgba(62,115,119,.03), transparent);
+      radial-gradient(ellipse 900px 500px at 15% -10%, rgba(35,76,106,.05), transparent),
+      radial-gradient(ellipse 700px 500px at 100% 10%, rgba(161,92,62,.04), transparent);
     background-repeat: repeat, no-repeat, no-repeat;
     background-size: 180px 180px, auto, auto;
     color: var(--ink);
@@ -60,9 +62,9 @@
     -webkit-font-smoothing: antialiased;
   }
 
-  a { color: var(--slate); }
-  ::selection { background: var(--brass-soft); color: var(--ink); }
-  :focus-visible { outline: 2px solid var(--brass); outline-offset: 3px; border-radius: 4px; }
+  a { color: var(--secondary); }
+  ::selection { background: var(--primary-soft); color: var(--ink); }
+  :focus-visible { outline: 2px solid var(--primary); outline-offset: 3px; border-radius: 4px; }
 
   .contenitore { max-width: 760px; margin: 0 auto; padding: 48px 24px 96px; }
 
@@ -81,7 +83,7 @@
     font-size: .72rem;
     letter-spacing: .12em;
     text-transform: uppercase;
-    color: var(--brass);
+    color: var(--primary);
     margin: 0 0 10px;
   }
   h1 {
@@ -101,7 +103,7 @@
     text-decoration: none;
     white-space: nowrap;
   }
-  .link-torna:hover { color: var(--brass); }
+  .link-torna:hover { color: var(--primary); }
 
   /* ============================================================
      SCHERMATA PASSWORD
@@ -114,7 +116,7 @@
     border-radius: 12px;
     padding: 32px;
     text-align: center;
-    box-shadow: 0 1px 2px rgba(42,35,24,.05);
+    box-shadow: 0 1px 2px rgba(30,35,32,.05);
   }
   .riquadro-gate h2 {
     font-family: var(--font-display);
@@ -148,9 +150,9 @@
     cursor: pointer;
     transition: background .2s ease;
   }
-  .bottone-primario:hover { background: var(--brass); }
-  .messaggio-errore { color: var(--oxblood); font-size: .85rem; margin-top: 12px; }
-  .messaggio-ok { color: var(--slate); font-size: .85rem; margin-top: 12px; font-weight: 600; }
+  .bottone-primario:hover { background: var(--primary); }
+  .messaggio-errore { color: var(--danger); font-size: .85rem; margin-top: 12px; }
+  .messaggio-ok { color: var(--secondary); font-size: .85rem; margin-top: 12px; font-weight: 600; }
   .messaggio-attesa { color: var(--ink-faint); font-size: .85rem; margin-top: 12px; }
 
   /* ============================================================
@@ -169,7 +171,7 @@
     border-radius: 12px;
     padding: 24px;
     margin-bottom: 20px;
-    box-shadow: 0 1px 2px rgba(42,35,24,.05);
+    box-shadow: 0 1px 2px rgba(30,35,32,.05);
     transition: opacity .2s ease;
   }
   .blocco-config h2 {
@@ -207,8 +209,8 @@
   .campo-form input[type="number"] { font-family: var(--font-mono); }
   .nota-campo { font-size: .78rem; color: var(--ink-faint); margin: 6px 0 0; line-height: 1.4; }
   .bottone-secondario {
-    background: var(--slate-soft);
-    color: var(--slate);
+    background: var(--secondary-soft);
+    color: var(--secondary);
     border: none;
     border-radius: 8px;
     padding: 8px 14px;
@@ -218,7 +220,7 @@
     cursor: pointer;
     margin-top: 8px;
   }
-  .bottone-secondario:hover { background: rgba(123,167,171,.24); }
+  .bottone-secondario:hover { background: rgba(161,92,62,.20); }
   .barra-ripristino { margin-bottom: 20px; }
 
   .etichetta-checkbox {
@@ -262,8 +264,8 @@
     font-size: .9rem;
   }
   .riga-ricerca-indirizzo button {
-    background: var(--slate-soft);
-    color: var(--slate);
+    background: var(--secondary-soft);
+    color: var(--secondary);
     border: none;
     border-radius: 8px;
     padding: 10px 16px;
@@ -273,8 +275,8 @@
     cursor: pointer;
     white-space: nowrap;
   }
-  .riga-ricerca-indirizzo button:hover { background: rgba(123,167,171,.24); }
-  .messaggio-ricerca { font-size: .78rem; color: var(--oxblood); margin: -6px 0 14px; }
+  .riga-ricerca-indirizzo button:hover { background: rgba(161,92,62,.20); }
+  .messaggio-ricerca { font-size: .78rem; color: var(--danger); margin: -6px 0 14px; }
 
   .contenitore-mappa {
     height: 360px;
@@ -293,7 +295,7 @@
   }
   .controllo-raggio input[type="range"] {
     width: 100%;
-    accent-color: var(--brass);
+    accent-color: var(--primary);
   }
   .nota-coordinate {
     font-family: var(--font-mono);
@@ -310,7 +312,7 @@
     margin-top: 8px;
   }
   .bottone-salva {
-    background: var(--brass);
+    background: var(--primary);
     color: var(--surface);
     border: none;
     border-radius: 8px;
@@ -321,9 +323,9 @@
     cursor: pointer;
     transition: background .2s ease;
   }
-  .bottone-salva:hover { background: #86591f; }
+  .bottone-salva:hover { background: #1a3a52; }
   .bottone-avvia {
-    background: var(--slate);
+    background: var(--secondary);
     color: var(--surface);
     border: none;
     border-radius: 8px;
@@ -334,11 +336,11 @@
     cursor: pointer;
     transition: background .2s ease;
   }
-  .bottone-avvia:hover { background: #336063; }
+  .bottone-avvia:hover { background: #7a4530; }
   .bottone-elimina {
-    background: var(--oxblood-soft);
-    color: var(--oxblood);
-    border: 1px solid var(--oxblood);
+    background: var(--danger-soft);
+    color: var(--danger);
+    border: 1px solid var(--danger);
     border-radius: 8px;
     padding: 10px 18px;
     font-family: var(--font-body);
@@ -347,7 +349,7 @@
     cursor: pointer;
     transition: background .2s ease, color .2s ease;
   }
-  .bottone-elimina:hover { background: var(--oxblood); color: var(--surface); }
+  .bottone-elimina:hover { background: var(--danger); color: var(--surface); }
   #messaggio-salvataggio { font-size: .85rem; }
 
   .nascosto { display: none !important; }
@@ -367,7 +369,7 @@
       <p class="eyebrow">Pannello di controllo</p>
       <h1>Configurazione Scanner</h1>
       <p class="sottotitolo">Modifica i parametri di ricerca letti da app.py a ogni run, senza toccare il codice.</p>
-      <p class="versione-pagina">v1.5</p>
+      <p class="versione-pagina">v2.0</p>
     </div>
     <a href="index.html" class="link-torna">← Torna al registro</a>
   </div>
@@ -595,7 +597,7 @@
 
     segnaposto = L.marker([37.5078836, 15.0830032], {draggable: true}).addTo(mappa);
     cerchio = L.circle([37.5078836, 15.0830032], {
-      radius: 22000, color: "#9c6b2e", fillColor: "#9c6b2e", fillOpacity: 0.08, weight: 1.5
+      radius: 22000, color: "#234c6a", fillColor: "#234c6a", fillOpacity: 0.08, weight: 1.5
     }).addTo(mappa);
 
     mappa.on("click", e => spostaPunto(e.latlng.lat, e.latlng.lng));
