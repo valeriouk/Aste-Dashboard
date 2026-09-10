@@ -9,7 +9,7 @@
 <link rel="manifest" href="manifest.json">
 <link rel="icon" href="favicon-32.png" sizes="32x32">
 <link rel="apple-touch-icon" href="apple-touch-icon.png">
-<meta name="theme-color" content="#2a2318">
+<meta name="theme-color" content="#1e2320">
 <meta name="apple-mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-status-bar-style" content="default">
 <meta name="apple-mobile-web-app-title" content="Registro Opp.">
@@ -26,19 +26,25 @@
      TOKEN DI DESIGN — un solo posto da cambiare per il tema
   ============================================================ */
   :root {
-    --bg: #f7f4ec;
+    /* Palette "Registro": ledger civico moderno — carta fredda invece di
+       crema calda, blu inchiostro (timbro ufficiale) come accento
+       primario invece di bronzo/terracotta. Il verde non compare qui: è
+       riservato SOLO al punteggio "alto" più sotto, per restare un
+       segnale raro e immediatamente riconoscibile — non un colore
+       decorativo sparso nell'interfaccia. */
+    --bg: #eef1ec;
     --surface: #ffffff;
-    --surface-2: #f0ead9;
-    --border: #e3dac9;
-    --brass: #9c6b2e;
-    --brass-soft: rgba(156, 107, 46, .10);
-    --slate: #3e7377;
-    --slate-soft: rgba(62, 115, 119, .10);
-    --oxblood: #8b3d2e;
-    --oxblood-soft: rgba(139, 61, 46, .10);
-    --ink: #2a2318;
-    --ink-muted: #6b6255;
-    --ink-faint: #9c9284;
+    --surface-2: #e3e7e0;
+    --border: #d5dad1;
+    --primary: #234c6a;
+    --primary-soft: rgba(35, 76, 106, .10);
+    --secondary: #a15c3e;
+    --secondary-soft: rgba(161, 92, 62, .10);
+    --danger: #8b3d2e;
+    --danger-soft: rgba(139, 61, 46, .10);
+    --ink: #1e2320;
+    --ink-muted: #5b615a;
+    --ink-faint: #8c9289;
     --font-display: 'Fraunces', Georgia, serif;
     --font-body: 'Inter', system-ui, -apple-system, sans-serif;
     --font-mono: 'JetBrains Mono', ui-monospace, monospace;
@@ -58,8 +64,8 @@
        senza una superficie bianca sopra (le card restano opache). */
     background-image:
       url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='g'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.85' numOctaves='3' stitchTiles='stitch'/%3E%3CfeColorMatrix type='matrix' values='0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0.05 0'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23g)'/%3E%3C/svg%3E"),
-      radial-gradient(ellipse 900px 500px at 15% -10%, rgba(156,107,46,.04), transparent),
-      radial-gradient(ellipse 700px 500px at 100% 10%, rgba(62,115,119,.03), transparent);
+      radial-gradient(ellipse 900px 500px at 15% -10%, rgba(35,76,106,.05), transparent),
+      radial-gradient(ellipse 700px 500px at 100% 10%, rgba(161,92,62,.04), transparent);
     background-repeat: repeat, no-repeat, no-repeat;
     background-size: 180px 180px, auto, auto;
     color: var(--ink);
@@ -68,12 +74,12 @@
     -webkit-font-smoothing: antialiased;
   }
 
-  a { color: var(--slate); }
+  a { color: var(--secondary); }
 
-  ::selection { background: var(--brass-soft); color: var(--ink); }
+  ::selection { background: var(--primary-soft); color: var(--ink); }
 
   :focus-visible {
-    outline: 2px solid var(--brass);
+    outline: 2px solid var(--primary);
     outline-offset: 3px;
     border-radius: 4px;
   }
@@ -103,7 +109,7 @@
     font-size: .72rem;
     letter-spacing: .12em;
     text-transform: uppercase;
-    color: var(--brass);
+    color: var(--primary);
     margin: 0 0 10px;
   }
 
@@ -130,7 +136,7 @@
     margin: 10px 0 0;
   }
   .versione-pagina a { color: inherit; text-decoration: none; }
-  .versione-pagina a:hover { color: var(--brass); }
+  .versione-pagina a:hover { color: var(--primary); }
 
   .aggiornato {
     text-align: right;
@@ -169,7 +175,7 @@
     font-family: var(--font-mono);
     font-size: 1.6rem;
     font-weight: 500;
-    color: var(--brass);
+    color: var(--primary);
     margin: 0;
   }
   .stat-nota {
@@ -244,7 +250,7 @@
   }
   .pillola:last-child { border-right: none; }
   .pillola:hover { color: var(--ink); }
-  .pillola.attiva { background: var(--brass-soft); color: var(--brass); font-weight: 600; }
+  .pillola.attiva { background: var(--primary-soft); color: var(--primary); font-weight: 600; }
 
   /* Menu a comparsa per il filtro tipologia: un pulsante dall'ingombro
      fisso (non cresce con quante categorie esistono) che apre un
@@ -270,7 +276,7 @@
     border-radius: 10px;
     padding: 8px;
     width: 240px;
-    box-shadow: 0 8px 24px rgba(42,35,24,.12);
+    box-shadow: 0 8px 24px rgba(30,35,32,.12);
   }
   /* Griglia a due colonne di larghezza fissa invece di flexbox: la
      casella occupa sempre esattamente 20px, il testo tutto il resto —
@@ -315,8 +321,8 @@
     flex-shrink: 0;
   }
   .voce-menu-tipologia input[type="checkbox"]:checked {
-    background: var(--brass);
-    border-color: var(--brass);
+    background: var(--primary);
+    border-color: var(--primary);
   }
   .voce-menu-tipologia input[type="checkbox"]:checked::after {
     content: "";
@@ -349,7 +355,7 @@
     cursor: pointer;
     white-space: nowrap;
   }
-  .bottone-toggle-tutti:hover { color: var(--brass); border-color: var(--brass); }
+  .bottone-toggle-tutti:hover { color: var(--primary); border-color: var(--primary); }
 
   /* ============================================================
      GRIGLIA CARTELLE / LOTTI
@@ -378,11 +384,19 @@
     margin: 14px 0 4px;
   }
   .legenda-voce { display: inline-flex; align-items: center; gap: 6px; }
+  /* Semaforo del punteggio — scala di SALIENZA deliberata, non solo di
+     tinta: alto è il verde più saturo e pieno (deve essere la prima cosa
+     che l'occhio nota scorrendo la mappa), medio un ambra ben visibile ma
+     un gradino sotto, basso un rosso volutamente SMORZATO — desaturato
+     abbastanza da non competere per l'attenzione, quasi un terracotta
+     spento piuttosto che un rosso d'allarme. Nessuno di questi tre riusa
+     --primary/--secondary/--danger: il punteggio è un canale visivo a
+     parte, mai confuso con gli accenti generali dell'interfaccia. */
   .pallino-legenda { width: 10px; height: 10px; border-radius: 50%; display: inline-block; flex-shrink: 0; }
-  .pallino-legenda.alto  { background: #dcae72; border: 1.5px solid #b67f3d; }
-  .pallino-legenda.medio { background: #8fbdc0; border: 1.5px solid #5a8b8e; }
-  .pallino-legenda.basso { background: #c17d6d; border: 1.5px solid #8f4433; }
-  .pallino-legenda.non-valutato { background: #f0ead9; border: 1.5px dashed var(--ink-faint); }
+  .pallino-legenda.alto  { background: #3DB56B; border: 1.5px solid #237A46; }
+  .pallino-legenda.medio { background: #E6A23C; border: 1.5px solid #B87A1E; }
+  .pallino-legenda.basso { background: #B98177; border: 1.5px solid #96635A; }
+  .pallino-legenda.non-valutato { background: var(--surface-2); border: 1.5px dashed var(--ink-faint); }
   .nota-mappa {
     font-family: var(--font-mono);
     font-size: .78rem;
@@ -406,9 +420,9 @@
     opacity: 0;
     animation: comparsa .5s ease forwards;
     transition: border-color .2s ease, transform .2s ease, box-shadow .2s ease;
-    box-shadow: 0 1px 2px rgba(42,35,24,.05);
+    box-shadow: 0 1px 2px rgba(30,35,32,.05);
   }
-  .lotto:hover { border-color: var(--ink-faint); transform: translateY(-2px); box-shadow: 0 6px 16px rgba(42,35,24,.08); }
+  .lotto:hover { border-color: var(--ink-faint); transform: translateY(-2px); box-shadow: 0 6px 16px rgba(30,35,32,.08); }
 
   /* La classe "conclusa" viene comunque assegnata (vedi cartellaLotto in
      JS) ma qui non applichiamo più un'attenuazione: da quando la vista è
@@ -443,12 +457,12 @@
     font-weight: 600;
     font-size: 1.05rem;
     transform: rotate(-4deg);
-    box-shadow: inset 0 2px 4px rgba(42,35,24,.25), 0 2px 5px rgba(42,35,24,.15);
+    box-shadow: inset 0 2px 4px rgba(30,35,32,.25), 0 2px 5px rgba(30,35,32,.15);
     border: 1.5px solid;
   }
-  .sigillo.alto   { background: radial-gradient(circle at 34% 28%, #dcae72, #b67f3d); border-color: #e6bd85; color: #241905; }
-  .sigillo.medio  { background: radial-gradient(circle at 34% 28%, #8fbdc0, #5a8b8e); border-color: #a3cdd0; color: #0c2021; }
-  .sigillo.basso  { background: radial-gradient(circle at 34% 28%, #c17d6d, #8f4433); border-color: #d19484; color: #2a0f09; }
+  .sigillo.alto   { background: radial-gradient(circle at 34% 28%, #4FC97D, #237A46); border-color: #6FD99B; color: #0A2E17; }
+  .sigillo.medio  { background: radial-gradient(circle at 34% 28%, #F0B860, #B87A1E); border-color: #F5C980; color: #2E1D02; }
+  .sigillo.basso  { background: radial-gradient(circle at 34% 28%, #C99589, #96635A); border-color: #D6ADA3; color: #2A1410; }
   .sigillo.non-valutato {
     background: transparent;
     border: 1.5px dashed var(--ink-faint);
@@ -496,8 +510,8 @@
 
   .badge-zona {
     display: inline-block;
-    background: var(--oxblood-soft);
-    color: var(--oxblood);
+    background: var(--danger-soft);
+    color: var(--danger);
     font-size: .72rem;
     font-weight: 600;
     padding: 3px 9px;
@@ -514,7 +528,7 @@
     font-family: var(--font-mono);
     font-size: 1.5rem;
     font-weight: 600;
-    color: var(--brass);
+    color: var(--primary);
     margin: 0;
   }
 
@@ -547,7 +561,7 @@
   .bottone-dettagli {
     background: none;
     border: none;
-    color: var(--slate);
+    color: var(--secondary);
     font-family: var(--font-body);
     font-size: .85rem;
     font-weight: 500;
@@ -589,7 +603,7 @@
   }
   .dettaglio-riga span:first-child { color: var(--ink-faint); }
   .dettaglio-riga span:last-child { text-align: right; color: var(--ink); }
-  .dettaglio-riga.avviso span:last-child { color: var(--oxblood); font-weight: 500; }
+  .dettaglio-riga.avviso span:last-child { color: var(--danger); font-weight: 500; }
 
   .lotto-note {
     background: var(--surface-2);
@@ -605,8 +619,8 @@
     display: inline-flex;
     align-items: center;
     gap: 6px;
-    background: var(--brass-soft);
-    color: var(--brass);
+    background: var(--primary-soft);
+    color: var(--primary);
     text-decoration: none;
     font-size: .82rem;
     font-weight: 500;
@@ -614,9 +628,9 @@
     border-radius: 7px;
     margin: 4px 8px 0 0;
   }
-  .lotto-link:hover { background: rgba(200,149,80,.24); }
-  .lotto-link.secondario { background: var(--slate-soft); color: var(--slate); }
-  .lotto-link.secondario:hover { background: rgba(123,167,171,.24); }
+  .lotto-link:hover { background: rgba(35,76,106,.20); }
+  .lotto-link.secondario { background: var(--secondary-soft); color: var(--secondary); }
+  .lotto-link.secondario:hover { background: rgba(161,92,62,.20); }
 
   /* ============================================================
      STATI: caricamento / vuoto / errore
@@ -672,7 +686,7 @@
       <p class="eyebrow">Scansione Aste Giudiziarie</p>
       <h1>Registro Opportunità</h1>
       <p class="sottotitolo">Aste residenziali filtrate per prezzo, distanza e margine potenziale stimato.</p>
-      <p class="versione-pagina">v1.0 · <a href="config.html">Configurazione</a></p>
+      <p class="versione-pagina">v2.0 · <a href="config.html">Configurazione</a></p>
     </div>
     <div class="aggiornato">
       <strong id="testo-aggiornato">—</strong>
@@ -862,11 +876,16 @@
   // Stessi colori già usati per il sigillo nelle card, riportati qui come
   // valori hex diretti (i marcatori Leaflet non possono leggere le
   // variabili CSS custom).
+  // Stesso semaforo del CSS (.pallino-legenda / .sigillo) — verde saturo
+  // per alto (deve saltare all'occhio scorrendo la mappa), ambra per
+  // medio, rosso deliberatamente smorzato per basso (non deve competere
+  // per l'attenzione). Duplicato qui invece di letto dal CSS perché i
+  // marcatori Leaflet non possono leggere le variabili CSS custom.
   const COLORI_LIVELLO = {
-    alto:  {bordo: "#b67f3d", riempimento: "#dcae72"},
-    medio: {bordo: "#5a8b8e", riempimento: "#8fbdc0"},
-    basso: {bordo: "#8f4433", riempimento: "#c17d6d"},
-    "non-valutato": {bordo: "#9c9284", riempimento: "#f0ead9"}
+    alto:  {bordo: "#237A46", riempimento: "#3DB56B"},
+    medio: {bordo: "#B87A1E", riempimento: "#E6A23C"},
+    basso: {bordo: "#96635A", riempimento: "#B98177"},
+    "non-valutato": {bordo: "#8c9289", riempimento: "#e3e7e0"}
   };
 
   let mappaLotti = null;
@@ -1359,9 +1378,14 @@
       const [lat, lon] = precisa ? base : jitterDeterministico(a.id, base);
       const livello = livelloPunteggio(a.punteggio, a.valoreStima);
       const colore = COLORI_LIVELLO[livello] || COLORI_LIVELLO["non-valutato"];
+      // Raggio leggermente diverso per livello, non solo colore diverso:
+      // rinforza la stessa gerarchia di attenzione (alto deve saltare
+      // all'occhio per primo) anche a colpo d'occhio su una mappa fitta
+      // di punti, non solo per chi distingue bene i colori.
+      const raggioMarcatore = {alto: 9, medio: 8, basso: 6, "non-valutato": 7}[livello] ?? 8;
 
       L.circleMarker([lat, lon], {
-        radius: 8, color: colore.bordo, fillColor: colore.riempimento, fillOpacity: 0.85, weight: 1.5
+        radius: raggioMarcatore, color: colore.bordo, fillColor: colore.riempimento, fillOpacity: 0.85, weight: 1.5
       }).bindPopup(popupLotto(a, precisa)).addTo(gruppoMarcatori);
 
       puntiValidi.push([lat, lon]);
