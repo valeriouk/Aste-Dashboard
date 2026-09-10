@@ -248,7 +248,8 @@
   /* "Cerca su tutta Italia": prima cosa nella sezione, niente margine
      sopra; un po' di spazio sotto per staccarla dal blocco locale che
      attenua quando è spuntata. */
-  .etichetta-tutta-italia { margin-top: 0; margin-bottom: 16px; }
+  .etichetta-tutta-italia { margin-top: 0; margin-bottom: 8px; }
+  .nota-tutta-italia { margin-bottom: 16px; }
 
   .riga-ricerca-indirizzo { display: flex; gap: 8px; margin-bottom: 14px; }
   .riga-ricerca-indirizzo input {
@@ -366,7 +367,7 @@
       <p class="eyebrow">Pannello di controllo</p>
       <h1>Configurazione Scanner</h1>
       <p class="sottotitolo">Modifica i parametri di ricerca letti da app.py a ogni run, senza toccare il codice.</p>
-      <p class="versione-pagina">v1.2</p>
+      <p class="versione-pagina">v1.5</p>
     </div>
     <a href="index.html" class="link-torna">← Torna al registro</a>
   </div>
@@ -396,6 +397,7 @@
           <input type="checkbox" id="campo-tutta-italia" onchange="aggiornaStatoTuttaItalia()">
           Cerca su tutta Italia (ignora punto e raggio qui sotto)
         </label>
+        <p class="nota-campo nota-tutta-italia">L'analisi in questa modalità è asincrona: le aste trovate vengono inviate a Gemini in un unico batch invece che una alla volta, per sfruttare lo sconto sui costi — può volerci da pochi minuti fino a 24 ore. Riceverai una notifica Telegram non appena l'invio è completato, e una notifica separata per ogni asta quando la sua analisi sarà pronta; il foglio non si aggiorna per queste aste nel frattempo.</p>
         <div id="blocco-area-locale">
           <div class="riga-ricerca-indirizzo">
             <input type="text" id="campo-indirizzo" placeholder="Cerca un indirizzo o una città..." onkeydown="if(event.key==='Enter') cercaIndirizzo()">
@@ -509,7 +511,7 @@
   // CONFIGURAZIONE — incolla qui l'URL della tua WebApp (lo stesso usato
   // come GOOGLE_SHEET_WEBAPP_URL nei secret di GitHub Actions).
   // ==========================================================
-  const WEBAPP_URL = "https://script.google.com/macros/s/AKfycbxeluW474kkGDYzN-BxhHKeeKPsPDT1UhIFMAptDbUpwAS8tROWYDagenaIhbyZc1QB/exec";
+  const WEBAPP_URL = "https://script.google.com/macros/s/AKfycbw8zisPCA5bvT2AXWhE8E4ZzWvbtCXku7__i9AklyPErTJpKOfKMCRNJe2-T6PCszD4/exec";
 
   // Deve essere IDENTICO a SALE_PASSWORD in Code.gs, altrimenti gli hash
   // calcolati qui e quelli attesi lato server non combaceranno mai. Non è
