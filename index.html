@@ -21,7 +21,17 @@
 <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/leaflet.min.css">
 <script src="https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/leaflet.js"></script>
 <style>
+
+  /* ============================================================
+     TOKEN DI DESIGN — un solo posto da cambiare per il tema
+  ============================================================ */
   :root {
+    /* Palette "Registro": ledger civico moderno — carta fredda invece di
+       crema calda, blu inchiostro (timbro ufficiale) come accento
+       primario invece di bronzo/terracotta. Il verde non compare qui: è
+       riservato SOLO al punteggio "alto" più sotto, per restare un
+       segnale raro e immediatamente riconoscibile — non un colore
+       decorativo sparso nell'interfaccia. */
     --bg: #eef1ec;
     --surface: #ffffff;
     --surface-2: #e3e7e0;
@@ -45,6 +55,13 @@
   body {
     margin: 0;
     background-color: var(--bg);
+    /* Tre livelli, dal più vicino al più lontano: grana carta finissima
+       (SVG feTurbulence, puro CSS, zero JS e zero immagini esterne) sopra
+       i due lavaggi di colore già esistenti, invariati. La grana è
+       generata in scala di grigi con l'alpha modulata al 5% massimo
+       tramite feColorMatrix — abbastanza sottile da non intaccare mai il
+       contrasto testo/sfondo, visibile solo nei margini e dietro le zone
+       senza una superficie bianca sopra (le card restano opache). */
     background-image:
       url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='g'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.85' numOctaves='3' stitchTiles='stitch'/%3E%3CfeColorMatrix type='matrix' values='0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0.05 0'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23g)'/%3E%3C/svg%3E"),
       radial-gradient(ellipse 900px 500px at 15% -10%, rgba(35,76,106,.05), transparent),
@@ -58,6 +75,7 @@
   }
 
   a { color: var(--secondary); }
+
   ::selection { background: var(--primary-soft); color: var(--ink); }
 
   :focus-visible {
@@ -72,6 +90,9 @@
     padding: 48px 24px 96px;
   }
 
+  /* ============================================================
+     INTESTAZIONE
+  ============================================================ */
   .intestazione {
     display: flex;
     justify-content: space-between;
@@ -125,6 +146,9 @@
   }
   .aggiornato strong { color: var(--ink-muted); font-weight: 500; display: block; margin-bottom: 3px;}
 
+  /* ============================================================
+     STATISTICHE
+  ============================================================ */
   .statistiche {
     display: grid;
     grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
@@ -154,7 +178,15 @@
     color: var(--primary);
     margin: 0;
   }
+  .stat-nota {
+    font-size: .85rem;
+    font-weight: 500;
+    color: var(--ink-faint);
+  }
 
+  /* ============================================================
+     CONTROLLI
+  ============================================================ */
   .controlli {
     display: flex;
     align-items: center;
@@ -178,6 +210,15 @@
     border-radius: 8px;
   }
 
+  /* flex-grow diverso per elemento, non uniforme: la ricerca beneficia
+     di più spazio su schermi larghi (più comodo leggere/scrivere un
+     comune), le select un po' meno (oltre una certa larghezza sarebbe
+     solo spazio vuoto dentro il menu) — per questo hanno un max-width.
+     Così la riga intera si allarga o restringe con lo schermo, ma le
+     select restano comunque compatte "di base" e non si gonfiano più in
+     base all'opzione più lunga al loro interno (il problema di ieri):
+     il menu APERTO, gestito dal browser e non da questo CSS, mostra
+     comunque il testo per intero in tutti i browser principali. */
   .controlli input { flex: 2 1 90px; min-width: 90px; }
   .controlli select {
     flex: 1 1 100px;
@@ -211,10 +252,22 @@
   .pillola:hover { color: var(--ink); }
   .pillola.attiva { background: var(--primary-soft); color: var(--primary); font-weight: 600; }
 
+  /* Menu a comparsa per il filtro tipologia: un pulsante dall'ingombro
+     fisso (non cresce con quante categorie esistono) che apre un
+     pannello con le spunte — pensato apposta per restare compatto su
+     mobile, dove 7 pillole in fila avrebbero occupato più righe di
+     spazio verticale a scapito delle aste stesse. */
   .contenitore-filtro-tipologia { position: relative; flex: 0 0 auto; }
   .freccia-tipologia { transition: transform .2s ease; display: inline-block; }
   #bottone-filtro-tipologia[aria-expanded="true"] .freccia-tipologia { transform: rotate(180deg); }
-
+  /* position:absolute (non fixed): segue il pulsante quando la pagina
+     scorre, comportamento normale di un menu a comparsa — le coordinate
+     restano comunque calcolate in JS (vedi posizionaMenuTipologia) per
+     tenerlo dentro i bordi dello schermo sia in orizzontale sia in
+     verticale, ma espresse relative al pulsante, non alla finestra.
+     z-index molto più alto del solito: Leaflet usa internamente valori
+     fino a ~700 per i suoi livelli, qui serve restare sopra anche a
+     quello. */
   .menu-tipologia {
     position: absolute;
     z-index: 1000;
@@ -225,7 +278,9 @@
     width: 240px;
     box-shadow: 0 8px 24px rgba(30,35,32,.12);
   }
-
+  /* Griglia a due colonne di larghezza fissa invece di flexbox: la
+     casella occupa sempre esattamente 20px, il testo tutto il resto —
+     zero dipendenza da come cresce lo spazio tra i due. */
   .voce-menu-tipologia {
     display: grid;
     grid-template-columns: 20px 1fr;
@@ -239,17 +294,31 @@
     cursor: pointer;
   }
   .voce-menu-tipologia:hover { background: var(--surface-2); }
-
+  /* Checkbox disegnata interamente via CSS (appearance:none) invece che
+     affidata al rendering nativo del browser/sistema operativo: anche
+     dopo aver fissato width/height esplicite, il controllo nativo
+     restava comunque incoerente tra Windows/Chrome, Android non-Safari e
+     iOS Safari (sconfinava sul testo su alcuni, perfetto su altri). Con
+     appearance:none non resta più nulla di nativo che possa variare —
+     stesso quadratino ovunque, spunta disegnata a mano con un pseudo-
+     elemento invece dell'icona di sistema. */
   .voce-menu-tipologia input[type="checkbox"] {
     appearance: none;
     -webkit-appearance: none;
     width: 16px;
     height: 16px;
+    min-width: 16px;
+    min-height: 16px;
+    max-width: 16px;
+    max-height: 16px;
+    padding: 0;
+    margin: 0;
     border: 1.5px solid var(--border);
     border-radius: 4px;
     background: var(--surface);
     cursor: pointer;
     position: relative;
+    flex-shrink: 0;
   }
   .voce-menu-tipologia input[type="checkbox"]:checked {
     background: var(--primary);
@@ -267,6 +336,13 @@
     transform: rotate(45deg);
   }
 
+  .conteggio-filtrati {
+    font-family: var(--font-mono);
+    font-size: .78rem;
+    color: var(--ink-faint);
+    margin: 0 0 14px;
+  }
+
   .bottone-toggle-tutti {
     background: var(--surface);
     border: 1px solid var(--border);
@@ -281,17 +357,59 @@
   }
   .bottone-toggle-tutti:hover { color: var(--primary); border-color: var(--primary); }
 
+  /* ============================================================
+     GRIGLIA CARTELLE / LOTTI
+  ============================================================ */
   .griglia {
     display: grid;
     grid-template-columns: repeat(auto-fill, minmax(320px, 1fr));
     gap: 16px;
   }
 
+  /* ============================================================
+     VISTA MAPPA
+  ============================================================ */
   .contenitore-mappa-dashboard {
     height: 560px;
     border-radius: 12px;
     border: 1px solid var(--border);
     overflow: hidden;
+  }
+  .legenda-mappa {
+    display: flex;
+    gap: 18px;
+    flex-wrap: wrap;
+    font-size: .8rem;
+    color: var(--ink-muted);
+    margin: 14px 0 4px;
+  }
+  .legenda-voce { display: inline-flex; align-items: center; gap: 6px; }
+  /* Semaforo del punteggio — scala di SALIENZA deliberata, non solo di
+     tinta: alto è il verde più saturo e pieno (deve essere la prima cosa
+     che l'occhio nota scorrendo la mappa), medio un ambra ben visibile ma
+     un gradino sotto, basso un rosso volutamente SMORZATO — desaturato
+     abbastanza da non competere per l'attenzione, quasi un terracotta
+     spento piuttosto che un rosso d'allarme. Nessuno di questi tre riusa
+     --primary/--secondary/--danger: il punteggio è un canale visivo a
+     parte, mai confuso con gli accenti generali dell'interfaccia. */
+  .pallino-legenda { width: 10px; height: 10px; border-radius: 50%; display: inline-block; flex-shrink: 0; }
+  .pallino-legenda.alto  { background: #3DB56B; border: 1.5px solid #237A46; }
+  .pallino-legenda.medio { background: #E6A23C; border: 1.5px solid #B87A1E; }
+  .pallino-legenda.basso { background: #B98177; border: 1.5px solid #96635A; }
+  .pallino-legenda.non-valutato { background: var(--surface-2); border: 1.5px dashed var(--ink-faint); }
+  .nota-mappa {
+    font-family: var(--font-mono);
+    font-size: .78rem;
+    color: var(--ink-faint);
+    margin: 4px 0 0;
+  }
+  .popup-lotto { font-family: var(--font-body); font-size: .85rem; min-width: 180px; }
+  .popup-lotto strong { font-family: var(--font-display); font-size: 1rem; display: block; margin-bottom: 6px; }
+  .popup-lotto div { margin-bottom: 3px; color: var(--ink-muted); }
+  .popup-lotto a { display: inline-block; margin-top: 6px; font-size: .8rem; font-weight: 600; }
+
+  @media (max-width: 640px) {
+    .contenitore-mappa-dashboard { height: 420px; }
   }
 
   .lotto {
@@ -299,10 +417,24 @@
     border: 1px solid var(--border);
     border-radius: 12px;
     padding: 22px;
+    opacity: 0;
+    animation: comparsa .5s ease forwards;
     transition: border-color .2s ease, transform .2s ease, box-shadow .2s ease;
     box-shadow: 0 1px 2px rgba(30,35,32,.05);
   }
   .lotto:hover { border-color: var(--ink-faint); transform: translateY(-2px); box-shadow: 0 6px 16px rgba(30,35,32,.08); }
+
+  /* La classe "conclusa" viene comunque assegnata (vedi cartellaLotto in
+     JS) ma qui non applichiamo più un'attenuazione: da quando la vista è
+     esclusiva (Attive OPPURE Concluse, mai le due insieme) non c'è più
+     nulla accanto a cui l'opacità ridotta serva da contrasto — attenuare
+     un'intera griglia di sole concluse la renderebbe solo meno leggibile.
+     Il badge sotto resta comunque il segnale, per chi scorre la lista. */
+
+  @keyframes comparsa {
+    from { opacity: 0; transform: translateY(8px); }
+    to { opacity: 1; transform: translateY(0); }
+  }
 
   .lotto-testata {
     display: flex;
@@ -311,6 +443,8 @@
     margin-bottom: 16px;
   }
 
+  /* Il sigillo: elemento distintivo della pagina — un timbro leggermente
+     irregolare, come un vero sigillo ceralacca su un documento ufficiale. */
   .sigillo {
     width: 58px;
     height: 58px;
@@ -363,10 +497,33 @@
     margin: 0;
   }
 
+  .badge-conclusa {
+    display: inline-block;
+    background: var(--surface-2);
+    color: var(--ink-muted);
+    font-size: .72rem;
+    font-weight: 600;
+    padding: 3px 9px;
+    border-radius: 5px;
+    margin: 4px 6px 6px 0;
+  }
+
+  .badge-zona {
+    display: inline-block;
+    background: var(--danger-soft);
+    color: var(--danger);
+    font-size: .72rem;
+    font-weight: 600;
+    padding: 3px 9px;
+    border-radius: 5px;
+    margin: 4px 0 6px;
+  }
+
   .lotto-margine {
     padding: 14px 0 2px;
     border-top: 1px solid var(--border);
   }
+  .lotto-margine .cifra-etichetta { margin-bottom: 4px; }
   .lotto-margine-valore {
     font-family: var(--font-mono);
     font-size: 1.5rem;
@@ -383,9 +540,23 @@
     border-bottom: 1px solid var(--border);
     margin-bottom: 14px;
   }
+  /* Per celle testuali più lunghe della media (es. Stato occupazione, che
+     arriva a essere una frase intera generata da Gemini) — occupare
+     l'intera riga invece di forzarle nella metà colonna è insieme più
+     ordinato e più leggibile. */
+  .cifra-larga { grid-column: 1 / -1; }
 
-  .cifra-etichetta { font-size: .72rem; color: var(--ink-faint); margin: 0 0 2px; }
-  .cifra-valore { font-family: var(--font-mono); font-size: .95rem; color: var(--ink); margin: 0; }
+  .cifra-etichetta {
+    font-size: .72rem;
+    color: var(--ink-faint);
+    margin: 0 0 2px;
+  }
+  .cifra-valore {
+    font-family: var(--font-mono);
+    font-size: .95rem;
+    color: var(--ink);
+    margin: 0;
+  }
 
   .bottone-dettagli {
     background: none;
@@ -400,6 +571,8 @@
     align-items: center;
     gap: 6px;
   }
+  .bottone-dettagli .freccia { transition: transform .2s ease; }
+  .bottone-dettagli[aria-expanded="true"] .freccia { transform: rotate(180deg); }
 
   .lotto-dettagli {
     display: grid;
@@ -407,6 +580,11 @@
     transition: grid-template-rows .3s ease;
   }
   .lotto-dettagli.aperto { grid-template-rows: 1fr; }
+  /* L'overflow:hidden qui (non sull'elemento esterno) è ciò che permette
+     alla riga della grid di collassare davvero a 0 invece di restare
+     bloccata all'altezza minima del contenuto — margin/padding/bordo sono
+     stati spostati qui apposta, così spariscono insieme al contenuto
+     invece di lasciare un vuoto fisso quando il pannello è chiuso. */
   .lotto-dettagli-inner {
     overflow: hidden;
     min-height: 0;
@@ -416,6 +594,90 @@
     font-size: .85rem;
   }
 
+  .dettaglio-riga {
+    display: flex;
+    justify-content: space-between;
+    gap: 12px;
+    padding: 6px 0;
+    color: var(--ink-muted);
+  }
+  .dettaglio-riga span:first-child { color: var(--ink-faint); }
+  .dettaglio-riga span:last-child { text-align: right; color: var(--ink); }
+  .dettaglio-riga.avviso span:last-child { color: var(--danger); font-weight: 500; }
+
+  .lotto-note {
+    background: var(--surface-2);
+    border-radius: 8px;
+    padding: 12px 14px;
+    margin: 12px 0;
+    font-size: .84rem;
+    color: var(--ink-muted);
+    font-style: italic;
+  }
+
+  .lotto-link {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    background: var(--primary-soft);
+    color: var(--primary);
+    text-decoration: none;
+    font-size: .82rem;
+    font-weight: 500;
+    padding: 8px 14px;
+    border-radius: 7px;
+    margin: 4px 8px 0 0;
+  }
+  .lotto-link:hover { background: rgba(35,76,106,.20); }
+  .lotto-link.secondario { background: var(--secondary-soft); color: var(--secondary); }
+  .lotto-link.secondario:hover { background: rgba(161,92,62,.20); }
+
+  /* ============================================================
+     STATI: caricamento / vuoto / errore
+  ============================================================ */
+  .stato-pagina {
+    text-align: center;
+    padding: 80px 24px;
+    color: var(--ink-muted);
+  }
+  .stato-pagina h2 {
+    font-family: var(--font-display);
+    font-weight: 500;
+    color: var(--ink);
+    font-size: 1.4rem;
+    margin: 0 0 10px;
+  }
+  .stato-pagina p { max-width: 46ch; margin: 0 auto; font-size: .92rem; }
+  .stato-pagina code {
+    background: var(--surface-2);
+    padding: 2px 7px;
+    border-radius: 5px;
+    font-family: var(--font-mono);
+    font-size: .85em;
+  }
+
+  .nascosto { display: none !important; }
+
+  footer {
+    text-align: center;
+    margin-top: 56px;
+    font-size: .78rem;
+    color: var(--ink-faint);
+  }
+
+  @media (max-width: 640px) {
+    .contenitore { padding: 32px 16px 64px; }
+    .intestazione { flex-direction: column; align-items: flex-start; }
+    .aggiornato { text-align: left; }
+    .lotto-cifre { grid-template-columns: 1fr; }
+  }
+
+  /* ============================================================
+     PREFERITI / SCARTATE — stella, scarto, nota
+  ============================================================ */
+  /* Spinge le due icone di azione a destra nell'intestazione della card,
+     senza toccare il layout esistente (sigillo + testo restano identici,
+     questa è solo una terza colonna flessibile aggiunta in coda). */
   .lotto-azioni {
     display: flex;
     gap: 4px;
@@ -436,13 +698,26 @@
   }
   .bottone-azione-lotto:hover { background: var(--surface-2); }
   .bottone-azione-lotto svg { width: 19px; height: 19px; }
+  /* Stella: blu inchiostro da attiva — colore mai usato altrove come
+     segnale di stato (il verde resta riservato al punteggio alto, vedi
+     sopra), quindi "preferito" resta un canale visivo a parte, mai
+     confuso col resto. */
   .bottone-azione-lotto.preferito-attivo { color: var(--primary); }
+  /* Scarto: stesso --danger già usato per badge/avvisi — coerente col
+     suo ruolo semantico esistente di "cosa non va", non un colore nuovo
+     inventato per l'occasione. */
   .bottone-azione-lotto.scartato-attivo { color: var(--danger); }
 
+  /* Un'asta scartata si attenua vistosamente — l'obiettivo dichiarato è
+     "non fartela ricapitare per sbaglio scorrendo per punteggio", quindi
+     l'attenuazione da sola non basta: l'ordinamento (vedi JS) la fa
+     scivolare in fondo a prescindere dal criterio scelto. */
   .lotto.scartato { opacity: .42; }
   .lotto.scartato:hover { opacity: .7; }
 
-  .nota-preferito { margin: -4px 0 16px; }
+  .nota-preferito {
+    margin: -4px 0 16px;
+  }
   .nota-preferito-bolla {
     display: block;
     width: 100%;
@@ -464,6 +739,7 @@
     border-color: var(--border);
     font-style: normal;
   }
+  .nota-preferito-bolla:hover { border-color: var(--ink-faint); }
   .nota-preferito-editor { display: none; }
   .nota-preferito-editor.aperto { display: block; }
   .nota-preferito-editor textarea {
@@ -493,25 +769,82 @@
     cursor: pointer;
   }
   .nota-preferito-salva { background: var(--primary-soft); color: var(--primary); }
+  .nota-preferito-salva:hover { background: rgba(35,76,106,.20); }
   .nota-preferito-elimina { background: var(--danger-soft); color: var(--danger); }
+  .nota-preferito-elimina:hover { background: rgba(139,61,46,.20); }
   .nota-preferito-annulla { background: none; color: var(--ink-faint); }
+  .nota-preferito-annulla:hover { color: var(--ink-muted); }
 
-  .stato-pagina {
+  /* ============================================================
+     MODALE PASSWORD — overlay leggero, non un gate a pagina intera come
+     in config.html: la lettura resta sempre aperta, questo compare solo
+     alla PRIMA azione di scrittura (stella/scarto/nota) di una sessione.
+  ============================================================ */
+  .overlay-password {
+    position: fixed;
+    inset: 0;
+    background: rgba(30,35,32,.45);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    padding: 24px;
+    z-index: 2000;
+  }
+  .riquadro-password-inline {
+    background: var(--surface);
+    border-radius: 12px;
+    padding: 28px;
+    max-width: 340px;
+    width: 100%;
     text-align: center;
-    padding: 80px 24px;
+    box-shadow: 0 12px 32px rgba(30,35,32,.25);
+  }
+  .riquadro-password-inline h3 {
+    font-family: var(--font-display);
+    font-weight: 500;
+    font-size: 1.15rem;
+    margin: 0 0 8px;
+  }
+  .riquadro-password-inline p {
     color: var(--ink-muted);
+    font-size: .85rem;
+    margin: 0 0 16px;
   }
-  .stato-pagina h2 { font-family: var(--font-display); font-weight: 500; color: var(--ink); font-size: 1.4rem; margin: 0 0 10px; }
-
-  .nascosto { display: none !important; }
-
-  footer {
+  .riquadro-password-inline input {
+    width: 100%;
+    background: var(--bg);
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    padding: 11px 14px;
+    font-family: var(--font-body);
+    font-size: .95rem;
+    color: var(--ink);
+    margin-bottom: 10px;
     text-align: center;
-    margin-top: 56px;
-    font-size: .78rem;
-    color: var(--ink-faint);
+    box-sizing: border-box;
   }
+  .riquadro-password-inline .riga-bottoni-password {
+    display: flex;
+    gap: 8px;
+  }
+  .riquadro-password-inline .riga-bottoni-password button {
+    flex: 1;
+    border: none;
+    border-radius: 8px;
+    padding: 11px 14px;
+    font-family: var(--font-body);
+    font-size: .88rem;
+    font-weight: 600;
+    cursor: pointer;
+  }
+  .bottone-password-conferma { background: var(--ink); color: var(--surface); }
+  .bottone-password-conferma:hover { background: var(--primary); }
+  .bottone-password-annulla { background: var(--surface-2); color: var(--ink-muted); }
+  .messaggio-errore-password { color: var(--danger); font-size: .82rem; margin: 10px 0 0; min-height: 1em; }
 
+  /* Toast discreto per un errore di salvataggio (stella/scarto/nota) —
+     compare in basso, si chiude da solo. Non blocca nulla sotto
+     (pointer-events attivi solo mentre visibile). */
   #toast-preferiti {
     position: fixed;
     bottom: 24px;
@@ -526,11 +859,18 @@
     pointer-events: none;
     transition: opacity .2s ease, transform .2s ease;
     z-index: 3000;
+    max-width: 90vw;
+    text-align: center;
+    box-shadow: 0 8px 24px rgba(30,35,32,.2);
   }
   #toast-preferiti.visibile {
     opacity: 1;
     transform: translateX(-50%) translateY(0);
     pointer-events: auto;
+  }
+
+  @media (prefers-reduced-motion: reduce) {
+    * { animation: none !important; transition: none !important; }
   }
 </style>
 </head>
@@ -567,7 +907,7 @@
   </div>
 
   <div class="controlli">
-    <input type="text" id="ricerca" placeholder="Cerca per comune..." oninput="applicaFiltri()">
+    <input type="text" id="ricerca" placeholder="Cerca per comune...">
     <div class="contenitore-filtro-tipologia">
       <div class="gruppo-pillole">
         <button type="button" class="pillola" id="bottone-filtro-tipologia" onclick="alternaMenuTipologia(event)" aria-expanded="false" aria-haspopup="true">
@@ -591,7 +931,7 @@
       <button type="button" class="pillola" id="pillola-vista-mappa" onclick="cambiaVista('mappa')">Mappa</button>
     </div>
     <button id="bottone-mostra-tutti" class="bottone-toggle-tutti" onclick="alternaTuttiIDettagli()">Mostra tutti i dettagli</button>
-    <select id="ordinamento" onchange="applicaFiltri()">
+    <select id="ordinamento">
       <option value="punteggio-desc">Punteggio (alto → basso)</option>
       <option value="margine-desc">Margine (alto → basso)</option>
       <option value="prezzo-asc">Offerta minima (bassa → alta)</option>
@@ -605,265 +945,1195 @@
     <p>Lettura del foglio in corso.</p>
   </div>
 
-  <div id="contenitore-griglia" class="griglia"></div>
-  <div id="contenitore-mappa" class="contenitore-mappa-dashboard nascosto"></div>
+  <div id="stato-non-configurato" class="stato-pagina nascosto">
+    <h2>Registro non collegato</h2>
+    <p>Apri il file <code>index.html</code> e incolla l'indirizzo CSV del tuo Google Sheet nella costante <code>CSV_URL</code>, in cima allo script.</p>
+  </div>
+
+  <div id="stato-errore" class="stato-pagina nascosto">
+    <h2>Non riesco a leggere il registro</h2>
+    <p>Controlla che il foglio sia pubblicato sul web in formato CSV e che l'indirizzo in <code>CSV_URL</code> sia corretto.</p>
+  </div>
+
+  <div id="stato-vuoto" class="stato-pagina nascosto">
+    <h2>Il registro è vuoto</h2>
+    <p>Nessuna asta trovata finora. Torna dopo la prossima esecuzione dello scanner.</p>
+  </div>
+
+  <div id="stato-nessun-risultato" class="stato-pagina nascosto">
+    <h2>Nessuna corrispondenza</h2>
+    <p>Nessuna asta soddisfa questi criteri di ricerca — prova ad ampliarli.</p>
+  </div>
+
+  <p class="conteggio-filtrati" id="conteggio-filtrati"></p>
+
+  <div class="griglia" id="griglia-lotti"></div>
+
+  <div id="vista-mappa" class="nascosto">
+    <div id="mappa-lotti" class="contenitore-mappa-dashboard"></div>
+    <p class="legenda-mappa">
+      <span class="legenda-voce"><span class="pallino-legenda alto"></span>Punteggio alto</span>
+      <span class="legenda-voce"><span class="pallino-legenda medio"></span>Punteggio medio</span>
+      <span class="legenda-voce"><span class="pallino-legenda basso"></span>Punteggio basso</span>
+      <span class="legenda-voce"><span class="pallino-legenda non-valutato"></span>Non valutato</span>
+    </p>
+    <p class="nota-mappa" id="nota-comuni-mancanti"></p>
+  </div>
+
+  <footer>Aggiornato leggendo direttamente il Google Sheet · dati raccolti dal Portale delle Vendite Pubbliche</footer>
+
+  <!-- Modale password per Preferiti/Scarti/Note — compare solo alla prima
+       azione di scrittura di una sessione, vedi richiediPasswordSeServe(). -->
+  <div id="overlay-password" class="overlay-password nascosto">
+    <div class="riquadro-password-inline">
+      <h3>Password richiesta</h3>
+      <p>Serve solo la prima volta in questa sessione, per preferiti, scarti e note.</p>
+      <input type="password" id="campo-password-inline" placeholder="Password" onkeydown="if(event.key==='Enter') confermaPasswordInline()">
+      <div class="riga-bottoni-password">
+        <button type="button" class="bottone-password-annulla" onclick="chiudiModalePassword()">Annulla</button>
+        <button type="button" class="bottone-password-conferma" onclick="confermaPasswordInline()">Conferma</button>
+      </div>
+      <p id="errore-password-inline" class="messaggio-errore-password"></p>
+    </div>
+  </div>
 
 </div>
 
-<div id="toast-preferiti"></div>
-
 <script>
-  let asteDati = [];
-  let preferitiMap = {}; // { idLotto: { preferito: bool, scartato: bool, nota: string } }
-  let filtroOccupazione = null;
-  let soloPreferiti = false;
-  let mostraConcluse = false;
-  let vistaCorrente = 'griglia';
-  let mappaInstance = null;
-  let markerGroup = null;
+  // ==========================================================
+  // CONFIGURAZIONE — sostituisci con l'indirizzo del tuo foglio
+  // pubblicato in CSV (Google Sheet -> File -> Condividi ->
+  // Pubblica sul web -> scegli il foglio giusto -> formato CSV).
+  // ==========================================================
+  const CSV_URL = "https://docs.google.com/spreadsheets/d/e/2PACX-1vRhWMNfMFaIKJjJ1UYA7qYl7XnMkst04fr8LZj_c40OthHSyws8KuWHFJVfnRsEtOTahqFnDnDuCSVh/pub?gid=0&single=true&output=csv";
 
-  document.addEventListener('DOMContentLoaded', () => {
-    caricaPreferitiLocale();
-    caricaDatiSimulati();
-  });
+  // URL del CSV pubblicato della scheda "Preferiti" (stella/scarto/nota) —
+  // scheda SEPARATA da quella principale, creata da Code.gs alla prima
+  // scrittura. Da compilare DOPO aver pubblicato quella scheda come CSV
+  // (Google Sheet -> File -> Condividi -> Pubblica sul web -> scegli la
+  // scheda "Preferiti" -> formato CSV), stesso identico procedimento già
+  // fatto per CSV_URL sopra. Finché resta vuota, la pagina funziona
+  // comunque normalmente — semplicemente nessuna asta risulta preferita o
+  // scartata finché questa non viene configurata.
+  const CSV_URL_PREFERITI = "";
 
-  function caricaPreferitiLocale() {
+  // Stesso identico principio di autenticazione già usato in config.html:
+  // l'hash calcolato qui viene verificato lato server (Code.gs), MAI una
+  // vera protezione lato client — vedi la conversazione sul perché una
+  // password qui ferma solo chi ci arriva per sbaglio, non chi guarda il
+  // codice sorgente. A differenza di config.html, però, qui NON blocca
+  // l'intera pagina: la lettura resta sempre aperta, la password viene
+  // chiesta solo alla PRIMA azione di scrittura (stella, scarto o nota) in
+  // questa sessione — vedi richiediPasswordSeServe più sotto.
+  const SALE_PASSWORD = "aste-ct-8f3k2-sale";
+  let hashPasswordCorrente = null;
+
+  // Stessa WebApp già usata da config.html per le scritture protette —
+  // qui serve solo per le tre azioni nuove (stella, scarto, nota), non
+  // per leggere: la lettura resta sempre via CSV, sopra.
+  const WEBAPP_URL = "https://script.google.com/macros/s/AKfycbw8zisPCA5bvT2AXWhE8E4ZzWvbtCXku7__i9AklyPErTJpKOfKMCRNJe2-T6PCszD4/exec";
+
+  let ASTE = [];
+  let PREFERITI = {}; // id_annuncio -> {stato: "preferito"|"scartato", nota: string}
+
+  // ==========================================================
+  // VISTA MAPPA — posizionamento a livello di COMUNE, non di indirizzo
+  // esatto: lo script oggi non salva le coordinate del singolo immobile
+  // (le riceve da PVP solo per calcolare la Distanza, poi le scarta), solo
+  // il testo dell'indirizzo. Coordinate approssimate del centro di ogni
+  // comune, sufficienti per un colpo d'occhio geografico ma non per la
+  // precisione del singolo civico — il popup di ogni punto mostra comunque
+  // l'indirizzo per esteso.
+  // ==========================================================
+  const COORDINATE_COMUNI = {
+    "gravina di catania": [37.5581, 15.0442],
+    "san giovanni la punta": [37.5747, 15.0989],
+    "tremestieri etneo": [37.5514, 15.0794],
+    "sant'agata li battiati": [37.5544, 15.0794],
+    "san gregorio di catania": [37.5567, 15.1092],
+    "aci sant'antonio": [37.6069, 15.1450],
+    "aci bonaccorsi": [37.6017, 15.1444],
+    "aci castello": [37.5522, 15.1500],
+    "aci trezza": [37.5561, 15.1608],
+    "aci catena": [37.6072, 15.1611],
+    "zafferana etnea": [37.6883, 15.1078],
+    "santa venerina": [37.6931, 15.1381],
+    "motta sant'anastasia": [37.5150, 14.9439],
+    "camporotondo etneo": [37.5539, 14.9931],
+    "san pietro clarenza": [37.5764, 15.0289],
+    "militello in val di catania": [37.2750, 14.8000],
+    "carlentini": [37.2780, 15.0150],
+    "lentini": [37.2830, 15.0000],
+    "scordia": [37.3000, 14.8500],
+    "acireale": [37.6117, 15.1656],
+    "trecastagni": [37.6167, 15.0736],
+    "mascalucia": [37.5975, 15.0658],
+    "belpasso": [37.5967, 14.9822],
+    "misterbianco": [37.5175, 15.0119],
+    "viagrande": [37.5936, 15.1147],
+    "valverde": [37.5844, 15.1153],
+    "ragalna": [37.6417, 14.9678],
+    "nicolosi": [37.6167, 15.0167],
+    "pedara": [37.6178, 15.0567],
+    "paternò": [37.5667, 14.9033],
+    "milo": [37.7256, 15.1706],
+    "vizzini": [37.1583, 14.7444],
+    "catania": [37.5079, 15.0830]
+  };
+  const NOMI_COMUNI_PER_LUNGHEZZA = Object.keys(COORDINATE_COMUNI).sort((a, b) => b.length - a.length);
+
+  // Due tentativi, in ordine di affidabilità:
+  // 1) pattern ", {comune} (" — è così che app.py costruisce il campo
+  //    quando il nome del comune non è già dentro l'indirizzo (vedi
+  //    _estrai_dati_annuncio in app.py): quando c'è, è il segnale più
+  //    affidabile, ed evita di confondersi con un nome di comune che compare
+  //    per caso più indietro nella stessa stringa (es. "...CT, Scordia
+  //    (Catania)" è a Scordia, non a Catania, anche se "Catania" compare
+  //    anche prima).
+  // 2) altrimenti, il nome noto più lungo trovato ovunque nel testo — i nomi
+  //    più lunghi sono più specifici, meno a rischio di falsi positivi.
+  function trovaCoordinateComune(testoComune) {
+    const testo = (testoComune || "").toLowerCase();
+    for (const nome of NOMI_COMUNI_PER_LUNGHEZZA) {
+      if (testo.includes(", " + nome + " (")) return COORDINATE_COMUNI[nome];
+    }
+    for (const nome of NOMI_COMUNI_PER_LUNGHEZZA) {
+      if (testo.includes(nome)) return COORDINATE_COMUNI[nome];
+    }
+    return null;
+  }
+
+  // Scostamento piccolo e deterministico (stesso ID annuncio = stesso
+  // scostamento a ogni ricarica, non casuale) per evitare che più aste nello
+  // stesso comune finiscano esattamente sovrapposte sulla mappa.
+  function jitterDeterministico(id, base) {
+    let hash = 0;
+    const s = String(id);
+    for (let i = 0; i < s.length; i++) hash = (hash * 31 + s.charCodeAt(i)) >>> 0;
+    const angolo = (hash % 360) * Math.PI / 180;
+    const raggioGradi = 0.006 + (hash % 100) / 100 * 0.010; // circa 0.6-1.6 km
+    return [base[0] + Math.sin(angolo) * raggioGradi, base[1] + Math.cos(angolo) * raggioGradi];
+  }
+
+  // Stessi colori già usati per il sigillo nelle card, riportati qui come
+  // valori hex diretti (i marcatori Leaflet non possono leggere le
+  // variabili CSS custom).
+  // Stesso semaforo del CSS (.pallino-legenda / .sigillo) — verde saturo
+  // per alto (deve saltare all'occhio scorrendo la mappa), ambra per
+  // medio, rosso deliberatamente smorzato per basso (non deve competere
+  // per l'attenzione). Duplicato qui invece di letto dal CSS perché i
+  // marcatori Leaflet non possono leggere le variabili CSS custom.
+  const COLORI_LIVELLO = {
+    alto:  {bordo: "#237A46", riempimento: "#3DB56B"},
+    medio: {bordo: "#B87A1E", riempimento: "#E6A23C"},
+    basso: {bordo: "#96635A", riempimento: "#B98177"},
+    "non-valutato": {bordo: "#8c9289", riempimento: "#e3e7e0"}
+  };
+
+  let mappaLotti = null;
+  let gruppoMarcatori = null;
+  let ultimoElencoFiltrato = [];
+
+  function numeroSicuro(valore, predefinito = 0) {
+    if (valore === null || valore === undefined) return predefinito;
+    let s = String(valore).trim();
+    if (s === "" || s.toUpperCase() === "N/D") return predefinito;
+    s = s.replace(/[€\s]/g, "");
+    const ultimoPunto = s.lastIndexOf(".");
+    const ultimaVirgola = s.lastIndexOf(",");
+    if (ultimoPunto > -1 && ultimaVirgola > -1) {
+      s = ultimaVirgola > ultimoPunto
+        ? s.replace(/\./g, "").replace(",", ".")
+        : s.replace(/,/g, "");
+    } else if (ultimaVirgola > -1) {
+      s = (s.length - ultimaVirgola - 1) <= 2 ? s.replace(",", ".") : s.replace(/,/g, "");
+    }
+    const n = parseFloat(s);
+    return isNaN(n) ? predefinito : n;
+  }
+
+  function formattaEuro(n) {
+    if (n === null || n === undefined || isNaN(n)) return "—";
+    return "€ " + n.toLocaleString("it-IT", { minimumFractionDigits: 0, maximumFractionDigits: 0 });
+  }
+
+  function escapeHtml(testo) {
+    const d = document.createElement("div");
+    d.textContent = testo === null || testo === undefined ? "" : String(testo);
+    return d.innerHTML;
+  }
+
+  // ==========================================================
+  // PREFERITI / SCARTATE — autenticazione e chiamate alla WebApp.
+  // Stesso schema hash+verifica di config.html (vedi lì per i dettagli
+  // del perché il "sale" può stare in chiaro).
+  // ==========================================================
+  async function calcolaHash(testo) {
+    const dati = new TextEncoder().encode(SALE_PASSWORD + testo);
+    const bufferHash = await crypto.subtle.digest("SHA-256", dati);
+    return Array.from(new Uint8Array(bufferHash)).map(b => b.toString(16).padStart(2, "0")).join("");
+  }
+
+  // Timeout esplicito su OGNI chiamata alla WebApp (password, stella,
+  // scarto, nota) — prima non c'era, quindi se Google non rispondeva la
+  // pagina restava bloccata a tempo indefinito invece di fallire in modo
+  // pulito e recuperabile. Un solo punto centralizzato: tutte e quattro
+  // le azioni che passano da qui ne beneficiano senza bisogno di toccarle
+  // una per una.
+  async function chiamaWebApp(azione, extra) {
+    const controller = new AbortController();
+    const scaduto = setTimeout(() => controller.abort(), 20000);
     try {
-      const salvati = localStorage.getItem('registro_preferiti');
-      if (salvati) preferitiMap = JSON.parse(salvati);
-    } catch(e) { preferitiMap = {}; }
-  }
-
-  function salvaPreferitiLocale() {
-    localStorage.setItem('registro_preferiti', JSON.stringify(preferitiMap));
-  }
-
-  function caricaDatiSimulati() {
-    // Esempio dati
-    asteDati = [
-      { id: 'L1', comune: 'Catania', punteggio: 8.5, margine: '45.000 €', prezzo: 80000, data: '2026-10-12', distanza: 5, occupato: false, conclusa: false, lat: 37.5079, lng: 15.0830 },
-      { id: 'L2', comune: 'Acireale', punteggio: 6.2, margine: '22.000 €', prezzo: 55000, data: '2026-11-05', distanza: 14, occupato: true, conclusa: false, lat: 37.6124, lng: 15.1652 },
-      { id: 'L3', comune: 'Misterbianco', punteggio: 9.1, margine: '60.000 €', prezzo: 110000, data: '2026-09-30', distanza: 8, occupato: false, conclusa: false, lat: 37.5183, lng: 15.0073 }
-    ];
-    
-    document.getElementById('stato-caricamento').classList.add('nascosto');
-    document.getElementById('testo-aggiornato').innerText = new Date().toLocaleTimeString();
-    aggiornaStatistiche();
-    applicaFiltri();
-  }
-
-  function aggiornaStatistiche() {
-    document.getElementById('stat-totale').innerText = asteDati.length;
-    document.getElementById('stat-punteggio').innerText = Math.max(...asteDati.map(a => a.punteggio || 0));
-    document.getElementById('stat-margine').innerText = "60.000 €";
-  }
-
-  function applicaFiltri() {
-    const query = document.getElementById('ricerca').value.toLowerCase();
-    const ord = document.getElementById('ordinamento').value;
-
-    let filtrate = asteDati.filter(item => {
-      const pref = preferitiMap[item.id] || {};
-      if (query && !item.comune.toLowerCase().includes(query)) return false;
-      if (filtroOccupazione === 'libero' && item.occupato) return false;
-      if (filtroOccupazione === 'occupato' && !item.occupato) return false;
-      if (soloPreferiti && !pref.preferito) return false;
-      if (!mostraConcluse && item.conclusa) return false;
-      return true;
-    });
-
-    filtrate.sort((a, b) => {
-      const prefA = preferitiMap[a.id] || {};
-      const prefB = preferitiMap[b.id] || {};
-      if (prefA.scartato !== prefB.scartato) return prefA.scartato ? 1 : -1;
-
-      if (ord === 'punteggio-desc') return b.punteggio - a.punteggio;
-      if (ord === 'prezzo-asc') return a.prezzo - b.prezzo;
-      return 0;
-    });
-
-    if (vistaCorrente === 'griglia') {
-      renderGriglia(filtrate);
-    } else {
-      renderMappa(filtrate);
+      const risposta = await fetch(WEBAPP_URL, {
+        method: "POST",
+        body: JSON.stringify({azione, ...extra}),
+        signal: controller.signal
+      });
+      return await risposta.json();
+    } finally {
+      clearTimeout(scaduto);
     }
   }
 
-  function renderGriglia(lista) {
-    const grid = document.getElementById('contenitore-griglia');
-    grid.innerHTML = '';
+  // Azione JS in sospeso mentre il modale password è aperto — eseguita
+  // automaticamente non appena la password viene confermata, così l'utente
+  // non deve ripetere il clic sulla stella/scarto/nota che l'ha innescata.
+  let azionePendente = null;
 
-    lista.forEach(item => {
-      const pref = preferitiMap[item.id] || {};
-      const card = document.createElement('div');
-      card.className = `lotto ${pref.scartato ? 'scartato' : ''}`;
-      card.id = `card-lotto-${item.id}`;
-
-      card.innerHTML = `
-        <div class="lotto-testata">
-          <div class="sigillo ${item.punteggio >= 8 ? 'alto' : 'medio'}">${item.punteggio}</div>
-          <div>
-            <p class="lotto-id">ID: ${item.id}</p>
-            <h3 class="lotto-comune">${item.comune}</h3>
-            <p class="lotto-meta">${item.occupato ? 'Occupato' : 'Libero'} · ${item.distanza} km</p>
-          </div>
-          <div class="lotto-azioni">
-            <button class="bottone-azione-lotto ${pref.preferito ? 'preferito-attivo' : ''}" onclick="togglePreferito('${item.id}')" title="Preferito">
-              <svg viewBox="0 0 24 24" fill="currentColor"><path d="M12 17.27L18.18 21l-1.64-7.03L22 9.24l-7.19-.61L12 2 9.19 8.63 2 9.24l5.46 4.73L5.82 21z"/></svg>
-            </button>
-            <button class="bottone-azione-lotto ${pref.scartato ? 'scartato-attivo' : ''}" onclick="toggleScartato('${item.id}')" title="Scarta">
-              <svg viewBox="0 0 24 24" fill="currentColor"><path d="M19 6.41L17.59 5 12 10.59 6.41 5 5 6.41 10.59 12 5 17.59 6.41 19 12 13.41 17.59 19 19 17.59 13.41 12z"/></svg>
-            </button>
-          </div>
-        </div>
-
-        <div class="nota-preferito">
-          <button class="nota-preferito-bolla ${pref.nota ? 'compilata' : ''}" id="bolla-nota-${item.id}" onclick="apriEditorNota('${item.id}')">
-            ${pref.nota || '+ Aggiungi una nota...'}
-          </button>
-          <div class="nota-preferito-editor" id="editor-nota-${item.id}">
-            <textarea id="input-nota-${item.id}">${pref.nota || ''}</textarea>
-            <div class="nota-preferito-azioni">
-              <button class="nota-preferito-salva" onclick="salvaNota('${item.id}')">Salva</button>
-              <button class="nota-preferito-annulla" onclick="chiudiEditorNota('${item.id}')">Annulla</button>
-            </div>
-          </div>
-        </div>
-
-        <div class="lotto-margine">
-          <p class="cifra-etichetta">Margine Stimato</p>
-          <p class="lotto-margine-valore">${item.margine}</p>
-        </div>
-        <div class="lotto-cifre">
-          <div>
-            <p class="cifra-etichetta">Offerta Minima</p>
-            <p class="cifra-valore">${item.prezzo.toLocaleString()} €</p>
-          </div>
-          <div>
-            <p class="cifra-etichetta">Data Vendita</p>
-            <p class="cifra-valore">${item.data}</p>
-          </div>
-        </div>
-        <button class="bottone-dettagli" onclick="toggleDettagli('${item.id}')">Dettagli <span class="freccia">▾</span></button>
-        <div class="lotto-dettagli" id="dettagli-${item.id}">
-          <div class="lotto-dettagli-inner">
-            Dettagli completi per l'opportunità a ${item.comune}.
-          </div>
-        </div>
-      `;
-      grid.appendChild(card);
-    });
+  function richiediPasswordSeServe(azione) {
+    if (hashPasswordCorrente) {
+      azione();
+      return;
+    }
+    azionePendente = azione;
+    document.getElementById("errore-password-inline").textContent = "";
+    document.getElementById("campo-password-inline").value = "";
+    document.getElementById("overlay-password").classList.remove("nascosto");
+    document.getElementById("campo-password-inline").focus();
   }
 
-  /* ============================================================
-     GESTIONE STATO PREFERITI SENZA RE-RENDER DIRETTO DEL DOM
-  ============================================================ */
-
-  function togglePreferito(id) {
-    if (!preferitiMap[id]) preferitiMap[id] = {};
-    preferitiMap[id].preferito = !preferitiMap[id].preferito;
-    salvaPreferitiLocale();
-    aggiornaStatoGraficoLotto(id);
+  function chiudiModalePassword() {
+    document.getElementById("overlay-password").classList.add("nascosto");
+    azionePendente = null; // annullata: il clic originale non deve avere effetto
   }
 
-  function toggleScartato(id) {
-    if (!preferitiMap[id]) preferitiMap[id] = {};
-    preferitiMap[id].scartato = !preferitiMap[id].scartato;
-    salvaPreferitiLocale();
-    aggiornaStatoGraficoLotto(id);
+  async function confermaPasswordInline() {
+    const password = document.getElementById("campo-password-inline").value;
+    const erroreEl = document.getElementById("errore-password-inline");
+    if (!password) return;
+
+    const hash = await calcolaHash(password);
+    let risultato;
+    try {
+      risultato = await chiamaWebApp("verifica_password", {hash_password: hash});
+    } catch (e) {
+      console.error("Verifica password fallita:", e);
+      erroreEl.textContent = `Richiesta non riuscita: ${dettaglioErrore(e)}`;
+      return;
+    }
+
+    if (risultato.valida) {
+      hashPasswordCorrente = hash;
+      document.getElementById("overlay-password").classList.add("nascosto");
+      const azione = azionePendente;
+      azionePendente = null;
+      if (azione) azione();
+    } else {
+      erroreEl.textContent = "Password errata.";
+    }
   }
 
+  // ==========================================================
+  // PREFERITI / SCARTATE — azioni vere: aggiornamento OTTIMISTICO (subito
+  // in locale, prima di sapere se il server conferma — dà una risposta
+  // immediata al tocco) con ripristino automatico se la chiamata fallisce.
+  // Diverso apposta dal pattern "aspetta la risposta" di config.html:
+  // quelle sono azioni rare e più pesanti (elimina aste scadute, avvia
+  // scanner), queste sono pensate per essere frequenti e leggere.
+  // ==========================================================
+  // ==========================================================
+  // Riassume un'eccezione di chiamaWebApp in un dettaglio leggibile,
+  // invece di un generico "errore di connessione" — distingue in
+  // particolare un timeout VERO (il limite di 20s è scattato, la
+  // richiesta era davvero bloccata) da un errore di rete di tutt'altra
+  // natura (CORS, DNS, connessione rifiutata) — sono problemi diversi,
+  // confonderli in un unico messaggio costringe a indovinare quale dei
+  // due sia successo invece di saperlo con certezza dal messaggio stesso.
+  function dettaglioErrore(e) {
+    if (e.name === "AbortError") return "tempo scaduto (20s) senza risposta";
+    return e.message || e.name || "sconosciuto";
+  }
+
+  function mostraToast(testo) {
+    let toast = document.getElementById("toast-preferiti");
+    if (!toast) {
+      toast = document.createElement("div");
+      toast.id = "toast-preferiti";
+      document.body.appendChild(toast);
+    }
+    toast.textContent = testo;
+    toast.classList.add("visibile");
+    clearTimeout(toast._timeoutToast);
+    toast._timeoutToast = setTimeout(() => toast.classList.remove("visibile"), 3200);
+  }
+
+  // Clic sulla stella: se già preferita, la toglie (torna neutro); se no,
+  // la imposta a preferito (rimpiazzando uno scarto, se presente — la
+  // mutua esclusione è già garantita da Code.gs scrivendo lo stesso stato
+  // in un'unica colonna, qui basta scegliere quale delle due azioni
+  // chiamare in base allo stato attuale).
+  function onClickStella(evento, id) {
+    evento.stopPropagation(); // non deve aprire/chiudere "vedi dettagli" sotto
+    const asta = ASTE.find(a => a.id === id);
+    if (!asta) return;
+    if (asta.preferito) {
+      richiediPasswordSeServe(() => eseguiRimuoviFlag(id));
+    } else {
+      richiediPasswordSeServe(() => eseguiImpostaStato(id, "preferito"));
+    }
+  }
+
+  function onClickScarta(evento, id) {
+    evento.stopPropagation();
+    const asta = ASTE.find(a => a.id === id);
+    if (!asta) return;
+    if (asta.scartato) {
+      richiediPasswordSeServe(() => eseguiRimuoviFlag(id));
+    } else {
+      richiediPasswordSeServe(() => eseguiImpostaStato(id, "scartato"));
+    }
+  }
+
+  // Chiamata SOLO su un vero cambio di stato (mai una riconferma dello
+  // stesso: quel caso non passa più da qui, vedi onClickStella/Scarta
+  // sopra) — la nota va quindi sempre cancellata in locale, stessa
+  // cascata già applicata lato server in gestisciImpostaStatoPreferito.
+  async function eseguiImpostaStato(id, stato) {
+    const asta = ASTE.find(a => a.id === id);
+    if (!asta) return;
+    const precedente = {preferito: asta.preferito, scartato: asta.scartato, notaPreferito: asta.notaPreferito};
+
+    asta.preferito = (stato === "preferito");
+    asta.scartato = (stato === "scartato");
+    asta.notaPreferito = "";
+    PREFERITI[id] = {stato, nota: ""};
+    applicaFiltri();
+
+    try {
+      const risultato = await chiamaWebApp("imposta_stato_preferito", {hash_password: hashPasswordCorrente, id_annuncio: id, stato});
+      if (risultato.result !== "success") throw new Error(risultato.message || "");
+    } catch (e) {
+      console.error("imposta_stato_preferito fallita:", e);
+      Object.assign(asta, precedente);
+      if (precedente.preferito) PREFERITI[id] = {stato: "preferito", nota: precedente.notaPreferito};
+      else if (precedente.scartato) PREFERITI[id] = {stato: "scartato", nota: precedente.notaPreferito};
+      else delete PREFERITI[id];
+      applicaFiltri();
+      mostraToast(`Non sono riuscita a salvare: ${dettaglioErrore(e)}`);
+    }
+  }
+
+  async function eseguiRimuoviFlag(id) {
+    const asta = ASTE.find(a => a.id === id);
+    if (!asta) return;
+    const precedente = {preferito: asta.preferito, scartato: asta.scartato, notaPreferito: asta.notaPreferito};
+
+    asta.preferito = false;
+    asta.scartato = false;
+    asta.notaPreferito = "";
+    delete PREFERITI[id];
+    applicaFiltri();
+
+    try {
+      const risultato = await chiamaWebApp("rimuovi_flag_preferito", {hash_password: hashPasswordCorrente, id_annuncio: id});
+      if (risultato.result !== "success") throw new Error(risultato.message || "");
+    } catch (e) {
+      console.error("rimuovi_flag_preferito fallita:", e);
+      Object.assign(asta, precedente);
+      if (precedente.preferito) PREFERITI[id] = {stato: "preferito", nota: precedente.notaPreferito};
+      else if (precedente.scartato) PREFERITI[id] = {stato: "scartato", nota: precedente.notaPreferito};
+      applicaFiltri();
+      mostraToast(`Non sono riuscita a salvare: ${dettaglioErrore(e)}`);
+    }
+  }
+
+  // Editor nota: scambia la bolla (sempre visibile, testo troncato) con
+  // un'area di modifica — stesso spirito espandi/comprimi di "vedi
+  // dettagli", solo applicato a un elemento più piccolo.
   function apriEditorNota(id) {
-    document.getElementById(`bolla-nota-${id}`).style.display = 'none';
-    document.getElementById(`editor-nota-${id}`).classList.add('aperto');
+    document.querySelector(`#nota-preferito-${CSS.escape(id)} .nota-preferito-bolla`)?.classList.add("nascosto");
+    const editor = document.getElementById("editor-nota-" + id);
+    editor?.classList.add("aperto");
+    editor?.querySelector("textarea")?.focus();
   }
 
   function chiudiEditorNota(id) {
-    document.getElementById(`bolla-nota-${id}`).style.display = 'block';
-    document.getElementById(`editor-nota-${id}`).classList.remove('aperto');
+    document.querySelector(`#nota-preferito-${CSS.escape(id)} .nota-preferito-bolla`)?.classList.remove("nascosto");
+    document.getElementById("editor-nota-" + id)?.classList.remove("aperto");
   }
 
-  function salvaNota(id) {
-    const testo = document.getElementById(`input-nota-${id}`).value.trim();
-    if (!preferitiMap[id]) preferitiMap[id] = {};
-    preferitiMap[id].nota = testo;
-    salvaPreferitiLocale();
-    
-    const bolla = document.getElementById(`bolla-nota-${id}`);
-    bolla.innerText = testo || '+ Aggiungi una nota...';
-    bolla.classList.toggle('compilata', !!testo);
-    chiudiEditorNota(id);
+  function salvaNotaDaEditor(id) {
+    const testo = document.getElementById("editor-nota-" + id)?.querySelector("textarea")?.value.trim() || "";
+    richiediPasswordSeServe(() => eseguiSalvaNota(id, testo));
   }
 
-  function aggiornaStatoGraficoLotto(id) {
-    const card = document.getElementById(`card-lotto-${id}`);
-    if (!card) return;
-
-    const pref = preferitiMap[id] || {};
-    const btnPref = card.querySelector('.lotto-azioni button:first-child');
-    const btnScarta = card.querySelector('.lotto-azioni button:last-child');
-
-    btnPref.classList.toggle('preferito-attivo', !!pref.preferito);
-    btnScarta.classList.toggle('scartato-attivo', !!pref.scartato);
-    card.classList.toggle('scartato', !!pref.scartato);
+  function eliminaNotaDaEditor(id) {
+    richiediPasswordSeServe(() => eseguiSalvaNota(id, ""));
   }
 
-  function toggleDettagli(id) {
-    const el = document.getElementById(`dettagli-${id}`);
-    el.classList.toggle('aperto');
-  }
+  // Salvare una nota vuota non è un'azione diversa: sul server è lo
+  // stesso salva_nota_preferito con nota="" — svuota il testo ma lascia
+  // intatto lo stato preferito/scartato (che si toglie solo dalla
+  // stella/scarto, non da qui).
+  async function eseguiSalvaNota(id, testo) {
+    const asta = ASTE.find(a => a.id === id);
+    if (!asta) return;
+    const precedente = asta.notaPreferito;
 
-  function attivaFiltroOccupazione(tipo) {
-    if (filtroOccupazione === tipo) {
-      filtroOccupazione = null;
-    } else {
-      filtroOccupazione = tipo;
+    asta.notaPreferito = testo;
+    if (PREFERITI[id]) PREFERITI[id].nota = testo;
+    applicaFiltri();
+
+    try {
+      const risultato = await chiamaWebApp("salva_nota_preferito", {hash_password: hashPasswordCorrente, id_annuncio: id, nota: testo});
+      if (risultato.result !== "success") throw new Error(risultato.message || "");
+    } catch (e) {
+      console.error("salva_nota_preferito fallita:", e);
+      asta.notaPreferito = precedente;
+      if (PREFERITI[id]) PREFERITI[id].nota = precedente;
+      applicaFiltri();
+      mostraToast(`Non sono riuscita a salvare la nota: ${dettaglioErrore(e)}`);
     }
-    document.querySelectorAll('#gruppo-occupazione .pillola').forEach(b => {
-      b.classList.toggle('attiva', b.getAttribute('data-stato') === filtroOccupazione);
+  }
+
+  function formattaData(iso) {
+    if (!iso) return "N/D";
+    const parti = String(iso).slice(0, 10).split("-");
+    if (parti.length !== 3) return iso;
+    return `${parti[2]}/${parti[1]}/${parti[0]}`;
+  }
+
+  // Data di oggi in locale, come stringa ISO YYYY-MM-DD. Costruita a mano
+  // (non new Date().toISOString(), che è in UTC) per evitare che nelle ore
+  // vicine alla mezzanotte un'asta di oggi risulti erroneamente "conclusa"
+  // o viceversa a seconda del fuso orario del browser.
+  function dataOggiISO() {
+    const oggi = new Date();
+    const anno = oggi.getFullYear();
+    const mese = String(oggi.getMonth() + 1).padStart(2, "0");
+    const giorno = String(oggi.getDate()).padStart(2, "0");
+    return `${anno}-${mese}-${giorno}`;
+  }
+
+  // Confronto tra stringhe "YYYY-MM-DD", non tra oggetti Date: essendo ISO,
+  // l'ordine lessicografico coincide con l'ordine cronologico (stesso
+  // trucco già usato nel comparatore di ordinamento "data-asc" più sotto),
+  // quindi zero rischio di parsing/fuso orario. Data mancante = non conclusa,
+  // per non nascondere righe con dato assente.
+  function astaConclusa(dataVendita) {
+    if (!dataVendita) return false;
+    return String(dataVendita).slice(0, 10) < dataOggiISO();
+  }
+
+  // Distanza assoluta in giorni tra una data ISO e oggi, indipendentemente
+  // dal verso (prima o dopo). Serve al comparatore "vicina → lontana": con
+  // le due viste ora separate (Attive / Concluse), "vicina" deve poter
+  // significare sia "il più presto possibile" sia "la più di recente
+  // conclusa", a seconda della vista. Uso Date.UTC su entrambi i lati solo
+  // come aritmetica di differenza tra giorni di calendario — non è un
+  // controllo di fuso orario come astaConclusa, quindi qui non serve
+  // evitarlo: essendo una differenza, un identico offset su entrambi i
+  // lati si annulla da solo.
+  function distanzaGiorni(dataISO) {
+    if (!dataISO) return Infinity;
+    const [aa, mm, gg] = String(dataISO).slice(0, 10).split("-").map(Number);
+    const [oaa, omm, ogg] = dataOggiISO().split("-").map(Number);
+    return Math.abs(Date.UTC(aa, mm - 1, gg) - Date.UTC(oaa, omm - 1, ogg));
+  }
+
+  function livelloPunteggio(punteggio, valoreStima) {
+    // "Non valutato" solo se mancano ENTRAMBI i segnali — prima bastava che
+    // mancasse solo valoreStima, il che rompeva il caso di un punteggio
+    // inserito a mano senza il valore di stima completo (es. per test).
+    const nessunPunteggio = !punteggio || punteggio <= 0;
+    const nessunValore = !valoreStima || valoreStima <= 0;
+    if (nessunPunteggio && nessunValore) return "non-valutato";
+    if (punteggio >= 70) return "alto";
+    if (punteggio >= 40) return "medio";
+    return "basso";
+  }
+
+  // ==========================================================
+  // CARICAMENTO DATI
+  // ==========================================================
+  // Rigetta (fallisce) dopo ms millisecondi se la promessa originale non
+  // si è ancora risolta — per le letture che DEVONO considerarsi un vero
+  // errore se non arrivano in tempo (il CSV principale), non un "va bene
+  // comunque, prosegui senza".
+  function conTimeoutRigetta(promessa, ms) {
+    return Promise.race([
+      promessa,
+      new Promise((_, reject) => setTimeout(() => reject(new Error("Tempo scaduto")), ms))
+    ]);
+  }
+
+  // Si risolve con un valore di ripiego dopo ms millisecondi se la
+  // promessa originale non si è ancora risolta — per le letture
+  // OPZIONALI (il CSV dei preferiti), dove un ritardo eccessivo deve
+  // degradare in modo controllato invece di bloccare tutta la pagina.
+  // Prima mancava questo limite: se quella lettura si bloccava (invece
+  // di fallire pulita con un errore di rete), la pagina restava ferma su
+  // "Apertura del registro…" a tempo indefinito — mai né risolta né
+  // fallita, quindi mai visualizzata.
+  function conTimeoutRipiego(promessa, ms, ripiego) {
+    return Promise.race([
+      promessa,
+      new Promise(resolve => setTimeout(() => resolve(ripiego), ms))
+    ]);
+  }
+
+  function avvia() {
+    if (!CSV_URL || CSV_URL.indexOf("INCOLLA_QUI") > -1) {
+      mostraStato("stato-non-configurato");
+      return;
+    }
+
+    const promessaAste = new Promise((resolve, reject) => {
+      Papa.parse(CSV_URL, {
+        download: true, header: true, skipEmptyLines: true,
+        transformHeader: h => h.trim(),
+        complete: risultato => {
+          console.log("Intestazioni lette dal CSV:", risultato.meta.fields);
+          resolve((risultato.data || []).filter(r => r["ID Annuncio"]));
+        },
+        error: reject
+      });
+    });
+
+    // Il CSV dei Preferiti non deve MAI bloccare il caricamento del
+    // registro principale: se non è ancora configurato (CSV_URL_PREFERITI
+    // vuoto) o irraggiungibile per qualunque motivo, si prosegue
+    // semplicemente senza nessuna stella/scarto già segnata — non è un
+    // errore che giustifichi lo stato "stato-errore" di tutta la pagina.
+    const promessaPreferiti = (!CSV_URL_PREFERITI || CSV_URL_PREFERITI.indexOf("INCOLLA_QUI") > -1)
+      ? Promise.resolve([])
+      : new Promise(resolve => {
+          Papa.parse(CSV_URL_PREFERITI, {
+            download: true, header: true, skipEmptyLines: true,
+            transformHeader: h => h.trim(),
+            complete: risultato => resolve(risultato.data || []),
+            error: () => resolve([])
+          });
+        });
+
+    Promise.all([
+      conTimeoutRigetta(promessaAste, 20000),
+      conTimeoutRipiego(promessaPreferiti, 8000, [])
+    ]).then(([righeAste, righePreferiti]) => {
+      PREFERITI = {};
+      righePreferiti.forEach(r => {
+        const id = r["ID Annuncio"];
+        if (id) PREFERITI[id] = {stato: r["Stato"] || "", nota: r["Nota"] || ""};
+      });
+      ASTE = righeAste.map(normalizzaRiga).map(applicaStatoPreferito);
+      document.getElementById("testo-aggiornato").textContent =
+        new Date().toLocaleTimeString("it-IT", { hour: "2-digit", minute: "2-digit" });
+      popolaFiltroTipologia();
+      applicaFiltri();
+    }).catch(() => {
+      mostraStato("stato-errore");
+    });
+  }
+
+  function normalizzaRiga(r) {
+    const valoreStima = numeroSicuro(r["Valore Stima Perito"]);
+    return {
+      id: r["ID Annuncio"] || "",
+      comune: r["Comune / Indirizzo"] || "N/D",
+      distanza: numeroSicuro(r["Distanza (km)"], null),
+      tipologia: r["Tipologia"] || "N/D",
+      tribunale: r["Tribunale"] || "N/D",
+      lotto: r["N. Lotto"] || "",
+      disponibilita: r["Disponibilità (PVP)"] || "N/D",
+      offertaMinima: numeroSicuro(r["Offerta Minima"]),
+      prezzoBase: numeroSicuro(r["Prezzo Base"]),
+      rilancioMinimo: numeroSicuro(r["Rilancio Minimo"]),
+      valoreStima: valoreStima,
+      margine: r["Margine Stimato"] !== "" ? numeroSicuro(r["Margine Stimato"], null) : null,
+      superficieMq: numeroSicuro(r["Superficie (mq)"], null),
+      euroMq: numeroSicuro(r["€/mq Offerta Minima"], null),
+      formalitaPregiudizievoli: r["Formalità Pregiudizievoli"] || "N/D",
+      zonaSegnalata: r["Zona Segnalata"] || "",
+      punteggio: numeroSicuro(r["Score Flipping"]),
+      statoOccupazione: r["Stato Occupazione"] || "N/D",
+      speseSanatoria: numeroSicuro(r["Spese Sanatoria"]),
+      abusiEdilizi: r["Abusi Edilizi"] || "N/D",
+      note: r["Note & Rischi"] || "",
+      descrizione: r["Descrizione Lotto"] || "",
+      dataVendita: r["Data Vendita"] || "",
+      urlAsta: r["Link Asta"] || "",
+      urlPdf: r["Link PDF"] || "",
+      fonteDocumento: r["Fonte Documento"] || "",
+      modelloUsato: r["Modello AI Usato"] || "",
+      lat: numeroSicuro(r["Latitudine"], null),
+      lon: numeroSicuro(r["Longitudine"], null),
+    };
+  }
+
+  // Applica lo stato preferito/scartato/nota a un'asta già normalizzata,
+  // leggendo dalla mappa PREFERITI (caricata separatamente, vedi avvia()).
+  // Funzione a parte invece che dentro normalizzaRiga: quest'ultima
+  // costruisce l'asta dal SOLO CSV principale, che non sa nulla di
+  // preferiti — tenerle separate rispecchia che sono due fonti dati
+  // indipendenti, unite solo dopo che entrambe sono arrivate.
+  function applicaStatoPreferito(asta) {
+    const voce = PREFERITI[asta.id];
+    asta.preferito = voce?.stato === "preferito";
+    asta.scartato = voce?.stato === "scartato";
+    asta.notaPreferito = voce?.nota || "";
+    return asta;
+  }
+
+  // ==========================================================
+  // AGGREGAZIONE TIPOLOGIE — PVP restituisce fino a più codici
+  // categoriaBene per annuncio, uniti da app.py in un'unica stringa (es.
+  // "ABITAZIONE_TIPO_ECO, GARAGE_AUTORIMESSA") — filtrare sui valori
+  // grezzi esplode in decine di combinazioni quasi tutte uniche, un menu
+  // di fatto inutile. Ogni codice grezzo viene mappato qui su una delle
+  // poche macro-categorie sotto; un codice MAI VISTO PRIMA (es. se PVP ne
+  // introduce uno nuovo domani) ricade sempre su "Altro" — non sparisce
+  // mai dai filtri, semplicemente non è ancora catalogato con precisione.
+  const MACROCATEGORIE_TIPOLOGIA = [
+    "Abitazioni", "Garage e posti auto", "Negozi e uffici", "Terreni",
+    "Depositi e magazzini", "Fabbricati e complessi", "Altro"
+  ];
+
+  const MAPPA_TIPOLOGIA = {
+    "ABITAZIONE_TIPO_CIV": "Abitazioni",
+    "ABITAZIONE_TIPO_ECO": "Abitazioni",
+    "ABITAZIONE_TIPO_POP": "Abitazioni",
+    "ABITAZIONE_TIPO_UPOP": "Abitazioni",
+    "ABITAZIONE_IN_VILLINI": "Abitazioni",
+    "APPARTAMENTO": "Abitazioni",
+    "GARAGE_AUTORIMESSA": "Garage e posti auto",
+    "POSTO_AUTO": "Garage e posti auto",
+    "NEGOZIO": "Negozi e uffici",
+    "NEGOZI_BOTTEGHE": "Negozi e uffici",
+    "UFFICIO": "Negozi e uffici",
+    "LABORATORI_ARTI": "Negozi e uffici",
+    "TERRENO": "Terreni",
+    "DEPOSITO": "Depositi e magazzini",
+    "MAGAZZINI_E_DEPOSITO": "Depositi e magazzini",
+    "STALLE_SCUDERIE_RIMESSE": "Depositi e magazzini",
+    "FABBRICATI_COSTRUITI_PER_ESIGENZE_IND": "Depositi e magazzini",
+    "FABBRICATO": "Fabbricati e complessi",
+    "FABBRICATO_IN_COSTR": "Fabbricati e complessi",
+    "COMPENDIO_PIGNORATO": "Fabbricati e complessi"
+  };
+
+  // Un annuncio può appartenere a più di una macro-categoria insieme (es.
+  // "abitazione + garage") — così filtrando per Garage non sparisce
+  // dall'elenco di Abitazioni, e viceversa: mai nascosto per errore da un
+  // filtro che comunque lo riguarda. Un Set toglie da solo eventuali
+  // duplicati (capita che PVP ripeta lo stesso codice più volte).
+  function categorieDiAsta(tipologiaGrezza) {
+    const token = (tipologiaGrezza || "").split(",").map(t => t.trim()).filter(Boolean);
+    if (token.length === 0) return ["Altro"];
+    return [...new Set(token.map(t => MAPPA_TIPOLOGIA[t] || "Altro"))];
+  }
+
+  function popolaFiltroTipologia() {
+    const menu = document.getElementById("menu-tipologia");
+    menu.innerHTML = MACROCATEGORIE_TIPOLOGIA.map(categoria =>
+      `<label class="voce-menu-tipologia"><input type="checkbox" value="${escapeHtml(categoria)}" onchange="aggiornaFiltroTipologia()"><span>${escapeHtml(categoria)}</span></label>`
+    ).join("");
+  }
+
+  // Nessuna spunta = nessun filtro (mostra tutto), stesso principio già
+  // usato altrove sulla pagina. Con una o più spuntate, un'asta passa se
+  // appartiene ad ALMENO UNA delle categorie scelte — non deve
+  // appartenere a tutte insieme.
+  let categorieTipologiaAttive = new Set();
+
+  function alternaMenuTipologia(evento) {
+    if (evento) evento.stopPropagation(); // non far scattare subito la chiusura "clic fuori" qui sotto
+    const menu = document.getElementById("menu-tipologia");
+    const bottone = document.getElementById("bottone-filtro-tipologia");
+    const apri = menu.classList.contains("nascosto");
+
+    if (apri) {
+      // Va mostrato PRIMA di calcolare la posizione: un pannello nascosto
+      // (display:none) non è misurabile, l'altezza vera serve per il
+      // contenimento verticale qui sotto. Il browser dipinge solo a fine
+      // funzione, quindi non si vede mai la posizione intermedia sbagliata.
+      menu.classList.remove("nascosto");
+      posizionaMenuTipologia();
+    } else {
+      menu.classList.add("nascosto");
+    }
+    bottone.setAttribute("aria-expanded", apri ? "true" : "false");
+  }
+
+  // Calcola dove aprire il pannello: parte da sotto il pulsante, ma se
+  // sforerebbe il bordo destro o inferiore dello schermo si sposta
+  // abbastanza da restare tutto visibile — qualunque sia la posizione
+  // del pulsante nella riga di controlli (che su mobile può finire
+  // ovunque, a seconda di cosa va a capo prima di lui) e qualunque sia
+  // lo scroll della pagina in quel momento. Il calcolo dei limiti usa
+  // coordinate di finestra (getBoundingClientRect), ma il risultato
+  // viene convertito in coordinate relative al pulsante perché il
+  // pannello resta position:absolute — così segue il pulsante durante lo
+  // scroll invece di restare fisso rispetto allo schermo.
+  function posizionaMenuTipologia() {
+    const menu = document.getElementById("menu-tipologia");
+    const contenitore = document.querySelector(".contenitore-filtro-tipologia");
+    const bottone = document.getElementById("bottone-filtro-tipologia");
+    const rettBottone = bottone.getBoundingClientRect();
+    const rettContenitore = contenitore.getBoundingClientRect();
+    const margine = 12;
+    const larghezza = Math.min(240, window.innerWidth - margine * 2);
+    menu.style.width = larghezza + "px";
+
+    let sinistraFinestra = rettBottone.left;
+    if (sinistraFinestra + larghezza > window.innerWidth - margine) {
+      sinistraFinestra = window.innerWidth - larghezza - margine;
+    }
+    if (sinistraFinestra < margine) sinistraFinestra = margine;
+    menu.style.left = (sinistraFinestra - rettContenitore.left) + "px";
+
+    // Altezza vera, leggibile solo ora che il pannello è visibile.
+    const altezzaMenu = menu.offsetHeight;
+    let altoFinestra = rettBottone.bottom + 6;
+    if (altoFinestra + altezzaMenu > window.innerHeight - margine) {
+      altoFinestra = window.innerHeight - altezzaMenu - margine;
+    }
+    if (altoFinestra < margine) altoFinestra = margine;
+    menu.style.top = (altoFinestra - rettContenitore.top) + "px";
+  }
+
+  document.addEventListener("click", evento => {
+    const contenitore = document.querySelector(".contenitore-filtro-tipologia");
+    const menu = document.getElementById("menu-tipologia");
+    if (menu && !menu.classList.contains("nascosto") && contenitore && !contenitore.contains(evento.target)) {
+      menu.classList.add("nascosto");
+      document.getElementById("bottone-filtro-tipologia").setAttribute("aria-expanded", "false");
+    }
+  });
+
+  function aggiornaFiltroTipologia() {
+    const spuntate = document.querySelectorAll('#menu-tipologia input[type="checkbox"]:checked');
+    categorieTipologiaAttive = new Set([...spuntate].map(c => c.value));
+
+    const bottone = document.getElementById("bottone-filtro-tipologia");
+    const n = categorieTipologiaAttive.size;
+    bottone.innerHTML = (n > 0 ? `Tipologia (${n})` : "Tipologia") + ' <span class="freccia-tipologia">▾</span>';
+    bottone.classList.toggle("attiva", n > 0);
+
+    applicaFiltri();
+  }
+
+  // Stato del filtro libero/occupato: null (tutti), 'libero' oppure 'occupato'.
+  let filtroOccupazioneAttivo = null;
+
+  // Il campo statoOccupazione è testo libero generato da Gemini (frasi come
+  // "Occupato dall'esecutato e da terzi" o "Lotto 1 libero, Lotto 2
+  // occupato"), non un elenco fisso — un menu con ogni valore distinto
+  // diventa presto ingestibile. Questa classificazione è deliberatamente
+  // PRUDENTE: nei casi misti o ambigui non assegna nessuna delle due
+  // categorie (l'asta resta comunque visibile con "tutti", solo non
+  // comparirà filtrando specificamente per Libero o Occupato) — meglio
+  // lasciare un'asta fuori da un filtro specifico che rischiare di
+  // etichettarla nel modo sbagliato.
+  function classificaOccupazione(testo) {
+    const t = (testo || "").toLowerCase().trim();
+    if (!t || t === "n/d") return null;
+    const contieneOccupato = t.includes("occupat");
+    const iniziaLibero = t.startsWith("libero");
+    if (iniziaLibero && !contieneOccupato) return "libero";
+    if (contieneOccupato && !iniziaLibero) return "occupato";
+    return null;
+  }
+
+  function attivaFiltroOccupazione(stato) {
+    filtroOccupazioneAttivo = (filtroOccupazioneAttivo === stato) ? null : stato;
+    document.querySelectorAll("#gruppo-occupazione .pillola").forEach(p => {
+      p.classList.toggle("attiva", p.dataset.stato === filtroOccupazioneAttivo);
     });
     applicaFiltri();
   }
 
-  function alternaFiltroPreferiti() {
-    soloPreferiti = !soloPreferiti;
-    document.getElementById('pillola-preferiti').classList.toggle('attiva', soloPreferiti);
-    applicaFiltri();
-  }
+  // Di default le aste con data vendita già passata restano NASCOSTE (il
+  // registro resta focalizzato sulle opportunità ancora aperte), ma non
+  // vengono mai tolte dal foglio. Il pulsante non le aggiunge alle attive:
+  // scambia la vista — mostra SOLO le concluse invece di mischiarle alle
+  // attive — così la griglia resta pulita sia prima sia dopo il clic.
+  let mostraConcluse = false;
 
   function alternaMostraConcluse() {
     mostraConcluse = !mostraConcluse;
-    document.getElementById('pillola-concluse').classList.toggle('attiva', mostraConcluse);
+    document.getElementById("pillola-concluse").classList.toggle("attiva", mostraConcluse);
     applicaFiltri();
   }
 
-  function cambiaVista(tipo) {
-    vistaCorrente = tipo;
-    document.getElementById('pillola-vista-griglia').classList.toggle('attiva', tipo === 'griglia');
-    document.getElementById('pillola-vista-mappa').classList.toggle('attiva', tipo === 'mappa');
-    
-    document.getElementById('contenitore-griglia').classList.toggle('nascosto', tipo !== 'griglia');
-    document.getElementById('contenitore-mappa').classList.toggle('nascosto', tipo !== 'mappa');
+  // Filtro "Preferiti": mostra SOLO le aste preferite quando attivo,
+  // combinato con gli altri filtri già presenti (non li sostituisce) —
+  // stesso principio di Libero/Occupato. Le scartate non compaiono mai
+  // qui (cercarle specificamente non è lo scopo di questo filtro).
+  let filtroPreferitiAttivo = false;
+
+  function alternaFiltroPreferiti() {
+    filtroPreferitiAttivo = !filtroPreferitiAttivo;
+    document.getElementById("pillola-preferiti").classList.toggle("attiva", filtroPreferitiAttivo);
     applicaFiltri();
   }
 
-  function renderMappa(lista) {
-    const mapDiv = document.getElementById('contenitore-mappa');
-    if (!mappaInstance) {
-      mappaInstance = L.map(mapDiv).setView([37.5079, 15.0830], 10);
-      L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png').addTo(mappaInstance);
-      markerGroup = L.layerGroup().addTo(mappaInstance);
+  // ==========================================================
+  // FILTRI, ORDINAMENTO, RENDER
+  // ==========================================================
+  function applicaFiltri() {
+    if (ASTE.length === 0) {
+      mostraStato("stato-vuoto");
+      return;
     }
-    markerGroup.clearLayers();
 
-    lista.forEach(item => {
-      if (item.lat && item.lng) {
-        L.marker([item.lat, item.lng])
-         .bindPopup(`<strong>${item.comune}</strong><br>Offerta: ${item.prezzo.toLocaleString()} €`)
-         .addTo(markerGroup);
-      }
+    const ricerca = document.getElementById("ricerca").value.trim().toLowerCase();
+    const ordine = document.getElementById("ordinamento").value;
+
+    let filtrate = ASTE.filter(a => {
+      const passaRicerca = !ricerca || a.comune.toLowerCase().includes(ricerca);
+      const passaTipologia = categorieTipologiaAttive.size === 0
+        || categorieDiAsta(a.tipologia).some(c => categorieTipologiaAttive.has(c));
+      const passaOccupazione = !filtroOccupazioneAttivo || classificaOccupazione(a.statoOccupazione) === filtroOccupazioneAttivo;
+      const passaConcluse = mostraConcluse ? astaConclusa(a.dataVendita) : !astaConclusa(a.dataVendita);
+      const passaPreferiti = !filtroPreferitiAttivo || a.preferito;
+      return passaRicerca && passaTipologia && passaOccupazione && passaConcluse && passaPreferiti;
     });
+
+    const comparatori = {
+      "punteggio-desc": (a, b) => b.punteggio - a.punteggio,
+      "margine-desc": (a, b) => (b.margine ?? -Infinity) - (a.margine ?? -Infinity),
+      "prezzo-asc": (a, b) => a.offertaMinima - b.offertaMinima,
+      "data-asc": (a, b) => distanzaGiorni(a.dataVendita) - distanzaGiorni(b.dataVendita),
+      "distanza-asc": (a, b) => (a.distanza ?? 9999) - (b.distanza ?? 9999),
+    };
+    // Le scartate scivolano SEMPRE in fondo, a prescindere dal criterio
+    // scelto — è il punto stesso dello scarto (non farle più ricapitare
+    // per sbaglio scorrendo per punteggio), l'attenuazione visiva da sola
+    // non basterebbe se restassero comunque in cima. false (0) prima di
+    // true (1): l'aritmetica del confronto fa il resto come chiave
+    // primaria, il criterio scelto resta il comparatore secondario.
+    filtrate.sort((a, b) => (a.scartato - b.scartato) || (comparatori[ordine] || comparatori["punteggio-desc"])(a, b));
+
+    renderizza(filtrate);
+  }
+
+  function renderizza(elenco) {
+    ultimoElencoFiltrato = elenco;
+    const griglia = document.getElementById("griglia-lotti");
+
+    // Ora segue la vista corrente (Attive/Concluse) invece di restare
+    // fissa sulle attive: utile soprattutto quando si guardano le
+    // concluse, per sapere subito quante sono sul totale senza contarle
+    // a mano nella griglia sottostante.
+    const totaleAttive = ASTE.filter(a => !astaConclusa(a.dataVendita)).length;
+    const totaleConcluse = ASTE.length - totaleAttive;
+    document.getElementById("stat-totale").innerHTML = mostraConcluse
+      ? `${totaleConcluse} concluse<span class="stat-nota"> di ${ASTE.length}</span>`
+      : `${totaleAttive} attive<span class="stat-nota"> di ${ASTE.length}</span>`;
+    // Filtri separati apposta: punteggio e margine dipendono da dati diversi.
+    // Un'asta con solo il punteggio inserito (senza valore di stima) ha un
+    // punteggio valido ma nessun margine calcolabile — un filtro unico
+    // farebbe apparire "-Infinity" invece di "—" in quel caso.
+    const conPunteggio = ASTE.filter(a => a.punteggio > 0);
+    const conMargine = ASTE.filter(a => a.margine !== null);
+    document.getElementById("stat-punteggio").textContent =
+      conPunteggio.length ? Math.max(...conPunteggio.map(a => a.punteggio)) + "/100" : "—";
+    document.getElementById("stat-margine").textContent =
+      conMargine.length ? formattaEuro(Math.max(...conMargine.map(a => a.margine))) : "—";
+
+    nascondiTuttiGliStati();
+    document.getElementById("conteggio-filtrati").textContent = `${elenco.length} di ${ASTE.length} aste mostrate`;
+
+    if (elenco.length === 0) {
+      mostraStato("stato-nessun-risultato");
+      griglia.innerHTML = "";
+      renderizzaMappa(elenco);
+      return;
+    }
+
+    griglia.innerHTML = elenco.map((a, i) => cartellaLotto(a, i)).join("");
+    document.getElementById("bottone-mostra-tutti").textContent = "Mostra tutti i dettagli";
+    renderizzaMappa(elenco);
+  }
+
+  // ==========================================================
+  // VISTA MAPPA — funzioni di rendering e cambio vista
+  // ==========================================================
+  function cambiaVista(vista) {
+    const griglia = document.getElementById("griglia-lotti");
+    const vistaMappaEl = document.getElementById("vista-mappa");
+    const bottoneGriglia = document.getElementById("pillola-vista-griglia");
+    const bottoneMappa = document.getElementById("pillola-vista-mappa");
+
+    if (vista === "mappa") {
+      griglia.classList.add("nascosto");
+      vistaMappaEl.classList.remove("nascosto");
+      bottoneGriglia.classList.remove("attiva");
+      bottoneMappa.classList.add("attiva");
+      // Inizializzazione ritardata al primo utilizzo: crearla mentre il
+      // contenitore è ancora nascosto la bloccherebbe piccola in un angolo
+      // (stesso problema, e stessa soluzione, già visto in config.html).
+      if (!mappaLotti) inizializzaMappaLotti();
+      mappaLotti.invalidateSize();
+      renderizzaMappa(ultimoElencoFiltrato);
+    } else {
+      vistaMappaEl.classList.add("nascosto");
+      griglia.classList.remove("nascosto");
+      bottoneMappa.classList.remove("attiva");
+      bottoneGriglia.classList.add("attiva");
+    }
+  }
+
+  function inizializzaMappaLotti() {
+    mappaLotti = L.map("mappa-lotti").setView([37.5078836, 15.0830032], 10);
+    L.tileLayer("https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png", {
+      attribution: '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a>',
+      maxZoom: 18
+    }).addTo(mappaLotti);
+    gruppoMarcatori = L.layerGroup().addTo(mappaLotti);
+  }
+
+  function popupLotto(a, precisa) {
+    const margine = a.margine !== null ? formattaEuro(a.margine) : "—";
+    const notaPosizione = precisa
+      ? ""
+      : `<div style="font-style:italic;color:var(--ink-faint)">Posizione approssimata (centro comune)</div>`;
+    return `
+      <div class="popup-lotto">
+        <strong>${escapeHtml(a.comune)}</strong>
+        ${notaPosizione}
+        <div>Offerta minima: ${formattaEuro(a.offertaMinima)}</div>
+        <div>Margine stimato: ${margine}</div>
+        <div>Punteggio: ${a.punteggio > 0 ? a.punteggio + "/100" : "—"}</div>
+        ${a.urlAsta ? `<a href="${escapeHtml(a.urlAsta)}" target="_blank" rel="noopener">Apri annuncio PVP</a>` : ""}
+      </div>
+    `;
+  }
+
+  function renderizzaMappa(elenco) {
+    // Non ancora inizializzata (la vista Mappa non è mai stata aperta in
+    // questa sessione) — inutile calcolare marcatori che nessuno vede.
+    if (!mappaLotti) return;
+
+    gruppoMarcatori.clearLayers();
+    const puntiValidi = [];
+    let senzaCoordinate = 0;
+
+    elenco.forEach(a => {
+      // Preferisce sempre la coordinata reale (colonne Latitudine/
+      // Longitudine, salvate da app.py per le aste raccolte da qui in poi
+      // o recuperate dal backfill) — ricade sul centro del comune solo
+      // quando manca, es. per le righe più vecchie non ancora recuperate.
+      let base, precisa;
+      if (a.lat !== null && a.lon !== null) {
+        base = [a.lat, a.lon];
+        precisa = true;
+      } else {
+        base = trovaCoordinateComune(a.comune);
+        precisa = false;
+      }
+      if (!base) { senzaCoordinate++; return; }
+
+      // Il jitter serve solo per l'approssimazione per comune (più aste
+      // che altrimenti cadrebbero sullo stesso punto) — una coordinata
+      // reale non ne ha bisogno, ogni immobile ha già la sua posizione.
+      const [lat, lon] = precisa ? base : jitterDeterministico(a.id, base);
+      const livello = livelloPunteggio(a.punteggio, a.valoreStima);
+      const colore = COLORI_LIVELLO[livello] || COLORI_LIVELLO["non-valutato"];
+      // Raggio leggermente diverso per livello, non solo colore diverso:
+      // rinforza la stessa gerarchia di attenzione (alto deve saltare
+      // all'occhio per primo) anche a colpo d'occhio su una mappa fitta
+      // di punti, non solo per chi distingue bene i colori.
+      const raggioMarcatore = {alto: 9, medio: 8, basso: 6, "non-valutato": 7}[livello] ?? 8;
+
+      L.circleMarker([lat, lon], {
+        radius: raggioMarcatore, color: colore.bordo, fillColor: colore.riempimento, fillOpacity: 0.85, weight: 1.5
+      }).bindPopup(popupLotto(a, precisa)).addTo(gruppoMarcatori);
+
+      puntiValidi.push([lat, lon]);
+    });
+
+    const notaEl = document.getElementById("nota-comuni-mancanti");
+    notaEl.textContent = senzaCoordinate > 0
+      ? `${senzaCoordinate} ast${senzaCoordinate === 1 ? "a" : "e"} non mostrat${senzaCoordinate === 1 ? "a" : "e"} sulla mappa (comune non riconosciuto).`
+      : "";
+
+    if (puntiValidi.length > 0) {
+      mappaLotti.fitBounds(puntiValidi, {padding: [30, 30], maxZoom: 13});
+    } else {
+      mappaLotti.setView([37.5078836, 15.0830032], 10);
+    }
+  }
+
+  function cartellaLotto(a, indice) {
+    const livello = livelloPunteggio(a.punteggio, a.valoreStima);
+    const contenutoSigillo = livello === "non-valutato" ? "Non<br>valutato" : a.punteggio;
+    const distanzaTesto = a.distanza !== null ? `${a.distanza} km` : "distanza N/D";
+    const idDom = "dett-" + indice;
+    const conclusa = astaConclusa(a.dataVendita);
+
+    // Celle superficie/€ al mq: solo se il dato è presente nel foglio (potrebbe
+    // non esserci ancora se Code.gs non è stato ridistribuito, o se Gemini
+    // non ha trovato la superficie in quella specifica perizia).
+    const rigaSuperficie = a.superficieMq !== null ? `
+          <div>
+            <p class="cifra-etichetta">Superficie</p>
+            <p class="cifra-valore">${a.superficieMq.toFixed(0)} mq</p>
+          </div>
+          <div>
+            <p class="cifra-etichetta">€/mq (offerta)</p>
+            <p class="cifra-valore">${a.euroMq !== null ? formattaEuro(a.euroMq) + "/mq" : "—"}</p>
+          </div>` : "";
+
+    // Evidenzia la riga solo se il testo segnala qualcosa fuori dall'ordinario
+    // (non semplicemente "N/D" o l'ipoteca standard già prevista dal prompt).
+    const formalitaTesto = a.formalitaPregiudizievoli;
+    const formalitaConAvviso = formalitaTesto && formalitaTesto !== "N/D"
+      && formalitaTesto.toLowerCase().indexOf("nessuna criticità") !== 0;
+
+    // Icone stella/scarto: piena + colorata quando attiva, solo contorno
+    // quando no — stessa convenzione (pieno = attivo) di GitHub/Twitter,
+    // già familiare a chi le usa. Colori: --primary per preferito (mai
+    // altrove come segnale di stato, vedi commento CSS), --danger per
+    // scartato (stesso ruolo semantico già usato per badge/avvisi).
+    const iconaStella = a.preferito
+      ? `<svg viewBox="0 0 24 24" fill="currentColor"><path d="M12 2.5l2.9 6.5 7.1.6-5.4 4.6 1.6 6.9-6.2-3.6-6.2 3.6 1.6-6.9L2 9.6l7.1-.6z"/></svg>`
+      : `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linejoin="round"><path d="M12 2.5l2.9 6.5 7.1.6-5.4 4.6 1.6 6.9-6.2-3.6-6.2 3.6 1.6-6.9L2 9.6l7.1-.6z"/></svg>`;
+    const iconaScarta = a.scartato
+      ? `<svg viewBox="0 0 24 24" fill="currentColor"><circle cx="12" cy="12" r="10"/><path d="M8.7 8.7l6.6 6.6m0-6.6l-6.6 6.6" stroke="var(--surface)" stroke-width="1.8" stroke-linecap="round" fill="none"/></svg>`
+      : `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"><circle cx="12" cy="12" r="9.2" stroke-linecap="butt"/><path d="M9 9l6 6m0-6l-6 6"/></svg>`;
+
+    // La nuvoletta compare solo se l'asta è preferita o scartata — una
+    // nota senza uno dei due stati non esiste, stessa invarianza già
+    // imposta lato server in Code.gs (salva_nota_preferito la rifiuta).
+    const notaHtml = (a.preferito || a.scartato) ? `
+        <div class="nota-preferito" id="nota-preferito-${a.id}">
+          <button type="button" class="nota-preferito-bolla${a.notaPreferito ? ' compilata' : ''}" onclick="apriEditorNota('${a.id}')">${a.notaPreferito ? escapeHtml(a.notaPreferito) : '+ Aggiungi una nota'}</button>
+          <div class="nota-preferito-editor" id="editor-nota-${a.id}">
+            <textarea placeholder="Es. interessante, valuta meglio i costi di ristrutturazione...">${escapeHtml(a.notaPreferito)}</textarea>
+            <div class="nota-preferito-azioni">
+              <button type="button" class="nota-preferito-salva" onclick="salvaNotaDaEditor('${a.id}')">Salva</button>
+              ${a.notaPreferito ? `<button type="button" class="nota-preferito-elimina" onclick="eliminaNotaDaEditor('${a.id}')">Elimina</button>` : ""}
+              <button type="button" class="nota-preferito-annulla" onclick="chiudiEditorNota('${a.id}')">Annulla</button>
+            </div>
+          </div>
+        </div>` : "";
+
+    return `
+      <article class="lotto${conclusa ? ' conclusa' : ''}${a.scartato ? ' scartato' : ''}" style="animation-delay:${Math.min(indice * 45, 500)}ms">
+        <div class="lotto-testata">
+          <div class="sigillo ${livello}">${contenutoSigillo}</div>
+          <div>
+            <p class="lotto-id">${a.lotto ? "Lotto " + escapeHtml(a.lotto) + " · " : ""}${escapeHtml(a.tipologia)}</p>
+            <p class="lotto-comune">${escapeHtml(a.comune)}</p>
+            ${conclusa ? `<span class="badge-conclusa">🏁 Conclusa</span>` : ""}
+            ${a.zonaSegnalata ? `<span class="badge-zona">🚩 ${escapeHtml(a.zonaSegnalata)}</span>` : ""}
+            <p class="lotto-meta">${escapeHtml(distanzaTesto)} · vendita ${formattaData(a.dataVendita)}</p>
+          </div>
+          <div class="lotto-azioni">
+            <button type="button" class="bottone-azione-lotto${a.preferito ? ' preferito-attivo' : ''}" title="Preferito" onclick="onClickStella(event, '${a.id}')">${iconaStella}</button>
+            <button type="button" class="bottone-azione-lotto${a.scartato ? ' scartato-attivo' : ''}" title="Non interessa" onclick="onClickScarta(event, '${a.id}')">${iconaScarta}</button>
+          </div>
+        </div>
+${notaHtml}
+        <div class="lotto-margine">
+          <p class="cifra-etichetta">Margine stimato</p>
+          <p class="lotto-margine-valore">${a.margine !== null ? formattaEuro(a.margine) : "—"}</p>
+        </div>
+
+        <div class="lotto-cifre">
+          <div>
+            <p class="cifra-etichetta">Offerta minima</p>
+            <p class="cifra-valore">${formattaEuro(a.offertaMinima)}</p>
+          </div>
+          <div>
+            <p class="cifra-etichetta">Valore stima</p>
+            <p class="cifra-valore">${a.valoreStima > 0 ? formattaEuro(a.valoreStima) : "—"}</p>
+          </div>${rigaSuperficie}
+          <div class="cifra-larga">
+            <p class="cifra-etichetta">Stato occupazione</p>
+            <p class="cifra-valore">${escapeHtml(a.statoOccupazione)}</p>
+          </div>
+        </div>
+
+        <button class="bottone-dettagli" aria-expanded="false" aria-controls="${idDom}" onclick="alternaDettagli(this, '${idDom}')">
+          Vedi dettagli <span class="freccia">▾</span>
+        </button>
+
+        <div class="lotto-dettagli" id="${idDom}">
+          <div class="lotto-dettagli-inner">
+            <div class="dettaglio-riga"><span>Tribunale</span><span>${escapeHtml(a.tribunale)}</span></div>
+            <div class="dettaglio-riga"><span>Disponibilità (PVP)</span><span>${escapeHtml(a.disponibilita)}</span></div>
+            <div class="dettaglio-riga"><span>Prezzo base</span><span>${formattaEuro(a.prezzoBase)}</span></div>
+            <div class="dettaglio-riga"><span>Rilancio minimo</span><span>${formattaEuro(a.rilancioMinimo)}</span></div>
+            <div class="dettaglio-riga"><span>Spese sanatoria</span><span>${formattaEuro(a.speseSanatoria)}</span></div>
+            <div class="dettaglio-riga"><span>Abusi edilizi</span><span>${escapeHtml(a.abusiEdilizi)}</span></div>
+            <div class="dettaglio-riga${formalitaConAvviso ? ' avviso' : ''}"><span>Formalità pregiudizievoli</span><span>${escapeHtml(formalitaTesto)}</span></div>
+            <div class="dettaglio-riga"><span>Fonte analisi</span><span>${escapeHtml(a.fonteDocumento || "nessuna")}</span></div>
+            <div class="dettaglio-riga"><span>Modello AI</span><span>${escapeHtml(a.modelloUsato || "N/D")}</span></div>
+            <div class="dettaglio-riga"><span>ID Annuncio</span><span>${escapeHtml(a.id)}</span></div>
+            ${a.note ? `<div class="lotto-note">${escapeHtml(a.note)}</div>` : ""}
+            ${a.descrizione ? `<div class="lotto-note">${escapeHtml(a.descrizione)}</div>` : ""}
+            <div style="margin-top:12px">
+              ${a.urlAsta ? `<a class="lotto-link" href="${escapeHtml(a.urlAsta)}" target="_blank" rel="noopener">Apri annuncio PVP</a>` : ""}
+              ${a.urlPdf ? `<a class="lotto-link secondario" href="${escapeHtml(a.urlPdf)}" target="_blank" rel="noopener">Apri documento</a>` : ""}
+            </div>
+          </div>
+        </div>
+      </article>
+    `;
+  }
+
+  function alternaDettagli(bottone, idDom) {
+    const pannello = document.getElementById(idDom);
+    const aperto = pannello.classList.toggle("aperto");
+    bottone.setAttribute("aria-expanded", aperto ? "true" : "false");
+    bottone.innerHTML = (aperto ? "Chiudi dettagli " : "Vedi dettagli ") + '<span class="freccia">▾</span>';
+  }
+
+  function alternaTuttiIDettagli() {
+    const bottoneGlobale = document.getElementById("bottone-mostra-tutti");
+    const daAprire = bottoneGlobale.textContent.indexOf("Mostra") === 0;
+    document.querySelectorAll(".lotto-dettagli").forEach(pannello => pannello.classList.toggle("aperto", daAprire));
+    document.querySelectorAll(".bottone-dettagli").forEach(bottone => {
+      bottone.setAttribute("aria-expanded", daAprire ? "true" : "false");
+      bottone.innerHTML = (daAprire ? "Chiudi dettagli " : "Vedi dettagli ") + '<span class="freccia">▾</span>';
+    });
+    bottoneGlobale.textContent = daAprire ? "Nascondi tutti i dettagli" : "Mostra tutti i dettagli";
+  }
+
+  function mostraStato(idStato) {
+    nascondiTuttiGliStati();
+    document.getElementById(idStato).classList.remove("nascosto");
+  }
+
+  function nascondiTuttiGliStati() {
+    ["stato-caricamento", "stato-non-configurato", "stato-errore", "stato-vuoto", "stato-nessun-risultato"]
+      .forEach(id => document.getElementById(id).classList.add("nascosto"));
+  }
+
+  document.getElementById("ricerca").addEventListener("input", applicaFiltri);
+  document.getElementById("ordinamento").addEventListener("change", applicaFiltri);
+
+  avvia();
+</script>
+
+<script>
+  // Registrazione PWA — vedi sw.js per cosa fa (nulla, di proposito).
+  if ("serviceWorker" in navigator) {
+    navigator.serviceWorker.register("sw.js").catch(() => {});
   }
 </script>
+
 </body>
 </html>
