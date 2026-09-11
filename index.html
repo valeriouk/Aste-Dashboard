@@ -1174,12 +1174,25 @@
     return Array.from(new Uint8Array(bufferHash)).map(b => b.toString(16).padStart(2, "0")).join("");
   }
 
+  // Timeout esplicito su OGNI chiamata alla WebApp (password, stella,
+  // scarto, nota) — prima non c'era, quindi se Google non rispondeva la
+  // pagina restava bloccata a tempo indefinito invece di fallire in modo
+  // pulito e recuperabile. Un solo punto centralizzato: tutte e quattro
+  // le azioni che passano da qui ne beneficiano senza bisogno di toccarle
+  // una per una.
   async function chiamaWebApp(azione, extra) {
-    const risposta = await fetch(WEBAPP_URL, {
-      method: "POST",
-      body: JSON.stringify({azione, ...extra})
-    });
-    return risposta.json();
+    const controller = new AbortController();
+    const scaduto = setTimeout(() => controller.abort(), 20000);
+    try {
+      const risposta = await fetch(WEBAPP_URL, {
+        method: "POST",
+        body: JSON.stringify({azione, ...extra}),
+        signal: controller.signal
+      });
+      return await risposta.json();
+    } finally {
+      clearTimeout(scaduto);
+    }
   }
 
   // Azione JS in sospeso mentre il modale password è aperto — eseguita
@@ -1436,6 +1449,32 @@
   // ==========================================================
   // CARICAMENTO DATI
   // ==========================================================
+  // Rigetta (fallisce) dopo ms millisecondi se la promessa originale non
+  // si è ancora risolta — per le letture che DEVONO considerarsi un vero
+  // errore se non arrivano in tempo (il CSV principale), non un "va bene
+  // comunque, prosegui senza".
+  function conTimeoutRigetta(promessa, ms) {
+    return Promise.race([
+      promessa,
+      new Promise((_, reject) => setTimeout(() => reject(new Error("Tempo scaduto")), ms))
+    ]);
+  }
+
+  // Si risolve con un valore di ripiego dopo ms millisecondi se la
+  // promessa originale non si è ancora risolta — per le letture
+  // OPZIONALI (il CSV dei preferiti), dove un ritardo eccessivo deve
+  // degradare in modo controllato invece di bloccare tutta la pagina.
+  // Prima mancava questo limite: se quella lettura si bloccava (invece
+  // di fallire pulita con un errore di rete), la pagina restava ferma su
+  // "Apertura del registro…" a tempo indefinito — mai né risolta né
+  // fallita, quindi mai visualizzata.
+  function conTimeoutRipiego(promessa, ms, ripiego) {
+    return Promise.race([
+      promessa,
+      new Promise(resolve => setTimeout(() => resolve(ripiego), ms))
+    ]);
+  }
+
   function avvia() {
     if (!CSV_URL || CSV_URL.indexOf("INCOLLA_QUI") > -1) {
       mostraStato("stato-non-configurato");
@@ -1470,7 +1509,10 @@
           });
         });
 
-    Promise.all([promessaAste, promessaPreferiti]).then(([righeAste, righePreferiti]) => {
+    Promise.all([
+      conTimeoutRigetta(promessaAste, 20000),
+      conTimeoutRipiego(promessaPreferiti, 8000, [])
+    ]).then(([righeAste, righePreferiti]) => {
       PREFERITI = {};
       righePreferiti.forEach(r => {
         const id = r["ID Annuncio"];
