@@ -1227,7 +1227,8 @@
     try {
       risultato = await chiamaWebApp("verifica_password", {hash_password: hash});
     } catch (e) {
-      erroreEl.textContent = "Richiesta non riuscita. Controlla la connessione.";
+      console.error("Verifica password fallita:", e);
+      erroreEl.textContent = `Richiesta non riuscita: ${dettaglioErrore(e)}`;
       return;
     }
 
@@ -1250,6 +1251,19 @@
   // quelle sono azioni rare e più pesanti (elimina aste scadute, avvia
   // scanner), queste sono pensate per essere frequenti e leggere.
   // ==========================================================
+  // ==========================================================
+  // Riassume un'eccezione di chiamaWebApp in un dettaglio leggibile,
+  // invece di un generico "errore di connessione" — distingue in
+  // particolare un timeout VERO (il limite di 20s è scattato, la
+  // richiesta era davvero bloccata) da un errore di rete di tutt'altra
+  // natura (CORS, DNS, connessione rifiutata) — sono problemi diversi,
+  // confonderli in un unico messaggio costringe a indovinare quale dei
+  // due sia successo invece di saperlo con certezza dal messaggio stesso.
+  function dettaglioErrore(e) {
+    if (e.name === "AbortError") return "tempo scaduto (20s) senza risposta";
+    return e.message || e.name || "sconosciuto";
+  }
+
   function mostraToast(testo) {
     let toast = document.getElementById("toast-preferiti");
     if (!toast) {
@@ -1309,12 +1323,13 @@
       const risultato = await chiamaWebApp("imposta_stato_preferito", {hash_password: hashPasswordCorrente, id_annuncio: id, stato});
       if (risultato.result !== "success") throw new Error(risultato.message || "");
     } catch (e) {
+      console.error("imposta_stato_preferito fallita:", e);
       Object.assign(asta, precedente);
       if (precedente.preferito) PREFERITI[id] = {stato: "preferito", nota: precedente.notaPreferito};
       else if (precedente.scartato) PREFERITI[id] = {stato: "scartato", nota: precedente.notaPreferito};
       else delete PREFERITI[id];
       applicaFiltri();
-      mostraToast("Non sono riuscita a salvare — riprova.");
+      mostraToast(`Non sono riuscita a salvare: ${dettaglioErrore(e)}`);
     }
   }
 
@@ -1333,11 +1348,12 @@
       const risultato = await chiamaWebApp("rimuovi_flag_preferito", {hash_password: hashPasswordCorrente, id_annuncio: id});
       if (risultato.result !== "success") throw new Error(risultato.message || "");
     } catch (e) {
+      console.error("rimuovi_flag_preferito fallita:", e);
       Object.assign(asta, precedente);
       if (precedente.preferito) PREFERITI[id] = {stato: "preferito", nota: precedente.notaPreferito};
       else if (precedente.scartato) PREFERITI[id] = {stato: "scartato", nota: precedente.notaPreferito};
       applicaFiltri();
-      mostraToast("Non sono riuscita a salvare — riprova.");
+      mostraToast(`Non sono riuscita a salvare: ${dettaglioErrore(e)}`);
     }
   }
 
@@ -1382,10 +1398,11 @@
       const risultato = await chiamaWebApp("salva_nota_preferito", {hash_password: hashPasswordCorrente, id_annuncio: id, nota: testo});
       if (risultato.result !== "success") throw new Error(risultato.message || "");
     } catch (e) {
+      console.error("salva_nota_preferito fallita:", e);
       asta.notaPreferito = precedente;
       if (PREFERITI[id]) PREFERITI[id].nota = precedente;
       applicaFiltri();
-      mostraToast("Non sono riuscita a salvare la nota — riprova.");
+      mostraToast(`Non sono riuscita a salvare la nota: ${dettaglioErrore(e)}`);
     }
   }
 
