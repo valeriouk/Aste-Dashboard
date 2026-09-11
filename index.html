@@ -672,6 +672,203 @@
     .lotto-cifre { grid-template-columns: 1fr; }
   }
 
+  /* ============================================================
+     PREFERITI / SCARTATE — stella, scarto, nota
+  ============================================================ */
+  /* Spinge le due icone di azione a destra nell'intestazione della card,
+     senza toccare il layout esistente (sigillo + testo restano identici,
+     questa è solo una terza colonna flessibile aggiunta in coda). */
+  .lotto-azioni {
+    display: flex;
+    gap: 4px;
+    margin-left: auto;
+    flex-shrink: 0;
+  }
+  .bottone-azione-lotto {
+    background: none;
+    border: none;
+    padding: 6px;
+    border-radius: 8px;
+    cursor: pointer;
+    color: var(--ink-faint);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    transition: background .15s ease, color .15s ease;
+  }
+  .bottone-azione-lotto:hover { background: var(--surface-2); }
+  .bottone-azione-lotto svg { width: 19px; height: 19px; }
+  /* Stella: blu inchiostro da attiva — colore mai usato altrove come
+     segnale di stato (il verde resta riservato al punteggio alto, vedi
+     sopra), quindi "preferito" resta un canale visivo a parte, mai
+     confuso col resto. */
+  .bottone-azione-lotto.preferito-attivo { color: var(--primary); }
+  /* Scarto: stesso --danger già usato per badge/avvisi — coerente col
+     suo ruolo semantico esistente di "cosa non va", non un colore nuovo
+     inventato per l'occasione. */
+  .bottone-azione-lotto.scartato-attivo { color: var(--danger); }
+
+  /* Un'asta scartata si attenua vistosamente — l'obiettivo dichiarato è
+     "non fartela ricapitare per sbaglio scorrendo per punteggio", quindi
+     l'attenuazione da sola non basta: l'ordinamento (vedi JS) la fa
+     scivolare in fondo a prescindere dal criterio scelto. */
+  .lotto.scartato { opacity: .42; }
+  .lotto.scartato:hover { opacity: .7; }
+
+  .nota-preferito {
+    margin: -4px 0 16px;
+  }
+  .nota-preferito-bolla {
+    display: block;
+    width: 100%;
+    text-align: left;
+    background: var(--surface-2);
+    border: 1px dashed var(--border);
+    border-radius: 8px;
+    padding: 8px 12px;
+    font-size: .82rem;
+    color: var(--ink-muted);
+    font-style: italic;
+    cursor: pointer;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+  }
+  .nota-preferito-bolla.compilata {
+    border-style: solid;
+    border-color: var(--border);
+    font-style: normal;
+  }
+  .nota-preferito-bolla:hover { border-color: var(--ink-faint); }
+  .nota-preferito-editor { display: none; }
+  .nota-preferito-editor.aperto { display: block; }
+  .nota-preferito-editor textarea {
+    width: 100%;
+    min-height: 64px;
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    padding: 10px 12px;
+    font-family: var(--font-body);
+    font-size: .85rem;
+    color: var(--ink);
+    resize: vertical;
+  }
+  .nota-preferito-azioni {
+    display: flex;
+    gap: 8px;
+    margin-top: 8px;
+  }
+  .nota-preferito-azioni button {
+    border: none;
+    border-radius: 7px;
+    padding: 7px 14px;
+    font-family: var(--font-body);
+    font-size: .8rem;
+    font-weight: 600;
+    cursor: pointer;
+  }
+  .nota-preferito-salva { background: var(--primary-soft); color: var(--primary); }
+  .nota-preferito-salva:hover { background: rgba(35,76,106,.20); }
+  .nota-preferito-elimina { background: var(--danger-soft); color: var(--danger); }
+  .nota-preferito-elimina:hover { background: rgba(139,61,46,.20); }
+  .nota-preferito-annulla { background: none; color: var(--ink-faint); }
+  .nota-preferito-annulla:hover { color: var(--ink-muted); }
+
+  /* ============================================================
+     MODALE PASSWORD — overlay leggero, non un gate a pagina intera come
+     in config.html: la lettura resta sempre aperta, questo compare solo
+     alla PRIMA azione di scrittura (stella/scarto/nota) di una sessione.
+  ============================================================ */
+  .overlay-password {
+    position: fixed;
+    inset: 0;
+    background: rgba(30,35,32,.45);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    padding: 24px;
+    z-index: 2000;
+  }
+  .riquadro-password-inline {
+    background: var(--surface);
+    border-radius: 12px;
+    padding: 28px;
+    max-width: 340px;
+    width: 100%;
+    text-align: center;
+    box-shadow: 0 12px 32px rgba(30,35,32,.25);
+  }
+  .riquadro-password-inline h3 {
+    font-family: var(--font-display);
+    font-weight: 500;
+    font-size: 1.15rem;
+    margin: 0 0 8px;
+  }
+  .riquadro-password-inline p {
+    color: var(--ink-muted);
+    font-size: .85rem;
+    margin: 0 0 16px;
+  }
+  .riquadro-password-inline input {
+    width: 100%;
+    background: var(--bg);
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    padding: 11px 14px;
+    font-family: var(--font-body);
+    font-size: .95rem;
+    color: var(--ink);
+    margin-bottom: 10px;
+    text-align: center;
+    box-sizing: border-box;
+  }
+  .riquadro-password-inline .riga-bottoni-password {
+    display: flex;
+    gap: 8px;
+  }
+  .riquadro-password-inline .riga-bottoni-password button {
+    flex: 1;
+    border: none;
+    border-radius: 8px;
+    padding: 11px 14px;
+    font-family: var(--font-body);
+    font-size: .88rem;
+    font-weight: 600;
+    cursor: pointer;
+  }
+  .bottone-password-conferma { background: var(--ink); color: var(--surface); }
+  .bottone-password-conferma:hover { background: var(--primary); }
+  .bottone-password-annulla { background: var(--surface-2); color: var(--ink-muted); }
+  .messaggio-errore-password { color: var(--danger); font-size: .82rem; margin: 10px 0 0; min-height: 1em; }
+
+  /* Toast discreto per un errore di salvataggio (stella/scarto/nota) —
+     compare in basso, si chiude da solo. Non blocca nulla sotto
+     (pointer-events attivi solo mentre visibile). */
+  #toast-preferiti {
+    position: fixed;
+    bottom: 24px;
+    left: 50%;
+    transform: translateX(-50%) translateY(20px);
+    background: var(--ink);
+    color: var(--surface);
+    padding: 12px 20px;
+    border-radius: 8px;
+    font-size: .85rem;
+    opacity: 0;
+    pointer-events: none;
+    transition: opacity .2s ease, transform .2s ease;
+    z-index: 3000;
+    max-width: 90vw;
+    text-align: center;
+    box-shadow: 0 8px 24px rgba(30,35,32,.2);
+  }
+  #toast-preferiti.visibile {
+    opacity: 1;
+    transform: translateX(-50%) translateY(0);
+    pointer-events: auto;
+  }
+
   @media (prefers-reduced-motion: reduce) {
     * { animation: none !important; transition: none !important; }
   }
@@ -686,7 +883,7 @@
       <p class="eyebrow">Scansione Aste Giudiziarie</p>
       <h1>Registro Opportunità</h1>
       <p class="sottotitolo">Aste residenziali filtrate per prezzo, distanza e margine potenziale stimato.</p>
-      <p class="versione-pagina">v2.0 · <a href="config.html">Configurazione</a></p>
+      <p class="versione-pagina">v2.1 · <a href="config.html">Configurazione</a></p>
     </div>
     <div class="aggiornato">
       <strong id="testo-aggiornato">—</strong>
@@ -722,6 +919,9 @@
     <div class="gruppo-pillole" id="gruppo-occupazione">
       <button type="button" class="pillola" data-stato="libero" onclick="attivaFiltroOccupazione('libero')">Libero</button>
       <button type="button" class="pillola" data-stato="occupato" onclick="attivaFiltroOccupazione('occupato')">Occupato</button>
+    </div>
+    <div class="gruppo-pillole" id="gruppo-preferiti">
+      <button type="button" class="pillola" id="pillola-preferiti" onclick="alternaFiltroPreferiti()">★ Preferiti</button>
     </div>
     <div class="gruppo-pillole" id="gruppo-concluse">
       <button type="button" class="pillola" id="pillola-concluse" onclick="alternaMostraConcluse()">Concluse</button>
@@ -782,6 +982,21 @@
 
   <footer>Aggiornato leggendo direttamente il Google Sheet · dati raccolti dal Portale delle Vendite Pubbliche</footer>
 
+  <!-- Modale password per Preferiti/Scarti/Note — compare solo alla prima
+       azione di scrittura di una sessione, vedi richiediPasswordSeServe(). -->
+  <div id="overlay-password" class="overlay-password nascosto">
+    <div class="riquadro-password-inline">
+      <h3>Password richiesta</h3>
+      <p>Serve solo la prima volta in questa sessione, per preferiti, scarti e note.</p>
+      <input type="password" id="campo-password-inline" placeholder="Password" onkeydown="if(event.key==='Enter') confermaPasswordInline()">
+      <div class="riga-bottoni-password">
+        <button type="button" class="bottone-password-annulla" onclick="chiudiModalePassword()">Annulla</button>
+        <button type="button" class="bottone-password-conferma" onclick="confermaPasswordInline()">Conferma</button>
+      </div>
+      <p id="errore-password-inline" class="messaggio-errore-password"></p>
+    </div>
+  </div>
+
 </div>
 
 <script>
@@ -792,7 +1007,34 @@
   // ==========================================================
   const CSV_URL = "https://docs.google.com/spreadsheets/d/e/2PACX-1vRhWMNfMFaIKJjJ1UYA7qYl7XnMkst04fr8LZj_c40OthHSyws8KuWHFJVfnRsEtOTahqFnDnDuCSVh/pub?gid=0&single=true&output=csv";
 
+  // URL del CSV pubblicato della scheda "Preferiti" (stella/scarto/nota) —
+  // scheda SEPARATA da quella principale, creata da Code.gs alla prima
+  // scrittura. Da compilare DOPO aver pubblicato quella scheda come CSV
+  // (Google Sheet -> File -> Condividi -> Pubblica sul web -> scegli la
+  // scheda "Preferiti" -> formato CSV), stesso identico procedimento già
+  // fatto per CSV_URL sopra. Finché resta vuota, la pagina funziona
+  // comunque normalmente — semplicemente nessuna asta risulta preferita o
+  // scartata finché questa non viene configurata.
+  const CSV_URL_PREFERITI = "";
+
+  // Stesso identico principio di autenticazione già usato in config.html:
+  // l'hash calcolato qui viene verificato lato server (Code.gs), MAI una
+  // vera protezione lato client — vedi la conversazione sul perché una
+  // password qui ferma solo chi ci arriva per sbaglio, non chi guarda il
+  // codice sorgente. A differenza di config.html, però, qui NON blocca
+  // l'intera pagina: la lettura resta sempre aperta, la password viene
+  // chiesta solo alla PRIMA azione di scrittura (stella, scarto o nota) in
+  // questa sessione — vedi richiediPasswordSeServe più sotto.
+  const SALE_PASSWORD = "aste-ct-8f3k2-sale";
+  let hashPasswordCorrente = null;
+
+  // Stessa WebApp già usata da config.html per le scritture protette —
+  // qui serve solo per le tre azioni nuove (stella, scarto, nota), non
+  // per leggere: la lettura resta sempre via CSV, sopra.
+  const WEBAPP_URL = "https://script.google.com/macros/s/AKfycbw8zisPCA5bvT2AXWhE8E4ZzWvbtCXku7__i9AklyPErTJpKOfKMCRNJe2-T6PCszD4/exec";
+
   let ASTE = [];
+  let PREFERITI = {}; // id_annuncio -> {stato: "preferito"|"scartato", nota: string}
 
   // ==========================================================
   // VISTA MAPPA — posizionamento a livello di COMUNE, non di indirizzo
@@ -921,6 +1163,219 @@
     return d.innerHTML;
   }
 
+  // ==========================================================
+  // PREFERITI / SCARTATE — autenticazione e chiamate alla WebApp.
+  // Stesso schema hash+verifica di config.html (vedi lì per i dettagli
+  // del perché il "sale" può stare in chiaro).
+  // ==========================================================
+  async function calcolaHash(testo) {
+    const dati = new TextEncoder().encode(SALE_PASSWORD + testo);
+    const bufferHash = await crypto.subtle.digest("SHA-256", dati);
+    return Array.from(new Uint8Array(bufferHash)).map(b => b.toString(16).padStart(2, "0")).join("");
+  }
+
+  async function chiamaWebApp(azione, extra) {
+    const risposta = await fetch(WEBAPP_URL, {
+      method: "POST",
+      body: JSON.stringify({azione, ...extra})
+    });
+    return risposta.json();
+  }
+
+  // Azione JS in sospeso mentre il modale password è aperto — eseguita
+  // automaticamente non appena la password viene confermata, così l'utente
+  // non deve ripetere il clic sulla stella/scarto/nota che l'ha innescata.
+  let azionePendente = null;
+
+  function richiediPasswordSeServe(azione) {
+    if (hashPasswordCorrente) {
+      azione();
+      return;
+    }
+    azionePendente = azione;
+    document.getElementById("errore-password-inline").textContent = "";
+    document.getElementById("campo-password-inline").value = "";
+    document.getElementById("overlay-password").classList.remove("nascosto");
+    document.getElementById("campo-password-inline").focus();
+  }
+
+  function chiudiModalePassword() {
+    document.getElementById("overlay-password").classList.add("nascosto");
+    azionePendente = null; // annullata: il clic originale non deve avere effetto
+  }
+
+  async function confermaPasswordInline() {
+    const password = document.getElementById("campo-password-inline").value;
+    const erroreEl = document.getElementById("errore-password-inline");
+    if (!password) return;
+
+    const hash = await calcolaHash(password);
+    let risultato;
+    try {
+      risultato = await chiamaWebApp("verifica_password", {hash_password: hash});
+    } catch (e) {
+      erroreEl.textContent = "Richiesta non riuscita. Controlla la connessione.";
+      return;
+    }
+
+    if (risultato.valida) {
+      hashPasswordCorrente = hash;
+      document.getElementById("overlay-password").classList.add("nascosto");
+      const azione = azionePendente;
+      azionePendente = null;
+      if (azione) azione();
+    } else {
+      erroreEl.textContent = "Password errata.";
+    }
+  }
+
+  // ==========================================================
+  // PREFERITI / SCARTATE — azioni vere: aggiornamento OTTIMISTICO (subito
+  // in locale, prima di sapere se il server conferma — dà una risposta
+  // immediata al tocco) con ripristino automatico se la chiamata fallisce.
+  // Diverso apposta dal pattern "aspetta la risposta" di config.html:
+  // quelle sono azioni rare e più pesanti (elimina aste scadute, avvia
+  // scanner), queste sono pensate per essere frequenti e leggere.
+  // ==========================================================
+  function mostraToast(testo) {
+    let toast = document.getElementById("toast-preferiti");
+    if (!toast) {
+      toast = document.createElement("div");
+      toast.id = "toast-preferiti";
+      document.body.appendChild(toast);
+    }
+    toast.textContent = testo;
+    toast.classList.add("visibile");
+    clearTimeout(toast._timeoutToast);
+    toast._timeoutToast = setTimeout(() => toast.classList.remove("visibile"), 3200);
+  }
+
+  // Clic sulla stella: se già preferita, la toglie (torna neutro); se no,
+  // la imposta a preferito (rimpiazzando uno scarto, se presente — la
+  // mutua esclusione è già garantita da Code.gs scrivendo lo stesso stato
+  // in un'unica colonna, qui basta scegliere quale delle due azioni
+  // chiamare in base allo stato attuale).
+  function onClickStella(evento, id) {
+    evento.stopPropagation(); // non deve aprire/chiudere "vedi dettagli" sotto
+    const asta = ASTE.find(a => a.id === id);
+    if (!asta) return;
+    if (asta.preferito) {
+      richiediPasswordSeServe(() => eseguiRimuoviFlag(id));
+    } else {
+      richiediPasswordSeServe(() => eseguiImpostaStato(id, "preferito"));
+    }
+  }
+
+  function onClickScarta(evento, id) {
+    evento.stopPropagation();
+    const asta = ASTE.find(a => a.id === id);
+    if (!asta) return;
+    if (asta.scartato) {
+      richiediPasswordSeServe(() => eseguiRimuoviFlag(id));
+    } else {
+      richiediPasswordSeServe(() => eseguiImpostaStato(id, "scartato"));
+    }
+  }
+
+  // Chiamata SOLO su un vero cambio di stato (mai una riconferma dello
+  // stesso: quel caso non passa più da qui, vedi onClickStella/Scarta
+  // sopra) — la nota va quindi sempre cancellata in locale, stessa
+  // cascata già applicata lato server in gestisciImpostaStatoPreferito.
+  async function eseguiImpostaStato(id, stato) {
+    const asta = ASTE.find(a => a.id === id);
+    if (!asta) return;
+    const precedente = {preferito: asta.preferito, scartato: asta.scartato, notaPreferito: asta.notaPreferito};
+
+    asta.preferito = (stato === "preferito");
+    asta.scartato = (stato === "scartato");
+    asta.notaPreferito = "";
+    PREFERITI[id] = {stato, nota: ""};
+    applicaFiltri();
+
+    try {
+      const risultato = await chiamaWebApp("imposta_stato_preferito", {hash_password: hashPasswordCorrente, id_annuncio: id, stato});
+      if (risultato.result !== "success") throw new Error(risultato.message || "");
+    } catch (e) {
+      Object.assign(asta, precedente);
+      if (precedente.preferito) PREFERITI[id] = {stato: "preferito", nota: precedente.notaPreferito};
+      else if (precedente.scartato) PREFERITI[id] = {stato: "scartato", nota: precedente.notaPreferito};
+      else delete PREFERITI[id];
+      applicaFiltri();
+      mostraToast("Non sono riuscita a salvare — riprova.");
+    }
+  }
+
+  async function eseguiRimuoviFlag(id) {
+    const asta = ASTE.find(a => a.id === id);
+    if (!asta) return;
+    const precedente = {preferito: asta.preferito, scartato: asta.scartato, notaPreferito: asta.notaPreferito};
+
+    asta.preferito = false;
+    asta.scartato = false;
+    asta.notaPreferito = "";
+    delete PREFERITI[id];
+    applicaFiltri();
+
+    try {
+      const risultato = await chiamaWebApp("rimuovi_flag_preferito", {hash_password: hashPasswordCorrente, id_annuncio: id});
+      if (risultato.result !== "success") throw new Error(risultato.message || "");
+    } catch (e) {
+      Object.assign(asta, precedente);
+      if (precedente.preferito) PREFERITI[id] = {stato: "preferito", nota: precedente.notaPreferito};
+      else if (precedente.scartato) PREFERITI[id] = {stato: "scartato", nota: precedente.notaPreferito};
+      applicaFiltri();
+      mostraToast("Non sono riuscita a salvare — riprova.");
+    }
+  }
+
+  // Editor nota: scambia la bolla (sempre visibile, testo troncato) con
+  // un'area di modifica — stesso spirito espandi/comprimi di "vedi
+  // dettagli", solo applicato a un elemento più piccolo.
+  function apriEditorNota(id) {
+    document.querySelector(`#nota-preferito-${CSS.escape(id)} .nota-preferito-bolla`)?.classList.add("nascosto");
+    const editor = document.getElementById("editor-nota-" + id);
+    editor?.classList.add("aperto");
+    editor?.querySelector("textarea")?.focus();
+  }
+
+  function chiudiEditorNota(id) {
+    document.querySelector(`#nota-preferito-${CSS.escape(id)} .nota-preferito-bolla`)?.classList.remove("nascosto");
+    document.getElementById("editor-nota-" + id)?.classList.remove("aperto");
+  }
+
+  function salvaNotaDaEditor(id) {
+    const testo = document.getElementById("editor-nota-" + id)?.querySelector("textarea")?.value.trim() || "";
+    richiediPasswordSeServe(() => eseguiSalvaNota(id, testo));
+  }
+
+  function eliminaNotaDaEditor(id) {
+    richiediPasswordSeServe(() => eseguiSalvaNota(id, ""));
+  }
+
+  // Salvare una nota vuota non è un'azione diversa: sul server è lo
+  // stesso salva_nota_preferito con nota="" — svuota il testo ma lascia
+  // intatto lo stato preferito/scartato (che si toglie solo dalla
+  // stella/scarto, non da qui).
+  async function eseguiSalvaNota(id, testo) {
+    const asta = ASTE.find(a => a.id === id);
+    if (!asta) return;
+    const precedente = asta.notaPreferito;
+
+    asta.notaPreferito = testo;
+    if (PREFERITI[id]) PREFERITI[id].nota = testo;
+    applicaFiltri();
+
+    try {
+      const risultato = await chiamaWebApp("salva_nota_preferito", {hash_password: hashPasswordCorrente, id_annuncio: id, nota: testo});
+      if (risultato.result !== "success") throw new Error(risultato.message || "");
+    } catch (e) {
+      asta.notaPreferito = precedente;
+      if (PREFERITI[id]) PREFERITI[id].nota = precedente;
+      applicaFiltri();
+      mostraToast("Non sono riuscita a salvare la nota — riprova.");
+    }
+  }
+
   function formattaData(iso) {
     if (!iso) return "N/D";
     const parti = String(iso).slice(0, 10).split("-");
@@ -987,22 +1442,47 @@
       return;
     }
 
-    Papa.parse(CSV_URL, {
-      download: true,
-      header: true,
-      skipEmptyLines: true,
-      transformHeader: h => h.trim(),
-      complete: function (risultato) {
-        console.log("Intestazioni lette dal CSV:", risultato.meta.fields);
-        ASTE = (risultato.data || []).filter(r => r["ID Annuncio"]).map(normalizzaRiga);
-        document.getElementById("testo-aggiornato").textContent =
-          new Date().toLocaleTimeString("it-IT", { hour: "2-digit", minute: "2-digit" });
-        popolaFiltroTipologia();
-        applicaFiltri();
-      },
-      error: function () {
-        mostraStato("stato-errore");
-      }
+    const promessaAste = new Promise((resolve, reject) => {
+      Papa.parse(CSV_URL, {
+        download: true, header: true, skipEmptyLines: true,
+        transformHeader: h => h.trim(),
+        complete: risultato => {
+          console.log("Intestazioni lette dal CSV:", risultato.meta.fields);
+          resolve((risultato.data || []).filter(r => r["ID Annuncio"]));
+        },
+        error: reject
+      });
+    });
+
+    // Il CSV dei Preferiti non deve MAI bloccare il caricamento del
+    // registro principale: se non è ancora configurato (CSV_URL_PREFERITI
+    // vuoto) o irraggiungibile per qualunque motivo, si prosegue
+    // semplicemente senza nessuna stella/scarto già segnata — non è un
+    // errore che giustifichi lo stato "stato-errore" di tutta la pagina.
+    const promessaPreferiti = (!CSV_URL_PREFERITI || CSV_URL_PREFERITI.indexOf("INCOLLA_QUI") > -1)
+      ? Promise.resolve([])
+      : new Promise(resolve => {
+          Papa.parse(CSV_URL_PREFERITI, {
+            download: true, header: true, skipEmptyLines: true,
+            transformHeader: h => h.trim(),
+            complete: risultato => resolve(risultato.data || []),
+            error: () => resolve([])
+          });
+        });
+
+    Promise.all([promessaAste, promessaPreferiti]).then(([righeAste, righePreferiti]) => {
+      PREFERITI = {};
+      righePreferiti.forEach(r => {
+        const id = r["ID Annuncio"];
+        if (id) PREFERITI[id] = {stato: r["Stato"] || "", nota: r["Nota"] || ""};
+      });
+      ASTE = righeAste.map(normalizzaRiga).map(applicaStatoPreferito);
+      document.getElementById("testo-aggiornato").textContent =
+        new Date().toLocaleTimeString("it-IT", { hour: "2-digit", minute: "2-digit" });
+      popolaFiltroTipologia();
+      applicaFiltri();
+    }).catch(() => {
+      mostraStato("stato-errore");
     });
   }
 
@@ -1039,6 +1519,20 @@
       lat: numeroSicuro(r["Latitudine"], null),
       lon: numeroSicuro(r["Longitudine"], null),
     };
+  }
+
+  // Applica lo stato preferito/scartato/nota a un'asta già normalizzata,
+  // leggendo dalla mappa PREFERITI (caricata separatamente, vedi avvia()).
+  // Funzione a parte invece che dentro normalizzaRiga: quest'ultima
+  // costruisce l'asta dal SOLO CSV principale, che non sa nulla di
+  // preferiti — tenerle separate rispecchia che sono due fonti dati
+  // indipendenti, unite solo dopo che entrambe sono arrivate.
+  function applicaStatoPreferito(asta) {
+    const voce = PREFERITI[asta.id];
+    asta.preferito = voce?.stato === "preferito";
+    asta.scartato = voce?.stato === "scartato";
+    asta.notaPreferito = voce?.nota || "";
+    return asta;
   }
 
   // ==========================================================
@@ -1222,6 +1716,18 @@
     applicaFiltri();
   }
 
+  // Filtro "Preferiti": mostra SOLO le aste preferite quando attivo,
+  // combinato con gli altri filtri già presenti (non li sostituisce) —
+  // stesso principio di Libero/Occupato. Le scartate non compaiono mai
+  // qui (cercarle specificamente non è lo scopo di questo filtro).
+  let filtroPreferitiAttivo = false;
+
+  function alternaFiltroPreferiti() {
+    filtroPreferitiAttivo = !filtroPreferitiAttivo;
+    document.getElementById("pillola-preferiti").classList.toggle("attiva", filtroPreferitiAttivo);
+    applicaFiltri();
+  }
+
   // ==========================================================
   // FILTRI, ORDINAMENTO, RENDER
   // ==========================================================
@@ -1240,7 +1746,8 @@
         || categorieDiAsta(a.tipologia).some(c => categorieTipologiaAttive.has(c));
       const passaOccupazione = !filtroOccupazioneAttivo || classificaOccupazione(a.statoOccupazione) === filtroOccupazioneAttivo;
       const passaConcluse = mostraConcluse ? astaConclusa(a.dataVendita) : !astaConclusa(a.dataVendita);
-      return passaRicerca && passaTipologia && passaOccupazione && passaConcluse;
+      const passaPreferiti = !filtroPreferitiAttivo || a.preferito;
+      return passaRicerca && passaTipologia && passaOccupazione && passaConcluse && passaPreferiti;
     });
 
     const comparatori = {
@@ -1250,7 +1757,13 @@
       "data-asc": (a, b) => distanzaGiorni(a.dataVendita) - distanzaGiorni(b.dataVendita),
       "distanza-asc": (a, b) => (a.distanza ?? 9999) - (b.distanza ?? 9999),
     };
-    filtrate.sort(comparatori[ordine] || comparatori["punteggio-desc"]);
+    // Le scartate scivolano SEMPRE in fondo, a prescindere dal criterio
+    // scelto — è il punto stesso dello scarto (non farle più ricapitare
+    // per sbaglio scorrendo per punteggio), l'attenuazione visiva da sola
+    // non basterebbe se restassero comunque in cima. false (0) prima di
+    // true (1): l'aritmetica del confronto fa il resto come chiave
+    // primaria, il criterio scelto resta il comparatore secondario.
+    filtrate.sort((a, b) => (a.scartato - b.scartato) || (comparatori[ordine] || comparatori["punteggio-desc"])(a, b));
 
     renderizza(filtrate);
   }
@@ -1429,8 +1942,36 @@
     const formalitaConAvviso = formalitaTesto && formalitaTesto !== "N/D"
       && formalitaTesto.toLowerCase().indexOf("nessuna criticità") !== 0;
 
+    // Icone stella/scarto: piena + colorata quando attiva, solo contorno
+    // quando no — stessa convenzione (pieno = attivo) di GitHub/Twitter,
+    // già familiare a chi le usa. Colori: --primary per preferito (mai
+    // altrove come segnale di stato, vedi commento CSS), --danger per
+    // scartato (stesso ruolo semantico già usato per badge/avvisi).
+    const iconaStella = a.preferito
+      ? `<svg viewBox="0 0 24 24" fill="currentColor"><path d="M12 2.5l2.9 6.5 7.1.6-5.4 4.6 1.6 6.9-6.2-3.6-6.2 3.6 1.6-6.9L2 9.6l7.1-.6z"/></svg>`
+      : `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linejoin="round"><path d="M12 2.5l2.9 6.5 7.1.6-5.4 4.6 1.6 6.9-6.2-3.6-6.2 3.6 1.6-6.9L2 9.6l7.1-.6z"/></svg>`;
+    const iconaScarta = a.scartato
+      ? `<svg viewBox="0 0 24 24" fill="currentColor"><circle cx="12" cy="12" r="10"/><path d="M8.7 8.7l6.6 6.6m0-6.6l-6.6 6.6" stroke="var(--surface)" stroke-width="1.8" stroke-linecap="round" fill="none"/></svg>`
+      : `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"><circle cx="12" cy="12" r="9.2" stroke-linecap="butt"/><path d="M9 9l6 6m0-6l-6 6"/></svg>`;
+
+    // La nuvoletta compare solo se l'asta è preferita o scartata — una
+    // nota senza uno dei due stati non esiste, stessa invarianza già
+    // imposta lato server in Code.gs (salva_nota_preferito la rifiuta).
+    const notaHtml = (a.preferito || a.scartato) ? `
+        <div class="nota-preferito" id="nota-preferito-${a.id}">
+          <button type="button" class="nota-preferito-bolla${a.notaPreferito ? ' compilata' : ''}" onclick="apriEditorNota('${a.id}')">${a.notaPreferito ? escapeHtml(a.notaPreferito) : '+ Aggiungi una nota'}</button>
+          <div class="nota-preferito-editor" id="editor-nota-${a.id}">
+            <textarea placeholder="Es. interessante, valuta meglio i costi di ristrutturazione...">${escapeHtml(a.notaPreferito)}</textarea>
+            <div class="nota-preferito-azioni">
+              <button type="button" class="nota-preferito-salva" onclick="salvaNotaDaEditor('${a.id}')">Salva</button>
+              ${a.notaPreferito ? `<button type="button" class="nota-preferito-elimina" onclick="eliminaNotaDaEditor('${a.id}')">Elimina</button>` : ""}
+              <button type="button" class="nota-preferito-annulla" onclick="chiudiEditorNota('${a.id}')">Annulla</button>
+            </div>
+          </div>
+        </div>` : "";
+
     return `
-      <article class="lotto${conclusa ? ' conclusa' : ''}" style="animation-delay:${Math.min(indice * 45, 500)}ms">
+      <article class="lotto${conclusa ? ' conclusa' : ''}${a.scartato ? ' scartato' : ''}" style="animation-delay:${Math.min(indice * 45, 500)}ms">
         <div class="lotto-testata">
           <div class="sigillo ${livello}">${contenutoSigillo}</div>
           <div>
@@ -1440,8 +1981,12 @@
             ${a.zonaSegnalata ? `<span class="badge-zona">🚩 ${escapeHtml(a.zonaSegnalata)}</span>` : ""}
             <p class="lotto-meta">${escapeHtml(distanzaTesto)} · vendita ${formattaData(a.dataVendita)}</p>
           </div>
+          <div class="lotto-azioni">
+            <button type="button" class="bottone-azione-lotto${a.preferito ? ' preferito-attivo' : ''}" title="Preferito" onclick="onClickStella(event, '${a.id}')">${iconaStella}</button>
+            <button type="button" class="bottone-azione-lotto${a.scartato ? ' scartato-attivo' : ''}" title="Non interessa" onclick="onClickScarta(event, '${a.id}')">${iconaScarta}</button>
+          </div>
         </div>
-
+${notaHtml}
         <div class="lotto-margine">
           <p class="cifra-etichetta">Margine stimato</p>
           <p class="lotto-margine-valore">${a.margine !== null ? formattaEuro(a.margine) : "—"}</p>
