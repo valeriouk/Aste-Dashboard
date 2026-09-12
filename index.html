@@ -17,7 +17,7 @@
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,400..700&family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500;600&display=swap" rel="stylesheet">
-<script src="https://cdnjs.cloudflare.com/ajax/libs/PapaParse/5.4.1/papaparse.min.js"></script>
+<script src="papaparse-locale.js"></script>
 <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/leaflet.min.css">
 <script src="https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/leaflet.js"></script>
 <style>
@@ -1072,7 +1072,7 @@
   // Stessa WebApp già usata da config.html per le scritture protette —
   // qui serve solo per le tre azioni nuove (stella, scarto, nota), non
   // per leggere: la lettura resta sempre via CSV, sopra.
-  const WEBAPP_URL = "https://script.google.com/macros/s/AKfycbzaUdsroX6mZZIWCNd6PChRIxyGgsjLVBWQFU2NYgDWRGNCoNkcCUvQmSfF70w6CwQh/exec";
+  const WEBAPP_URL = "https://script.google.com/macros/s/AKfycby1KiSEB2vSyrg5M5qx-T-TXtlNGdYpzh-KbgEyDdFAeMWCPFInHy-tJhMe1nXRI-4g/exec";
 
   let ASTE = [];
   let PREFERITI = {}; // id_annuncio -> {stato: "preferito"|"scartato", nota: string}
@@ -1205,6 +1205,13 @@
   // essere una preferenza che ogni card legge quando viene costruita
   // (in cartellaLotto), non un'azione eseguita su elementi già lì.
   let tuttiIDettagliAperti = false;
+  // Stessa idea ma per i dettagli aperti UNO ALLA VOLTA (non tramite
+  // "mostra tutti"): un ridisegno della griglia (scroll, filtro, azione
+  // su un'altra card) ricrea la card da zero — senza tracciare QUALI id
+  // erano stati aperti individualmente, la riapertura andrebbe persa a
+  // ogni ridisegno, anche in mezzo alla lettura. Un Set di ID, non un
+  // singolo booleano: più di una card può restare aperta insieme.
+  let dettagliApertiSingolarmente = new Set();
 
   // Quante colonne la griglia sta effettivamente mostrando in questo
   // momento — stessa aritmetica di "auto-fill" del CSS Grid (colonne di
@@ -1215,6 +1222,20 @@
   function colonneCorrenti(larghezzaContenitore) {
     const conGap = larghezzaContenitore + GAP_GRIGLIA;
     return Math.max(1, Math.floor(conGap / (LARGHEZZA_MIN_CARD + GAP_GRIGLIA)));
+  }
+
+  // Sceglie una card SENZA dettagli aperti da cui misurare l'altezza
+  // "tipica" di una riga — una card coi dettagli espansi è molto più
+  // alta del normale, tutt'altro che rappresentativa. Ripiega sulla
+  // prima qualunque solo se proprio tutte quelle renderizzate in questo
+  // momento hanno i dettagli aperti (raro).
+  function trovaCardPerMisuraAltezza(griglia) {
+    const cards = griglia.querySelectorAll(".lotto");
+    for (const card of cards) {
+      const dettagli = card.querySelector(".lotto-dettagli");
+      if (!dettagli || !dettagli.classList.contains("aperto")) return card;
+    }
+    return cards[0] || null;
   }
 
   // Il cuore della virtualizzazione: calcola quale fetta di elenco serve
@@ -1376,17 +1397,16 @@
 
     griglia.innerHTML = pezzi.join("");
 
-    // Misura vera dell'altezza riga dalla prima card appena disegnata —
-    // corregge la stima iniziale (o una precedente non più accurata, es.
-    // se sono comparse più note lunghe che allungano le card) al volo.
-    // Media mobile leggera (non una sostituzione di netto) per le
-    // correzioni successive alla prima: le card non sono tutte
-    // esattamente della stessa altezza (nota sì/no, badge zona sì/no),
-    // sostituire di colpo a ogni piccola differenza farebbe "saltare"
-    // leggermente l'altezza totale implicita a ogni scroll — una media
-    // che si sposta con calma converge verso un valore stabile senza
-    // quell'effetto.
-    const primaCardVera = griglia.querySelector(".lotto");
+    // Misura vera dell'altezza riga da una card SENZA dettagli aperti —
+    // una card coi dettagli espansi è molto più alta del normale (anche
+    // +300-400px), tutt'altro che rappresentativa di una riga "tipica":
+    // misurando proprio da quella, la stima si sballa e scatena
+    // ricalcoli continui a ogni minimo scroll — verificato per davvero
+    // (8 ridisegni completi durante 8 piccoli movimenti di rotella).
+    // Se TUTTE le card renderizzate hanno i dettagli aperti (raro),
+    // ripiego sulla prima comunque: meglio una stima imprecisa per un
+    // momento che nessuna stima.
+    const primaCardVera = trovaCardPerMisuraAltezza(griglia);
     if (primaCardVera) {
       const nuovaAltezza = primaCardVera.getBoundingClientRect().height + GAP_GRIGLIA;
       if (!altezzaRigaMisurata) {
@@ -2344,6 +2364,10 @@
     const distanzaTesto = a.distanza !== null ? `${a.distanza} km` : "distanza N/D";
     const idDom = "dett-" + indice;
     const conclusa = astaConclusa(a.dataVendita);
+    // Aperti se "mostra tutti" è attivo, OPPURE se QUESTA specifica card
+    // era stata aperta individualmente prima di un ridisegno — vedi
+    // dettagliApertiSingolarmente più sopra per il perché serve.
+    const dettagliDiQuestaCardAperti = tuttiIDettagliAperti || dettagliApertiSingolarmente.has(a.id);
 
     // Celle superficie/€ al mq: solo se il dato è presente nel foglio (potrebbe
     // non esserci ancora se Code.gs non è stato ridistribuito, o se Gemini
@@ -2429,11 +2453,11 @@ ${notaHtml}
           </div>
         </div>
 
-        <button class="bottone-dettagli" aria-expanded="${tuttiIDettagliAperti}" aria-controls="${idDom}" onclick="alternaDettagli(this, '${idDom}')">
-          ${tuttiIDettagliAperti ? "Chiudi dettagli " : "Vedi dettagli "}<span class="freccia">▾</span>
+        <button class="bottone-dettagli" aria-expanded="${dettagliDiQuestaCardAperti}" aria-controls="${idDom}" onclick="alternaDettagli(this, '${idDom}')">
+          ${dettagliDiQuestaCardAperti ? "Chiudi dettagli " : "Vedi dettagli "}<span class="freccia">▾</span>
         </button>
 
-        <div class="lotto-dettagli${tuttiIDettagliAperti ? ' aperto' : ''}" id="${idDom}">
+        <div class="lotto-dettagli${dettagliDiQuestaCardAperti ? ' aperto' : ''}" id="${idDom}">
           <div class="lotto-dettagli-inner">
             <div class="dettaglio-riga"><span>Tribunale</span><span>${escapeHtml(a.tribunale)}</span></div>
             <div class="dettaglio-riga"><span>Disponibilità (PVP)</span><span>${escapeHtml(a.disponibilita)}</span></div>
@@ -2462,6 +2486,19 @@ ${notaHtml}
     const aperto = pannello.classList.toggle("aperto");
     bottone.setAttribute("aria-expanded", aperto ? "true" : "false");
     bottone.innerHTML = (aperto ? "Chiudi dettagli " : "Vedi dettagli ") + '<span class="freccia">▾</span>';
+
+    // Ricordo lo stato SPECIFICO di questa card, non solo quello nel DOM
+    // in questo momento — un ridisegno della griglia (può scattare anche
+    // solo scorrendo per leggere il resto di questi stessi dettagli, vedi
+    // trovaCardPerMisuraAltezza più sopra per il perché) ricrea la card da
+    // zero: senza questo, riaprirla al volo per poi perderla di nuovo
+    // sarebbe lo stesso problema, solo spostato.
+    const cardGenitore = bottone.closest(".lotto");
+    const idAsta = cardGenitore ? cardGenitore.id.replace("lotto-", "") : null;
+    if (idAsta) {
+      if (aperto) dettagliApertiSingolarmente.add(idAsta);
+      else dettagliApertiSingolarmente.delete(idAsta);
+    }
   }
 
   // Con la virtualizzazione una card fuori vista in questo momento non
@@ -2472,6 +2509,12 @@ ${notaHtml}
   // disegnate scorrendo più avanti.
   function alternaTuttiIDettagli() {
     tuttiIDettagliAperti = !tuttiIDettagliAperti;
+    // "Nascondi TUTTI i dettagli" deve significare davvero tutti — anche
+    // quelli aperti singolarmente prima, non solo quelli aperti tramite
+    // questo stesso pulsante. Attivandolo invece non serve toccare il
+    // set: con tuttiIDettagliAperti=true sono comunque tutti aperti,
+    // indipendentemente da cosa contiene.
+    if (!tuttiIDettagliAperti) dettagliApertiSingolarmente.clear();
     document.getElementById("bottone-mostra-tutti").textContent =
       tuttiIDettagliAperti ? "Nascondi tutti i dettagli" : "Mostra tutti i dettagli";
     ultimaChiaveRangeRenderizzato = null; // forza il ridisegno anche se il range di indici è lo stesso di prima
