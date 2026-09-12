@@ -1396,6 +1396,82 @@
   // singolo booleano: più di una card può restare aperta insieme.
   let dettagliApertiSingolarmente = new Set();
 
+  // Per ogni asta con dettagli aperti, di quanti pixel la sua riga
+  // supera l'altezza "normale" (altezzaRigaMisurata) — misurato quando
+  // la card viene effettivamente disegnata con i dettagli aperti, non
+  // stimato a caso. Serve a correggere la posizione di tutto ciò che
+  // viene dopo una riga espansa: ignorare questo pixel in più per ogni
+  // riga espansa è esattamente la causa dei salti quando più card sono
+  // aperte insieme, o quando l'espansione è vicino al fondo di un
+  // elenco lungo (l'errore ignorato pesa di più quanto più lontano si
+  // scorre oltre) — verificato per davvero con più card aperte insieme.
+  let alturaExtraRigheEspanse = new Map(); // id asta -> pixel extra (>= 0)
+
+  // Riga (0-based) a cui appartiene un'asta nell'elenco filtrato
+  // corrente — dipende da ordinamento/filtro/colonne del momento, va
+  // ricalcolata ogni volta che serve, mai memorizzata: cambia ogni volta
+  // che uno qualunque di quei tre cambia.
+  function rigaDiAsta(id, colonne) {
+    const indice = ultimoElencoFiltrato.findIndex(a => a.id === id);
+    if (indice === -1) return -1;
+    return Math.floor(indice / colonne);
+  }
+
+  // Somma dei pixel extra di tutte le righe espanse che si trovano PRIMA
+  // (in senso stretto) della riga indicata — è quanto in più va aggiunto
+  // allo spaziatore superiore, o considerato nella conversione
+  // scroll->riga, per restare coerenti con l'altezza VERA della pagina
+  // fin lì. Il caso comune (nessuna card espansa) esce subito, zero
+  // costo aggiuntivo per lo scroll normale.
+  function extraSopraRiga(rigaTarget, colonne) {
+    if (alturaExtraRigheEspanse.size === 0) return 0;
+    let somma = 0;
+    for (const [id, extra] of alturaExtraRigheEspanse) {
+      const riga = rigaDiAsta(id, colonne);
+      if (riga !== -1 && riga < rigaTarget) somma += extra;
+    }
+    return somma;
+  }
+
+  // Misura le card ESPANSE effettivamente disegnate in questo momento
+  // (guardo il DOM vero, non solo i flag, che dicono "dovrebbe essere
+  // aperta" ma non "di quanto è più alta ORA") e aggiorna la mappa. Le
+  // voci di card non più aperte individualmente vengono tolte — se
+  // "mostra tutti" è attivo invece le lascio: in quel modo potenzialmente
+  // ogni riga è espansa, non ha senso trattarle come eccezioni sparse
+  // da ripulire una per una.
+  function aggiornaAltezzeExtraEspanse(griglia, altezzaRiga) {
+    if (!tuttiIDettagliAperti) {
+      for (const id of [...alturaExtraRigheEspanse.keys()]) {
+        if (!dettagliApertiSingolarmente.has(id)) alturaExtraRigheEspanse.delete(id);
+      }
+    }
+    griglia.querySelectorAll(".lotto").forEach(card => {
+      const dettagli = card.querySelector(".lotto-dettagli");
+      if (!dettagli || !dettagli.classList.contains("aperto")) return;
+      const idCard = card.id.replace("lotto-", "");
+      const altezzaReale = card.getBoundingClientRect().height + GAP_GRIGLIA;
+      alturaExtraRigheEspanse.set(idCard, Math.max(0, altezzaReale - altezzaRiga));
+    });
+  }
+
+  // Converte una posizione di scroll in un indice di riga, tenendo conto
+  // delle righe espanse PRIMA di quel punto — non una semplice
+  // divisione, perché l'altezza extra da sottrarre dipende da QUALE riga
+  // si sta cercando, che è proprio quello che si sta calcolando. Due
+  // passate convergono bene nella pratica: le righe espanse sono
+  // tipicamente poche, la stima cambia (se cambia) di poco tra la prima
+  // e la seconda passata.
+  function rigaDaScroll(scrollRelativo, altezzaRiga, colonne) {
+    let riga = Math.floor(scrollRelativo / altezzaRiga);
+    const extra1 = extraSopraRiga(riga, colonne);
+    if (extra1 === 0) return riga; // caso comune, nessuna correzione necessaria
+    riga = Math.floor((scrollRelativo - extra1) / altezzaRiga);
+    const extra2 = extraSopraRiga(riga, colonne);
+    if (extra2 !== extra1) riga = Math.floor((scrollRelativo - extra2) / altezzaRiga);
+    return riga;
+  }
+
   // Quante colonne la griglia sta effettivamente mostrando in questo
   // momento — stessa aritmetica di "auto-fill" del CSS Grid (colonne di
   // almeno LARGHEZZA_MIN_CARD, quante ce ne stanno), calcolata a mano
@@ -1484,27 +1560,18 @@
       if (r.bottom > 0 && r.top < altezzaViewport) return false; // almeno una copre lo schermo, tutto ok
     }
 
+    // Nessuna card renderizzata è a schermo: ricalcolo la riga corretta
+    // DIRETTAMENTE dalla posizione vera dello scroll, con la STESSA
+    // conversione "consapevole" delle righe espanse usata dal percorso
+    // normale (rigaDaScroll) — più diretto e affidabile che dedurre uno
+    // scarto dalla posizione della prima card: un'unica fonte di verità
+    // per la conversione scroll->riga, non due calcoli paralleli che
+    // potrebbero disallinearsi tra loro.
     const larghezzaContenitore = griglia.clientWidth || griglia.getBoundingClientRect().width;
     const colonne = colonneCorrenti(larghezzaContenitore);
     const altezzaRiga = altezzaRigaMisurata || STIMA_ALTEZZA_RIGA_INIZIALE;
-
-    // Nessuna card renderizzata è a schermo: correggo dalla posizione
-    // vera della prima, e forzo un altro giro completo da lì.
-    const primaCard = cards[0];
-    const idPrimaCard = primaCard.id.replace("lotto-", "");
-    const indicePrimaCard = ultimoElencoFiltrato.findIndex(a => a.id === idPrimaCard);
-    if (indicePrimaCard === -1) return false;
-
-    const rigaPrimaCardRenderizzata = Math.floor(indicePrimaCard / colonne);
-
-    // Quante righe separano DAVVERO la prima card renderizzata da dove
-    // dovrebbe essere (cima dello schermo, meno il cuscinetto) — dedotto
-    // dalla sua posizione VERA sullo schermo in questo momento, non da
-    // altezzaRiga applicata su tutte le righe precedenti (quella è
-    // proprio la stima che ha accumulato l'errore).
-    const rettPrimaCard = primaCard.getBoundingClientRect();
-    const scartoRighe = Math.round(rettPrimaCard.top / altezzaRiga);
-    const rigaCorretta = Math.max(0, rigaPrimaCardRenderizzata + scartoRighe - RIGHE_CUSCINETTO);
+    const scrollRelativo = Math.max(0, -rettGriglia.top);
+    const rigaCorretta = Math.max(0, rigaDaScroll(scrollRelativo, altezzaRiga, colonne) - RIGHE_CUSCINETTO);
 
     // Forzo il prossimo giro a partire da questa riga corretta, non da
     // un nuovo calcolo scrollRelativo/altezzaRiga che ripeterebbe lo
@@ -1535,14 +1602,21 @@
 
     const primoIndice = primaRiga * colonne;
     const ultimoIndiceEsclusivo = Math.min(totale, (ultimaRiga + 1) * colonne);
-    const altezzaSopra = primaRiga * altezzaRiga;
-    const altezzaSotto = (righeTotali - 1 - ultimaRiga) * altezzaRiga;
+    // + l'altezza extra delle righe espanse prima/dopo questo intervallo
+    // — senza questo, uno spaziatore calcolato solo con altezzaRiga
+    // uniforme sarebbe troppo corto/lungo di preciso quanto ignorato,
+    // lo stesso tipo di errore che questa correzione nel suo insieme
+    // vuole eliminare, non solo spostare da un altro punto del codice.
+    const altezzaSopra = primaRiga * altezzaRiga + extraSopraRiga(primaRiga, colonne);
+    const altezzaSotto = (righeTotali - 1 - ultimaRiga) * altezzaRiga
+      + (extraSopraRiga(righeTotali, colonne) - extraSopraRiga(ultimaRiga + 1, colonne));
 
     const pezzi = [];
     if (altezzaSopra > 0) pezzi.push(`<div style="grid-column:1/-1;height:${altezzaSopra}px" aria-hidden="true"></div>`);
     for (let i = primoIndice; i < ultimoIndiceEsclusivo; i++) pezzi.push(cartellaLotto(elenco[i], i));
     if (altezzaSotto > 0) pezzi.push(`<div style="grid-column:1/-1;height:${altezzaSotto}px" aria-hidden="true"></div>`);
     griglia.innerHTML = pezzi.join("");
+    aggiornaAltezzeExtraEspanse(griglia, altezzaRiga);
     ultimaChiaveRangeRenderizzato = primoIndice + "-" + ultimoIndiceEsclusivo + "-" + colonne;
   }
 
@@ -1565,8 +1639,13 @@
     const scrollRelativo = Math.max(0, -rettGriglia.top);
     const altezzaViewport = window.innerHeight;
 
-    let primaRiga = Math.floor(scrollRelativo / altezzaRiga) - RIGHE_CUSCINETTO;
-    let ultimaRiga = Math.ceil((scrollRelativo + altezzaViewport) / altezzaRiga) + RIGHE_CUSCINETTO;
+    let primaRiga = rigaDaScroll(scrollRelativo, altezzaRiga, colonne) - RIGHE_CUSCINETTO;
+    // rigaDaScroll arrotonda per difetto (floor) — +1 per compensare,
+    // stesso spirito del precedente Math.ceil ma passando dalla stessa
+    // conversione consapevole delle righe espanse usata per primaRiga:
+    // un'unica funzione per tutte le conversioni scroll->riga, non due
+    // versioni diverse che potrebbero disallinearsi.
+    let ultimaRiga = rigaDaScroll(scrollRelativo + altezzaViewport, altezzaRiga, colonne) + RIGHE_CUSCINETTO + 1;
     // Limitata sia dal basso (0) sia dall'ALTO (righeTotali-1) — mancava
     // questo secondo limite: vicino al fondo, una stima leggermente
     // ottimistica di altezzaRiga poteva far calcolare una primaRiga
@@ -1588,8 +1667,14 @@
     if (chiaveRange === ultimaChiaveRangeRenderizzato) return false;
     ultimaChiaveRangeRenderizzato = chiaveRange;
 
-    const altezzaSopra = primaRiga * altezzaRiga;
-    const altezzaSotto = (righeTotali - 1 - ultimaRiga) * altezzaRiga;
+    // + l'altezza extra delle righe espanse prima/dopo questo intervallo
+    // — vedi extraSopraRiga più sopra: senza questo, uno spaziatore
+    // calcolato solo con altezzaRiga uniforme sarebbe corto/lungo di
+    // esattamente quanto ignorato, proprio l'errore che tutta questa
+    // correzione serve a eliminare.
+    const altezzaSopra = primaRiga * altezzaRiga + extraSopraRiga(primaRiga, colonne);
+    const altezzaSotto = (righeTotali - 1 - ultimaRiga) * altezzaRiga
+      + (extraSopraRiga(righeTotali, colonne) - extraSopraRiga(ultimaRiga + 1, colonne));
 
     const pezzi = [];
     if (altezzaSopra > 0) pezzi.push(`<div style="grid-column:1/-1;height:${altezzaSopra}px" aria-hidden="true"></div>`);
@@ -1599,6 +1684,7 @@
     if (altezzaSotto > 0) pezzi.push(`<div style="grid-column:1/-1;height:${altezzaSotto}px" aria-hidden="true"></div>`);
 
     griglia.innerHTML = pezzi.join("");
+    aggiornaAltezzeExtraEspanse(griglia, altezzaRiga);
 
     // Misura vera dell'altezza riga da una card SENZA dettagli aperti —
     // una card coi dettagli espansi è molto più alta del normale (anche
