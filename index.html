@@ -1251,7 +1251,6 @@
   // quelle sono azioni rare e più pesanti (elimina aste scadute, avvia
   // scanner), queste sono pensate per essere frequenti e leggere.
   // ==========================================================
-  // ==========================================================
   // Riassume un'eccezione di chiamaWebApp in un dettaglio leggibile,
   // invece di un generico "errore di connessione" — distingue in
   // particolare un timeout VERO (il limite di 20s è scattato, la
@@ -1262,6 +1261,28 @@
   function dettaglioErrore(e) {
     if (e.name === "AbortError") return "tempo scaduto (20s) senza risposta";
     return e.message || e.name || "sconosciuto";
+  }
+
+  // Rigenera SOLO la card di un'asta (riusando cartellaLotto, la stessa
+  // funzione della griglia intera — zero logica duplicata) e la sostituisce
+  // nel DOM al posto di quella vecchia. Molto più leggero di applicaFiltri()
+  // su un foglio con centinaia di righe: quello ricostruisce l'INTERA
+  // griglia a ogni singolo clic — su un foglio piccolo non si notava, su
+  // uno grande può bloccare il thread principale abbastanza a lungo da far
+  // scattare l'avviso "pagina non risponde" di Chrome (osservato per
+  // davvero). Compromesso scelto consapevolmente: l'ordinamento (le
+  // scartate in fondo) o la visibilità sotto il filtro "★ Preferiti"
+  // potrebbero restare per un momento non aggiornati fino alla prossima
+  // interazione — meglio di un blocco vero, e si autocorregge da solo al
+  // primo filtro/ricerca/ricarica successivo.
+  function aggiornaCardSingola(id) {
+    const indice = ultimoElencoFiltrato.findIndex(a => a.id === id);
+    if (indice === -1) return; // non in vista in questo momento, nulla da aggiornare
+    const cardEsistente = document.getElementById("lotto-" + id);
+    if (!cardEsistente) return;
+    const contenitoreTemp = document.createElement("div");
+    contenitoreTemp.innerHTML = cartellaLotto(ultimoElencoFiltrato[indice], indice);
+    cardEsistente.replaceWith(contenitoreTemp.firstElementChild);
   }
 
   function mostraToast(testo) {
@@ -1317,7 +1338,7 @@
     asta.scartato = (stato === "scartato");
     asta.notaPreferito = "";
     PREFERITI[id] = {stato, nota: ""};
-    applicaFiltri();
+    aggiornaCardSingola(id);
 
     try {
       const risultato = await chiamaWebApp("imposta_stato_preferito", {hash_password: hashPasswordCorrente, id_annuncio: id, stato});
@@ -1328,7 +1349,7 @@
       if (precedente.preferito) PREFERITI[id] = {stato: "preferito", nota: precedente.notaPreferito};
       else if (precedente.scartato) PREFERITI[id] = {stato: "scartato", nota: precedente.notaPreferito};
       else delete PREFERITI[id];
-      applicaFiltri();
+      aggiornaCardSingola(id);
       mostraToast(`Non sono riuscita a salvare: ${dettaglioErrore(e)}`);
     }
   }
@@ -1342,7 +1363,7 @@
     asta.scartato = false;
     asta.notaPreferito = "";
     delete PREFERITI[id];
-    applicaFiltri();
+    aggiornaCardSingola(id);
 
     try {
       const risultato = await chiamaWebApp("rimuovi_flag_preferito", {hash_password: hashPasswordCorrente, id_annuncio: id});
@@ -1352,10 +1373,11 @@
       Object.assign(asta, precedente);
       if (precedente.preferito) PREFERITI[id] = {stato: "preferito", nota: precedente.notaPreferito};
       else if (precedente.scartato) PREFERITI[id] = {stato: "scartato", nota: precedente.notaPreferito};
-      applicaFiltri();
+      aggiornaCardSingola(id);
       mostraToast(`Non sono riuscita a salvare: ${dettaglioErrore(e)}`);
     }
   }
+
 
   // Editor nota: scambia la bolla (sempre visibile, testo troncato) con
   // un'area di modifica — stesso spirito espandi/comprimi di "vedi
@@ -1392,7 +1414,7 @@
 
     asta.notaPreferito = testo;
     if (PREFERITI[id]) PREFERITI[id].nota = testo;
-    applicaFiltri();
+    aggiornaCardSingola(id);
 
     try {
       const risultato = await chiamaWebApp("salva_nota_preferito", {hash_password: hashPasswordCorrente, id_annuncio: id, nota: testo});
@@ -1401,7 +1423,7 @@
       console.error("salva_nota_preferito fallita:", e);
       asta.notaPreferito = precedente;
       if (PREFERITI[id]) PREFERITI[id].nota = precedente;
-      applicaFiltri();
+      aggiornaCardSingola(id);
       mostraToast(`Non sono riuscita a salvare la nota: ${dettaglioErrore(e)}`);
     }
   }
@@ -2030,7 +2052,7 @@
         </div>` : "";
 
     return `
-      <article class="lotto${conclusa ? ' conclusa' : ''}${a.scartato ? ' scartato' : ''}" style="animation-delay:${Math.min(indice * 45, 500)}ms">
+      <article class="lotto${conclusa ? ' conclusa' : ''}${a.scartato ? ' scartato' : ''}" id="lotto-${a.id}" style="animation-delay:${Math.min(indice * 45, 500)}ms">
         <div class="lotto-testata">
           <div class="sigillo ${livello}">${contenutoSigillo}</div>
           <div>
