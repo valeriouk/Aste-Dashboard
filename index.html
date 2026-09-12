@@ -1284,7 +1284,7 @@
       <p class="stat-valore" id="stat-punteggio">—</p>
     </div>
     <div class="stat">
-      <p class="stat-etichetta">Margine massimo stimato</p>
+      <p class="stat-etichetta">Aste con margine positivo</p>
       <p class="stat-valore" id="stat-margine">—</p>
     </div>
   </div>
@@ -1402,7 +1402,7 @@
     <div class="riquadro-password-inline">
       <h3>Password richiesta</h3>
       <p>Serve solo la prima volta in questa sessione, per preferiti, scarti e note.</p>
-      <input type="password" id="campo-password-inline" placeholder="Password" onkeydown="if(event.key==='Enter') confermaPasswordInline()">
+      <input type="password" id="campo-password-inline" placeholder="Password" autocomplete="current-password" onkeydown="if(event.key==='Enter') confermaPasswordInline()">
       <div class="riga-bottoni-password">
         <button type="button" class="bottone-password-annulla" onclick="chiudiModalePassword()">Annulla</button>
         <button type="button" class="bottone-password-conferma" onclick="confermaPasswordInline()">Conferma</button>
@@ -1452,10 +1452,62 @@
   const SALE_PASSWORD = "aste-ct-8f3k2-sale";
   let hashPasswordCorrente = null;
 
+  // ==========================================================
+  // PASSWORD RICORDATA SU QUESTO DEVICE — localStorage invece di un
+  // cookie vero: stesso risultato (resta impostata tra una visita e
+  // l'altra, senza scadenza), ma senza le complicazioni di dominio/path/
+  // scadenza di un cookie, e senza bisogno del server per leggerla. La
+  // STESSA chiave è usata anche in config.html: sono due file serviti
+  // dalla stessa origine, quindi condividono lo stesso localStorage —
+  // sbloccare da una pagina resta sbloccato anche sull'altra, senza
+  // bisogno di sincronizzarle esplicitamente tra loro.
+  // Quello che viene salvato è l'HASH, non la password in chiaro — ma è
+  // comunque, a tutti gli effetti, la credenziale stessa (chi legge
+  // l'hash può riusarlo per autenticarsi): un compromesso accettabile
+  // per uno strumento personale su un device proprio, non pensato per
+  // resistere a chi ha già accesso fisico al device stesso.
+  const CHIAVE_LOCALSTORAGE_HASH = "aste_hash_password_v1";
+
+  function salvaHashRicordato(hash) {
+    try { localStorage.setItem(CHIAVE_LOCALSTORAGE_HASH, hash); } catch (e) { /* storage negato/pieno — si ridigita ogni volta, nessun blocco */ }
+  }
+  function leggiHashRicordato() {
+    try { return localStorage.getItem(CHIAVE_LOCALSTORAGE_HASH); } catch (e) { return null; }
+  }
+  function cancellaHashRicordato() {
+    try { localStorage.removeItem(CHIAVE_LOCALSTORAGE_HASH); } catch (e) {}
+  }
+
+  // Letto in modo OTTIMISTICO: nessuna chiamata di verifica dedicata al
+  // caricamento pagina (un giro di rete in più a ogni visita, per un
+  // caso — password cambiata da un altro device — raro). Se l'hash
+  // ricordato non fosse più valido (es. cambiata da config.html), la
+  // PRIMA azione di scrittura fallirebbe normalmente con "Password
+  // errata", e gestisceErroreAzionePassword più sotto lo ripulisce da
+  // solo — stesso esito, un giro di rete risparmiato nel caso comune.
+  hashPasswordCorrente = leggiHashRicordato();
+
+  // Se l'esito di un'azione protetta indica password sbagliata, pulisce
+  // sia lo stato in memoria sia quello ricordato: un hash rimasto valido
+  // in memoria ma già rifiutato dal server continuerebbe a fallire in
+  // silenzio a ogni tentativo successivo, senza mai far ricomparire il
+  // modale per digitarne una corretta. Ritorna true se ha riconosciuto
+  // (e ripulito) proprio questo caso, false per qualunque altro errore
+  // (rete, timeout): quelli non devono far dimenticare una password che
+  // in realtà è ancora giusta.
+  function gestisceErroreAzionePassword(e) {
+    if (e && e.message === "Password errata.") {
+      hashPasswordCorrente = null;
+      cancellaHashRicordato();
+      return true;
+    }
+    return false;
+  }
+
   // Stessa WebApp già usata da config.html per le scritture protette —
   // qui serve solo per le tre azioni nuove (stella, scarto, nota), non
   // per leggere: la lettura resta sempre via CSV, sopra.
-  const WEBAPP_URL = "https://script.google.com/macros/s/AKfycbzaUdsroX6mZZIWCNd6PChRIxyGgsjLVBWQFU2NYgDWRGNCoNkcCUvQmSfF70w6CwQh/exec";
+  const WEBAPP_URL = "https://script.google.com/macros/s/AKfycbyVS9aTh7jx7fjCIaI6OziW8wwDr5Yj8QB9W5QRP5HHGJP7H-3NelKg35fmQhQ5s0yD/exec";
 
   let ASTE = [];
   let PREFERITI = {}; // id_annuncio -> {stato: "preferito"|"scartato", nota: string}
@@ -1930,6 +1982,7 @@
 
     if (risultato.valida) {
       hashPasswordCorrente = hash;
+      salvaHashRicordato(hash);
       document.getElementById("overlay-password").classList.add("nascosto");
       const azione = azionePendente;
       azionePendente = null;
@@ -2051,6 +2104,7 @@
       if (risultato.result !== "success") throw new Error(risultato.message || "");
     } catch (e) {
       console.error("imposta_stato_preferito fallita:", e);
+      gestisceErroreAzionePassword(e);
       Object.assign(asta, precedente);
       if (precedente.preferito) PREFERITI[id] = {stato: "preferito", nota: precedente.notaPreferito};
       else if (precedente.scartato) PREFERITI[id] = {stato: "scartato", nota: precedente.notaPreferito};
@@ -2076,6 +2130,7 @@
       if (risultato.result !== "success") throw new Error(risultato.message || "");
     } catch (e) {
       console.error("rimuovi_flag_preferito fallita:", e);
+      gestisceErroreAzionePassword(e);
       Object.assign(asta, precedente);
       if (precedente.preferito) PREFERITI[id] = {stato: "preferito", nota: precedente.notaPreferito};
       else if (precedente.scartato) PREFERITI[id] = {stato: "scartato", nota: precedente.notaPreferito};
@@ -2139,6 +2194,7 @@
       if (risultato.result !== "success") throw new Error(risultato.message || "");
     } catch (e) {
       console.error("salva_nota_preferito fallita:", e);
+      gestisceErroreAzionePassword(e);
       asta.notaPreferito = precedente;
       if (PREFERITI[id]) PREFERITI[id].nota = precedente;
       aggiornaCardSingola(id);
@@ -2814,11 +2870,17 @@
     // punteggio valido ma nessun margine calcolabile — un filtro unico
     // farebbe apparire "-Infinity" invece di "—" in quel caso.
     const conPunteggio = ASTE.filter(a => a.punteggio > 0);
-    const conMargine = ASTE.filter(a => a.margine !== null);
+    // Conteggio, non il valore massimo: un singolo margine sballato (perizia
+    // condivisa da più lotti, letta come se il valore dell'intero complesso
+    // riguardasse un solo lotto — capita, vedi commento su numero_lotto nel
+    // prompt Gemini in app.py) gonfiava il massimo fino a cifre senza senso.
+    // Un conteggio non risente della GRANDEZZA di un singolo valore fuori
+    // scala, solo della sua presenza — molto più robusto come prima cifra
+    // da guardare.
+    const conMarginePositivo = ASTE.filter(a => a.margine !== null && a.margine > 0);
     document.getElementById("stat-punteggio").textContent =
       conPunteggio.length ? Math.max(...conPunteggio.map(a => a.punteggio)) + "/100" : "—";
-    document.getElementById("stat-margine").textContent =
-      conMargine.length ? formattaEuro(Math.max(...conMargine.map(a => a.margine))) : "—";
+    document.getElementById("stat-margine").textContent = conMarginePositivo.length;
 
     nascondiTuttiGliStati();
     document.getElementById("conteggio-filtrati").textContent = `${elenco.length} di ${ASTE.length} aste mostrate`;
