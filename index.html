@@ -854,25 +854,6 @@
     margin: 0;
   }
 
-  .bottone-dettagli {
-    background: none;
-    border: none;
-    color: var(--secondary);
-    font-family: var(--font-body);
-    font-size: .85rem;
-    font-weight: 500;
-    cursor: pointer;
-    padding: 4px 0;
-    display: flex;
-    align-items: center;
-    gap: 6px;
-  }
-  /* Icona piccola e discreta ("apre altrove", non "si espande qui sotto"
-     — coerente col fatto che i dettagli ora aprono una finestra a
-     parte, non più la card stessa) invece della vecchia freccia verso
-     il basso, che suggeriva un'espansione sul posto non più vera. */
-  .bottone-dettagli .icona-finestra { width: 13px; height: 13px; flex-shrink: 0; }
-
   .dettaglio-riga {
     display: flex;
     justify-content: space-between;
@@ -3026,7 +3007,7 @@
         </div>` : "";
 
     return `
-      <article class="lotto${conclusa ? ' conclusa' : ''}${a.scartato ? ' scartato' : ''}" id="lotto-${a.id}" onclick="apriDettagliAsta('${a.id}')">
+      <article class="lotto${conclusa ? ' conclusa' : ''}${a.scartato ? ' scartato' : ''}" id="lotto-${a.id}" onclick="apriDettagliAsta('${a.id}')" tabindex="0" aria-label="Vedi dettagli di ${escapeHtml(a.comune)}" onkeydown="if(event.key==='Enter'){apriDettagliAsta('${a.id}')}">
         <div class="lotto-testata">
           <div class="sigillo ${livello}">${contenutoSigillo}</div>
           <div>
@@ -3061,11 +3042,6 @@ ${notaHtml}
             <p class="cifra-valore">${escapeHtml(a.statoOccupazione)}</p>
           </div>
         </div>
-
-        <button class="bottone-dettagli" onclick="apriDettagliAsta('${a.id}')">
-          Vedi dettagli
-          <svg class="icona-finestra" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M18 13v6a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h6"/><path d="M15 3h6v6"/><path d="M10 14L21 3"/></svg>
-        </button>
       </article>
     `;
   }
