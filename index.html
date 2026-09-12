@@ -189,9 +189,9 @@
   ============================================================ */
   .controlli {
     display: flex;
+    flex-wrap: wrap;
     align-items: center;
     gap: 8px;
-    flex-wrap: wrap;
     background: var(--surface-2);
     border: 1px solid var(--border);
     border-radius: 10px;
@@ -206,11 +206,27 @@
        da cellulare. Con la barra sempre visibile, quel salto non ha più
        motivo di scattare: l'elemento è già in vista. z-index scelto per
        restare sopra le card della griglia (che non ne dichiarano uno,
-       quindi 0 implicito) ma sotto il menu tipologia (1000) e il
-       modale password (2000), che devono continuare a coprire tutto. */
+       quindi 0 implicito) ma sotto il menu tipologia e il modale
+       password, che devono continuare a coprire tutto. */
     position: sticky;
     top: 12px;
     z-index: 10;
+  }
+
+  /* Su schermi larghi questi due sono solo raggruppamenti logici: i
+     loro figli si comportano come se fossero direttamente dentro
+     .controlli (stesso identico aspetto di quando .controlli conteneva
+     tutto in un unico livello). Cambia solo sotto i 640px, vedi il
+     media query più sotto — un'unica sorgente per i controlli invece di
+     duplicarli tra desktop e mobile, che si sarebbero potuti disallineare. */
+  .controlli-riga-compatta,
+  .controlli-estesi {
+    display: contents;
+  }
+  .bottone-apri-filtri,
+  .foglio-filtri-intestazione,
+  .sfondo-foglio-filtri {
+    display: none;
   }
 
   .controlli input,
@@ -279,12 +295,12 @@
      restano comunque calcolate in JS (vedi posizionaMenuTipologia) per
      tenerlo dentro i bordi dello schermo sia in orizzontale sia in
      verticale, ma espresse relative al pulsante, non alla finestra.
-     z-index molto più alto del solito: Leaflet usa internamente valori
-     fino a ~700 per i suoi livelli, qui serve restare sopra anche a
-     quello. */
+     z-index alzato a 1700 (era 1000): deve restare sopra anche al
+     foglio filtri mobile (1600), da cui può essere aperto — oltre che
+     sopra Leaflet, che usa internamente valori fino a ~700. */
   .menu-tipologia {
     position: absolute;
-    z-index: 1000;
+    z-index: 1700;
     background: var(--surface);
     border: 1px solid var(--border);
     border-radius: 10px;
@@ -436,6 +452,145 @@
 
   @media (max-width: 640px) {
     .contenitore-mappa-dashboard { height: 420px; }
+  }
+
+  /* ============================================================
+     FOGLIO FILTRI — solo sotto i 640px. Sopra questa soglia i due
+     blocchi (.controlli-riga-compatta / .controlli-estesi) restano
+     "trasparenti" (display:contents, vedi sopra) e tutto si vede come
+     un'unica barra, esattamente come prima. Qui sotto invece
+     .controlli-estesi esce dal flusso normale e diventa un vero foglio
+     che sale dal basso, aperto solo a richiesta: intestazione,
+     statistiche e barra filtri insieme arrivavano a occupare quasi metà
+     schermo su un telefono, lasciando spazio utile per una sola card
+     invece di due.
+  ============================================================ */
+  @media (max-width: 640px) {
+    /* z-index alzato (era 10, ereditato da desktop): .controlli-estesi
+       e .sfondo-foglio-filtri sono fratelli nell'HTML, ma il foglio è
+       ANNIDATO dentro .controlli — che essendo position:sticky con un
+       suo z-index proprio crea un contesto di stacking a parte. Dentro
+       quel contesto, lo z-index alto del foglio (1600) conta solo
+       RELATIVO agli altri figli di .controlli, non rispetto allo sfondo
+       scuro che sta fuori: senza alzare anche il contenitore, lo sfondo
+       (1500) finiva comunque sopra l'intero .controlli (10) e ne
+       intercettava i clic, impedendo di toccare i filtri dentro il
+       foglio appena aperto — verificato per davvero, non solo temuto.
+    */
+    .controlli { padding: 8px; z-index: 1650; }
+
+    .controlli-riga-compatta {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      width: 100%;
+    }
+    .controlli-riga-compatta input { flex: 1 1 60px; min-width: 60px; }
+    #gruppo-vista { flex-shrink: 0; }
+
+    .bottone-apri-filtri {
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+      background: var(--surface);
+      border: 1px solid var(--border);
+      color: var(--ink);
+      font-family: var(--font-body);
+      font-size: .85rem;
+      font-weight: 500;
+      padding: 11px 14px;
+      border-radius: 8px;
+      cursor: pointer;
+      flex-shrink: 0;
+      white-space: nowrap;
+    }
+    .badge-filtri {
+      background: var(--primary);
+      color: var(--surface);
+      font-size: .7rem;
+      font-weight: 700;
+      min-width: 17px;
+      height: 17px;
+      border-radius: 999px;
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      padding: 0 4px;
+    }
+
+    .controlli-estesi {
+      display: flex;
+      flex-direction: column;
+      gap: 12px;
+      position: fixed;
+      left: 0;
+      right: 0;
+      bottom: 0;
+      max-height: 80vh;
+      background: var(--surface);
+      border-radius: 16px 16px 0 0;
+      box-shadow: 0 -8px 28px rgba(30,35,32,.22);
+      padding: 20px 20px calc(20px + env(safe-area-inset-bottom, 0px));
+      overflow-y: auto;
+      z-index: 1600;
+      /* Fuori dallo schermo di default (sotto il bordo inferiore),
+         scorre dentro quando riceve .aperto — cubic-bezier scelto per
+         un piccolo "rimbalzo" in arrivo, la stessa sensazione di un
+         foglio nativo iOS/Android invece di un semplice lineare. */
+      transform: translateY(105%);
+      transition: transform .28s cubic-bezier(.32, .72, 0, 1);
+    }
+    .controlli-estesi.aperto { transform: translateY(0); }
+
+    .foglio-filtri-intestazione {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+    }
+    .foglio-filtri-titolo {
+      font-family: var(--font-display);
+      font-weight: 500;
+      font-size: 1.15rem;
+      margin: 0;
+    }
+    .foglio-filtri-chiudi {
+      background: var(--surface-2);
+      border: none;
+      color: var(--ink-muted);
+      width: 32px;
+      height: 32px;
+      border-radius: 50%;
+      font-size: 1.3rem;
+      line-height: 1;
+      cursor: pointer;
+      flex-shrink: 0;
+    }
+
+    /* Dentro il foglio i controlli vanno a piena larghezza — affiancati
+       stretti come nella barra compatta sarebbe scomodo da toccare. */
+    .controlli-estesi .gruppo-pillole,
+    .controlli-estesi .contenitore-filtro-tipologia,
+    .controlli-estesi select,
+    .controlli-estesi .bottone-toggle-tutti {
+      width: 100%;
+    }
+    .controlli-estesi .gruppo-pillole .pillola { flex: 1; text-align: center; }
+    .controlli-estesi #bottone-filtro-tipologia { width: 100%; justify-content: center; }
+
+    .sfondo-foglio-filtri {
+      display: block;
+      position: fixed;
+      inset: 0;
+      background: rgba(30, 35, 32, .4);
+      z-index: 1500;
+      opacity: 0;
+      pointer-events: none;
+      transition: opacity .25s ease;
+    }
+    .sfondo-foglio-filtri.visibile {
+      opacity: 1;
+      pointer-events: auto;
+    }
   }
 
   .lotto {
@@ -948,38 +1103,58 @@
   </div>
 
   <div class="controlli">
-    <input type="text" id="ricerca" placeholder="Cerca per comune...">
-    <div class="contenitore-filtro-tipologia">
-      <div class="gruppo-pillole">
-        <button type="button" class="pillola" id="bottone-filtro-tipologia" onclick="alternaMenuTipologia(event)" aria-expanded="false" aria-haspopup="true">
-          Tipologia <span class="freccia-tipologia">▾</span>
-        </button>
+    <div class="controlli-riga-compatta">
+      <input type="text" id="ricerca" placeholder="Cerca per comune...">
+      <button type="button" id="bottone-apri-filtri" class="bottone-apri-filtri" onclick="apriFoglioFiltri()">
+        Filtri<span id="badge-filtri-attivi" class="badge-filtri nascosto">0</span>
+      </button>
+      <div class="gruppo-pillole" id="gruppo-vista">
+        <button type="button" class="pillola attiva" id="pillola-vista-griglia" onclick="cambiaVista('griglia')">Griglia</button>
+        <button type="button" class="pillola" id="pillola-vista-mappa" onclick="cambiaVista('mappa')">Mappa</button>
       </div>
-      <div class="menu-tipologia nascosto" id="menu-tipologia"></div>
     </div>
-    <div class="gruppo-pillole" id="gruppo-occupazione">
-      <button type="button" class="pillola" data-stato="libero" onclick="attivaFiltroOccupazione('libero')">Libero</button>
-      <button type="button" class="pillola" data-stato="occupato" onclick="attivaFiltroOccupazione('occupato')">Occupato</button>
+
+    <!-- Su schermi larghi, questo blocco resta semplicemente parte della
+         stessa barra sopra (display:contents, vedi CSS) — sotto i 640px
+         diventa invece un foglio che sale dal basso, aperto solo a
+         richiesta tramite il pulsante "Filtri" qui sopra: intestazione,
+         statistiche e questa barra insieme arrivavano a occupare quasi
+         metà schermo su un telefono, lasciando spazio per una sola card
+         invece di due. */ -->
+    <div class="controlli-estesi" id="controlli-estesi">
+      <div class="foglio-filtri-intestazione">
+        <p class="foglio-filtri-titolo">Filtri</p>
+        <button type="button" class="foglio-filtri-chiudi" onclick="chiudiFoglioFiltri()" aria-label="Chiudi">×</button>
+      </div>
+      <div class="contenitore-filtro-tipologia">
+        <div class="gruppo-pillole">
+          <button type="button" class="pillola" id="bottone-filtro-tipologia" onclick="alternaMenuTipologia(event)" aria-expanded="false" aria-haspopup="true">
+            Tipologia <span class="freccia-tipologia">▾</span>
+          </button>
+        </div>
+        <div class="menu-tipologia nascosto" id="menu-tipologia"></div>
+      </div>
+      <div class="gruppo-pillole" id="gruppo-occupazione">
+        <button type="button" class="pillola" data-stato="libero" onclick="attivaFiltroOccupazione('libero')">Libero</button>
+        <button type="button" class="pillola" data-stato="occupato" onclick="attivaFiltroOccupazione('occupato')">Occupato</button>
+      </div>
+      <div class="gruppo-pillole" id="gruppo-preferiti">
+        <button type="button" class="pillola" id="pillola-preferiti" onclick="alternaFiltroPreferiti()">★ Preferiti</button>
+      </div>
+      <div class="gruppo-pillole" id="gruppo-concluse">
+        <button type="button" class="pillola" id="pillola-concluse" onclick="alternaMostraConcluse()">Concluse</button>
+      </div>
+      <button id="bottone-mostra-tutti" class="bottone-toggle-tutti" onclick="alternaTuttiIDettagli()">Mostra tutti i dettagli</button>
+      <select id="ordinamento">
+        <option value="punteggio-desc">Punteggio (alto → basso)</option>
+        <option value="margine-desc">Margine (alto → basso)</option>
+        <option value="prezzo-asc">Offerta minima (bassa → alta)</option>
+        <option value="data-asc">Data vendita (vicina → lontana)</option>
+        <option value="distanza-asc">Distanza (vicina → lontana)</option>
+      </select>
     </div>
-    <div class="gruppo-pillole" id="gruppo-preferiti">
-      <button type="button" class="pillola" id="pillola-preferiti" onclick="alternaFiltroPreferiti()">★ Preferiti</button>
-    </div>
-    <div class="gruppo-pillole" id="gruppo-concluse">
-      <button type="button" class="pillola" id="pillola-concluse" onclick="alternaMostraConcluse()">Concluse</button>
-    </div>
-    <div class="gruppo-pillole" id="gruppo-vista">
-      <button type="button" class="pillola attiva" id="pillola-vista-griglia" onclick="cambiaVista('griglia')">Griglia</button>
-      <button type="button" class="pillola" id="pillola-vista-mappa" onclick="cambiaVista('mappa')">Mappa</button>
-    </div>
-    <button id="bottone-mostra-tutti" class="bottone-toggle-tutti" onclick="alternaTuttiIDettagli()">Mostra tutti i dettagli</button>
-    <select id="ordinamento">
-      <option value="punteggio-desc">Punteggio (alto → basso)</option>
-      <option value="margine-desc">Margine (alto → basso)</option>
-      <option value="prezzo-asc">Offerta minima (bassa → alta)</option>
-      <option value="data-asc">Data vendita (vicina → lontana)</option>
-      <option value="distanza-asc">Distanza (vicina → lontana)</option>
-    </select>
   </div>
+  <div class="sfondo-foglio-filtri nascosto" id="sfondo-foglio-filtri" onclick="chiudiFoglioFiltri()"></div>
 
   <div id="stato-caricamento" class="stato-pagina">
     <h2>Apertura del registro…</h2>
@@ -2189,9 +2364,56 @@
   }
 
   // ==========================================================
+  // FOGLIO FILTRI (mobile) — apre/chiude il pannello che sale dal
+  // basso, e tiene aggiornato il numero sul pulsante "Filtri" che lo
+  // apre. Su schermi larghi questi elementi restano sempre nascosti
+  // (vedi CSS), le funzioni semplicemente non hanno nulla da mostrare.
+  // ==========================================================
+  function apriFoglioFiltri() {
+    document.getElementById("controlli-estesi").classList.add("aperto");
+    document.getElementById("sfondo-foglio-filtri").classList.remove("nascosto");
+    // Un frame di margine prima di aggiungere .visibile: serve perché la
+    // transizione di opacità del CSS parta davvero (rimuovere "nascosto"
+    // e aggiungere "visibile" nello stesso istante salterebbe la
+    // transizione, comparendo di scatto invece che in dissolvenza).
+    requestAnimationFrame(() => document.getElementById("sfondo-foglio-filtri").classList.add("visibile"));
+    document.body.style.overflow = "hidden"; // la pagina sotto non scorre mentre il foglio è aperto
+  }
+
+  function chiudiFoglioFiltri() {
+    document.getElementById("controlli-estesi").classList.remove("aperto");
+    document.getElementById("sfondo-foglio-filtri").classList.remove("visibile");
+    document.body.style.overflow = "";
+    setTimeout(() => document.getElementById("sfondo-foglio-filtri").classList.add("nascosto"), 250); // dopo la transizione, non durante
+  }
+
+  // Conta le CATEGORIE di filtro attive (non i singoli valori dentro
+  // ciascuna — es. tre tipologie spuntate insieme contano 1, non 3),
+  // così il numero sul pulsante "Filtri" corrisponde a "quanti criteri
+  // diversi stai applicando", più utile a colpo d'occhio di un conteggio
+  // grezzo. Chiamata da applicaFiltri ogni volta che qualcosa cambia,
+  // così resta sempre sincronizzata senza doverci pensare a ogni singolo
+  // punto che modifica un filtro.
+  function aggiornaBadgeFiltri() {
+    let conteggio = 0;
+    if (categorieTipologiaAttive.size > 0) conteggio++;
+    if (filtroOccupazioneAttivo) conteggio++;
+    if (filtroPreferitiAttivo) conteggio++;
+    if (mostraConcluse) conteggio++;
+    const badge = document.getElementById("badge-filtri-attivi");
+    if (conteggio > 0) {
+      badge.textContent = conteggio;
+      badge.classList.remove("nascosto");
+    } else {
+      badge.classList.add("nascosto");
+    }
+  }
+
+  // ==========================================================
   // FILTRI, ORDINAMENTO, RENDER
   // ==========================================================
   function applicaFiltri() {
+    aggiornaBadgeFiltri();
     if (ASTE.length === 0) {
       mostraStato("stato-vuoto");
       return;
