@@ -994,6 +994,7 @@
   <div id="stato-errore" class="stato-pagina nascosto">
     <h2>Non riesco a leggere il registro</h2>
     <p>Controlla che il foglio sia pubblicato sul web in formato CSV e che l'indirizzo in <code>CSV_URL</code> sia corretto.</p>
+    <p id="dettaglio-stato-errore" style="font-family: var(--font-mono); font-size: .78rem; color: var(--ink-faint); margin-top: 12px;"></p>
   </div>
 
   <div id="stato-vuoto" class="stato-pagina nascosto">
@@ -1072,7 +1073,7 @@
   // Stessa WebApp già usata da config.html per le scritture protette —
   // qui serve solo per le tre azioni nuove (stella, scarto, nota), non
   // per leggere: la lettura resta sempre via CSV, sopra.
-  const WEBAPP_URL = "https://script.google.com/macros/s/AKfycbzaUdsroX6mZZIWCNd6PChRIxyGgsjLVBWQFU2NYgDWRGNCoNkcCUvQmSfF70w6CwQh/exec";
+  const WEBAPP_URL = "https://script.google.com/macros/s/AKfycby1KiSEB2vSyrg5M5qx-T-TXtlNGdYpzh-KbgEyDdFAeMWCPFInHy-tJhMe1nXRI-4g/exec";
 
   let ASTE = [];
   let PREFERITI = {}; // id_annuncio -> {stato: "preferito"|"scartato", nota: string}
@@ -1889,8 +1890,18 @@
         new Date().toLocaleTimeString("it-IT", { hour: "2-digit", minute: "2-digit" });
       popolaFiltroTipologia();
       applicaFiltri();
-    }).catch(() => {
+    }).catch(e => {
+      // Questo stesso .catch prende SIA un fallimento vero del CSV
+      // (rete, timeout) SIA un'eccezione lanciata più avanti dentro il
+      // .then (es. un errore nel disegnare le card) — due cause ben
+      // diverse che il vecchio messaggio fisso confondeva in uno solo,
+      // costringendo a indovinare quale delle due fosse successa invece
+      // di saperlo dal messaggio stesso. Stesso principio già applicato
+      // a password/scrittura.
+      console.error("Caricamento registro fallito:", e);
       mostraStato("stato-errore");
+      const dettaglio = document.getElementById("dettaglio-stato-errore");
+      if (dettaglio) dettaglio.textContent = `Dettaglio: ${dettaglioErrore(e)}`;
     });
   }
 
