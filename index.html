@@ -343,7 +343,10 @@
     overflow: hidden;
     text-overflow: ellipsis;
   }
-  #ordinamento { flex-basis: 130px; max-width: 230px; }
+  /* #ordinamento (il vecchio <select>) rimosso — sostituito dal
+     pulsante+menu #bottone-ordinamento, che riusa già lo stile
+     .pillola comune agli altri controlli, nessuna regola dedicata
+     serve più qui. */
   .controlli input::placeholder { color: var(--ink-faint); }
 
   .gruppo-pillole {
@@ -410,6 +413,28 @@
     cursor: pointer;
   }
   .voce-menu-tipologia:hover { background: var(--surface-2); }
+
+  /* Voce del menu ordinamento — un semplice pulsante testuale, niente
+     casella: cliccare il criterio già attivo ne inverte la direzione
+     invece di riselezionare la stessa cosa senza effetto, cliccarne un
+     altro passa a quello con la sua direzione predefinita. */
+  .voce-menu-ordinamento {
+    display: block;
+    width: 100%;
+    text-align: left;
+    background: none;
+    border: none;
+    padding: 9px 10px;
+    border-radius: 6px;
+    font-family: var(--font-body);
+    font-size: .85rem;
+    color: var(--ink);
+    cursor: pointer;
+  }
+  .voce-menu-ordinamento:hover { background: var(--surface-2); }
+  .voce-menu-ordinamento.attiva { color: var(--primary); font-weight: 600; }
+  .freccia-direzione { display: inline-block; font-size: .85em; }
+
   /* Checkbox disegnata interamente via CSS (appearance:none) invece che
      affidata al rendering nativo del browser/sistema operativo: anche
      dopo aver fissato width/height esplicite, il controllo nativo
@@ -656,12 +681,12 @@
        stretti come nella barra compatta sarebbe scomodo da toccare. */
     .controlli-estesi .gruppo-pillole,
     .controlli-estesi .contenitore-filtro-tipologia,
-    .controlli-estesi select,
     .controlli-estesi .filtro-punteggio {
       width: 100%;
     }
     .controlli-estesi .gruppo-pillole .pillola { flex: 1; text-align: center; }
-    .controlli-estesi #bottone-filtro-tipologia { width: 100%; justify-content: center; }
+    .controlli-estesi #bottone-filtro-tipologia,
+    .controlli-estesi #bottone-ordinamento { width: 100%; justify-content: center; }
 
     .sfondo-foglio-filtri {
       display: block;
@@ -684,6 +709,7 @@
     border: 1px solid var(--border);
     border-radius: 12px;
     padding: 22px;
+    cursor: pointer; /* l'intera card apre i dettagli, non solo il pulsante — stella/scarto/nota fermano la propagazione, vedi onClickStella/onClickScarta e il contenitore nota-preferito */
     /* Niente più animazione di comparsa qui: aveva senso quando le card
        nascevano una volta sola al caricamento — con la griglia
        virtualizzata vengono ricreate di continuo scorrendo, e ogni
@@ -1021,9 +1047,29 @@
        carattere digitato. Qui il campo era a .85rem (~13.6px): un pelo
        sopra la soglia evita che lo zoom scatti fin dall'inizio, niente
        da "farlo tornare indietro" dopo. Solo su mobile, apposta: su
-       desktop la dimensione più compatta resta quella voluta. */
-    .controlli input,
-    .controlli select {
+       desktop la dimensione più compatta resta quella voluta. Stessa
+       correzione estesa alla textarea della nota (stesso zoom
+       segnalato aprendola dalla card o dalla finestra dettagli) e al
+       campo password, sotto soglia anche lui (.95rem ≈ 15.2px).
+
+       Il prefisso "html" davanti a ciascun selettore non seleziona
+       nulla di diverso (html è sempre l'antenato di tutto) — serve solo
+       ad alzare la specificità di un pelo. Senza, .nota-preferito-editor
+       textarea e .riquadro-password-inline input hanno la STESSA
+       specificità della loro regola base (definita più avanti nel
+       file, fuori da qualunque media query) — a parità di specificità
+       vince chi compare dopo nel testo, non chi sta dentro il media
+       query: la regola base vinceva silenziosamente, annullando questa
+       correzione. Verificato per davvero (13.6px misurati invece dei
+       16px attesi). Con l'antenato in più, vince sempre questa,
+       indipendentemente da dove si trovano le due nel file — più
+       solido che affidarsi all'ordine, che si romperebbe di nuovo al
+       prossimo riordino del CSS.
+    */
+    html .controlli input,
+    html .controlli select,
+    html .nota-preferito-editor textarea,
+    html .riquadro-password-inline input {
       font-size: 16px;
     }
   }
@@ -1288,19 +1334,19 @@
       </div>
       <div class="contenitore-filtro-tipologia">
         <div class="gruppo-pillole">
-          <button type="button" class="pillola" id="bottone-filtro-tipologia" onclick="alternaMenuTipologia(event)" aria-expanded="false" aria-haspopup="true">
-            Tipologia <span class="freccia-tipologia">▾</span>
+          <button type="button" class="pillola" id="bottone-filtro-tipologia" onclick="alternaMenuTipologia(event)" aria-expanded="false" aria-haspopup="true" title="Tipologia">
+            Tipo <span class="freccia-tipologia">▾</span>
           </button>
         </div>
         <div class="menu-tipologia nascosto" id="menu-tipologia"></div>
       </div>
       <div class="gruppo-pillole" id="gruppo-occupazione">
         <button type="button" class="pillola" data-stato="libero" onclick="attivaFiltroOccupazione('libero')">Libero</button>
-        <button type="button" class="pillola" data-stato="occupato" onclick="attivaFiltroOccupazione('occupato')">Occupato</button>
+        <button type="button" class="pillola" data-stato="occupato" onclick="attivaFiltroOccupazione('occupato')" title="Occupato">Occ.</button>
       </div>
       <div class="gruppo-pillole" id="gruppo-preferiti">
-        <button type="button" class="pillola" data-stato-pref="preferito" onclick="attivaFiltroPreferitiScartati('preferito')">★ Preferiti</button>
-        <button type="button" class="pillola" data-stato-pref="scartato" onclick="attivaFiltroPreferitiScartati('scartato')">Scartati</button>
+        <button type="button" class="pillola" data-stato-pref="preferito" onclick="attivaFiltroPreferitiScartati('preferito')" title="Preferiti">★</button>
+        <button type="button" class="pillola" data-stato-pref="scartato" onclick="attivaFiltroPreferitiScartati('scartato')" title="Scartati">✕</button>
       </div>
       <div class="gruppo-pillole" id="gruppo-concluse">
         <button type="button" class="pillola" id="pillola-concluse" onclick="alternaMostraConcluse()">Concluse</button>
@@ -1314,13 +1360,14 @@
           <input type="range" id="punteggio-massimo" min="0" max="100" step="5" value="100" oninput="onCambioPunteggioMassimo()">
         </div>
       </div>
-      <select id="ordinamento">
-        <option value="punteggio-desc">Punteggio (alto → basso)</option>
-        <option value="margine-desc">Margine (alto → basso)</option>
-        <option value="prezzo-asc">Offerta minima (bassa → alta)</option>
-        <option value="data-asc">Data vendita (vicina → lontana)</option>
-        <option value="distanza-asc">Distanza (vicina → lontana)</option>
-      </select>
+      <div class="contenitore-filtro-tipologia">
+        <div class="gruppo-pillole">
+          <button type="button" class="pillola" id="bottone-ordinamento" onclick="alternaMenuOrdinamento(event)" aria-expanded="false" aria-haspopup="true" title="Ordina per">
+            <span id="etichetta-ordinamento-corrente">Punteggio</span> <span class="freccia-direzione" id="freccia-direzione-ordinamento">↓</span>
+          </button>
+        </div>
+        <div class="menu-tipologia nascosto" id="menu-ordinamento"></div>
+      </div>
     </div>
   </div>
   <div class="sfondo-foglio-filtri nascosto" id="sfondo-foglio-filtri" onclick="chiudiFoglioFiltri()"></div>
@@ -2409,7 +2456,7 @@
       // contenimento verticale qui sotto. Il browser dipinge solo a fine
       // funzione, quindi non si vede mai la posizione intermedia sbagliata.
       menu.classList.remove("nascosto");
-      posizionaMenuTipologia();
+      posizionaMenuAComparsa(menu, bottone);
     } else {
       menu.classList.add("nascosto");
     }
@@ -2423,13 +2470,15 @@
   // ovunque, a seconda di cosa va a capo prima di lui) e qualunque sia
   // lo scroll della pagina in quel momento. Il calcolo dei limiti usa
   // coordinate di finestra (getBoundingClientRect), ma il risultato
-  // viene convertito in coordinate relative al pulsante perché il
+  // viene convertito in coordinate relative al CONTENITORE del bottone
+  // (risalito da lì, non cercato per classe: due menu diversi — tipologia
+  // e ordinamento — condividono la stessa classe contenitore, cercarla
+  // per classe avrebbe sempre trovato solo il primo dei due) perché il
   // pannello resta position:absolute — così segue il pulsante durante lo
-  // scroll invece di restare fisso rispetto allo schermo.
-  function posizionaMenuTipologia() {
-    const menu = document.getElementById("menu-tipologia");
-    const contenitore = document.querySelector(".contenitore-filtro-tipologia");
-    const bottone = document.getElementById("bottone-filtro-tipologia");
+  // scroll invece di restare fisso rispetto allo schermo. Generalizzata
+  // per essere riusata da entrambi i menu, non solo quello tipologia.
+  function posizionaMenuAComparsa(menu, bottone) {
+    const contenitore = bottone.closest(".contenitore-filtro-tipologia");
     const rettBottone = bottone.getBoundingClientRect();
     const rettContenitore = contenitore.getBoundingClientRect();
     const margine = 12;
@@ -2453,13 +2502,22 @@
     menu.style.top = (altoFinestra - rettContenitore.top) + "px";
   }
 
+  // Un solo ascoltatore "clic fuori" per ENTRAMBI i menu a comparsa
+  // (tipologia e ordinamento) — ciascuno si chiude se il clic è avvenuto
+  // fuori dal SUO contenitore specifico, indipendentemente dall'altro.
   document.addEventListener("click", evento => {
-    const contenitore = document.querySelector(".contenitore-filtro-tipologia");
-    const menu = document.getElementById("menu-tipologia");
-    if (menu && !menu.classList.contains("nascosto") && contenitore && !contenitore.contains(evento.target)) {
-      menu.classList.add("nascosto");
-      document.getElementById("bottone-filtro-tipologia").setAttribute("aria-expanded", "false");
-    }
+    [
+      {contenitoreSel: "#bottone-filtro-tipologia", menuId: "menu-tipologia", bottoneId: "bottone-filtro-tipologia"},
+      {contenitoreSel: "#bottone-ordinamento", menuId: "menu-ordinamento", bottoneId: "bottone-ordinamento"},
+    ].forEach(({contenitoreSel, menuId, bottoneId}) => {
+      const bottone = document.getElementById(bottoneId);
+      const contenitore = bottone ? bottone.closest(".contenitore-filtro-tipologia") : null;
+      const menu = document.getElementById(menuId);
+      if (menu && !menu.classList.contains("nascosto") && contenitore && !contenitore.contains(evento.target)) {
+        menu.classList.add("nascosto");
+        bottone.setAttribute("aria-expanded", "false");
+      }
+    });
   });
 
   function aggiornaFiltroTipologia() {
@@ -2468,10 +2526,88 @@
 
     const bottone = document.getElementById("bottone-filtro-tipologia");
     const n = categorieTipologiaAttive.size;
-    bottone.innerHTML = (n > 0 ? `Tipologia (${n})` : "Tipologia") + ' <span class="freccia-tipologia">▾</span>';
+    bottone.innerHTML = (n > 0 ? `Tipo (${n})` : "Tipo") + ' <span class="freccia-tipologia">▾</span>';
     bottone.classList.toggle("attiva", n > 0);
 
     applicaFiltri();
+  }
+
+  // ==========================================================
+  // ORDINAMENTO — un pulsante+menu a comparsa invece del vecchio
+  // <select>, per due motivi: un'etichetta corta quando chiuso ("Data",
+  // non "Data vendita (vicina → lontana)", che su schermi stretti
+  // costringeva ad andare a capo) e una direzione invertibile, cosa che
+  // un <select> nativo non permette (riselezionare la stessa voce già
+  // scelta non genera alcun evento "change", quindi non c'era modo di
+  // reagire a un secondo clic sulla stessa opzione).
+  //
+  // Ogni criterio ha un comparatore SEMPRE crescente — la direzione si
+  // applica una volta sola nel confronto finale (vedi applicaFiltri),
+  // non due comparatori scritti a mano per ognuno. "ascLabel"/"discLabel"
+  // sono il testo mostrato nel menu aperto per la voce attiva, diverso
+  // da criterio a criterio (per la data "vicina → lontana" ha più senso
+  // di "basso → alto").
+  const DEFINIZIONI_ORDINAMENTO = {
+    punteggio: { etichetta: "Punteggio", ascLabel: "basso → alto", descLabel: "alto → basso", direzioneDefault: "desc",
+                 comparatore: (a, b) => a.punteggio - b.punteggio },
+    margine:   { etichetta: "Margine", ascLabel: "basso → alto", descLabel: "alto → basso", direzioneDefault: "desc",
+                 comparatore: (a, b) => (a.margine ?? -Infinity) - (b.margine ?? -Infinity) },
+    prezzo:    { etichetta: "Offerta", ascLabel: "bassa → alta", descLabel: "alta → bassa", direzioneDefault: "asc",
+                 comparatore: (a, b) => a.offertaMinima - b.offertaMinima },
+    data:      { etichetta: "Data", ascLabel: "vicina → lontana", descLabel: "lontana → vicina", direzioneDefault: "asc",
+                 comparatore: (a, b) => distanzaGiorni(a.dataVendita) - distanzaGiorni(b.dataVendita) },
+    distanza:  { etichetta: "Distanza", ascLabel: "vicina → lontana", descLabel: "lontana → vicina", direzioneDefault: "asc",
+                 comparatore: (a, b) => (a.distanza ?? 9999) - (b.distanza ?? 9999) },
+  };
+  let criterioOrdinamento = "punteggio";
+  let direzioneOrdinamento = "desc";
+
+  function popolaMenuOrdinamento() {
+    const menu = document.getElementById("menu-ordinamento");
+    menu.innerHTML = Object.entries(DEFINIZIONI_ORDINAMENTO).map(([chiave, def]) => {
+      const attiva = chiave === criterioOrdinamento;
+      const etichettaDirezione = attiva ? ` (${direzioneOrdinamento === "asc" ? def.ascLabel : def.descLabel})` : "";
+      const frecciaVoce = attiva ? (direzioneOrdinamento === "asc" ? " ↑" : " ↓") : "";
+      return `<button type="button" class="voce-menu-ordinamento${attiva ? ' attiva' : ''}" onclick="selezionaOrdinamento('${chiave}')">${def.etichetta}${etichettaDirezione}${frecciaVoce}</button>`;
+    }).join("");
+  }
+
+  function alternaMenuOrdinamento(evento) {
+    if (evento) evento.stopPropagation();
+    const menu = document.getElementById("menu-ordinamento");
+    const bottone = document.getElementById("bottone-ordinamento");
+    const apri = menu.classList.contains("nascosto");
+    if (apri) {
+      popolaMenuOrdinamento();
+      menu.classList.remove("nascosto");
+      posizionaMenuAComparsa(menu, bottone);
+    } else {
+      menu.classList.add("nascosto");
+    }
+    bottone.setAttribute("aria-expanded", apri ? "true" : "false");
+  }
+
+  // Cliccare il criterio GIÀ attivo ne inverte la direzione (riselezionare
+  // la stessa cosa senza cambiare nulla non avrebbe alcun senso); cliccare
+  // un criterio diverso vi passa con la sua direzione predefinita — quella
+  // che nella maggior parte dei casi si vuole vedere per prima (punteggio
+  // e margine dall'alto, offerta/data/distanza da chi è più vicino).
+  function selezionaOrdinamento(chiave) {
+    if (chiave === criterioOrdinamento) {
+      direzioneOrdinamento = direzioneOrdinamento === "asc" ? "desc" : "asc";
+    } else {
+      criterioOrdinamento = chiave;
+      direzioneOrdinamento = DEFINIZIONI_ORDINAMENTO[chiave].direzioneDefault;
+    }
+    aggiornaEtichettaOrdinamento();
+    document.getElementById("menu-ordinamento").classList.add("nascosto");
+    document.getElementById("bottone-ordinamento").setAttribute("aria-expanded", "false");
+    applicaFiltri();
+  }
+
+  function aggiornaEtichettaOrdinamento() {
+    document.getElementById("etichetta-ordinamento-corrente").textContent = DEFINIZIONI_ORDINAMENTO[criterioOrdinamento].etichetta;
+    document.getElementById("freccia-direzione-ordinamento").textContent = direzioneOrdinamento === "asc" ? "↑" : "↓";
   }
 
   // Stato del filtro libero/occupato: null (tutti), 'libero' oppure 'occupato'.
@@ -2624,7 +2760,6 @@
     }
 
     const ricerca = document.getElementById("ricerca").value.trim().toLowerCase();
-    const ordine = document.getElementById("ordinamento").value;
     const punteggioMinimo = Number(document.getElementById("punteggio-minimo").value);
     const punteggioMassimo = Number(document.getElementById("punteggio-massimo").value);
 
@@ -2640,20 +2775,20 @@
       return passaRicerca && passaTipologia && passaOccupazione && passaConcluse && passaPreferiti && passaPunteggio;
     });
 
-    const comparatori = {
-      "punteggio-desc": (a, b) => b.punteggio - a.punteggio,
-      "margine-desc": (a, b) => (b.margine ?? -Infinity) - (a.margine ?? -Infinity),
-      "prezzo-asc": (a, b) => a.offertaMinima - b.offertaMinima,
-      "data-asc": (a, b) => distanzaGiorni(a.dataVendita) - distanzaGiorni(b.dataVendita),
-      "distanza-asc": (a, b) => (a.distanza ?? 9999) - (b.distanza ?? 9999),
-    };
+    // Comparatore SEMPRE in ordine crescente per il criterio scelto — la
+    // direzione (asc/desc) si applica una volta sola qui, invertendo il
+    // segno, invece di avere due comparatori scritti a mano per ogni
+    // criterio (uno crescente e uno decrescente): stessa logica, la metà
+    // del codice da mantenere.
+    const definizione = DEFINIZIONI_ORDINAMENTO[criterioOrdinamento] || DEFINIZIONI_ORDINAMENTO.punteggio;
+    const segno = direzioneOrdinamento === "desc" ? -1 : 1;
     // Le scartate scivolano SEMPRE in fondo, a prescindere dal criterio
     // scelto — è il punto stesso dello scarto (non farle più ricapitare
     // per sbaglio scorrendo per punteggio), l'attenuazione visiva da sola
     // non basterebbe se restassero comunque in cima. false (0) prima di
     // true (1): l'aritmetica del confronto fa il resto come chiave
     // primaria, il criterio scelto resta il comparatore secondario.
-    filtrate.sort((a, b) => (a.scartato - b.scartato) || (comparatori[ordine] || comparatori["punteggio-desc"])(a, b));
+    filtrate.sort((a, b) => (a.scartato - b.scartato) || segno * definizione.comparatore(a, b));
 
     // Il range virtuale va azzerato a ogni cambio di filtro/ricerca/
     // ordinamento: altrimenti potrebbe combaciare per caso con quello di
@@ -2878,7 +3013,7 @@
     // nota senza uno dei due stati non esiste, stessa invarianza già
     // imposta lato server in Code.gs (salva_nota_preferito la rifiuta).
     const notaHtml = (a.preferito || a.scartato) ? `
-        <div class="nota-preferito">
+        <div class="nota-preferito" onclick="event.stopPropagation()">
           <button type="button" class="nota-preferito-bolla${a.notaPreferito ? ' compilata' : ''}" onclick="apriEditorNota(this)">${a.notaPreferito ? escapeHtml(a.notaPreferito) : '+ Aggiungi una nota'}</button>
           <div class="nota-preferito-editor">
             <textarea placeholder="Es. interessante, valuta meglio i costi di ristrutturazione...">${escapeHtml(a.notaPreferito)}</textarea>
@@ -2891,7 +3026,7 @@
         </div>` : "";
 
     return `
-      <article class="lotto${conclusa ? ' conclusa' : ''}${a.scartato ? ' scartato' : ''}" id="lotto-${a.id}">
+      <article class="lotto${conclusa ? ' conclusa' : ''}${a.scartato ? ' scartato' : ''}" id="lotto-${a.id}" onclick="apriDettagliAsta('${a.id}')">
         <div class="lotto-testata">
           <div class="sigillo ${livello}">${contenutoSigillo}</div>
           <div>
@@ -2990,7 +3125,7 @@ ${notaHtml}
       : `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"><circle cx="12" cy="12" r="9.2" stroke-linecap="butt"/><path d="M9 9l6 6m0-6l-6 6"/></svg>`;
 
     const notaHtml = (a.preferito || a.scartato) ? `
-        <div class="nota-preferito">
+        <div class="nota-preferito" onclick="event.stopPropagation()">
           <button type="button" class="nota-preferito-bolla${a.notaPreferito ? ' compilata' : ''}" onclick="apriEditorNota(this)">${a.notaPreferito ? escapeHtml(a.notaPreferito) : '+ Aggiungi una nota'}</button>
           <div class="nota-preferito-editor">
             <textarea placeholder="Es. interessante, valuta meglio i costi di ristrutturazione...">${escapeHtml(a.notaPreferito)}</textarea>
@@ -3079,7 +3214,6 @@ ${notaHtml}
   }
 
   document.getElementById("ricerca").addEventListener("input", applicaFiltri);
-  document.getElementById("ordinamento").addEventListener("change", applicaFiltri);
 
   avvia();
 </script>
