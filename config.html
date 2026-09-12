@@ -350,7 +350,7 @@
     transition: background .2s ease, color .2s ease;
   }
   .bottone-elimina:hover { background: var(--danger); color: var(--surface); }
-  #messaggio-salvataggio { font-size: .85rem; }
+  #messaggio-salvataggio, #messaggio-cambio-password { font-size: .85rem; }
 
   .nascosto { display: none !important; }
 
@@ -374,10 +374,15 @@
     <a href="index.html" class="link-torna">← Torna al registro</a>
   </div>
 
-  <div id="schermata-password" class="riquadro-gate">
+  <div id="stato-verifica-automatica" class="riquadro-gate">
+    <h2>Verifica in corso…</h2>
+    <p>Un attimo.</p>
+  </div>
+
+  <div id="schermata-password" class="riquadro-gate nascosto">
     <h2>Accesso protetto</h2>
     <p>Inserisci la password per modificare la configurazione.</p>
-    <input type="password" id="campo-password" placeholder="Password" onkeydown="if(event.key==='Enter') sblocca()">
+    <input type="password" id="campo-password" placeholder="Password" autocomplete="current-password" onkeydown="if(event.key==='Enter') sblocca()">
     <button class="bottone-primario" onclick="sblocca()">Sblocca</button>
     <p id="errore-gate" class="messaggio-errore nascosto"></p>
   </div>
@@ -497,6 +502,25 @@
         </div>
       </section>
 
+      <section class="blocco-config">
+        <h2>Cambia password</h2>
+        <p class="nota-campo">Un'unica password protegge sia questa pagina sia preferiti/scarti/note su index.html — cambiarla qui vale per entrambe, subito.</p>
+        <div class="campo-form">
+          <label for="campo-password-attuale">Password attuale</label>
+          <input type="password" id="campo-password-attuale" autocomplete="current-password">
+        </div>
+        <div class="campo-form">
+          <label for="campo-password-nuova">Nuova password</label>
+          <input type="password" id="campo-password-nuova" autocomplete="new-password">
+        </div>
+        <div class="campo-form">
+          <label for="campo-password-conferma">Conferma nuova password</label>
+          <input type="password" id="campo-password-conferma" autocomplete="new-password" onkeydown="if(event.key==='Enter') cambiaPassword()">
+        </div>
+        <button type="button" class="bottone-secondario" id="bottone-cambia-password" onclick="cambiaPassword()">Cambia password</button>
+        <p id="messaggio-cambio-password"></p>
+      </section>
+
       <div class="riga-salvataggio">
         <button type="button" class="bottone-salva" onclick="salvaConfigurazione()">Salva le modifiche</button>
         <button type="button" class="bottone-avvia" id="bottone-avvia-scanner" onclick="avviaScanner()">▶ Avvia scanner ora</button>
@@ -513,7 +537,7 @@
   // CONFIGURAZIONE — incolla qui l'URL della tua WebApp (lo stesso usato
   // come GOOGLE_SHEET_WEBAPP_URL nei secret di GitHub Actions).
   // ==========================================================
-  const WEBAPP_URL = "https://script.google.com/macros/s/AKfycbzaUdsroX6mZZIWCNd6PChRIxyGgsjLVBWQFU2NYgDWRGNCoNkcCUvQmSfF70w6CwQh/exec";
+  const WEBAPP_URL = "https://script.google.com/macros/s/AKfycbyVS9aTh7jx7fjCIaI6OziW8wwDr5Yj8QB9W5QRP5HHGJP7H-3NelKg35fmQhQ5s0yD/exec";
 
   // Deve essere IDENTICO a SALE_PASSWORD in Code.gs, altrimenti gli hash
   // calcolati qui e quelli attesi lato server non combaceranno mai. Non è
@@ -523,6 +547,24 @@
 
   let mappa, segnaposto, cerchio;
   let hashPasswordCorrente = null;
+
+  // ==========================================================
+  // PASSWORD RICORDATA SU QUESTO DEVICE — STESSA chiave localStorage di
+  // index.html (stessa origine, quindi stesso storage): sbloccare da una
+  // pagina resta sbloccato anche sull'altra. Vedi il commento gemello in
+  // index.html per il ragionamento completo su perché localStorage
+  // invece di un cookie vero, e sul compromesso di sicurezza accettato.
+  const CHIAVE_LOCALSTORAGE_HASH = "aste_hash_password_v1";
+
+  function salvaHashRicordato(hash) {
+    try { localStorage.setItem(CHIAVE_LOCALSTORAGE_HASH, hash); } catch (e) { /* storage negato/pieno — si ridigita ogni volta, nessun blocco */ }
+  }
+  function leggiHashRicordato() {
+    try { return localStorage.getItem(CHIAVE_LOCALSTORAGE_HASH); } catch (e) { return null; }
+  }
+  function cancellaHashRicordato() {
+    try { localStorage.removeItem(CHIAVE_LOCALSTORAGE_HASH); } catch (e) {}
+  }
 
   // ==========================================================
   // UTILITY: hash e chiamate alla WebApp
@@ -558,6 +600,11 @@
   // qui viene tenuto in memoria e riusato al salvataggio, senza richiederlo
   // una seconda volta.
   // ==========================================================
+
+  // Eseguita al caricamento pagina, PRIMA di mostrare il gate manuale —
+  // vedi provaSbloccoAutomatico() più sotto per il perché la richiesta di
+  // verifica va comunque fatta (non ci si fida ciecamente dell'hash
+  // ricordato) invece di saltare dritti alla configurazione.
   async function sblocca() {
     const password = document.getElementById("campo-password").value;
     const erroreEl = document.getElementById("errore-gate");
@@ -576,6 +623,7 @@
 
     if (risultato.valida) {
       hashPasswordCorrente = hash;
+      salvaHashRicordato(hash);
       document.getElementById("schermata-password").classList.add("nascosto");
       document.getElementById("schermata-config").classList.remove("nascosto");
       caricaConfigurazioneAttuale();
@@ -583,6 +631,48 @@
       erroreEl.textContent = "Password errata.";
       erroreEl.classList.remove("nascosto");
     }
+  }
+
+  // Prova a sbloccare da sola con l'hash ricordato su questo device,
+  // PRIMA di mostrare il gate manuale — chiamata al caricamento pagina
+  // (vedi in fondo al file). Verifica comunque col server invece di
+  // fidarsi ciecamente: l'hash ricordato potrebbe essere superato (es.
+  // password cambiata da config.html stesso, o da un altro device),
+  // scoprirlo solo al primo salvataggio fallito sarebbe più confuso che
+  // un controllo esplicito qui, un solo giro di rete in più al
+  // caricamento di questa pagina (che capita una volta per visita, non
+  // ripetutamente come le azioni di index.html).
+  async function provaSbloccoAutomatico() {
+    const hashRicordato = leggiHashRicordato();
+    if (!hashRicordato) {
+      mostraGateManuale();
+      return;
+    }
+    try {
+      const risultato = await chiamaWebApp("verifica_password", {hash_password: hashRicordato});
+      if (risultato.valida) {
+        hashPasswordCorrente = hashRicordato;
+        document.getElementById("stato-verifica-automatica").classList.add("nascosto");
+        document.getElementById("schermata-config").classList.remove("nascosto");
+        caricaConfigurazioneAttuale();
+        return;
+      }
+      // Rifiutata esplicitamente (password cambiata altrove) — non ha
+      // più senso tenerla in memoria per i prossimi caricamenti.
+      cancellaHashRicordato();
+    } catch (e) {
+      // Rete irraggiungibile: non è detto che l'hash sia sbagliato, solo
+      // che non si è potuto controllare — lo lascio intatto per il
+      // prossimo tentativo invece di costringere a reinserire la
+      // password per un problema che potrebbe risolversi da solo.
+    }
+    mostraGateManuale();
+  }
+
+  function mostraGateManuale() {
+    document.getElementById("stato-verifica-automatica").classList.add("nascosto");
+    document.getElementById("schermata-password").classList.remove("nascosto");
+    document.getElementById("campo-password").focus();
   }
 
   // ==========================================================
@@ -1064,6 +1154,64 @@
       messaggioEl.className = "messaggio-errore";
     }
   }
+
+  // Chiede la password ATTUALE (verificata lato server in
+  // gestisciCambiaPassword prima di accettare quella nuova, stessa idea
+  // di riconfermarla prima di un cambio su un account Google o simili —
+  // protegge da un cambio non voluto se qualcuno trova questa pagina già
+  // sbloccata, es. un tab dimenticato aperto) più la nuova, due volte per
+  // sicurezza contro un errore di battitura. Aggiorna sia hashPasswordCorrente
+  // sia l'hash ricordato in locale (vedi salvaHashRicordato): da questo
+  // momento entrambi riflettono la password nuova, non serve rifare login.
+  async function cambiaPassword() {
+    const messaggioEl = document.getElementById("messaggio-cambio-password");
+    const attuale = document.getElementById("campo-password-attuale").value;
+    const nuova = document.getElementById("campo-password-nuova").value;
+    const conferma = document.getElementById("campo-password-conferma").value;
+
+    if (!attuale || !nuova || !conferma) {
+      messaggioEl.textContent = "Compila tutti e tre i campi.";
+      messaggioEl.className = "messaggio-errore";
+      return;
+    }
+    if (nuova !== conferma) {
+      messaggioEl.textContent = "La nuova password e la conferma non coincidono.";
+      messaggioEl.className = "messaggio-errore";
+      return;
+    }
+    if (nuova.length < 6) {
+      messaggioEl.textContent = "La nuova password deve avere almeno 6 caratteri.";
+      messaggioEl.className = "messaggio-errore";
+      return;
+    }
+
+    messaggioEl.textContent = "Cambio in corso…";
+    messaggioEl.className = "messaggio-attesa";
+
+    const hashAttuale = await calcolaHash(attuale);
+    const hashNuova = await calcolaHash(nuova);
+
+    try {
+      const risultato = await chiamaWebApp("cambia_password", {hash_password: hashAttuale, hash_password_nuova: hashNuova});
+      if (risultato.result === "success") {
+        hashPasswordCorrente = hashNuova;
+        salvaHashRicordato(hashNuova);
+        document.getElementById("campo-password-attuale").value = "";
+        document.getElementById("campo-password-nuova").value = "";
+        document.getElementById("campo-password-conferma").value = "";
+        messaggioEl.textContent = "Password cambiata — vale da subito, anche per preferiti/scarti/note su index.html.";
+        messaggioEl.className = "messaggio-ok";
+      } else {
+        messaggioEl.textContent = risultato.message || "Errore sconosciuto durante il cambio password.";
+        messaggioEl.className = "messaggio-errore";
+      }
+    } catch (e) {
+      messaggioEl.textContent = "Richiesta non riuscita. Controlla la connessione e riprova.";
+      messaggioEl.className = "messaggio-errore";
+    }
+  }
+
+  provaSbloccoAutomatico();
 </script>
 
 <script>
