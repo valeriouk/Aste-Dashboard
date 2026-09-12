@@ -1350,6 +1350,20 @@
   let mappaLotti = null;
   let gruppoMarcatori = null;
   let ultimoElencoFiltrato = [];
+  // id asta -> indice in ultimoElencoFiltrato — ricostruita in blocco
+  // ogni volta che l'elenco filtrato cambia (dentro renderizza), non
+  // cercata da capo a ogni singola card. Prima rigaDiAsta usava
+  // ultimoElencoFiltrato.findIndex(...): una scansione dell'INTERO
+  // elenco a ogni chiamata — chiamata più volte per ogni ridisegno, per
+  // ogni card con i dettagli aperti. Con un elenco di centinaia di
+  // aste e i dettagli aperti verso il fondo, quella scansione doveva
+  // attraversare centinaia di elementi ogni volta, decine di volte per
+  // ogni fotogramma di scroll — abbastanza da bloccare il thread
+  // principale e far perdere fotogrammi, visto come scatti nello
+  // scroll anche se il valore finale calcolato restava corretto.
+  // Verificato: il ritardo cresceva proprio scendendo nell'elenco,
+  // esattamente il sintomo segnalato.
+  let mappaIndiceAsta = new Map();
 
   // ============================================================
   // VIRTUALIZZAZIONE DELLA GRIGLIA — invece di costruire una card per
@@ -1408,12 +1422,12 @@
   let alturaExtraRigheEspanse = new Map(); // id asta -> pixel extra (>= 0)
 
   // Riga (0-based) a cui appartiene un'asta nell'elenco filtrato
-  // corrente — dipende da ordinamento/filtro/colonne del momento, va
-  // ricalcolata ogni volta che serve, mai memorizzata: cambia ogni volta
-  // che uno qualunque di quei tre cambia.
+  // corrente — dipende da ordinamento/filtro/colonne del momento (la
+  // MAPPA va ricostruita quando cambiano, vedi renderizza), ma la
+  // singola lettura qui è diretta O(1), non una scansione.
   function rigaDiAsta(id, colonne) {
-    const indice = ultimoElencoFiltrato.findIndex(a => a.id === id);
-    if (indice === -1) return -1;
+    const indice = mappaIndiceAsta.get(id);
+    if (indice === undefined) return -1;
     return Math.floor(indice / colonne);
   }
 
@@ -1456,20 +1470,27 @@
   }
 
   // Converte una posizione di scroll in un indice di riga, tenendo conto
-  // delle righe espanse PRIMA di quel punto — non una semplice
-  // divisione, perché l'altezza extra da sottrarre dipende da QUALE riga
-  // si sta cercando, che è proprio quello che si sta calcolando. Due
-  // passate convergono bene nella pratica: le righe espanse sono
-  // tipicamente poche, la stima cambia (se cambia) di poco tra la prima
-  // e la seconda passata.
-  function rigaDaScroll(scrollRelativo, altezzaRiga, colonne) {
-    let riga = Math.floor(scrollRelativo / altezzaRiga);
-    const extra1 = extraSopraRiga(riga, colonne);
-    if (extra1 === 0) return riga; // caso comune, nessuna correzione necessaria
-    riga = Math.floor((scrollRelativo - extra1) / altezzaRiga);
-    const extra2 = extraSopraRiga(riga, colonne);
-    if (extra2 !== extra1) riga = Math.floor((scrollRelativo - extra2) / altezzaRiga);
-    return riga;
+  // delle righe espanse PRIMA di quel punto. Non più "stima con una
+  // divisione, poi correggi con un'altra" (due passate): quell'approccio
+  // poteva OSCILLARE senza mai stabilizzarsi quando più righe espanse
+  // erano vicine tra loro — riprodotto per davvero: la sequenza dei
+  // ridisegni saltava avanti e indietro tra tre valori diversi
+  // all'infinito, ognuno dei quali provava a costruire centinaia di
+  // card. Una ricerca binaria non può oscillare per costruzione: cerca
+  // la riga la cui altezza cumulativa (righe normali + extra delle
+  // espanse prima di lei) è la più vicina senza superare scrollRelativo
+  // — sempre la stessa risposta, in un numero di passate logaritmico
+  // anche su elenchi di migliaia di righe (circa 11 passate per 1500
+  // righe), ciascuna quasi gratuita.
+  function rigaDaScroll(scrollRelativo, altezzaRiga, colonne, righeTotali) {
+    let basso = 0, alto = righeTotali;
+    while (basso < alto) {
+      const meta = Math.floor((basso + alto) / 2);
+      const altezzaFinoAMeta = meta * altezzaRiga + extraSopraRiga(meta, colonne);
+      if (altezzaFinoAMeta <= scrollRelativo) basso = meta + 1;
+      else alto = meta;
+    }
+    return Math.max(0, basso - 1);
   }
 
   // Quante colonne la griglia sta effettivamente mostrando in questo
@@ -1484,15 +1505,34 @@
   }
 
   // Sceglie una card SENZA dettagli aperti da cui misurare l'altezza
-  // "tipica" di una riga — una card coi dettagli espansi è molto più
-  // alta del normale, tutt'altro che rappresentativa. Ripiega sulla
-  // prima qualunque solo se proprio tutte quelle renderizzate in questo
-  // momento hanno i dettagli aperti (raro).
+  // "tipica" di una riga — non basta evitare la card espansa in sé: CSS
+  // Grid rende TUTTE le celle di una riga alte quanto la più alta tra
+  // loro, quindi una card senza dettagli propri aperti risulterebbe
+  // comunque (erroneamente) alta quanto una vicina espansa se stanno
+  // nella STESSA riga della griglia. Misurare da lì per sbaglio faceva
+  // oscillare la stima in modo intermittente (a seconda di quale card
+  // capitava di essere campionata) — verificato per davvero: con
+  // ~1700 righe totali, anche pochi pixel di oscillazione nella stima
+  // per riga si moltiplicavano in migliaia di pixel di altezza pagina,
+  // e vicino al fondo questo faceva saltare lo scroll in modo vistoso.
+  // Ripiega sulla prima qualunque solo se proprio nessuna card
+  // renderizzata sta in una riga "pulita" (raro, es. con "mostra tutti
+  // i dettagli" attivo).
   function trovaCardPerMisuraAltezza(griglia) {
     const cards = griglia.querySelectorAll(".lotto");
+    const larghezzaContenitore = griglia.clientWidth || griglia.getBoundingClientRect().width;
+    const colonne = colonneCorrenti(larghezzaContenitore);
+    const righeDaEvitare = new Set();
+    for (const id of dettagliApertiSingolarmente) {
+      const riga = rigaDiAsta(id, colonne);
+      if (riga !== -1) righeDaEvitare.add(riga);
+    }
     for (const card of cards) {
       const dettagli = card.querySelector(".lotto-dettagli");
-      if (!dettagli || !dettagli.classList.contains("aperto")) return card;
+      if (dettagli && dettagli.classList.contains("aperto")) continue;
+      const idCard = card.id.replace("lotto-", "");
+      if (righeDaEvitare.has(rigaDiAsta(idCard, colonne))) continue;
+      return card;
     }
     return cards[0] || null;
   }
@@ -1570,8 +1610,9 @@
     const larghezzaContenitore = griglia.clientWidth || griglia.getBoundingClientRect().width;
     const colonne = colonneCorrenti(larghezzaContenitore);
     const altezzaRiga = altezzaRigaMisurata || STIMA_ALTEZZA_RIGA_INIZIALE;
+    const righeTotaliCorrezione = Math.ceil(ultimoElencoFiltrato.length / colonne);
     const scrollRelativo = Math.max(0, -rettGriglia.top);
-    const rigaCorretta = Math.max(0, rigaDaScroll(scrollRelativo, altezzaRiga, colonne) - RIGHE_CUSCINETTO);
+    const rigaCorretta = Math.max(0, rigaDaScroll(scrollRelativo, altezzaRiga, colonne, righeTotaliCorrezione) - RIGHE_CUSCINETTO);
 
     // Forzo il prossimo giro a partire da questa riga corretta, non da
     // un nuovo calcolo scrollRelativo/altezzaRiga che ripeterebbe lo
@@ -1639,13 +1680,13 @@
     const scrollRelativo = Math.max(0, -rettGriglia.top);
     const altezzaViewport = window.innerHeight;
 
-    let primaRiga = rigaDaScroll(scrollRelativo, altezzaRiga, colonne) - RIGHE_CUSCINETTO;
+    let primaRiga = rigaDaScroll(scrollRelativo, altezzaRiga, colonne, righeTotali) - RIGHE_CUSCINETTO;
     // rigaDaScroll arrotonda per difetto (floor) — +1 per compensare,
     // stesso spirito del precedente Math.ceil ma passando dalla stessa
     // conversione consapevole delle righe espanse usata per primaRiga:
     // un'unica funzione per tutte le conversioni scroll->riga, non due
     // versioni diverse che potrebbero disallinearsi.
-    let ultimaRiga = rigaDaScroll(scrollRelativo + altezzaViewport, altezzaRiga, colonne) + RIGHE_CUSCINETTO + 1;
+    let ultimaRiga = rigaDaScroll(scrollRelativo + altezzaViewport, altezzaRiga, colonne, righeTotali) + RIGHE_CUSCINETTO + 1;
     // Limitata sia dal basso (0) sia dall'ALTO (righeTotali-1) — mancava
     // questo secondo limite: vicino al fondo, una stima leggermente
     // ottimistica di altezzaRiga poteva far calcolare una primaRiga
@@ -2546,6 +2587,11 @@
 
   function renderizza(elenco) {
     ultimoElencoFiltrato = elenco;
+    // Ricostruita qui, in blocco, una sola volta per cambio di elenco —
+    // non una scansione ripetuta a ogni singola card durante lo scroll
+    // (vedi il commento su mappaIndiceAsta più sopra per il perché).
+    mappaIndiceAsta = new Map();
+    for (let i = 0; i < elenco.length; i++) mappaIndiceAsta.set(elenco[i].id, i);
     const griglia = document.getElementById("griglia-lotti");
 
     // Salvo la posizione di scroll PRIMA di toccare qualunque cosa nel
