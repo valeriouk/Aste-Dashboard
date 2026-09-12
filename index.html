@@ -969,6 +969,10 @@
 
   <div class="griglia" id="griglia-lotti"></div>
 
+  <div id="contenitore-mostra-altre" class="nascosto" style="text-align:center;margin-top:24px">
+    <button type="button" class="bottone-toggle-tutti" id="bottone-mostra-altre" onclick="mostraAltreAste()"></button>
+  </div>
+
   <div id="vista-mappa" class="nascosto">
     <div id="mappa-lotti" class="contenitore-mappa-dashboard"></div>
     <p class="legenda-mappa">
@@ -1133,6 +1137,18 @@
   let mappaLotti = null;
   let gruppoMarcatori = null;
   let ultimoElencoFiltrato = [];
+
+  // Costruire migliaia di card complesse (sigillo, icone, nota, dettagli
+  // nascosti) tutte insieme in un solo colpo è un carico di lavoro
+  // pesante per il motore di rendering del browser, indipendente da
+  // quanto è veloce il mio codice o dalle animazioni — verificato: anche
+  // con le animazioni disattivate del tutto, il blocco resta identico su
+  // un foglio da 5000 righe. Un limite iniziale, con un pulsante per
+  // vederne altre a richiesta, evita di pagare quel costo ogni volta che
+  // la pagina si apre o un filtro cambia — chi vuole scendere oltre le
+  // prime N può comunque farlo con un clic.
+  const LIMITE_RENDER_INIZIALE = 150;
+  let numeroAsteVisualizzate = LIMITE_RENDER_INIZIALE;
 
   function numeroSicuro(valore, predefinito = 0) {
     if (valore === null || valore === undefined) return predefinito;
@@ -1520,13 +1536,34 @@
       return;
     }
 
+    // Le intestazioni vengono ripulite (spazi iniziali/finali) DOPO che i
+    // dati sono già tornati dal worker sul thread principale, non tramite
+    // l'opzione transformHeader di PapaParse — quell'opzione è una
+    // funzione, e le funzioni non si possono serializzare per mandarle a
+    // un worker (postMessage lancia DataCloneError, verificato) — questo
+    // ottiene lo stesso risultato senza passare nessuna funzione nella
+    // configurazione che il worker deve ricevere.
+    function pulisciChiaviRiga(riga) {
+      const pulita = {};
+      for (const chiave in riga) pulita[chiave.trim()] = riga[chiave];
+      return pulita;
+    }
+
     const promessaAste = new Promise((resolve, reject) => {
       Papa.parse(CSV_URL, {
         download: true, header: true, skipEmptyLines: true,
-        transformHeader: h => h.trim(),
+        // worker:true sposta l'ANALISI del CSV (non solo lo scaricamento,
+        // che è già di per sé asincrono) su un thread separato. Senza
+        // questo, PapaParse la esegue sul thread principale della pagina
+        // — con un foglio piccolo non si nota, ma con centinaia/migliaia
+        // di righe può bastare da solo a bloccare la pagina per qualche
+        // secondo mentre analizza, indipendentemente da quanto è
+        // veloce la connessione.
+        worker: true,
         complete: risultato => {
+          const righe = (risultato.data || []).map(pulisciChiaviRiga);
           console.log("Intestazioni lette dal CSV:", risultato.meta.fields);
-          resolve((risultato.data || []).filter(r => r["ID Annuncio"]));
+          resolve(righe.filter(r => r["ID Annuncio"]));
         },
         error: reject
       });
@@ -1541,9 +1578,8 @@
       ? Promise.resolve([])
       : new Promise(resolve => {
           Papa.parse(CSV_URL_PREFERITI, {
-            download: true, header: true, skipEmptyLines: true,
-            transformHeader: h => h.trim(),
-            complete: risultato => resolve(risultato.data || []),
+            download: true, header: true, skipEmptyLines: true, worker: true,
+            complete: risultato => resolve((risultato.data || []).map(pulisciChiaviRiga)),
             error: () => resolve([])
           });
         });
@@ -1846,6 +1882,10 @@
     // primaria, il criterio scelto resta il comparatore secondario.
     filtrate.sort((a, b) => (a.scartato - b.scartato) || (comparatori[ordine] || comparatori["punteggio-desc"])(a, b));
 
+    // Ogni cambio di filtro/ricerca/ordinamento riparte dalle prime N —
+    // chi ha cliccato "mostra altre" su un elenco precedente non deve
+    // restare con un limite più alto su un elenco completamente diverso.
+    numeroAsteVisualizzate = LIMITE_RENDER_INIZIALE;
     renderizza(filtrate);
   }
 
@@ -1874,18 +1914,46 @@
       conMargine.length ? formattaEuro(Math.max(...conMargine.map(a => a.margine))) : "—";
 
     nascondiTuttiGliStati();
-    document.getElementById("conteggio-filtrati").textContent = `${elenco.length} di ${ASTE.length} aste mostrate`;
 
     if (elenco.length === 0) {
       mostraStato("stato-nessun-risultato");
       griglia.innerHTML = "";
+      document.getElementById("contenitore-mostra-altre").classList.add("nascosto");
+      document.getElementById("conteggio-filtrati").textContent = `0 di ${ASTE.length} aste mostrate`;
       renderizzaMappa(elenco);
       return;
     }
 
-    griglia.innerHTML = elenco.map((a, i) => cartellaLotto(a, i)).join("");
+    // Solo le prime numeroAsteVisualizzate vengono davvero costruite nel
+    // DOM — vedi il commento sulla costante LIMITE_RENDER_INIZIALE più
+    // sopra per il perché. La mappa invece riceve sempre l'elenco
+    // COMPLETO: i marcatori Leaflet sono semplici cerchi SVG, un carico
+    // di rendering molto più leggero di centinaia di card complesse, e
+    // vedere tutti i risultati sulla mappa anche oltre il limite della
+    // griglia è comunque utile per un colpo d'occhio geografico.
+    const daMostrare = elenco.slice(0, numeroAsteVisualizzate);
+    const rimanenti = elenco.length - daMostrare.length;
+
+    document.getElementById("conteggio-filtrati").textContent = rimanenti > 0
+      ? `${daMostrare.length} di ${elenco.length} corrispondenti mostrate (${ASTE.length} totali)`
+      : `${elenco.length} di ${ASTE.length} aste mostrate`;
+
+    const contenitoreAltre = document.getElementById("contenitore-mostra-altre");
+    if (rimanenti > 0) {
+      contenitoreAltre.classList.remove("nascosto");
+      document.getElementById("bottone-mostra-altre").textContent = `Mostra altre ${Math.min(rimanenti, LIMITE_RENDER_INIZIALE)} (ne restano ${rimanenti})`;
+    } else {
+      contenitoreAltre.classList.add("nascosto");
+    }
+
+    griglia.innerHTML = daMostrare.map((a, i) => cartellaLotto(a, i)).join("");
     document.getElementById("bottone-mostra-tutti").textContent = "Mostra tutti i dettagli";
     renderizzaMappa(elenco);
+  }
+
+  function mostraAltreAste() {
+    numeroAsteVisualizzate += LIMITE_RENDER_INIZIALE;
+    renderizza(ultimoElencoFiltrato);
   }
 
   // ==========================================================
