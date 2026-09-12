@@ -240,23 +240,89 @@
     border-radius: 8px;
   }
 
+  /* Stessa altezza (via lo stesso padding) delle pillole e degli altri
+     controlli della barra — prima questo riquadro era più alto degli
+     altri (etichetta ed elemento su righe separate, larghezza minima
+     generosa), rompendo la riga unica che il resto della barra riesce a
+     mantenere. Qui invece etichetta e doppio cursore stanno affiancati
+     sulla stessa riga, un blocco solo, compatto quanto una pillola. */
   .filtro-punteggio {
     display: flex;
-    flex-direction: column;
-    gap: 6px;
+    align-items: center;
+    gap: 10px;
     background: var(--surface);
     border: 1px solid var(--border);
     border-radius: 8px;
-    padding: 9px 12px;
-    font-size: .82rem;
+    padding: 11px 14px;
+    font-size: .8rem;
     color: var(--ink-muted);
-    min-width: 190px;
-    flex: 1 1 190px;
+    flex: 0 1 auto;
+    white-space: nowrap;
   }
-  .filtro-punteggio label { font-weight: 500; color: var(--ink); }
-  .filtro-punteggio input[type="range"] {
+  .filtro-punteggio label { font-weight: 500; color: var(--ink); flex-shrink: 0; }
+
+  /* Due <input type="range"> nativi sovrapposti — trucco comune per un
+     cursore a doppio estremo senza un componente su misura: ciascuno
+     controlla un solo capo (min o max), pointer-events:none sull'intero
+     binario e riattivato solo sulla manopola (::-webkit-slider-thumb /
+     ::-moz-range-thumb) fa sì che si possa afferrare l'una o l'altra
+     indipendentemente, senza che il binario stesso intercetti i clic. */
+  .doppio-slider {
+    position: relative;
+    width: 110px;
+    height: 20px;
+    flex: 1 1 90px;
+  }
+  .doppio-slider-binario {
+    position: absolute;
+    top: 50%; left: 0; right: 0;
+    height: 4px;
+    background: var(--border);
+    border-radius: 2px;
+    transform: translateY(-50%);
+  }
+  .doppio-slider-riempimento {
+    position: absolute;
+    top: 50%;
+    height: 4px;
+    background: var(--primary);
+    border-radius: 2px;
+    transform: translateY(-50%);
+  }
+  .doppio-slider input[type="range"] {
+    position: absolute;
+    top: 0; left: 0;
     width: 100%;
-    accent-color: var(--primary);
+    height: 20px;
+    margin: 0;
+    background: none;
+    pointer-events: none;
+    -webkit-appearance: none;
+    appearance: none;
+  }
+  .doppio-slider input[type="range"]::-webkit-slider-runnable-track { background: transparent; }
+  .doppio-slider input[type="range"]::-moz-range-track { background: transparent; }
+  .doppio-slider input[type="range"]::-webkit-slider-thumb {
+    pointer-events: auto;
+    -webkit-appearance: none;
+    appearance: none;
+    width: 16px;
+    height: 16px;
+    border-radius: 50%;
+    background: var(--primary);
+    border: 2px solid var(--surface);
+    box-shadow: 0 1px 3px rgba(30,35,32,.3);
+    cursor: pointer;
+    margin-top: 0;
+  }
+  .doppio-slider input[type="range"]::-moz-range-thumb {
+    pointer-events: auto;
+    width: 14px;
+    height: 14px;
+    border-radius: 50%;
+    background: var(--primary);
+    border: 2px solid var(--surface);
+    box-shadow: 0 1px 3px rgba(30,35,32,.3);
     cursor: pointer;
   }
 
@@ -775,6 +841,11 @@
     align-items: center;
     gap: 6px;
   }
+  /* Icona piccola e discreta ("apre altrove", non "si espande qui sotto"
+     — coerente col fatto che i dettagli ora aprono una finestra a
+     parte, non più la card stessa) invece della vecchia freccia verso
+     il basso, che suggeriva un'espansione sul posto non più vera. */
+  .bottone-dettagli .icona-finestra { width: 13px; height: 13px; flex-shrink: 0; }
 
   .dettaglio-riga {
     display: flex;
@@ -815,6 +886,17 @@
     max-height: 85vh;
     overflow-y: auto;
     box-shadow: 0 16px 48px rgba(30, 35, 32, .3);
+    transition: max-width .22s ease, max-height .22s ease;
+  }
+  /* Attivata dal pulsante "espandi" nell'intestazione — solo desktop
+     (su mobile la finestra occupa già quasi tutto lo schermo, non c'è
+     altro spazio utile da guadagnare). Persiste finché non viene
+     disattivata di nuovo, anche passando da un'asta all'altra: chi la
+     apre la trova comoda di solito la vuole così per più di una card di
+     fila, non solo per quella che l'ha fatta scoprire. */
+  .finestra-dettagli-asta.espansa {
+    max-width: 900px;
+    max-height: 92vh;
   }
   .finestra-dettagli-header {
     position: sticky;
@@ -833,23 +915,38 @@
     gap: 14px;
     align-items: flex-start;
   }
-  .finestra-dettagli-chiudi {
+  .finestra-dettagli-azioni-header {
+    display: flex;
+    gap: 8px;
+    flex-shrink: 0;
+  }
+  .finestra-dettagli-chiudi,
+  .finestra-dettagli-espandi {
     background: var(--surface-2);
     border: none;
     color: var(--ink-muted);
     width: 36px;
     height: 36px;
     border-radius: 50%;
-    font-size: 1.4rem;
-    line-height: 1;
     cursor: pointer;
     flex-shrink: 0;
+    display: flex;
+    align-items: center;
+    justify-content: center;
   }
+  .finestra-dettagli-chiudi { font-size: 1.4rem; line-height: 1; }
+  .finestra-dettagli-espandi svg { width: 16px; height: 16px; }
+  .finestra-dettagli-espandi:hover,
+  .finestra-dettagli-chiudi:hover { color: var(--ink); }
   .finestra-dettagli-corpo { padding: 20px 24px 28px; }
 
   @media (max-width: 640px) {
     .overlay-dettagli-asta { padding: 0; align-items: flex-end; }
-    .finestra-dettagli-asta { max-width: 100%; max-height: 92vh; border-radius: 16px 16px 0 0; }
+    .finestra-dettagli-asta,
+    .finestra-dettagli-asta.espansa { max-width: 100%; max-height: 92vh; border-radius: 16px 16px 0 0; }
+    /* Su mobile la finestra è già quasi a schermo intero — niente da
+       espandere, il pulsante non avrebbe alcun effetto visibile. */
+    .finestra-dettagli-espandi { display: none; }
   }
 
   .lotto-note {
@@ -1202,15 +1299,20 @@
         <button type="button" class="pillola" data-stato="occupato" onclick="attivaFiltroOccupazione('occupato')">Occupato</button>
       </div>
       <div class="gruppo-pillole" id="gruppo-preferiti">
-        <button type="button" class="pillola" id="pillola-preferiti" onclick="alternaFiltroPreferiti()">★ Preferiti</button>
+        <button type="button" class="pillola" data-stato-pref="preferito" onclick="attivaFiltroPreferitiScartati('preferito')">★ Preferiti</button>
+        <button type="button" class="pillola" data-stato-pref="scartato" onclick="attivaFiltroPreferitiScartati('scartato')">Scartati</button>
       </div>
       <div class="gruppo-pillole" id="gruppo-concluse">
         <button type="button" class="pillola" id="pillola-concluse" onclick="alternaMostraConcluse()">Concluse</button>
       </div>
       <div class="filtro-punteggio">
-        <label for="punteggio-minimo">Punteggio minimo: <span id="valore-punteggio-minimo">0</span></label>
-        <input type="range" id="punteggio-minimo" min="0" max="100" step="5" value="0"
-               oninput="document.getElementById('valore-punteggio-minimo').textContent = this.value; applicaFiltri()">
+        <label>Punteggio <span id="valore-punteggio-minimo">0</span>–<span id="valore-punteggio-massimo">100</span></label>
+        <div class="doppio-slider">
+          <div class="doppio-slider-binario"></div>
+          <div class="doppio-slider-riempimento" id="riempimento-punteggio"></div>
+          <input type="range" id="punteggio-minimo" min="0" max="100" step="5" value="0" oninput="onCambioPunteggioMinimo()">
+          <input type="range" id="punteggio-massimo" min="0" max="100" step="5" value="100" oninput="onCambioPunteggioMassimo()">
+        </div>
       </div>
       <select id="ordinamento">
         <option value="punteggio-desc">Punteggio (alto → basso)</option>
@@ -1956,26 +2058,38 @@
 
 
   // Editor nota: scambia la bolla (sempre visibile, testo troncato) con
-  // un'area di modifica — stesso spirito espandi/comprimi di "vedi
-  // dettagli", solo applicato a un elemento più piccolo.
-  function apriEditorNota(id) {
-    document.querySelector(`#nota-preferito-${CSS.escape(id)} .nota-preferito-bolla`)?.classList.add("nascosto");
-    const editor = document.getElementById("editor-nota-" + id);
-    editor?.classList.add("aperto");
-    editor?.querySelector("textarea")?.focus();
+  // un'area di modifica. Tutte e quattro le funzioni operano PARTENDO
+  // DAL BOTTONE cliccato (this) e risalendo al contenitore più vicino
+  // (.closest), non cercando un ID globale — la stessa asta può avere la
+  // sua nota disegnata sia nella card sia nella finestra dettagli
+  // contemporaneamente (entrambe restano nel DOM insieme), e un ID
+  // ripetuto due volte nella pagina fa sì che document.getElementById
+  // trovi sempre e solo il primo, ignorando l'altro — verificato per
+  // davvero: cliccare "aggiungi nota" dentro la finestra apriva l'editor
+  // della card sottostante, invisibile, sembrando che il pulsante non
+  // facesse nulla. Risalire dal bottone specifico invece di cercare per
+  // ID rende ciascuna istanza indipendente dall'altra per costruzione.
+  function apriEditorNota(bottone) {
+    const contenitore = bottone.closest(".nota-preferito");
+    contenitore.querySelector(".nota-preferito-bolla").classList.add("nascosto");
+    const editor = contenitore.querySelector(".nota-preferito-editor");
+    editor.classList.add("aperto");
+    editor.querySelector("textarea")?.focus();
   }
 
-  function chiudiEditorNota(id) {
-    document.querySelector(`#nota-preferito-${CSS.escape(id)} .nota-preferito-bolla`)?.classList.remove("nascosto");
-    document.getElementById("editor-nota-" + id)?.classList.remove("aperto");
+  function chiudiEditorNota(bottone) {
+    const contenitore = bottone.closest(".nota-preferito");
+    contenitore.querySelector(".nota-preferito-bolla").classList.remove("nascosto");
+    contenitore.querySelector(".nota-preferito-editor").classList.remove("aperto");
   }
 
-  function salvaNotaDaEditor(id) {
-    const testo = document.getElementById("editor-nota-" + id)?.querySelector("textarea")?.value.trim() || "";
+  function salvaNotaDaEditor(bottone, id) {
+    const contenitore = bottone.closest(".nota-preferito");
+    const testo = contenitore.querySelector("textarea")?.value.trim() || "";
     richiediPasswordSeServe(() => eseguiSalvaNota(id, testo));
   }
 
-  function eliminaNotaDaEditor(id) {
+  function eliminaNotaDaEditor(bottone, id) {
     richiediPasswordSeServe(() => eseguiSalvaNota(id, ""));
   }
 
@@ -2403,15 +2517,18 @@
     applicaFiltri();
   }
 
-  // Filtro "Preferiti": mostra SOLO le aste preferite quando attivo,
-  // combinato con gli altri filtri già presenti (non li sostituisce) —
-  // stesso principio di Libero/Occupato. Le scartate non compaiono mai
-  // qui (cercarle specificamente non è lo scopo di questo filtro).
-  let filtroPreferitiAttivo = false;
+  // Filtro Preferiti/Scartati: mutualmente esclusivo, stesso principio
+  // già usato per Libero/Occupato — un clic su una pillola già attiva
+  // la disattiva (torna a "tutte"), un clic sull'altra la sostituisce.
+  // null = nessun filtro su questo asse (mostra entrambe, comprese le
+  // scartate attenuate in fondo, comportamento di sempre).
+  let filtroPreferitiScartatiAttivo = null; // null | "preferito" | "scartato"
 
-  function alternaFiltroPreferiti() {
-    filtroPreferitiAttivo = !filtroPreferitiAttivo;
-    document.getElementById("pillola-preferiti").classList.toggle("attiva", filtroPreferitiAttivo);
+  function attivaFiltroPreferitiScartati(stato) {
+    filtroPreferitiScartatiAttivo = (filtroPreferitiScartatiAttivo === stato) ? null : stato;
+    document.querySelectorAll("#gruppo-preferiti .pillola").forEach(p => {
+      p.classList.toggle("attiva", p.dataset.statoPref === filtroPreferitiScartatiAttivo);
+    });
     applicaFiltri();
   }
 
@@ -2450,9 +2567,10 @@
     let conteggio = 0;
     if (categorieTipologiaAttive.size > 0) conteggio++;
     if (filtroOccupazioneAttivo) conteggio++;
-    if (filtroPreferitiAttivo) conteggio++;
+    if (filtroPreferitiScartatiAttivo) conteggio++;
     if (mostraConcluse) conteggio++;
-    if (Number(document.getElementById("punteggio-minimo").value) > 0) conteggio++;
+    if (Number(document.getElementById("punteggio-minimo").value) > 0
+      || Number(document.getElementById("punteggio-massimo").value) < 100) conteggio++;
     const badge = document.getElementById("badge-filtri-attivi");
     if (conteggio > 0) {
       badge.textContent = conteggio;
@@ -2460,6 +2578,39 @@
     } else {
       badge.classList.add("nascosto");
     }
+  }
+
+  // Sposta e ridimensiona il segmento colorato tra le due manopole —
+  // in percentuale diretta, dato che l'intervallo dello slider (0-100)
+  // combacia già con una scala percentuale.
+  function aggiornaRiempimentoPunteggio() {
+    const min = Number(document.getElementById("punteggio-minimo").value);
+    const max = Number(document.getElementById("punteggio-massimo").value);
+    const riempimento = document.getElementById("riempimento-punteggio");
+    riempimento.style.left = min + "%";
+    riempimento.style.width = Math.max(0, max - min) + "%";
+  }
+
+  // Le due manopole non possono superarsi — se si trascina il minimo
+  // oltre il massimo (o viceversa), l'altra si ferma allo stesso valore
+  // invece di lasciarle scambiare di posto, il comportamento atteso di
+  // un cursore a doppio estremo.
+  function onCambioPunteggioMinimo() {
+    const minEl = document.getElementById("punteggio-minimo");
+    const maxEl = document.getElementById("punteggio-massimo");
+    if (Number(minEl.value) > Number(maxEl.value)) minEl.value = maxEl.value;
+    document.getElementById("valore-punteggio-minimo").textContent = minEl.value;
+    aggiornaRiempimentoPunteggio();
+    applicaFiltri();
+  }
+
+  function onCambioPunteggioMassimo() {
+    const minEl = document.getElementById("punteggio-minimo");
+    const maxEl = document.getElementById("punteggio-massimo");
+    if (Number(maxEl.value) < Number(minEl.value)) maxEl.value = minEl.value;
+    document.getElementById("valore-punteggio-massimo").textContent = maxEl.value;
+    aggiornaRiempimentoPunteggio();
+    applicaFiltri();
   }
 
   // ==========================================================
@@ -2475,6 +2626,7 @@
     const ricerca = document.getElementById("ricerca").value.trim().toLowerCase();
     const ordine = document.getElementById("ordinamento").value;
     const punteggioMinimo = Number(document.getElementById("punteggio-minimo").value);
+    const punteggioMassimo = Number(document.getElementById("punteggio-massimo").value);
 
     let filtrate = ASTE.filter(a => {
       const passaRicerca = !ricerca || a.comune.toLowerCase().includes(ricerca);
@@ -2482,8 +2634,9 @@
         || categorieDiAsta(a.tipologia).some(c => categorieTipologiaAttive.has(c));
       const passaOccupazione = !filtroOccupazioneAttivo || classificaOccupazione(a.statoOccupazione) === filtroOccupazioneAttivo;
       const passaConcluse = mostraConcluse ? astaConclusa(a.dataVendita) : !astaConclusa(a.dataVendita);
-      const passaPreferiti = !filtroPreferitiAttivo || a.preferito;
-      const passaPunteggio = a.punteggio >= punteggioMinimo;
+      const passaPreferiti = !filtroPreferitiScartatiAttivo
+        || (filtroPreferitiScartatiAttivo === "preferito" ? a.preferito : a.scartato);
+      const passaPunteggio = a.punteggio >= punteggioMinimo && a.punteggio <= punteggioMassimo;
       return passaRicerca && passaTipologia && passaOccupazione && passaConcluse && passaPreferiti && passaPunteggio;
     });
 
@@ -2725,14 +2878,14 @@
     // nota senza uno dei due stati non esiste, stessa invarianza già
     // imposta lato server in Code.gs (salva_nota_preferito la rifiuta).
     const notaHtml = (a.preferito || a.scartato) ? `
-        <div class="nota-preferito" id="nota-preferito-${a.id}">
-          <button type="button" class="nota-preferito-bolla${a.notaPreferito ? ' compilata' : ''}" onclick="apriEditorNota('${a.id}')">${a.notaPreferito ? escapeHtml(a.notaPreferito) : '+ Aggiungi una nota'}</button>
-          <div class="nota-preferito-editor" id="editor-nota-${a.id}">
+        <div class="nota-preferito">
+          <button type="button" class="nota-preferito-bolla${a.notaPreferito ? ' compilata' : ''}" onclick="apriEditorNota(this)">${a.notaPreferito ? escapeHtml(a.notaPreferito) : '+ Aggiungi una nota'}</button>
+          <div class="nota-preferito-editor">
             <textarea placeholder="Es. interessante, valuta meglio i costi di ristrutturazione...">${escapeHtml(a.notaPreferito)}</textarea>
             <div class="nota-preferito-azioni">
-              <button type="button" class="nota-preferito-salva" onclick="salvaNotaDaEditor('${a.id}')">Salva</button>
-              ${a.notaPreferito ? `<button type="button" class="nota-preferito-elimina" onclick="eliminaNotaDaEditor('${a.id}')">Elimina</button>` : ""}
-              <button type="button" class="nota-preferito-annulla" onclick="chiudiEditorNota('${a.id}')">Annulla</button>
+              <button type="button" class="nota-preferito-salva" onclick="salvaNotaDaEditor(this, '${a.id}')">Salva</button>
+              ${a.notaPreferito ? `<button type="button" class="nota-preferito-elimina" onclick="eliminaNotaDaEditor(this, '${a.id}')">Elimina</button>` : ""}
+              <button type="button" class="nota-preferito-annulla" onclick="chiudiEditorNota(this)">Annulla</button>
             </div>
           </div>
         </div>` : "";
@@ -2775,7 +2928,8 @@ ${notaHtml}
         </div>
 
         <button class="bottone-dettagli" onclick="apriDettagliAsta('${a.id}')">
-          Vedi dettagli <span class="freccia">▾</span>
+          Vedi dettagli
+          <svg class="icona-finestra" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M18 13v6a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h6"/><path d="M15 3h6v6"/><path d="M10 14L21 3"/></svg>
         </button>
       </article>
     `;
@@ -2794,6 +2948,15 @@ ${notaHtml}
     idAstaModaleDettagli = null;
     document.getElementById("overlay-dettagli-asta").classList.add("nascosto");
     document.body.style.overflow = "";
+  }
+
+  // Solo desktop (il pulsante è nascosto via CSS sotto i 640px). Lascio
+  // deliberatamente la classe "espansa" attiva quando si passa a
+  // un'altra asta (mai azzerata in apriDettagliAsta): chi la allarga di
+  // solito la preferisce così per più di una card di fila, non solo per
+  // quella che gliel'ha fatta scoprire.
+  function alternaEspansioneDettagli() {
+    document.querySelector(".finestra-dettagli-asta").classList.toggle("espansa");
   }
 
   document.addEventListener("keydown", evento => {
@@ -2827,14 +2990,14 @@ ${notaHtml}
       : `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"><circle cx="12" cy="12" r="9.2" stroke-linecap="butt"/><path d="M9 9l6 6m0-6l-6 6"/></svg>`;
 
     const notaHtml = (a.preferito || a.scartato) ? `
-        <div class="nota-preferito" id="nota-preferito-${a.id}">
-          <button type="button" class="nota-preferito-bolla${a.notaPreferito ? ' compilata' : ''}" onclick="apriEditorNota('${a.id}')">${a.notaPreferito ? escapeHtml(a.notaPreferito) : '+ Aggiungi una nota'}</button>
-          <div class="nota-preferito-editor" id="editor-nota-${a.id}">
+        <div class="nota-preferito">
+          <button type="button" class="nota-preferito-bolla${a.notaPreferito ? ' compilata' : ''}" onclick="apriEditorNota(this)">${a.notaPreferito ? escapeHtml(a.notaPreferito) : '+ Aggiungi una nota'}</button>
+          <div class="nota-preferito-editor">
             <textarea placeholder="Es. interessante, valuta meglio i costi di ristrutturazione...">${escapeHtml(a.notaPreferito)}</textarea>
             <div class="nota-preferito-azioni">
-              <button type="button" class="nota-preferito-salva" onclick="salvaNotaDaEditor('${a.id}')">Salva</button>
-              ${a.notaPreferito ? `<button type="button" class="nota-preferito-elimina" onclick="eliminaNotaDaEditor('${a.id}')">Elimina</button>` : ""}
-              <button type="button" class="nota-preferito-annulla" onclick="chiudiEditorNota('${a.id}')">Annulla</button>
+              <button type="button" class="nota-preferito-salva" onclick="salvaNotaDaEditor(this, '${a.id}')">Salva</button>
+              ${a.notaPreferito ? `<button type="button" class="nota-preferito-elimina" onclick="eliminaNotaDaEditor(this, '${a.id}')">Elimina</button>` : ""}
+              <button type="button" class="nota-preferito-annulla" onclick="chiudiEditorNota(this)">Annulla</button>
             </div>
           </div>
         </div>` : "";
@@ -2851,7 +3014,12 @@ ${notaHtml}
             <p class="lotto-meta">${escapeHtml(distanzaTesto)} · vendita ${formattaData(a.dataVendita)}</p>
           </div>
         </div>
-        <button type="button" class="finestra-dettagli-chiudi" onclick="chiudiDettagliAsta()" aria-label="Chiudi">×</button>
+        <div class="finestra-dettagli-azioni-header">
+          <button type="button" class="finestra-dettagli-espandi" onclick="alternaEspansioneDettagli()" aria-label="Espandi">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M15 3h6v6M9 21H3v-6M21 3l-7 7M3 21l7-7"/></svg>
+          </button>
+          <button type="button" class="finestra-dettagli-chiudi" onclick="chiudiDettagliAsta()" aria-label="Chiudi">×</button>
+        </div>
       </div>
       <div class="finestra-dettagli-corpo">
         <div class="lotto-azioni" style="margin:0 0 18px">
