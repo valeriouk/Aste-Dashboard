@@ -240,6 +240,26 @@
     border-radius: 8px;
   }
 
+  .filtro-punteggio {
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    padding: 9px 12px;
+    font-size: .82rem;
+    color: var(--ink-muted);
+    min-width: 190px;
+    flex: 1 1 190px;
+  }
+  .filtro-punteggio label { font-weight: 500; color: var(--ink); }
+  .filtro-punteggio input[type="range"] {
+    width: 100%;
+    accent-color: var(--primary);
+    cursor: pointer;
+  }
+
   /* flex-grow diverso per elemento, non uniforme: la ricerca beneficia
      di più spazio su schermi larghi (più comodo leggere/scrivere un
      comune), le select un po' meno (oltre una certa larghezza sarebbe
@@ -571,7 +591,7 @@
     .controlli-estesi .gruppo-pillole,
     .controlli-estesi .contenitore-filtro-tipologia,
     .controlli-estesi select,
-    .controlli-estesi .bottone-toggle-tutti {
+    .controlli-estesi .filtro-punteggio {
       width: 100%;
     }
     .controlli-estesi .gruppo-pillole .pillola { flex: 1; text-align: center; }
@@ -755,28 +775,6 @@
     align-items: center;
     gap: 6px;
   }
-  .bottone-dettagli .freccia { transition: transform .2s ease; }
-  .bottone-dettagli[aria-expanded="true"] .freccia { transform: rotate(180deg); }
-
-  .lotto-dettagli {
-    display: grid;
-    grid-template-rows: 0fr;
-    transition: grid-template-rows .3s ease;
-  }
-  .lotto-dettagli.aperto { grid-template-rows: 1fr; }
-  /* L'overflow:hidden qui (non sull'elemento esterno) è ciò che permette
-     alla riga della grid di collassare davvero a 0 invece di restare
-     bloccata all'altezza minima del contenuto — margin/padding/bordo sono
-     stati spostati qui apposta, così spariscono insieme al contenuto
-     invece di lasciare un vuoto fisso quando il pannello è chiuso. */
-  .lotto-dettagli-inner {
-    overflow: hidden;
-    min-height: 0;
-    margin-top: 16px;
-    padding-top: 16px;
-    border-top: 1px solid var(--border);
-    font-size: .85rem;
-  }
 
   .dettaglio-riga {
     display: flex;
@@ -788,6 +786,71 @@
   .dettaglio-riga span:first-child { color: var(--ink-faint); }
   .dettaglio-riga span:last-child { text-align: right; color: var(--ink); }
   .dettaglio-riga.avviso span:last-child { color: var(--danger); font-weight: 500; }
+
+  /* ============================================================
+     FINESTRA DETTAGLI ASTA — sostituisce la vecchia espansione sul
+     posto dentro la card. Aprendo i dettagli in un riquadro a parte
+     invece che allargando la card, la griglia sottostante non cambia
+     MAI altezza — la virtualizzazione (vedi più sotto) può quindi
+     tornare a un modello ad altezza uniforme semplice e robusto, senza
+     dover inseguire quale riga sia più alta del normale in un dato
+     momento. Il compromesso accettato: un solo dettaglio alla volta,
+     non più il confronto affiancato di più card insieme.
+  ============================================================ */
+  .overlay-dettagli-asta {
+    position: fixed;
+    inset: 0;
+    background: rgba(30, 35, 32, .5);
+    z-index: 1800;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    padding: 24px;
+  }
+  .finestra-dettagli-asta {
+    background: var(--surface);
+    border-radius: 16px;
+    max-width: 640px;
+    width: 100%;
+    max-height: 85vh;
+    overflow-y: auto;
+    box-shadow: 0 16px 48px rgba(30, 35, 32, .3);
+  }
+  .finestra-dettagli-header {
+    position: sticky;
+    top: 0;
+    background: var(--surface);
+    display: flex;
+    justify-content: space-between;
+    align-items: flex-start;
+    gap: 16px;
+    padding: 22px 24px 18px;
+    border-bottom: 1px solid var(--border);
+    border-radius: 16px 16px 0 0;
+  }
+  .finestra-dettagli-testata {
+    display: flex;
+    gap: 14px;
+    align-items: flex-start;
+  }
+  .finestra-dettagli-chiudi {
+    background: var(--surface-2);
+    border: none;
+    color: var(--ink-muted);
+    width: 36px;
+    height: 36px;
+    border-radius: 50%;
+    font-size: 1.4rem;
+    line-height: 1;
+    cursor: pointer;
+    flex-shrink: 0;
+  }
+  .finestra-dettagli-corpo { padding: 20px 24px 28px; }
+
+  @media (max-width: 640px) {
+    .overlay-dettagli-asta { padding: 0; align-items: flex-end; }
+    .finestra-dettagli-asta { max-width: 100%; max-height: 92vh; border-radius: 16px 16px 0 0; }
+  }
 
   .lotto-note {
     background: var(--surface-2);
@@ -1144,7 +1207,11 @@
       <div class="gruppo-pillole" id="gruppo-concluse">
         <button type="button" class="pillola" id="pillola-concluse" onclick="alternaMostraConcluse()">Concluse</button>
       </div>
-      <button id="bottone-mostra-tutti" class="bottone-toggle-tutti" onclick="alternaTuttiIDettagli()">Mostra tutti i dettagli</button>
+      <div class="filtro-punteggio">
+        <label for="punteggio-minimo">Punteggio minimo: <span id="valore-punteggio-minimo">0</span></label>
+        <input type="range" id="punteggio-minimo" min="0" max="100" step="5" value="0"
+               oninput="document.getElementById('valore-punteggio-minimo').textContent = this.value; applicaFiltri()">
+      </div>
       <select id="ordinamento">
         <option value="punteggio-desc">Punteggio (alto → basso)</option>
         <option value="margine-desc">Margine (alto → basso)</option>
@@ -1211,6 +1278,16 @@
         <button type="button" class="bottone-password-conferma" onclick="confermaPasswordInline()">Conferma</button>
       </div>
       <p id="errore-password-inline" class="messaggio-errore-password"></p>
+    </div>
+  </div>
+
+  <!-- Finestra dettagli asta — sostituisce la vecchia espansione sul
+       posto dentro la card, vedi apriDettagliAsta(). Il contenuto viene
+       costruito e inserito al volo quando si apre, non tenuto qui in
+       partenza: una sola asta alla volta, mai serve prima di allora. -->
+  <div id="overlay-dettagli-asta" class="overlay-dettagli-asta nascosto" onclick="if (event.target === this) chiudiDettagliAsta()">
+    <div class="finestra-dettagli-asta">
+      <div id="finestra-dettagli-contenuto"></div>
     </div>
   </div>
 
@@ -1352,17 +1429,9 @@
   let ultimoElencoFiltrato = [];
   // id asta -> indice in ultimoElencoFiltrato — ricostruita in blocco
   // ogni volta che l'elenco filtrato cambia (dentro renderizza), non
-  // cercata da capo a ogni singola card. Prima rigaDiAsta usava
-  // ultimoElencoFiltrato.findIndex(...): una scansione dell'INTERO
-  // elenco a ogni chiamata — chiamata più volte per ogni ridisegno, per
-  // ogni card con i dettagli aperti. Con un elenco di centinaia di
-  // aste e i dettagli aperti verso il fondo, quella scansione doveva
-  // attraversare centinaia di elementi ogni volta, decine di volte per
-  // ogni fotogramma di scroll — abbastanza da bloccare il thread
-  // principale e far perdere fotogrammi, visto come scatti nello
-  // scroll anche se il valore finale calcolato restava corretto.
-  // Verificato: il ritardo cresceva proprio scendendo nell'elenco,
-  // esattamente il sintomo segnalato.
+  // cercata da capo con una scansione a ogni singolo uso. Usata da
+  // aggiornaCardSingola per aggiornare stella/scarto/nota senza dover
+  // ricostruire l'intera griglia a ogni clic.
   let mappaIndiceAsta = new Map();
 
   // ============================================================
@@ -1396,102 +1465,11 @@
   let altezzaRigaMisurata = null;
   let ultimaChiaveRangeRenderizzato = null;
   let rafInSospesoVirtualizzazione = null;
-  // Sostituisce il vecchio "Mostra tutti i dettagli" basato su DOM già
-  // presente: con la virtualizzazione una card fuori vista in un dato
-  // momento non esiste ancora nel DOM, quindi lo stato "aperto" deve
-  // essere una preferenza che ogni card legge quando viene costruita
-  // (in cartellaLotto), non un'azione eseguita su elementi già lì.
-  let tuttiIDettagliAperti = false;
-  // Stessa idea ma per i dettagli aperti UNO ALLA VOLTA (non tramite
-  // "mostra tutti"): un ridisegno della griglia (scroll, filtro, azione
-  // su un'altra card) ricrea la card da zero — senza tracciare QUALI id
-  // erano stati aperti individualmente, la riapertura andrebbe persa a
-  // ogni ridisegno, anche in mezzo alla lettura. Un Set di ID, non un
-  // singolo booleano: più di una card può restare aperta insieme.
-  let dettagliApertiSingolarmente = new Set();
-
-  // Per ogni asta con dettagli aperti, di quanti pixel la sua riga
-  // supera l'altezza "normale" (altezzaRigaMisurata) — misurato quando
-  // la card viene effettivamente disegnata con i dettagli aperti, non
-  // stimato a caso. Serve a correggere la posizione di tutto ciò che
-  // viene dopo una riga espansa: ignorare questo pixel in più per ogni
-  // riga espansa è esattamente la causa dei salti quando più card sono
-  // aperte insieme, o quando l'espansione è vicino al fondo di un
-  // elenco lungo (l'errore ignorato pesa di più quanto più lontano si
-  // scorre oltre) — verificato per davvero con più card aperte insieme.
-  let alturaExtraRigheEspanse = new Map(); // id asta -> pixel extra (>= 0)
-
-  // Riga (0-based) a cui appartiene un'asta nell'elenco filtrato
-  // corrente — dipende da ordinamento/filtro/colonne del momento (la
-  // MAPPA va ricostruita quando cambiano, vedi renderizza), ma la
-  // singola lettura qui è diretta O(1), non una scansione.
-  function rigaDiAsta(id, colonne) {
-    const indice = mappaIndiceAsta.get(id);
-    if (indice === undefined) return -1;
-    return Math.floor(indice / colonne);
-  }
-
-  // Somma dei pixel extra di tutte le righe espanse che si trovano PRIMA
-  // (in senso stretto) della riga indicata — è quanto in più va aggiunto
-  // allo spaziatore superiore, o considerato nella conversione
-  // scroll->riga, per restare coerenti con l'altezza VERA della pagina
-  // fin lì. Il caso comune (nessuna card espansa) esce subito, zero
-  // costo aggiuntivo per lo scroll normale.
-  function extraSopraRiga(rigaTarget, colonne) {
-    if (alturaExtraRigheEspanse.size === 0) return 0;
-    let somma = 0;
-    for (const [id, extra] of alturaExtraRigheEspanse) {
-      const riga = rigaDiAsta(id, colonne);
-      if (riga !== -1 && riga < rigaTarget) somma += extra;
-    }
-    return somma;
-  }
-
-  // Misura le card ESPANSE effettivamente disegnate in questo momento
-  // (guardo il DOM vero, non solo i flag, che dicono "dovrebbe essere
-  // aperta" ma non "di quanto è più alta ORA") e aggiorna la mappa. Le
-  // voci di card non più aperte individualmente vengono tolte — se
-  // "mostra tutti" è attivo invece le lascio: in quel modo potenzialmente
-  // ogni riga è espansa, non ha senso trattarle come eccezioni sparse
-  // da ripulire una per una.
-  function aggiornaAltezzeExtraEspanse(griglia, altezzaRiga) {
-    if (!tuttiIDettagliAperti) {
-      for (const id of [...alturaExtraRigheEspanse.keys()]) {
-        if (!dettagliApertiSingolarmente.has(id)) alturaExtraRigheEspanse.delete(id);
-      }
-    }
-    griglia.querySelectorAll(".lotto").forEach(card => {
-      const dettagli = card.querySelector(".lotto-dettagli");
-      if (!dettagli || !dettagli.classList.contains("aperto")) return;
-      const idCard = card.id.replace("lotto-", "");
-      const altezzaReale = card.getBoundingClientRect().height + GAP_GRIGLIA;
-      alturaExtraRigheEspanse.set(idCard, Math.max(0, altezzaReale - altezzaRiga));
-    });
-  }
-
-  // Converte una posizione di scroll in un indice di riga, tenendo conto
-  // delle righe espanse PRIMA di quel punto. Non più "stima con una
-  // divisione, poi correggi con un'altra" (due passate): quell'approccio
-  // poteva OSCILLARE senza mai stabilizzarsi quando più righe espanse
-  // erano vicine tra loro — riprodotto per davvero: la sequenza dei
-  // ridisegni saltava avanti e indietro tra tre valori diversi
-  // all'infinito, ognuno dei quali provava a costruire centinaia di
-  // card. Una ricerca binaria non può oscillare per costruzione: cerca
-  // la riga la cui altezza cumulativa (righe normali + extra delle
-  // espanse prima di lei) è la più vicina senza superare scrollRelativo
-  // — sempre la stessa risposta, in un numero di passate logaritmico
-  // anche su elenchi di migliaia di righe (circa 11 passate per 1500
-  // righe), ciascuna quasi gratuita.
-  function rigaDaScroll(scrollRelativo, altezzaRiga, colonne, righeTotali) {
-    let basso = 0, alto = righeTotali;
-    while (basso < alto) {
-      const meta = Math.floor((basso + alto) / 2);
-      const altezzaFinoAMeta = meta * altezzaRiga + extraSopraRiga(meta, colonne);
-      if (altezzaFinoAMeta <= scrollRelativo) basso = meta + 1;
-      else alto = meta;
-    }
-    return Math.max(0, basso - 1);
-  }
+  // Quale asta sta mostrando la finestra dettagli in questo momento (null
+  // se chiusa) — serve a sapere se rinfrescarla quando stella/scarto/nota
+  // vengono premuti (anche da dentro la finestra stessa), vedi
+  // aggiornaCardSingola.
+  let idAstaModaleDettagli = null;
 
   // Quante colonne la griglia sta effettivamente mostrando in questo
   // momento — stessa aritmetica di "auto-fill" del CSS Grid (colonne di
@@ -1518,23 +1496,14 @@
   // Ripiega sulla prima qualunque solo se proprio nessuna card
   // renderizzata sta in una riga "pulita" (raro, es. con "mostra tutti
   // i dettagli" attivo).
-  function trovaCardPerMisuraAltezza(griglia) {
-    const cards = griglia.querySelectorAll(".lotto");
-    const larghezzaContenitore = griglia.clientWidth || griglia.getBoundingClientRect().width;
-    const colonne = colonneCorrenti(larghezzaContenitore);
-    const righeDaEvitare = new Set();
-    for (const id of dettagliApertiSingolarmente) {
-      const riga = rigaDiAsta(id, colonne);
-      if (riga !== -1) righeDaEvitare.add(riga);
-    }
-    for (const card of cards) {
-      const dettagli = card.querySelector(".lotto-dettagli");
-      if (dettagli && dettagli.classList.contains("aperto")) continue;
-      const idCard = card.id.replace("lotto-", "");
-      if (righeDaEvitare.has(rigaDiAsta(idCard, colonne))) continue;
-      return card;
-    }
-    return cards[0] || null;
+  // Misura l'altezza (gap incluso) della prima card renderizzata — con
+  // i dettagli ora sempre in una finestra a parte (mai più dentro la
+  // card), tutte le righe hanno grosso modo la stessa altezza: non
+  // serve più scegliere con cura quale card campionare, la prima va
+  // benissimo.
+  function misuraAltezzaRigaTipica(griglia) {
+    const primaCard = griglia.querySelector(".lotto");
+    return primaCard ? primaCard.getBoundingClientRect().height + GAP_GRIGLIA : null;
   }
 
   // Il cuore della virtualizzazione: calcola quale fetta di elenco serve
@@ -1547,9 +1516,7 @@
   // davvero lo schermo — e se la prima correzione non basta da sola
   // (può succedere vicino ai bordi, dove una singola correzione non
   // sempre converge al primo colpo — verificato), riprova ancora, non
-  // una volta sola. Stesso principio del ciclo sull'altezza: una singola
-  // passata "ragionevole" non basta da sola come garanzia, il ciclo con
-  // verifica ripetuta sì. Il tetto di iterazioni è solo una rete di
+  // una volta sola. Il tetto di iterazioni è solo una rete di
   // sicurezza, non dovrebbe mai servirne più di qualche unità.
   function renderizzaFinestraVirtuale() {
     for (let iterazione = 0; iterazione < 8; iterazione++) {
@@ -1561,14 +1528,10 @@
   }
 
   // Controlla se ALMENO una card renderizzata ricade davvero nella parte
-  // visibile dello schermo. Se nessuna lo fa (il caso "schermo vuoto" —
-  // riprodotto e verificato con card di altezza variabile, e nei casi
-  // limite vicino ai bordi dell'elenco), calcola la correzione da una
-  // misura VERA invece che da un'altra stima: quanti pixel separano il
-  // bordo della prima card renderizzata dalla cima dello schermo dicono
-  // esattamente di quante righe eravamo fuori strada. Ritorna true se ha
-  // applicato una correzione (il chiamante deve riverificare), false se
-  // la copertura era già a posto.
+  // visibile dello schermo. Se nessuna lo fa (il caso "schermo vuoto"),
+  // ricalcola la riga corretta direttamente dalla posizione vera dello
+  // scroll. Ritorna true se ha applicato una correzione (il chiamante
+  // deve riverificare), false se la copertura era già a posto.
   function correggiSeFuoriSchermo() {
     const griglia = document.getElementById("griglia-lotti");
     const cards = griglia.querySelectorAll(".lotto");
@@ -1582,16 +1545,10 @@
     // (intestazione, statistiche e barra dei filtri fissa possono
     // occupare anche quasi 1000px prima della griglia su schermi stretti)
     // oppure l'abbiamo già superata scorrendo oltre il fondo. In
-    // ENTRAMBI i casi la card "prima" del render attuale è
-    // correttamente quella giusta — nessuna correzione serve, e
-    // soprattutto nessuna VA tentata: senza questo controllo, la
-    // correzione calcolata da qui sotto risultava sistematicamente
-    // identica a quella già in vigore (perché il problema non era mai
-    // lì), un ciclo che si ripeteva fino al tetto di 8 tentativi senza
-    // mai risolvere nulla — verificato per davvero: 24 cicli sprecati
-    // così nei primi 3 passi di un singolo scroll, la causa vera della
-    // lentezza percepita fin dall'inizio, non le card coi dettagli
-    // aperti come pensavo all'inizio.
+    // ENTRAMBI i casi nessuna correzione VA tentata: senza questo
+    // controllo, la correzione calcolata sotto risultava sistematicamente
+    // identica a quella già in vigore, un ciclo che si ripeteva fino al
+    // tetto di 8 tentativi senza mai risolvere nulla — verificato.
     const rettGriglia = griglia.getBoundingClientRect();
     if (rettGriglia.top >= altezzaViewport || rettGriglia.bottom <= 0) return false;
 
@@ -1601,24 +1558,19 @@
     }
 
     // Nessuna card renderizzata è a schermo: ricalcolo la riga corretta
-    // DIRETTAMENTE dalla posizione vera dello scroll, con la STESSA
-    // conversione "consapevole" delle righe espanse usata dal percorso
-    // normale (rigaDaScroll) — più diretto e affidabile che dedurre uno
-    // scarto dalla posizione della prima card: un'unica fonte di verità
-    // per la conversione scroll->riga, non due calcoli paralleli che
-    // potrebbero disallinearsi tra loro.
+    // direttamente dalla posizione vera dello scroll.
     const larghezzaContenitore = griglia.clientWidth || griglia.getBoundingClientRect().width;
     const colonne = colonneCorrenti(larghezzaContenitore);
     const altezzaRiga = altezzaRigaMisurata || STIMA_ALTEZZA_RIGA_INIZIALE;
     const righeTotaliCorrezione = Math.ceil(ultimoElencoFiltrato.length / colonne);
     const scrollRelativo = Math.max(0, -rettGriglia.top);
-    const rigaCorretta = Math.max(0, rigaDaScroll(scrollRelativo, altezzaRiga, colonne, righeTotaliCorrezione) - RIGHE_CUSCINETTO);
+    let rigaCorretta = Math.floor(scrollRelativo / altezzaRiga) - RIGHE_CUSCINETTO;
+    rigaCorretta = Math.max(0, Math.min(rigaCorretta, righeTotaliCorrezione - 1));
 
-    // Forzo il prossimo giro a partire da questa riga corretta, non da
-    // un nuovo calcolo scrollRelativo/altezzaRiga che ripeterebbe lo
-    // stesso errore — sovrascrivo direttamente la chiave di cache così
-    // il prossimo giro DEVE ridisegnare, e uso una funzione dedicata che
-    // accetta la riga di partenza già decisa invece di ricalcolarla.
+    // Forzo il prossimo giro a partire da questa riga corretta — sovrascrivo
+    // direttamente la chiave di cache così il prossimo giro DEVE
+    // ridisegnare, e uso una funzione dedicata che accetta la riga di
+    // partenza già decisa invece di ricalcolarla.
     ultimaChiaveRangeRenderizzato = null;
     renderizzaDaRigaSpecifica(rigaCorretta, colonne);
     return true;
@@ -1643,21 +1595,14 @@
 
     const primoIndice = primaRiga * colonne;
     const ultimoIndiceEsclusivo = Math.min(totale, (ultimaRiga + 1) * colonne);
-    // + l'altezza extra delle righe espanse prima/dopo questo intervallo
-    // — senza questo, uno spaziatore calcolato solo con altezzaRiga
-    // uniforme sarebbe troppo corto/lungo di preciso quanto ignorato,
-    // lo stesso tipo di errore che questa correzione nel suo insieme
-    // vuole eliminare, non solo spostare da un altro punto del codice.
-    const altezzaSopra = primaRiga * altezzaRiga + extraSopraRiga(primaRiga, colonne);
-    const altezzaSotto = (righeTotali - 1 - ultimaRiga) * altezzaRiga
-      + (extraSopraRiga(righeTotali, colonne) - extraSopraRiga(ultimaRiga + 1, colonne));
+    const altezzaSopra = primaRiga * altezzaRiga;
+    const altezzaSotto = (righeTotali - 1 - ultimaRiga) * altezzaRiga;
 
     const pezzi = [];
     if (altezzaSopra > 0) pezzi.push(`<div style="grid-column:1/-1;height:${altezzaSopra}px" aria-hidden="true"></div>`);
     for (let i = primoIndice; i < ultimoIndiceEsclusivo; i++) pezzi.push(cartellaLotto(elenco[i], i));
     if (altezzaSotto > 0) pezzi.push(`<div style="grid-column:1/-1;height:${altezzaSotto}px" aria-hidden="true"></div>`);
     griglia.innerHTML = pezzi.join("");
-    aggiornaAltezzeExtraEspanse(griglia, altezzaRiga);
     ultimaChiaveRangeRenderizzato = primoIndice + "-" + ultimoIndiceEsclusivo + "-" + colonne;
   }
 
@@ -1680,19 +1625,13 @@
     const scrollRelativo = Math.max(0, -rettGriglia.top);
     const altezzaViewport = window.innerHeight;
 
-    let primaRiga = rigaDaScroll(scrollRelativo, altezzaRiga, colonne, righeTotali) - RIGHE_CUSCINETTO;
-    // rigaDaScroll arrotonda per difetto (floor) — +1 per compensare,
-    // stesso spirito del precedente Math.ceil ma passando dalla stessa
-    // conversione consapevole delle righe espanse usata per primaRiga:
-    // un'unica funzione per tutte le conversioni scroll->riga, non due
-    // versioni diverse che potrebbero disallinearsi.
-    let ultimaRiga = rigaDaScroll(scrollRelativo + altezzaViewport, altezzaRiga, colonne, righeTotali) + RIGHE_CUSCINETTO + 1;
-    // Limitata sia dal basso (0) sia dall'ALTO (righeTotali-1) — mancava
-    // questo secondo limite: vicino al fondo, una stima leggermente
-    // ottimistica di altezzaRiga poteva far calcolare una primaRiga
-    // OLTRE l'ultima riga vera, producendo un indice di partenza
-    // maggiore del totale aste — zero card renderizzate, verificato per
-    // davvero (schermo vuoto proprio in fondo alla pagina).
+    let primaRiga = Math.floor(scrollRelativo / altezzaRiga) - RIGHE_CUSCINETTO;
+    let ultimaRiga = Math.ceil((scrollRelativo + altezzaViewport) / altezzaRiga) + RIGHE_CUSCINETTO;
+    // Limitata sia dal basso (0) sia dall'ALTO (righeTotali-1) — vicino
+    // al fondo, una stima leggermente ottimistica di altezzaRiga poteva
+    // far calcolare una primaRiga OLTRE l'ultima riga vera, producendo
+    // un indice di partenza maggiore del totale aste — zero card
+    // renderizzate, verificato per davvero (schermo vuoto in fondo).
     primaRiga = Math.max(0, Math.min(primaRiga, righeTotali - 1));
     ultimaRiga = Math.min(righeTotali - 1, ultimaRiga);
 
@@ -1702,20 +1641,13 @@
     // Salta la ricostruzione se la fetta da mostrare non è cambiata
     // dall'ultima volta — piccoli movimenti di scroll che non
     // attraversano il confine di una riga sono comuni, e ridisegnare
-    // per nulla sarebbe uno spreco esattamente del tipo che sto
-    // cercando di eliminare.
+    // per nulla sarebbe uno spreco.
     const chiaveRange = primoIndice + "-" + ultimoIndiceEsclusivo + "-" + colonne;
     if (chiaveRange === ultimaChiaveRangeRenderizzato) return false;
     ultimaChiaveRangeRenderizzato = chiaveRange;
 
-    // + l'altezza extra delle righe espanse prima/dopo questo intervallo
-    // — vedi extraSopraRiga più sopra: senza questo, uno spaziatore
-    // calcolato solo con altezzaRiga uniforme sarebbe corto/lungo di
-    // esattamente quanto ignorato, proprio l'errore che tutta questa
-    // correzione serve a eliminare.
-    const altezzaSopra = primaRiga * altezzaRiga + extraSopraRiga(primaRiga, colonne);
-    const altezzaSotto = (righeTotali - 1 - ultimaRiga) * altezzaRiga
-      + (extraSopraRiga(righeTotali, colonne) - extraSopraRiga(ultimaRiga + 1, colonne));
+    const altezzaSopra = primaRiga * altezzaRiga;
+    const altezzaSotto = (righeTotali - 1 - ultimaRiga) * altezzaRiga;
 
     const pezzi = [];
     if (altezzaSopra > 0) pezzi.push(`<div style="grid-column:1/-1;height:${altezzaSopra}px" aria-hidden="true"></div>`);
@@ -1725,17 +1657,10 @@
     if (altezzaSotto > 0) pezzi.push(`<div style="grid-column:1/-1;height:${altezzaSotto}px" aria-hidden="true"></div>`);
 
     griglia.innerHTML = pezzi.join("");
-    aggiornaAltezzeExtraEspanse(griglia, altezzaRiga);
 
-    // Misura vera dell'altezza riga da una card SENZA dettagli aperti —
-    // una card coi dettagli espansi è molto più alta del normale (anche
-    // +300-400px), tutt'altro che rappresentativa di una riga "tipica".
-    // Se TUTTE le card renderizzate hanno i dettagli aperti (raro),
-    // ripiego sulla prima comunque: meglio una stima imprecisa per un
-    // momento che nessuna stima.
-    const primaCardVera = trovaCardPerMisuraAltezza(griglia);
-    if (primaCardVera) {
-      const nuovaAltezza = primaCardVera.getBoundingClientRect().height + GAP_GRIGLIA;
+    // Misura vera dell'altezza riga, per restare accurata nel tempo.
+    const nuovaAltezza = misuraAltezzaRigaTipica(griglia);
+    if (nuovaAltezza !== null) {
       if (!altezzaRigaMisurata) {
         // Primissima misura vera (prima d'ora c'era solo la stima fissa
         // iniziale) — qui SÌ conviene un ricalcolo immediato, una tantum.
@@ -1744,23 +1669,13 @@
         return true;
       }
       // Da qui in poi, SOLO un aggiornamento silenzioso della media
-      // mobile — mai più un altro giro forzato per questo motivo. Avevo
-      // provato prima ad alzare la soglia oltre cui "vale la pena
-      // ricalcolare" (da 2px a un valore proporzionale), ma anche quella
-      // più larga scattava comunque spesso: nei dati veri capita che PIÙ
-      // fattori si sommino sulla stessa card (badge E nota lunga E testo
-      // stato-occupazione lungo insieme), superando qualunque soglia
-      // ragionevole. Il problema non era "la soglia è troppo stretta" —
-      // è che reagire SUBITO a ogni singola card, invece di lasciare che
-      // la stima si assesti nel tempo, non ha mai funzionato bene per
-      // questo tipo di dati. Verificato: 81 ridisegni completi durante
-      // appena 60 passi di rotella, quasi mezzo secondo sprecato su un
-      // secondo di scroll — e la sola soglia più larga non lo cambiava
-      // affatto. Se l'imprecisione diventasse mai abbastanza grande da
-      // lasciare la parte visibile scoperta per davvero, ci pensa
-      // comunque correggiSeFuoriSchermo (rete di sicurezza separata, già
-      // verificata a parte) — qui basta che la stima resti ragionevole
-      // nel tempo, non che insegua ogni singola card.
+      // mobile — mai un altro giro forzato per una singola card diversa
+      // dalla media: la normale variabilità tra card (nota più o meno
+      // lunga, badge presente o no) è rumore atteso, non un segnale che
+      // la stima sia sbagliata. Se l'imprecisione diventasse mai
+      // abbastanza grande da lasciare la parte visibile scoperta per
+      // davvero, ci pensa comunque correggiSeFuoriSchermo (rete di
+      // sicurezza separata, verificata a parte).
       altezzaRigaMisurata = altezzaRigaMisurata * 0.9 + nuovaAltezza * 0.1;
     }
     return false;
@@ -1927,13 +1842,23 @@
   // interazione — meglio di un blocco vero, e si autocorregge da solo al
   // primo filtro/ricerca/ricarica successivo.
   function aggiornaCardSingola(id) {
-    const indice = ultimoElencoFiltrato.findIndex(a => a.id === id);
-    if (indice === -1) return; // non in vista in questo momento, nulla da aggiornare
-    const cardEsistente = document.getElementById("lotto-" + id);
-    if (!cardEsistente) return;
-    const contenitoreTemp = document.createElement("div");
-    contenitoreTemp.innerHTML = cartellaLotto(ultimoElencoFiltrato[indice], indice);
-    cardEsistente.replaceWith(contenitoreTemp.firstElementChild);
+    const indice = mappaIndiceAsta.get(id);
+    if (indice !== undefined) {
+      const cardEsistente = document.getElementById("lotto-" + id);
+      if (cardEsistente) {
+        const contenitoreTemp = document.createElement("div");
+        contenitoreTemp.innerHTML = cartellaLotto(ultimoElencoFiltrato[indice], indice);
+        cardEsistente.replaceWith(contenitoreTemp.firstElementChild);
+      }
+    }
+    // Se la finestra dettagli è aperta PROPRIO su questa stessa asta,
+    // rinfresco anche lei — altrimenti stella/scarto/nota premuti da
+    // dentro la finestra non si vedrebbero riflessi finché non la si
+    // richiude e riapre.
+    if (idAstaModaleDettagli === id) {
+      const asta = ASTE.find(a => a.id === id);
+      if (asta) document.getElementById("finestra-dettagli-contenuto").innerHTML = contenutoFinestraDettagli(asta);
+    }
   }
 
   function mostraToast(testo) {
@@ -2527,6 +2452,7 @@
     if (filtroOccupazioneAttivo) conteggio++;
     if (filtroPreferitiAttivo) conteggio++;
     if (mostraConcluse) conteggio++;
+    if (Number(document.getElementById("punteggio-minimo").value) > 0) conteggio++;
     const badge = document.getElementById("badge-filtri-attivi");
     if (conteggio > 0) {
       badge.textContent = conteggio;
@@ -2548,6 +2474,7 @@
 
     const ricerca = document.getElementById("ricerca").value.trim().toLowerCase();
     const ordine = document.getElementById("ordinamento").value;
+    const punteggioMinimo = Number(document.getElementById("punteggio-minimo").value);
 
     let filtrate = ASTE.filter(a => {
       const passaRicerca = !ricerca || a.comune.toLowerCase().includes(ricerca);
@@ -2556,7 +2483,8 @@
       const passaOccupazione = !filtroOccupazioneAttivo || classificaOccupazione(a.statoOccupazione) === filtroOccupazioneAttivo;
       const passaConcluse = mostraConcluse ? astaConclusa(a.dataVendita) : !astaConclusa(a.dataVendita);
       const passaPreferiti = !filtroPreferitiAttivo || a.preferito;
-      return passaRicerca && passaTipologia && passaOccupazione && passaConcluse && passaPreferiti;
+      const passaPunteggio = a.punteggio >= punteggioMinimo;
+      return passaRicerca && passaTipologia && passaOccupazione && passaConcluse && passaPreferiti && passaPunteggio;
     });
 
     const comparatori = {
@@ -2642,8 +2570,6 @@
     // complesse, e vedere tutti i risultati sulla mappa è comunque utile
     // per un colpo d'occhio geografico.
     renderizzaFinestraVirtuale();
-    document.getElementById("bottone-mostra-tutti").textContent =
-      tuttiIDettagliAperti ? "Nascondi tutti i dettagli" : "Mostra tutti i dettagli";
     renderizzaMappa(elenco);
     window.scrollTo(0, scrollPrecedente);
   }
@@ -2768,12 +2694,7 @@
     const livello = livelloPunteggio(a.punteggio, a.valoreStima);
     const contenutoSigillo = livello === "non-valutato" ? "Non<br>valutato" : a.punteggio;
     const distanzaTesto = a.distanza !== null ? `${a.distanza} km` : "distanza N/D";
-    const idDom = "dett-" + indice;
     const conclusa = astaConclusa(a.dataVendita);
-    // Aperti se "mostra tutti" è attivo, OPPURE se QUESTA specifica card
-    // era stata aperta individualmente prima di un ridisegno — vedi
-    // dettagliApertiSingolarmente più sopra per il perché serve.
-    const dettagliDiQuestaCardAperti = tuttiIDettagliAperti || dettagliApertiSingolarmente.has(a.id);
 
     // Celle superficie/€ al mq: solo se il dato è presente nel foglio (potrebbe
     // non esserci ancora se Code.gs non è stato ridistribuito, o se Gemini
@@ -2787,12 +2708,6 @@
             <p class="cifra-etichetta">€/mq (offerta)</p>
             <p class="cifra-valore">${a.euroMq !== null ? formattaEuro(a.euroMq) + "/mq" : "—"}</p>
           </div>` : "";
-
-    // Evidenzia la riga solo se il testo segnala qualcosa fuori dall'ordinario
-    // (non semplicemente "N/D" o l'ipoteca standard già prevista dal prompt).
-    const formalitaTesto = a.formalitaPregiudizievoli;
-    const formalitaConAvviso = formalitaTesto && formalitaTesto !== "N/D"
-      && formalitaTesto.toLowerCase().indexOf("nessuna criticità") !== 0;
 
     // Icone stella/scarto: piena + colorata quando attiva, solo contorno
     // quando no — stessa convenzione (pieno = attivo) di GitHub/Twitter,
@@ -2859,72 +2774,130 @@ ${notaHtml}
           </div>
         </div>
 
-        <button class="bottone-dettagli" aria-expanded="${dettagliDiQuestaCardAperti}" aria-controls="${idDom}" onclick="alternaDettagli(this, '${idDom}')">
-          ${dettagliDiQuestaCardAperti ? "Chiudi dettagli " : "Vedi dettagli "}<span class="freccia">▾</span>
+        <button class="bottone-dettagli" onclick="apriDettagliAsta('${a.id}')">
+          Vedi dettagli <span class="freccia">▾</span>
         </button>
-
-        <div class="lotto-dettagli${dettagliDiQuestaCardAperti ? ' aperto' : ''}" id="${idDom}">
-          <div class="lotto-dettagli-inner">
-            <div class="dettaglio-riga"><span>Tribunale</span><span>${escapeHtml(a.tribunale)}</span></div>
-            <div class="dettaglio-riga"><span>Disponibilità (PVP)</span><span>${escapeHtml(a.disponibilita)}</span></div>
-            <div class="dettaglio-riga"><span>Prezzo base</span><span>${formattaEuro(a.prezzoBase)}</span></div>
-            <div class="dettaglio-riga"><span>Rilancio minimo</span><span>${formattaEuro(a.rilancioMinimo)}</span></div>
-            <div class="dettaglio-riga"><span>Spese sanatoria</span><span>${formattaEuro(a.speseSanatoria)}</span></div>
-            <div class="dettaglio-riga"><span>Abusi edilizi</span><span>${escapeHtml(a.abusiEdilizi)}</span></div>
-            <div class="dettaglio-riga${formalitaConAvviso ? ' avviso' : ''}"><span>Formalità pregiudizievoli</span><span>${escapeHtml(formalitaTesto)}</span></div>
-            <div class="dettaglio-riga"><span>Fonte analisi</span><span>${escapeHtml(a.fonteDocumento || "nessuna")}</span></div>
-            <div class="dettaglio-riga"><span>Modello AI</span><span>${escapeHtml(a.modelloUsato || "N/D")}</span></div>
-            <div class="dettaglio-riga"><span>ID Annuncio</span><span>${escapeHtml(a.id)}</span></div>
-            ${a.note ? `<div class="lotto-note">${escapeHtml(a.note)}</div>` : ""}
-            ${a.descrizione ? `<div class="lotto-note">${escapeHtml(a.descrizione)}</div>` : ""}
-            <div style="margin-top:12px">
-              ${a.urlAsta ? `<a class="lotto-link" href="${escapeHtml(a.urlAsta)}" target="_blank" rel="noopener">Apri annuncio PVP</a>` : ""}
-              ${a.urlPdf ? `<a class="lotto-link secondario" href="${escapeHtml(a.urlPdf)}" target="_blank" rel="noopener">Apri documento</a>` : ""}
-            </div>
-          </div>
-        </div>
       </article>
     `;
   }
 
-  function alternaDettagli(bottone, idDom) {
-    const pannello = document.getElementById(idDom);
-    const aperto = pannello.classList.toggle("aperto");
-    bottone.setAttribute("aria-expanded", aperto ? "true" : "false");
-    bottone.innerHTML = (aperto ? "Chiudi dettagli " : "Vedi dettagli ") + '<span class="freccia">▾</span>';
-
-    // Ricordo lo stato SPECIFICO di questa card, non solo quello nel DOM
-    // in questo momento — un ridisegno della griglia (può scattare anche
-    // solo scorrendo per leggere il resto di questi stessi dettagli, vedi
-    // trovaCardPerMisuraAltezza più sopra per il perché) ricrea la card da
-    // zero: senza questo, riaprirla al volo per poi perderla di nuovo
-    // sarebbe lo stesso problema, solo spostato.
-    const cardGenitore = bottone.closest(".lotto");
-    const idAsta = cardGenitore ? cardGenitore.id.replace("lotto-", "") : null;
-    if (idAsta) {
-      if (aperto) dettagliApertiSingolarmente.add(idAsta);
-      else dettagliApertiSingolarmente.delete(idAsta);
-    }
+  function apriDettagliAsta(id) {
+    const asta = ASTE.find(a => a.id === id);
+    if (!asta) return;
+    idAstaModaleDettagli = id;
+    document.getElementById("finestra-dettagli-contenuto").innerHTML = contenutoFinestraDettagli(asta);
+    document.getElementById("overlay-dettagli-asta").classList.remove("nascosto");
+    document.body.style.overflow = "hidden"; // la pagina sotto non scorre mentre la finestra è aperta
   }
 
-  // Con la virtualizzazione una card fuori vista in questo momento non
-  // esiste ancora nel DOM — non basta più toggleare gli elementi già
-  // presenti. tuttiIDettagliAperti è la preferenza che ogni card legge
-  // quando viene costruita (in cartellaLotto): qui la cambio e ridisegno,
-  // sia le card già a schermo sia (automaticamente) quelle che verranno
-  // disegnate scorrendo più avanti.
-  function alternaTuttiIDettagli() {
-    tuttiIDettagliAperti = !tuttiIDettagliAperti;
-    // "Nascondi TUTTI i dettagli" deve significare davvero tutti — anche
-    // quelli aperti singolarmente prima, non solo quelli aperti tramite
-    // questo stesso pulsante. Attivandolo invece non serve toccare il
-    // set: con tuttiIDettagliAperti=true sono comunque tutti aperti,
-    // indipendentemente da cosa contiene.
-    if (!tuttiIDettagliAperti) dettagliApertiSingolarmente.clear();
-    document.getElementById("bottone-mostra-tutti").textContent =
-      tuttiIDettagliAperti ? "Nascondi tutti i dettagli" : "Mostra tutti i dettagli";
-    ultimaChiaveRangeRenderizzato = null; // forza il ridisegno anche se il range di indici è lo stesso di prima
-    renderizzaFinestraVirtuale();
+  function chiudiDettagliAsta() {
+    idAstaModaleDettagli = null;
+    document.getElementById("overlay-dettagli-asta").classList.add("nascosto");
+    document.body.style.overflow = "";
+  }
+
+  document.addEventListener("keydown", evento => {
+    if (evento.key === "Escape" && idAstaModaleDettagli !== null) chiudiDettagliAsta();
+  });
+
+  // Tutto il contenuto della finestra — testata (sigillo, comune, badge),
+  // stella/scarto/nota, cifre principali, e i dettagli che prima erano
+  // nella card espandibile. Costruita da ASTE (non dall'elenco filtrato
+  // corrente): la finestra mostra l'asta scelta a prescindere da
+  // eventuali filtri applicati dopo averla aperta.
+  function contenutoFinestraDettagli(a) {
+    const livello = livelloPunteggio(a.punteggio, a.valoreStima);
+    const contenutoSigillo = livello === "non-valutato" ? "Non<br>valutato" : a.punteggio;
+    const distanzaTesto = a.distanza !== null ? `${a.distanza} km` : "distanza N/D";
+    const conclusa = astaConclusa(a.dataVendita);
+
+    const rigaSuperficie = a.superficieMq !== null ? `
+          <div class="dettaglio-riga"><span>Superficie</span><span>${a.superficieMq.toFixed(0)} mq</span></div>
+          <div class="dettaglio-riga"><span>€/mq (offerta)</span><span>${a.euroMq !== null ? formattaEuro(a.euroMq) + "/mq" : "—"}</span></div>` : "";
+
+    const formalitaTesto = a.formalitaPregiudizievoli;
+    const formalitaConAvviso = formalitaTesto && formalitaTesto !== "N/D"
+      && formalitaTesto.toLowerCase().indexOf("nessuna criticità") !== 0;
+
+    const iconaStella = a.preferito
+      ? `<svg viewBox="0 0 24 24" fill="currentColor"><path d="M12 2.5l2.9 6.5 7.1.6-5.4 4.6 1.6 6.9-6.2-3.6-6.2 3.6 1.6-6.9L2 9.6l7.1-.6z"/></svg>`
+      : `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linejoin="round"><path d="M12 2.5l2.9 6.5 7.1.6-5.4 4.6 1.6 6.9-6.2-3.6-6.2 3.6 1.6-6.9L2 9.6l7.1-.6z"/></svg>`;
+    const iconaScarta = a.scartato
+      ? `<svg viewBox="0 0 24 24" fill="currentColor"><circle cx="12" cy="12" r="10"/><path d="M8.7 8.7l6.6 6.6m0-6.6l-6.6 6.6" stroke="var(--surface)" stroke-width="1.8" stroke-linecap="round" fill="none"/></svg>`
+      : `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"><circle cx="12" cy="12" r="9.2" stroke-linecap="butt"/><path d="M9 9l6 6m0-6l-6 6"/></svg>`;
+
+    const notaHtml = (a.preferito || a.scartato) ? `
+        <div class="nota-preferito" id="nota-preferito-${a.id}">
+          <button type="button" class="nota-preferito-bolla${a.notaPreferito ? ' compilata' : ''}" onclick="apriEditorNota('${a.id}')">${a.notaPreferito ? escapeHtml(a.notaPreferito) : '+ Aggiungi una nota'}</button>
+          <div class="nota-preferito-editor" id="editor-nota-${a.id}">
+            <textarea placeholder="Es. interessante, valuta meglio i costi di ristrutturazione...">${escapeHtml(a.notaPreferito)}</textarea>
+            <div class="nota-preferito-azioni">
+              <button type="button" class="nota-preferito-salva" onclick="salvaNotaDaEditor('${a.id}')">Salva</button>
+              ${a.notaPreferito ? `<button type="button" class="nota-preferito-elimina" onclick="eliminaNotaDaEditor('${a.id}')">Elimina</button>` : ""}
+              <button type="button" class="nota-preferito-annulla" onclick="chiudiEditorNota('${a.id}')">Annulla</button>
+            </div>
+          </div>
+        </div>` : "";
+
+    return `
+      <div class="finestra-dettagli-header">
+        <div class="finestra-dettagli-testata">
+          <div class="sigillo ${livello}">${contenutoSigillo}</div>
+          <div>
+            <p class="lotto-id">${a.lotto ? "Lotto " + escapeHtml(a.lotto) + " · " : ""}${escapeHtml(a.tipologia)}</p>
+            <p class="lotto-comune">${escapeHtml(a.comune)}</p>
+            ${conclusa ? `<span class="badge-conclusa">🏁 Conclusa</span>` : ""}
+            ${a.zonaSegnalata ? `<span class="badge-zona">🚩 ${escapeHtml(a.zonaSegnalata)}</span>` : ""}
+            <p class="lotto-meta">${escapeHtml(distanzaTesto)} · vendita ${formattaData(a.dataVendita)}</p>
+          </div>
+        </div>
+        <button type="button" class="finestra-dettagli-chiudi" onclick="chiudiDettagliAsta()" aria-label="Chiudi">×</button>
+      </div>
+      <div class="finestra-dettagli-corpo">
+        <div class="lotto-azioni" style="margin:0 0 18px">
+          <button type="button" class="bottone-azione-lotto${a.preferito ? ' preferito-attivo' : ''}" title="Preferito" onclick="onClickStella(event, '${a.id}')">${iconaStella}</button>
+          <button type="button" class="bottone-azione-lotto${a.scartato ? ' scartato-attivo' : ''}" title="Non interessa" onclick="onClickScarta(event, '${a.id}')">${iconaScarta}</button>
+        </div>
+        ${notaHtml}
+        <div class="lotto-margine">
+          <p class="cifra-etichetta">Margine stimato</p>
+          <p class="lotto-margine-valore">${a.margine !== null ? formattaEuro(a.margine) : "—"}</p>
+        </div>
+        <div class="lotto-cifre">
+          <div>
+            <p class="cifra-etichetta">Offerta minima</p>
+            <p class="cifra-valore">${formattaEuro(a.offertaMinima)}</p>
+          </div>
+          <div>
+            <p class="cifra-etichetta">Valore stima</p>
+            <p class="cifra-valore">${a.valoreStima > 0 ? formattaEuro(a.valoreStima) : "—"}</p>
+          </div>
+          <div class="cifra-larga">
+            <p class="cifra-etichetta">Stato occupazione</p>
+            <p class="cifra-valore">${escapeHtml(a.statoOccupazione)}</p>
+          </div>
+        </div>
+        <div style="margin-top:18px">
+          <div class="dettaglio-riga"><span>Tribunale</span><span>${escapeHtml(a.tribunale)}</span></div>
+          <div class="dettaglio-riga"><span>Disponibilità (PVP)</span><span>${escapeHtml(a.disponibilita)}</span></div>
+          <div class="dettaglio-riga"><span>Prezzo base</span><span>${formattaEuro(a.prezzoBase)}</span></div>
+          <div class="dettaglio-riga"><span>Rilancio minimo</span><span>${formattaEuro(a.rilancioMinimo)}</span></div>
+          ${rigaSuperficie}
+          <div class="dettaglio-riga"><span>Spese sanatoria</span><span>${formattaEuro(a.speseSanatoria)}</span></div>
+          <div class="dettaglio-riga"><span>Abusi edilizi</span><span>${escapeHtml(a.abusiEdilizi)}</span></div>
+          <div class="dettaglio-riga${formalitaConAvviso ? ' avviso' : ''}"><span>Formalità pregiudizievoli</span><span>${escapeHtml(formalitaTesto)}</span></div>
+          <div class="dettaglio-riga"><span>Fonte analisi</span><span>${escapeHtml(a.fonteDocumento || "nessuna")}</span></div>
+          <div class="dettaglio-riga"><span>Modello AI</span><span>${escapeHtml(a.modelloUsato || "N/D")}</span></div>
+          <div class="dettaglio-riga"><span>ID Annuncio</span><span>${escapeHtml(a.id)}</span></div>
+        </div>
+        ${a.note ? `<div class="lotto-note">${escapeHtml(a.note)}</div>` : ""}
+        ${a.descrizione ? `<div class="lotto-note">${escapeHtml(a.descrizione)}</div>` : ""}
+        <div style="margin-top:12px">
+          ${a.urlAsta ? `<a class="lotto-link" href="${escapeHtml(a.urlAsta)}" target="_blank" rel="noopener">Apri annuncio PVP</a>` : ""}
+          ${a.urlPdf ? `<a class="lotto-link secondario" href="${escapeHtml(a.urlPdf)}" target="_blank" rel="noopener">Apri documento</a>` : ""}
+        </div>
+      </div>
+    `;
   }
 
   function mostraStato(idStato) {
