@@ -197,6 +197,20 @@
     border-radius: 10px;
     padding: 10px;
     margin-bottom: 28px;
+    /* Fissa in alto durante lo scroll, invece di restare al suo posto
+       naturale nella pagina — così il campo di ricerca resta sempre
+       raggiungibile senza dover prima risalire. Prima, se ci si era
+       scorsi lontano dentro i risultati, cliccarci sopra faceva
+       scattare il comportamento nativo del browser "porta l'elemento
+       attivo in vista", con un salto brusco — fastidioso, soprattutto
+       da cellulare. Con la barra sempre visibile, quel salto non ha più
+       motivo di scattare: l'elemento è già in vista. z-index scelto per
+       restare sopra le card della griglia (che non ne dichiarano uno,
+       quindi 0 implicito) ma sotto il menu tipologia (1000) e il
+       modale password (2000), che devono continuare a coprire tutto. */
+    position: sticky;
+    top: 12px;
+    z-index: 10;
   }
 
   .controlli input,
@@ -685,6 +699,18 @@
     .intestazione { flex-direction: column; align-items: flex-start; }
     .aggiornato { text-align: left; }
     .lotto-cifre { grid-template-columns: 1fr; }
+    /* Sotto i 16px, Safari su iOS ingrandisce automaticamente la pagina
+       quando il campo riceve il focus (pensato per rendere leggibile un
+       testo altrimenti piccolo) — e restava leggermente ingrandita
+       anche dopo, specie con la pagina che si aggiornava a ogni
+       carattere digitato. Qui il campo era a .85rem (~13.6px): un pelo
+       sopra la soglia evita che lo zoom scatti fin dall'inizio, niente
+       da "farlo tornare indietro" dopo. Solo su mobile, apposta: su
+       desktop la dimensione più compatta resta quella voluta. */
+    .controlli input,
+    .controlli select {
+      font-size: 16px;
+    }
   }
 
   /* ============================================================
@@ -2127,13 +2153,13 @@
     // primaria, il criterio scelto resta il comparatore secondario.
     filtrate.sort((a, b) => (a.scartato - b.scartato) || (comparatori[ordine] || comparatori["punteggio-desc"])(a, b));
 
-    // Ogni cambio di filtro/ricerca/ordinamento torna in cima ai
-    // risultati — vedere "riga 40-60" di un elenco appena diventato
-    // diverso sarebbe confuso. Anche il range virtuale va azzerato:
-    // altrimenti potrebbe combaciare per caso con quello di prima e
-    // saltare il ridisegno anche se il CONTENUTO di quelle posizioni è
-    // cambiato del tutto.
-    window.scrollTo({top: 0, behavior: "auto"});
+    // Il range virtuale va azzerato a ogni cambio di filtro/ricerca/
+    // ordinamento: altrimenti potrebbe combaciare per caso con quello di
+    // prima e saltare il ridisegno anche se il CONTENUTO di quelle
+    // posizioni è cambiato del tutto. Niente scroll forzato in cima,
+    // però — restava fastidioso digitando nel campo di ricerca
+    // carattere per carattere, specialmente da cellulare. La posizione
+    // di scroll dell'utente resta esattamente dov'era.
     ultimaChiaveRangeRenderizzato = null;
     renderizza(filtrate);
   }
@@ -2141,6 +2167,15 @@
   function renderizza(elenco) {
     ultimoElencoFiltrato = elenco;
     const griglia = document.getElementById("griglia-lotti");
+
+    // Salvo la posizione di scroll PRIMA di toccare qualunque cosa nel
+    // DOM, e la ripristino subito dopo — a prescindere da cosa la faccia
+    // muovere (ricostruire centinaia di elementi in un colpo può far
+    // scattare comportamenti del browser non sempre prevedibili), così
+    // digitare nel campo di ricerca o cliccare un filtro non sposta mai
+    // la pagina da sotto l'utente. Prima capitava, era fastidioso
+    // soprattutto da cellulare.
+    const scrollPrecedente = window.scrollY;
 
     // Ora segue la vista corrente (Attive/Concluse) invece di restare
     // fissa sulle attive: utile soprattutto quando si guardano le
@@ -2169,6 +2204,7 @@
       mostraStato("stato-nessun-risultato");
       griglia.innerHTML = "";
       renderizzaMappa(elenco);
+      window.scrollTo(0, scrollPrecedente);
       return;
     }
 
@@ -2183,6 +2219,7 @@
     document.getElementById("bottone-mostra-tutti").textContent =
       tuttiIDettagliAperti ? "Nascondi tutti i dettagli" : "Mostra tutti i dettagli";
     renderizzaMappa(elenco);
+    window.scrollTo(0, scrollPrecedente);
   }
 
   // ==========================================================
