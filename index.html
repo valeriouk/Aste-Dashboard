@@ -2034,10 +2034,17 @@
         cardEsistente.replaceWith(contenitoreTemp.firstElementChild);
       }
     }
-    // Se la finestra dettagli è aperta PROPRIO su questa stessa asta,
-    // rinfresco anche lei — altrimenti stella/scarto/nota premuti da
-    // dentro la finestra non si vedrebbero riflessi finché non la si
-    // richiude e riapre.
+    aggiornaFinestraSeApertaSu(id);
+  }
+
+  // Se la finestra dettagli è aperta PROPRIO su questa asta, rinfresca
+  // anche lei — altrimenti stella/scarto/nota premuti da dentro la
+  // finestra (o mentre è aperta) non si vedrebbero riflessi finché non
+  // la si richiude e riapre. Estratta a parte (non solo dentro
+  // aggiornaCardSingola) perché serve anche a chi ricostruisce l'intera
+  // griglia con applicaFiltri() invece di patchare la singola card — vedi
+  // eseguiImpostaStato/eseguiRimuoviFlag più sotto.
+  function aggiornaFinestraSeApertaSu(id) {
     if (idAstaModaleDettagli === id) {
       const asta = ASTE.find(a => a.id === id);
       if (asta) document.getElementById("finestra-dettagli-contenuto").innerHTML = contenutoFinestraDettagli(asta);
@@ -2097,7 +2104,19 @@
     asta.scartato = (stato === "scartato");
     asta.notaPreferito = "";
     PREFERITI[id] = {stato, nota: ""};
-    aggiornaCardSingola(id);
+    // Ricalcola subito filtro/ordinamento (non solo la card sul posto):
+    // scartare un'asta la fa scivolare in fondo immediatamente, togliere
+    // la stella mentre si guardano i Preferiti la fa sparire subito dalla
+    // vista, invece di aspettare il prossimo cambio di filtro per
+    // accorgersene. Sicuro solo ora che nessuna card cambia più altezza
+    // da sola (niente più espansione sul posto, i dettagli aprono una
+    // finestra a parte) — un ricalcolo pieno della griglia virtualizzata
+    // avrebbe riportato gli stessi salti di scroll che c'erano prima.
+    // renderizza() (chiamata da applicaFiltri) preserva comunque la
+    // posizione di scroll dell'utente, quindi la card che si sposta o
+    // sparisce non porta la pagina a saltare sotto di lui.
+    applicaFiltri();
+    aggiornaFinestraSeApertaSu(id);
 
     try {
       const risultato = await chiamaWebApp("imposta_stato_preferito", {hash_password: hashPasswordCorrente, id_annuncio: id, stato});
@@ -2109,7 +2128,8 @@
       if (precedente.preferito) PREFERITI[id] = {stato: "preferito", nota: precedente.notaPreferito};
       else if (precedente.scartato) PREFERITI[id] = {stato: "scartato", nota: precedente.notaPreferito};
       else delete PREFERITI[id];
-      aggiornaCardSingola(id);
+      applicaFiltri();
+      aggiornaFinestraSeApertaSu(id);
       mostraToast(`Non sono riuscita a salvare: ${dettaglioErrore(e)}`);
     }
   }
@@ -2123,7 +2143,8 @@
     asta.scartato = false;
     asta.notaPreferito = "";
     delete PREFERITI[id];
-    aggiornaCardSingola(id);
+    applicaFiltri(); // vedi il commento in eseguiImpostaStato sopra
+    aggiornaFinestraSeApertaSu(id);
 
     try {
       const risultato = await chiamaWebApp("rimuovi_flag_preferito", {hash_password: hashPasswordCorrente, id_annuncio: id});
@@ -2134,7 +2155,8 @@
       Object.assign(asta, precedente);
       if (precedente.preferito) PREFERITI[id] = {stato: "preferito", nota: precedente.notaPreferito};
       else if (precedente.scartato) PREFERITI[id] = {stato: "scartato", nota: precedente.notaPreferito};
-      aggiornaCardSingola(id);
+      applicaFiltri();
+      aggiornaFinestraSeApertaSu(id);
       mostraToast(`Non sono riuscita a salvare: ${dettaglioErrore(e)}`);
     }
   }
