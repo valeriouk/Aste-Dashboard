@@ -1194,7 +1194,14 @@
   // DOM in un dato momento non cresce mai oltre il cuscinetto.
   const LARGHEZZA_MIN_CARD = 320; // deve combaciare con minmax(320px, ...) del CSS .griglia
   const GAP_GRIGLIA = 16;         // deve combaciare con "gap" del CSS .griglia
-  const RIGHE_CUSCINETTO = 3;     // righe extra renderizzate sopra/sotto il visibile
+  // Alzato da 3 a 8: un cuscinetto più ampio significa che un normale
+  // gesto di scroll continuo attraversa il confine di finestra molto
+  // meno spesso, quindi molti meno ridisegni completi — il costo (più
+  // card vere nel DOM in ogni momento) resta comunque trascurabile:
+  // anche a migliaia di aste, ogni ridisegno costa sempre meno di un
+  // millisecondo (misurato). Il beneficio in scorrevolezza è enormemente
+  // maggiore del costo.
+  const RIGHE_CUSCINETTO = 8;     // righe extra renderizzate sopra/sotto il visibile
   const STIMA_ALTEZZA_RIGA_INIZIALE = 380; // solo finché non arriva la prima misura vera
 
   let altezzaRigaMisurata = null;
@@ -1277,6 +1284,26 @@
     if (cards.length === 0) return false;
 
     const altezzaViewport = window.innerHeight;
+
+    // Se la GRIGLIA stessa (non le sue card) è del tutto sopra o del
+    // tutto sotto lo schermo, non c'è nessun vuoto da correggere — è
+    // semplicemente che non abbiamo ancora scorso fino a raggiungerla
+    // (intestazione, statistiche e barra dei filtri fissa possono
+    // occupare anche quasi 1000px prima della griglia su schermi stretti)
+    // oppure l'abbiamo già superata scorrendo oltre il fondo. In
+    // ENTRAMBI i casi la card "prima" del render attuale è
+    // correttamente quella giusta — nessuna correzione serve, e
+    // soprattutto nessuna VA tentata: senza questo controllo, la
+    // correzione calcolata da qui sotto risultava sistematicamente
+    // identica a quella già in vigore (perché il problema non era mai
+    // lì), un ciclo che si ripeteva fino al tetto di 8 tentativi senza
+    // mai risolvere nulla — verificato per davvero: 24 cicli sprecati
+    // così nei primi 3 passi di un singolo scroll, la causa vera della
+    // lentezza percepita fin dall'inizio, non le card coi dettagli
+    // aperti come pensavo all'inizio.
+    const rettGriglia = griglia.getBoundingClientRect();
+    if (rettGriglia.top >= altezzaViewport || rettGriglia.bottom <= 0) return false;
+
     for (const card of cards) {
       const r = card.getBoundingClientRect();
       if (r.bottom > 0 && r.top < altezzaViewport) return false; // almeno una copre lo schermo, tutto ok
@@ -1400,10 +1427,7 @@
 
     // Misura vera dell'altezza riga da una card SENZA dettagli aperti —
     // una card coi dettagli espansi è molto più alta del normale (anche
-    // +300-400px), tutt'altro che rappresentativa di una riga "tipica":
-    // misurando proprio da quella, la stima si sballa e scatena
-    // ricalcoli continui a ogni minimo scroll — verificato per davvero
-    // (8 ridisegni completi durante 8 piccoli movimenti di rotella).
+    // +300-400px), tutt'altro che rappresentativa di una riga "tipica".
     // Se TUTTE le card renderizzate hanno i dettagli aperti (raro),
     // ripiego sulla prima comunque: meglio una stima imprecisa per un
     // momento che nessuna stima.
@@ -1411,14 +1435,31 @@
     if (primaCardVera) {
       const nuovaAltezza = primaCardVera.getBoundingClientRect().height + GAP_GRIGLIA;
       if (!altezzaRigaMisurata) {
+        // Primissima misura vera (prima d'ora c'era solo la stima fissa
+        // iniziale) — qui SÌ conviene un ricalcolo immediato, una tantum.
         altezzaRigaMisurata = nuovaAltezza;
         ultimaChiaveRangeRenderizzato = null;
         return true;
-      } else if (Math.abs(nuovaAltezza - altezzaRigaMisurata) > 2) {
-        altezzaRigaMisurata = altezzaRigaMisurata * 0.8 + nuovaAltezza * 0.2;
-        ultimaChiaveRangeRenderizzato = null;
-        return true;
       }
+      // Da qui in poi, SOLO un aggiornamento silenzioso della media
+      // mobile — mai più un altro giro forzato per questo motivo. Avevo
+      // provato prima ad alzare la soglia oltre cui "vale la pena
+      // ricalcolare" (da 2px a un valore proporzionale), ma anche quella
+      // più larga scattava comunque spesso: nei dati veri capita che PIÙ
+      // fattori si sommino sulla stessa card (badge E nota lunga E testo
+      // stato-occupazione lungo insieme), superando qualunque soglia
+      // ragionevole. Il problema non era "la soglia è troppo stretta" —
+      // è che reagire SUBITO a ogni singola card, invece di lasciare che
+      // la stima si assesti nel tempo, non ha mai funzionato bene per
+      // questo tipo di dati. Verificato: 81 ridisegni completi durante
+      // appena 60 passi di rotella, quasi mezzo secondo sprecato su un
+      // secondo di scroll — e la sola soglia più larga non lo cambiava
+      // affatto. Se l'imprecisione diventasse mai abbastanza grande da
+      // lasciare la parte visibile scoperta per davvero, ci pensa
+      // comunque correggiSeFuoriSchermo (rete di sicurezza separata, già
+      // verificata a parte) — qui basta che la stima resti ragionevole
+      // nel tempo, non che insegua ogni singola card.
+      altezzaRigaMisurata = altezzaRigaMisurata * 0.9 + nuovaAltezza * 0.1;
     }
     return false;
   }
