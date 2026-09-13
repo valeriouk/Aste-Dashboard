@@ -2036,6 +2036,36 @@
     }
   }
 
+  // Le tre scritture su preferiti/scarto/nota (mai la verifica password,
+  // che capita una sola volta a inizio sessione e non si accumula mai in
+  // raffica) passano da QUI invece di chiamare chiamaWebApp() ciascuna
+  // per conto proprio — in coda, una alla volta, nello stesso ordine dei
+  // clic. Code.gs non usa LockService: più scritture arrivate davvero
+  // insieme rischiano di leggere il foglio Preferiti PRIMA che la
+  // precedente sia arrivata, calcolando la stessa "prima riga libera"
+  // per due ID diversi — una sovrascriverebbe l'altra, un rischio di
+  // dati persi, non solo di lentezza. In coda, ciascuna richiesta parte
+  // SOLO dopo che la precedente è del tutto completata lato server:
+  // elimina la corsa critica alla radice, non solo il timeout che ne era
+  // comunque un sintomo (tante richieste tutte insieme competono per la
+  // stessa esecuzione dello script, invece che una alla volta ciascuna
+  // nel proprio turno — verificato che il timeout si concentra proprio
+  // scartando più aste vicine in rapida sequenza). L'aggiornamento
+  // ottimistico (card che sparisce, toast) resta comunque immediato per
+  // ogni clic: solo la richiesta di RETE vera e propria aspetta il suo
+  // turno, in sottofondo, mai l'interazione stessa.
+  let codaScrittureWebApp = Promise.resolve();
+
+  function accodaScritturaWebApp(azione, extra) {
+    const richiesta = codaScrittureWebApp.then(() => chiamaWebApp(azione, extra));
+    // .catch(()=>{}) SOLO per non interrompere la coda per le richieste
+    // successive se questa fallisce — l'errore vero arriva comunque a
+    // chi ha chiamato accodaScritturaWebApp tramite "richiesta" stessa,
+    // qui viene solo impedito di propagarsi alla PROSSIMA in coda.
+    codaScrittureWebApp = richiesta.catch(() => {});
+    return richiesta;
+  }
+
   // Azione JS in sospeso mentre il modale password è aperto — eseguita
   // automaticamente non appena la password viene confermata, così l'utente
   // non deve ripetere il clic sulla stella/scarto/nota che l'ha innescata.
@@ -2241,7 +2271,7 @@
     }
 
     try {
-      const risultato = await chiamaWebApp("imposta_stato_preferito", {hash_password: hashPasswordCorrente, id_annuncio: id, stato});
+      const risultato = await accodaScritturaWebApp("imposta_stato_preferito", {hash_password: hashPasswordCorrente, id_annuncio: id, stato});
       if (risultato.result !== "success") throw new Error(risultato.message || "");
     } catch (e) {
       console.error("imposta_stato_preferito fallita:", e);
@@ -2269,7 +2299,7 @@
     aggiornaFinestraSeApertaSu(id);
 
     try {
-      const risultato = await chiamaWebApp("rimuovi_flag_preferito", {hash_password: hashPasswordCorrente, id_annuncio: id});
+      const risultato = await accodaScritturaWebApp("rimuovi_flag_preferito", {hash_password: hashPasswordCorrente, id_annuncio: id});
       if (risultato.result !== "success") throw new Error(risultato.message || "");
     } catch (e) {
       console.error("rimuovi_flag_preferito fallita:", e);
@@ -2334,7 +2364,7 @@
     aggiornaCardSingola(id);
 
     try {
-      const risultato = await chiamaWebApp("salva_nota_preferito", {hash_password: hashPasswordCorrente, id_annuncio: id, nota: testo});
+      const risultato = await accodaScritturaWebApp("salva_nota_preferito", {hash_password: hashPasswordCorrente, id_annuncio: id, nota: testo});
       if (risultato.result !== "success") throw new Error(risultato.message || "");
     } catch (e) {
       console.error("salva_nota_preferito fallita:", e);
