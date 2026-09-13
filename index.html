@@ -2225,22 +2225,24 @@
     // sparisce non porta la pagina a saltare sotto di lui.
     applicaFiltri();
     aggiornaFinestraSeApertaSu(id);
+    // Il toast (con l'offerta di aggiungere una nota) compare QUI, nello
+    // stesso istante in cui la card sparisce — non dopo la conferma del
+    // server più sotto. Prima compariva solo a chiamata riuscita: con la
+    // latenza tipica di una WebApp Apps Script (anche solo mezzo
+    // secondo, a volte di più) l'attenzione si era già spostata altrove
+    // quando il toast arrivava, sembrando che non fosse mai comparso —
+    // segnalato per davvero. La card sparisce già in modo ottimistico
+    // (vedi sopra), il toast deve seguirla nello stesso istante, non in
+    // un secondo momento imprevedibile. Se la chiamata dovesse poi
+    // fallire, il blocco catch più sotto sostituisce questo stesso toast
+    // con l'avviso di errore — non restano entrambi insieme.
+    if (stato === "scartato") {
+      mostraToast("Asta scartata.", {etichetta: "Aggiungi una nota", callback: () => apriDettagliConNotaAperta(id)});
+    }
 
     try {
       const risultato = await chiamaWebApp("imposta_stato_preferito", {hash_password: hashPasswordCorrente, id_annuncio: id, stato});
       if (risultato.result !== "success") throw new Error(risultato.message || "");
-      // Solo per lo scarto, non per il preferito: la card sparisce subito
-      // dalla griglia (comportamento voluto, vedi sopra), quindi non
-      // resta più modo di aggiungere una nota sul perché dello scarto se
-      // non riprendendo l'asta più tardi dal filtro Scartati — questo
-      // pulsante nel toast evita quel giro, aprendo subito la finestra
-      // con l'editor già pronto. Un solo clic su "Scarta" continua a
-      // bastare da solo: il toast è solo un'offerta in più, non un
-      // passaggio obbligato — se lo si lascia sparire senza toccarlo, lo
-      // scarto resta comunque fatto, senza nota, esattamente come oggi.
-      if (stato === "scartato") {
-        mostraToast("Asta scartata.", {etichetta: "Aggiungi una nota", callback: () => apriDettagliConNotaAperta(id)});
-      }
     } catch (e) {
       console.error("imposta_stato_preferito fallita:", e);
       gestisceErroreAzionePassword(e);
