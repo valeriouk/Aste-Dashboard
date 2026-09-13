@@ -2174,6 +2174,25 @@
     }
   }
 
+  // Tronca un indirizzo per un toast — largo abbastanza da restare
+  // riconoscibile, corto abbastanza da non sfondare la riga. Usata SOLO
+  // per identificare a colpo d'occhio DI QUALE asta parla il toast: con
+  // più scarti ravvicinati in sequenza (proprio quello per cui la coda
+  // delle scritture è pensata, vedi accodaScritturaWebApp) un unico
+  // toast riusato ogni volta rischiava di riferirsi silenziosamente
+  // all'ultima card scartata invece di quella che si pensava — verificato
+  // per davvero: scartando due card di fila, "Aggiungi una nota" portava
+  // alla seconda anche pensando di star agendo sulla prima, senza nessun
+  // segnale che fosse cambiato qualcosa. Il testo grezzo di a.comune non
+  // è tagliato apposta a un separatore preciso (es. la sola virgola):
+  // app.py lo compone in ordini diversi a seconda dei casi (a volte il
+  // comune viene prima, a volte dopo), quindi un taglio a lunghezza fissa
+  // è più sicuro di provare a isolare "solo il comune" e sbagliare taglio.
+  function indirizzoTroncato(testo, lunghezzaMassima = 38) {
+    const t = testo || "";
+    return t.length <= lunghezzaMassima ? t : t.slice(0, lunghezzaMassima - 1) + "…";
+  }
+
   // "azione" opzionale: {etichetta, callback} — aggiunge un piccolo
   // pulsante dentro il toast stesso (es. "Aggiungi una nota" dopo uno
   // scarto), invece di aprire qualcosa subito o forzare una scelta prima
@@ -2267,7 +2286,7 @@
     // fallire, il blocco catch più sotto sostituisce questo stesso toast
     // con l'avviso di errore — non restano entrambi insieme.
     if (stato === "scartato") {
-      mostraToast("Asta scartata.", {etichetta: "Aggiungi una nota", callback: () => apriDettagliConNotaAperta(id)});
+      mostraToast(`${indirizzoTroncato(asta.comune)} — scartata.`, {etichetta: "Aggiungi una nota", callback: () => apriDettagliConNotaAperta(id)});
     }
 
     try {
@@ -2282,7 +2301,7 @@
       else delete PREFERITI[id];
       applicaFiltri();
       aggiornaFinestraSeApertaSu(id);
-      mostraToast(`Non sono riuscita a salvare: ${dettaglioErrore(e)}`);
+      mostraToast(`${indirizzoTroncato(asta.comune)} — non sono riuscita a salvare: ${dettaglioErrore(e)}`);
     }
   }
 
@@ -2309,7 +2328,7 @@
       else if (precedente.scartato) PREFERITI[id] = {stato: "scartato", nota: precedente.notaPreferito};
       applicaFiltri();
       aggiornaFinestraSeApertaSu(id);
-      mostraToast(`Non sono riuscita a salvare: ${dettaglioErrore(e)}`);
+      mostraToast(`${indirizzoTroncato(asta.comune)} — non sono riuscita a salvare: ${dettaglioErrore(e)}`);
     }
   }
 
@@ -2372,7 +2391,7 @@
       asta.notaPreferito = precedente;
       if (PREFERITI[id]) PREFERITI[id].nota = precedente;
       aggiornaCardSingola(id);
-      mostraToast(`Non sono riuscita a salvare la nota: ${dettaglioErrore(e)}`);
+      mostraToast(`${indirizzoTroncato(asta.comune)} — non sono riuscita a salvare la nota: ${dettaglioErrore(e)}`);
     }
   }
 
