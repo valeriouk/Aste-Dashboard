@@ -1643,8 +1643,15 @@
   // maggiore del costo.
   const RIGHE_CUSCINETTO = 8;     // righe extra renderizzate sopra/sotto il visibile
   const STIMA_ALTEZZA_RIGA_INIZIALE = 380; // solo finché non arriva la prima misura vera
+  // Dopo questante misure vere, altezzaRigaMisurata smette di aggiornarsi
+  // (finché l'elenco filtrato non cambia) — vedi il commento lungo su
+  // MISURE_CALIBRAGGIO_MASSIME più sotto, vicino a dove viene usato,
+  // per il perché questo è IL fix del salto risalendo dal fondo con
+  // centinaia di aste, non solo un'attenuazione come i tentativi prima.
+  const MISURE_CALIBRAGGIO_MASSIME = 8;
 
   let altezzaRigaMisurata = null;
+  let numeroMisureCalibraggio = 0;
   let ultimaChiaveRangeRenderizzato = null;
   let rafInSospesoVirtualizzazione = null;
   // Quale asta sta mostrando la finestra dettagli in questo momento (null
@@ -1841,37 +1848,58 @@
 
     griglia.innerHTML = pezzi.join("");
 
-    // Misura vera dell'altezza riga, per restare accurata nel tempo.
+    // Misura vera dell'altezza riga — SOLO durante una breve fase di
+    // calibraggio iniziale (le prime MISURE_CALIBRAGGIO_MASSIME misure
+    // vere), poi la stima si BLOCCA e resta invariata per il resto della
+    // sessione di scroll, finché l'elenco filtrato non cambia (vedi
+    // applicaFiltri, che azzera altezzaRigaMisurata insieme al resto).
+    //
+    // Il motivo per cui questo è DIVERSO dai tentativi precedenti (media
+    // su più card, poi uno smorzamento più lento — entrambi ancora
+    // presenti qui sotto, ma non più sufficienti da soli): il vero
+    // problema non era il RUMORE nella stima, ma la sua AMPLIFICAZIONE.
+    // Lo spazio vuoto sopra le card visibili si calcola come
+    // "numero di righe saltate × altezza stimata di una riga"
+    // (altezzaSopra = primaRiga * altezzaRiga, poco più sotto) — un
+    // MOLTIPLICATORE sulla riga. Con centinaia di righe saltate (verso il
+    // fondo di un elenco di ~700 aste), anche un aggiornamento della
+    // stima di una frazione di pixel — per quanto lento — si moltiplica
+    // per quel numero di righe, spostando lo spazio calcolato di decine o
+    // centinaia di pixel a ogni singolo ridisegno. Con un elenco filtrato
+    // a poche centinaia di righe (es. ~200 aste) lo stesso spostamento
+    // per riga resta sotto una manciata di pixel, troppo piccolo per
+    // notarsi — combacia esattamente con l'osservazione che filtrando a
+    // meno risultati il problema spariva. Bloccare la stima dopo la
+    // calibrazione elimina il bersaglio mobile alla radice: lo stesso
+    // identico calcolo, ripetuto, dà sempre lo stesso identico risultato,
+    // qualunque sia il numero di righe saltate.
     const nuovaAltezza = misuraAltezzaRigaTipica(griglia);
     if (nuovaAltezza !== null) {
       if (!altezzaRigaMisurata) {
         // Primissima misura vera (prima d'ora c'era solo la stima fissa
         // iniziale) — qui SÌ conviene un ricalcolo immediato, una tantum.
         altezzaRigaMisurata = nuovaAltezza;
+        numeroMisureCalibraggio = 1;
         ultimaChiaveRangeRenderizzato = null;
         return true;
       }
-      // Da qui in poi, SOLO un aggiornamento silenzioso della media
-      // mobile — mai un altro giro forzato per una singola card diversa
-      // dalla media: la normale variabilità tra card (nota più o meno
-      // lunga, badge presente o no) è rumore atteso, non un segnale che
-      // la stima sia sbagliata. Se l'imprecisione diventasse mai
-      // abbastanza grande da lasciare la parte visibile scoperta per
-      // davvero, ci pensa comunque correggiSeFuoriSchermo (rete di
-      // sicurezza separata, verificata a parte).
-      // Peso 0.97/0.03 (era 0.9/0.1): anche mediando su tutte le card
-      // renderizzate (vedi misuraAltezzaRigaTipica) resta una differenza
-      // reale, non solo rumore, tra la media di UNA finestra e quella
-      // della finestra successiva — tratti diversi dell'elenco hanno
-      // legittimamente più o meno badge/indirizzi lunghi. Con lo 0.1
-      // di prima, poche finestre di seguito con più badge del solito
-      // bastavano a spostare la stima abbastanza da cambiare quali righe
-      // venissero considerate "in vista" — verificato per davvero,
-      // risalendo dal fondo con contenuto realisticamente vario. Uno
-      // smorzamento più lento tollera la stessa variazione locale senza
-      // lasciarla accumulare in un cambiamento capace di alterare il
-      // risultato del calcolo.
-      altezzaRigaMisurata = altezzaRigaMisurata * 0.97 + nuovaAltezza * 0.03;
+      if (numeroMisureCalibraggio < MISURE_CALIBRAGGIO_MASSIME) {
+        // Media cumulativa vera (ogni misura pesa quanto le altre, non
+        // una media mobile con un peso arbitrario) — durante questa
+        // breve fase ha senso convergere in fretta verso un valore
+        // rappresentativo, non ancora bloccare tutto sulla primissima
+        // card vista.
+        altezzaRigaMisurata = (altezzaRigaMisurata * numeroMisureCalibraggio + nuovaAltezza) / (numeroMisureCalibraggio + 1);
+        numeroMisureCalibraggio++;
+      }
+      // Da qui in poi (calibraggio esaurito), NESSUN aggiornamento — la
+      // stima resta esattamente quella raggiunta a fine calibraggio,
+      // qualunque cosa mostrino le card incontrate scorrendo più avanti.
+      // Se l'imprecisione residua fosse mai abbastanza grande da lasciare
+      // la parte visibile scoperta per davvero, ci pensa comunque
+      // correggiSeFuoriSchermo (rete di sicurezza separata, verificata a
+      // parte) — ma quella corregge la POSIZIONE per quella volta, non
+      // rimette in moto la stima stessa.
     }
     return false;
   }
@@ -2870,6 +2898,17 @@
     // carattere per carattere, specialmente da cellulare. La posizione
     // di scroll dell'utente resta esattamente dov'era.
     ultimaChiaveRangeRenderizzato = null;
+    // Stessa idea applicata alla stima dell'altezza riga: un elenco
+    // filtrato diverso può avere caratteristiche diverse (es. "solo
+    // punteggio alto" potrebbe avere in media meno badge o note delle
+    // altre) — azzerarla qui permette una nuova, breve calibrazione
+    // apposta per il nuovo elenco, invece di ereditare senza motivo
+    // quella bloccata per il precedente. Il ricalcolo è rapido (poche
+    // righe, vedi MISURE_CALIBRAGGIO_MASSIME) e capita solo qui, mai
+    // durante lo scroll in sé — a differenza dell'aggiornamento continuo
+    // di prima, questo non può innescare il salto che causava.
+    altezzaRigaMisurata = null;
+    numeroMisureCalibraggio = 0;
     renderizza(filtrate);
   }
 
