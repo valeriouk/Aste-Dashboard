@@ -707,7 +707,7 @@
   .lotto {
     background: var(--surface);
     border: 1px solid var(--border);
-    border-radius: 12px;
+    border-radius: 10px;
     padding: 22px;
     cursor: pointer; /* l'intera card apre i dettagli, non solo il pulsante — stella/scarto/nota fermano la propagazione, vedi onClickStella/onClickScarta e il contenitore nota-preferito */
     /* Niente più animazione di comparsa qui: aveva senso quando le card
@@ -720,10 +720,27 @@
        schermo vuoto nonostante il posizionamento fosse corretto. Meglio
        comparire subito e sempre, che rischiare di non comparire affatto.
     */
-    transition: border-color .2s ease, transform .2s ease, box-shadow .2s ease;
-    box-shadow: 0 1px 2px rgba(30,35,32,.05);
+    transition: border-color .2s ease, box-shadow .2s ease;
+    /* Doppio strato invece di un'ombra sola: uno stretto e scuro vicino
+       al bordo (il punto di contatto) più uno largo e leggero sopra (la
+       luce ambiente) — un foglio appoggiato sul tavolo, non la solita
+       ombra piatta unica dei pannelli SaaS generici. Entrambi restano
+       comunque molto leggeri: il documento è ancora il protagonista, non
+       l'ombra sotto di lui. */
+    box-shadow: 0 1px 1px rgba(30,35,32,.04), 0 3px 8px rgba(30,35,32,.03);
   }
-  .lotto:hover { border-color: var(--ink-faint); transform: translateY(-2px); box-shadow: 0 6px 16px rgba(30,35,32,.08); }
+  /* Niente più il sollevamento (translateY) generico di prima — la
+     stessa animazione che avrebbe qualunque card hover di qualunque
+     sito. Il bordo si scurisce e l'ombra approfondisce leggermente
+     (la card "si stacca" un po' dal tavolo), e il sigillo si raddrizza
+     (vedi sopra) come a dire "questo è il lotto che stai guardando ora"
+     — un dettaglio pensato apposta per QUESTA pagina, non riusabile
+     altrove senza senso. */
+  .lotto:hover {
+    border-color: var(--ink-faint);
+    box-shadow: 0 2px 3px rgba(30,35,32,.06), 0 10px 22px rgba(30,35,32,.08);
+  }
+  .lotto:hover .sigillo { transform: rotate(-1.5deg); }
 
   /* La classe "conclusa" viene comunque assegnata (vedi cartellaLotto in
      JS) ma qui non applichiamo più un'attenuazione: da quando la vista è
@@ -753,6 +770,12 @@
     font-weight: 600;
     font-size: 1.05rem;
     transform: rotate(-4deg);
+    /* Si raddrizza leggermente al passaggio del mouse sulla card intera
+       (vedi .lotto:hover .sigillo più sotto) — il feedback dell'hover
+       è ancorato all'elemento più caratteristico della pagina invece di
+       un sollevamento generico dell'intera card, la stessa animazione
+       che avrebbe qualunque altra card di qualunque altro sito. */
+    transition: transform .2s ease;
     box-shadow: inset 0 2px 4px rgba(30,35,32,.25), 0 2px 5px rgba(30,35,32,.15);
     border: 1.5px solid;
   }
@@ -1251,6 +1274,23 @@
     transform: translateX(-50%) translateY(0);
     pointer-events: auto;
   }
+  /* Pulsante opzionale dentro il toast (es. "Aggiungi una nota" dopo uno
+     scarto) — contrasto invertito rispetto al fondo scuro del toast
+     stesso, stesso principio del pulsante primario ovunque nella pagina
+     ma su sfondo inverso, così resta leggibile lì dentro. */
+  .toast-azione {
+    background: var(--surface);
+    color: var(--ink);
+    border: none;
+    border-radius: 6px;
+    padding: 5px 10px;
+    margin-left: 8px;
+    font-family: var(--font-body);
+    font-size: .8rem;
+    font-weight: 600;
+    cursor: pointer;
+  }
+  .toast-azione:hover { background: var(--surface-2); }
 
   @media (prefers-reduced-motion: reduce) {
     * { animation: none !important; transition: none !important; }
@@ -1648,7 +1688,19 @@
   // MISURE_CALIBRAGGIO_MASSIME più sotto, vicino a dove viene usato,
   // per il perché questo è IL fix del salto risalendo dal fondo con
   // centinaia di aste, non solo un'attenuazione come i tentativi prima.
-  const MISURE_CALIBRAGGIO_MASSIME = 8;
+  // Era 8, abbassata a 4: con uno scroll molto rapido verso il fondo
+  // restava un residuo di una o due correzioni all'inizio della risalita
+  // (osservato per davvero) — la calibrazione, per quanto veloce,
+  // impiega comunque qualche ridisegno a completarsi, e uno scroll
+  // abbastanza aggressivo può arrivare in fondo prima che finisca. Una
+  // soglia più bassa si esaurisce prima. Non è una perdita di
+  // precisione significativa: ogni misura è già una media su tutte le
+  // card renderizzate in quel momento (30-50 circa, vedi
+  // misuraAltezzaRigaTipica), quindi anche 4 di queste restano centinaia
+  // di card campionate in totale — verificato che il caso limite già
+  // testato (calibrazione su contenuto corto, poi molto più lungo per il
+  // resto della lista) non peggiora con la soglia più bassa.
+  const MISURE_CALIBRAGGIO_MASSIME = 4;
 
   let altezzaRigaMisurata = null;
   let numeroMisureCalibraggio = 0;
@@ -2092,17 +2144,32 @@
     }
   }
 
-  function mostraToast(testo) {
+  // "azione" opzionale: {etichetta, callback} — aggiunge un piccolo
+  // pulsante dentro il toast stesso (es. "Aggiungi una nota" dopo uno
+  // scarto), invece di aprire qualcosa subito o forzare una scelta prima
+  // di procedere. Il toast resta comunque solo un avviso che scompare da
+  // solo: se non lo si tocca in tempo, semplicemente sparisce senza
+  // ulteriori conseguenze, l'azione principale (lo scarto) è già avvenuta.
+  function mostraToast(testo, azione) {
     let toast = document.getElementById("toast-preferiti");
     if (!toast) {
       toast = document.createElement("div");
       toast.id = "toast-preferiti";
       document.body.appendChild(toast);
     }
-    toast.textContent = testo;
+    toast.innerHTML = escapeHtml(testo)
+      + (azione ? ` <button type="button" class="toast-azione">${escapeHtml(azione.etichetta)}</button>` : "");
+    if (azione) {
+      toast.querySelector(".toast-azione").onclick = () => {
+        toast.classList.remove("visibile");
+        azione.callback();
+      };
+    }
     toast.classList.add("visibile");
     clearTimeout(toast._timeoutToast);
-    toast._timeoutToast = setTimeout(() => toast.classList.remove("visibile"), 3200);
+    // Più tempo quando c'è un'azione da poter cogliere (serve un attimo
+    // per notare il pulsante e decidere), il solito avviso breve altrimenti.
+    toast._timeoutToast = setTimeout(() => toast.classList.remove("visibile"), azione ? 5000 : 3200);
   }
 
   // Clic sulla stella: se già preferita, la toglie (torna neutro); se no,
@@ -2162,6 +2229,18 @@
     try {
       const risultato = await chiamaWebApp("imposta_stato_preferito", {hash_password: hashPasswordCorrente, id_annuncio: id, stato});
       if (risultato.result !== "success") throw new Error(risultato.message || "");
+      // Solo per lo scarto, non per il preferito: la card sparisce subito
+      // dalla griglia (comportamento voluto, vedi sopra), quindi non
+      // resta più modo di aggiungere una nota sul perché dello scarto se
+      // non riprendendo l'asta più tardi dal filtro Scartati — questo
+      // pulsante nel toast evita quel giro, aprendo subito la finestra
+      // con l'editor già pronto. Un solo clic su "Scarta" continua a
+      // bastare da solo: il toast è solo un'offerta in più, non un
+      // passaggio obbligato — se lo si lascia sparire senza toccarlo, lo
+      // scarto resta comunque fatto, senza nota, esattamente come oggi.
+      if (stato === "scartato") {
+        mostraToast("Asta scartata.", {etichetta: "Aggiungi una nota", callback: () => apriDettagliConNotaAperta(id)});
+      }
     } catch (e) {
       console.error("imposta_stato_preferito fallita:", e);
       gestisceErroreAzionePassword(e);
@@ -3189,6 +3268,18 @@ ${notaHtml}
     document.getElementById("finestra-dettagli-contenuto").innerHTML = contenutoFinestraDettagli(asta);
     document.getElementById("overlay-dettagli-asta").classList.remove("nascosto");
     document.body.style.overflow = "hidden"; // la pagina sotto non scorre mentre la finestra è aperta
+  }
+
+  // Usata dal pulsante "Aggiungi una nota" nel toast che compare dopo uno
+  // scarto (vedi eseguiImpostaStato): apre la finestra dettagli — che ha
+  // sempre l'editor della nota al suo interno, a differenza della card
+  // nella griglia, che dopo uno scarto sparisce subito dalla vista — e
+  // apre SUBITO anche l'editor stesso, un passaggio in meno rispetto a
+  // dover prima trovare e poi cliccare la bolla "+ Aggiungi una nota".
+  function apriDettagliConNotaAperta(id) {
+    apriDettagliAsta(id);
+    const bolla = document.querySelector("#finestra-dettagli-contenuto .nota-preferito-bolla");
+    if (bolla) apriEditorNota(bolla);
   }
 
   function chiudiDettagliAsta() {
