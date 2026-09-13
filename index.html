@@ -1507,7 +1507,7 @@
   // Stessa WebApp già usata da config.html per le scritture protette —
   // qui serve solo per le tre azioni nuove (stella, scarto, nota), non
   // per leggere: la lettura resta sempre via CSV, sopra.
-  const WEBAPP_URL = "https://script.google.com/macros/s/AKfycbyVS9aTh7jx7fjCIaI6OziW8wwDr5Yj8QB9W5QRP5HHGJP7H-3NelKg35fmQhQ5s0yD/exec";
+  const WEBAPP_URL = "https://script.google.com/macros/s/AKfycbzaUdsroX6mZZIWCNd6PChRIxyGgsjLVBWQFU2NYgDWRGNCoNkcCUvQmSfF70w6CwQh/exec";
 
   let ASTE = [];
   let PREFERITI = {}; // id_annuncio -> {stato: "preferito"|"scartato", nota: string}
@@ -1664,28 +1664,29 @@
     return Math.max(1, Math.floor(conGap / (LARGHEZZA_MIN_CARD + GAP_GRIGLIA)));
   }
 
-  // Sceglie una card SENZA dettagli aperti da cui misurare l'altezza
-  // "tipica" di una riga — non basta evitare la card espansa in sé: CSS
-  // Grid rende TUTTE le celle di una riga alte quanto la più alta tra
-  // loro, quindi una card senza dettagli propri aperti risulterebbe
-  // comunque (erroneamente) alta quanto una vicina espansa se stanno
-  // nella STESSA riga della griglia. Misurare da lì per sbaglio faceva
-  // oscillare la stima in modo intermittente (a seconda di quale card
-  // capitava di essere campionata) — verificato per davvero: con
-  // ~1700 righe totali, anche pochi pixel di oscillazione nella stima
-  // per riga si moltiplicavano in migliaia di pixel di altezza pagina,
-  // e vicino al fondo questo faceva saltare lo scroll in modo vistoso.
-  // Ripiega sulla prima qualunque solo se proprio nessuna card
-  // renderizzata sta in una riga "pulita" (raro, es. con "mostra tutti
-  // i dettagli" attivo).
-  // Misura l'altezza (gap incluso) della prima card renderizzata — con
-  // i dettagli ora sempre in una finestra a parte (mai più dentro la
-  // card), tutte le righe hanno grosso modo la stessa altezza: non
-  // serve più scegliere con cura quale card campionare, la prima va
-  // benissimo.
+  // Media sulle card RENDERIZZATE ORA (tipicamente 30-50, una chiamata
+  // a getBoundingClientRect() ciascuna: trascurabile), non solo la
+  // prima — CSS Grid rende TUTTE le card di una riga alte quanto la più
+  // alta tra loro, quindi misurare da una singola card la rende
+  // "gonfiata" o "normale" a seconda di chi capita di starle vicino in
+  // quella riga, non di lei stessa. Con contenuto reale (indirizzi di
+  // lunghezza diversa, badge zona segnalata solo su alcune) questa
+  // differenza non è mai stata zero come nei dati di prova uniformi
+  // usati nei test precedenti — abbastanza rumore da far derivare la
+  // stima riga dopo riga, che a sua volta sposta quali righe vengono
+  // considerate "in vista": verificato per davvero, il sintomo era
+  // proprio uno sfarfallio risalendo dal fondo, con la finestra
+  // renderizzata che oscillava avanti e indietro tra due stati vicini.
+  // La media su MOLTE card invece assorbe la variazione riga per riga
+  // (una riga più alta pesa nella media tante volte quante sono le sue
+  // colonne, esattamente quanto le spetta): la stima risulta stabile
+  // anche quando il contenuto reale non lo è.
   function misuraAltezzaRigaTipica(griglia) {
-    const primaCard = griglia.querySelector(".lotto");
-    return primaCard ? primaCard.getBoundingClientRect().height + GAP_GRIGLIA : null;
+    const cards = griglia.querySelectorAll(".lotto");
+    if (cards.length === 0) return null;
+    let somma = 0;
+    for (const card of cards) somma += card.getBoundingClientRect().height;
+    return (somma / cards.length) + GAP_GRIGLIA;
   }
 
   // Il cuore della virtualizzazione: calcola quale fetta di elenco serve
@@ -1858,7 +1859,19 @@
       // abbastanza grande da lasciare la parte visibile scoperta per
       // davvero, ci pensa comunque correggiSeFuoriSchermo (rete di
       // sicurezza separata, verificata a parte).
-      altezzaRigaMisurata = altezzaRigaMisurata * 0.9 + nuovaAltezza * 0.1;
+      // Peso 0.97/0.03 (era 0.9/0.1): anche mediando su tutte le card
+      // renderizzate (vedi misuraAltezzaRigaTipica) resta una differenza
+      // reale, non solo rumore, tra la media di UNA finestra e quella
+      // della finestra successiva — tratti diversi dell'elenco hanno
+      // legittimamente più o meno badge/indirizzi lunghi. Con lo 0.1
+      // di prima, poche finestre di seguito con più badge del solito
+      // bastavano a spostare la stima abbastanza da cambiare quali righe
+      // venissero considerate "in vista" — verificato per davvero,
+      // risalendo dal fondo con contenuto realisticamente vario. Uno
+      // smorzamento più lento tollera la stessa variazione locale senza
+      // lasciarla accumulare in un cambiamento capace di alterare il
+      // risultato del calcolo.
+      altezzaRigaMisurata = altezzaRigaMisurata * 0.97 + nuovaAltezza * 0.03;
     }
     return false;
   }
