@@ -534,40 +534,50 @@
 
 <script>
   // ==========================================================
-  // CONFIGURAZIONE — incolla qui l'URL della tua WebApp (lo stesso usato
-  // come GOOGLE_SHEET_WEBAPP_URL nei secret di GitHub Actions).
+  // CONFIGURAZIONE — incolla qui l'URL del tuo progetto Supabase e la
+  // relativa chiave "anon" (Project Settings -> API Keys nel pannello
+  // Supabase — la anon/publishable, MAI la service_role: quella è per
+  // il solo backend, vedi la chat sul perché). La chiave anon è pensata
+  // per stare in un file pubblico come questo: la sicurezza vera sta
+  // nelle funzioni protette da password sul database (vedi
+  // prepara_database.sql), non nel nasconderla.
   // ==========================================================
-  const WEBAPP_URL = "https://script.google.com/macros/s/AKfycbyVS9aTh7jx7fjCIaI6OziW8wwDr5Yj8QB9W5QRP5HHGJP7H-3NelKg35fmQhQ5s0yD/exec";
-
-  // Deve essere IDENTICO a SALE_PASSWORD in Code.gs, altrimenti gli hash
-  // calcolati qui e quelli attesi lato server non combaceranno mai. Non è
-  // un segreto (per questo può stare qui, in un file pubblico) — serve
-  // solo a rendere inutile un attacco con hash precalcolati.
-  const SALE_PASSWORD = "aste-ct-8f3k2-sale";
+  const SUPABASE_URL = "INCOLLA_QUI_URL_SUPABASE";
+  const SUPABASE_ANON_KEY = "INCOLLA_QUI_CHIAVE_ANON";
 
   let mappa, segnaposto, cerchio;
-  let hashPasswordCorrente = null;
+  // Non più un hash: le funzioni sul database (vedi prepara_database.sql,
+  // Sezione 6) confrontano la password in chiaro — niente più
+  // crypto.subtle.digest lato browser, il confronto vero avviene comunque
+  // sul server, non qui. Il nome della variabile resta lo stesso concetto
+  // di sempre ("la credenziale attuale, pronta per essere riusata"), solo
+  // senza più l'hashing di mezzo.
+  let passwordCorrente = null;
 
   // ==========================================================
   // PASSWORD RICORDATA SU QUESTO DEVICE — STESSA chiave localStorage di
   // index.html (stessa origine, quindi stesso storage): sbloccare da una
-  // pagina resta sbloccato anche sull'altra. Vedi il commento gemello in
-  // index.html per il ragionamento completo su perché localStorage
-  // invece di un cookie vero, e sul compromesso di sicurezza accettato.
-  const CHIAVE_LOCALSTORAGE_HASH = "aste_hash_password_v1";
+  // pagina resta sbloccato anche sull'altra. Chiave DIVERSA da quella
+  // usata ai tempi di Google Sheets (era "aste_hash_password_v1", conteneva
+  // un hash) apposta: un valore vecchio letto come se fosse la nuova
+  // forma (password in chiaro) manderebbe una password sbagliata al
+  // server invece di fallire in modo pulito — meglio ripartire da un
+  // nome di chiave pulito, che ignora automaticamente qualunque valore
+  // residuo dal sistema precedente.
+  const CHIAVE_LOCALSTORAGE_PASSWORD = "aste_password_v2";
 
-  function salvaHashRicordato(hash) {
-    try { localStorage.setItem(CHIAVE_LOCALSTORAGE_HASH, hash); } catch (e) { /* storage negato/pieno — si ridigita ogni volta, nessun blocco */ }
+  function salvaPasswordRicordata(password) {
+    try { localStorage.setItem(CHIAVE_LOCALSTORAGE_PASSWORD, password); } catch (e) { /* storage negato/pieno — si ridigita ogni volta, nessun blocco */ }
   }
-  function leggiHashRicordato() {
-    try { return localStorage.getItem(CHIAVE_LOCALSTORAGE_HASH); } catch (e) { return null; }
+  function leggiPasswordRicordata() {
+    try { return localStorage.getItem(CHIAVE_LOCALSTORAGE_PASSWORD); } catch (e) { return null; }
   }
-  function cancellaHashRicordato() {
-    try { localStorage.removeItem(CHIAVE_LOCALSTORAGE_HASH); } catch (e) {}
+  function cancellaPasswordRicordata() {
+    try { localStorage.removeItem(CHIAVE_LOCALSTORAGE_PASSWORD); } catch (e) {}
   }
 
   // ==========================================================
-  // UTILITY: hash e chiamate alla WebApp
+  // UTILITY
   // ==========================================================
   function escapeHtml(testo) {
     const d = document.createElement("div");
@@ -575,55 +585,53 @@
     return d.innerHTML;
   }
 
-  async function calcolaHash(testo) {
-    const dati = new TextEncoder().encode(SALE_PASSWORD + testo);
-    const bufferHash = await crypto.subtle.digest("SHA-256", dati);
-    return Array.from(new Uint8Array(bufferHash)).map(b => b.toString(16).padStart(2, "0")).join("");
-  }
-
-  // NIENT'ALTRO oltre a "body" nella richiesta: niente header Content-Type
-  // esplicito. È voluto — impostare "application/json" farebbe scattare
-  // una preflight CORS che le WebApp di Apps Script non gestiscono, e la
-  // richiesta fallirebbe prima ancora di partire. Code.gs legge comunque
-  // correttamente il corpo come JSON indipendentemente dall'header.
-  async function chiamaWebApp(azione, extra) {
-    const risposta = await fetch(WEBAPP_URL, {
+  // Un solo punto che sa come chiamare una funzione del database (RPC) —
+  // stesso ruolo di chiamaWebApp() di prima, ma verso Supabase invece che
+  // verso Apps Script. "payload" deve avere ESATTAMENTE i nomi dei
+  // parametri che la funzione SQL si aspetta (es. password_tentativo, non
+  // più hash_password) — vedi ogni singola chiamata più sotto per la
+  // forma esatta di ciascuna.
+  async function chiamaRpc(nomeFunzione, payload) {
+    const risposta = await fetch(`${SUPABASE_URL}/rest/v1/rpc/${nomeFunzione}`, {
       method: "POST",
-      body: JSON.stringify({azione, ...extra})
+      headers: {
+        "apikey": SUPABASE_ANON_KEY,
+        "Authorization": `Bearer ${SUPABASE_ANON_KEY}`,
+        "Content-Type": "application/json"
+      },
+      body: JSON.stringify(payload)
     });
     return risposta.json();
   }
 
   // ==========================================================
-  // GATE PASSWORD — la verifica vera è lato server (vedi Code.gs); questo
-  // è solo lo schermo che decide se mostrare il modulo. L'hash calcolato
-  // qui viene tenuto in memoria e riusato al salvataggio, senza richiederlo
-  // una seconda volta.
+  // GATE PASSWORD — la verifica vera è lato server (vedi
+  // verifica_password in prepara_database.sql); questo è solo lo
+  // schermo che decide se mostrare il modulo.
   // ==========================================================
 
   // Eseguita al caricamento pagina, PRIMA di mostrare il gate manuale —
   // vedi provaSbloccoAutomatico() più sotto per il perché la richiesta di
-  // verifica va comunque fatta (non ci si fida ciecamente dell'hash
-  // ricordato) invece di saltare dritti alla configurazione.
+  // verifica va comunque fatta (non ci si fida ciecamente della password
+  // ricordata) invece di saltare dritti alla configurazione.
   async function sblocca() {
     const password = document.getElementById("campo-password").value;
     const erroreEl = document.getElementById("errore-gate");
     erroreEl.classList.add("nascosto");
     if (!password) return;
 
-    const hash = await calcolaHash(password);
     let risultato;
     try {
-      risultato = await chiamaWebApp("verifica_password", {hash_password: hash});
+      risultato = await chiamaRpc("verifica_password", {password_tentativo: password});
     } catch (e) {
-      erroreEl.textContent = "Impossibile contattare la WebApp. Controlla WEBAPP_URL in cima a questo file.";
+      erroreEl.textContent = "Impossibile contattare Supabase. Controlla SUPABASE_URL in cima a questo file.";
       erroreEl.classList.remove("nascosto");
       return;
     }
 
-    if (risultato.valida) {
-      hashPasswordCorrente = hash;
-      salvaHashRicordato(hash);
+    if (risultato) {
+      passwordCorrente = password;
+      salvaPasswordRicordata(password);
       document.getElementById("schermata-password").classList.add("nascosto");
       document.getElementById("schermata-config").classList.remove("nascosto");
       caricaConfigurazioneAttuale();
@@ -633,25 +641,25 @@
     }
   }
 
-  // Prova a sbloccare da sola con l'hash ricordato su questo device,
+  // Prova a sbloccare da sola con la password ricordata su questo device,
   // PRIMA di mostrare il gate manuale — chiamata al caricamento pagina
   // (vedi in fondo al file). Verifica comunque col server invece di
-  // fidarsi ciecamente: l'hash ricordato potrebbe essere superato (es.
-  // password cambiata da config.html stesso, o da un altro device),
-  // scoprirlo solo al primo salvataggio fallito sarebbe più confuso che
-  // un controllo esplicito qui, un solo giro di rete in più al
-  // caricamento di questa pagina (che capita una volta per visita, non
-  // ripetutamente come le azioni di index.html).
+  // fidarsi ciecamente: la password ricordata potrebbe essere superata
+  // (es. cambiata da config.html stesso, o da un altro device), scoprirlo
+  // solo al primo salvataggio fallito sarebbe più confuso che un
+  // controllo esplicito qui, un solo giro di rete in più al caricamento
+  // di questa pagina (che capita una volta per visita, non ripetutamente
+  // come le azioni di index.html).
   async function provaSbloccoAutomatico() {
-    const hashRicordato = leggiHashRicordato();
-    if (!hashRicordato) {
+    const passwordRicordata = leggiPasswordRicordata();
+    if (!passwordRicordata) {
       mostraGateManuale();
       return;
     }
     try {
-      const risultato = await chiamaWebApp("verifica_password", {hash_password: hashRicordato});
-      if (risultato.valida) {
-        hashPasswordCorrente = hashRicordato;
+      const risultato = await chiamaRpc("verifica_password", {password_tentativo: passwordRicordata});
+      if (risultato) {
+        passwordCorrente = passwordRicordata;
         document.getElementById("stato-verifica-automatica").classList.add("nascosto");
         document.getElementById("schermata-config").classList.remove("nascosto");
         caricaConfigurazioneAttuale();
@@ -659,15 +667,16 @@
       }
       // Rifiutata esplicitamente (password cambiata altrove) — non ha
       // più senso tenerla in memoria per i prossimi caricamenti.
-      cancellaHashRicordato();
+      cancellaPasswordRicordata();
     } catch (e) {
-      // Rete irraggiungibile: non è detto che l'hash sia sbagliato, solo
-      // che non si è potuto controllare — lo lascio intatto per il
-      // prossimo tentativo invece di costringere a reinserire la
-      // password per un problema che potrebbe risolversi da solo.
+      // Rete irraggiungibile: non è detto che la password sia sbagliata,
+      // solo che non si è potuto controllare — la lascio intatta per il
+      // prossimo tentativo invece di costringere a reinserirla per un
+      // problema che potrebbe risolversi da solo.
     }
     mostraGateManuale();
   }
+
 
   function mostraGateManuale() {
     document.getElementById("stato-verifica-automatica").classList.add("nascosto");
@@ -773,14 +782,22 @@
   }
 
   // ==========================================================
-  // CARICAMENTO CONFIGURAZIONE ATTUALE (lettura libera, nessuna password)
+  // CARICAMENTO CONFIGURAZIONE ATTUALE (lettura libera, nessuna password
+  // — stessa apertura di prima: la tabella "config" non ha RLS attiva
+  // apposta, vedi prepara_database.sql. Il gate qui sopra resta comunque
+  // un passaggio UX voluto, non una vera barriera di sicurezza — stesso
+  // principio di sempre, solo il meccanismo sotto è cambiato).
   // ==========================================================
   async function caricaConfigurazioneAttuale() {
     const statoEl = document.getElementById("stato-caricamento-config");
     popolaListaTipologia();
     try {
-      const risposta = await fetch(`${WEBAPP_URL}?action=get_config`);
-      const config = await risposta.json();
+      const risposta = await fetch(`${SUPABASE_URL}/rest/v1/config?select=parametro,valore`, {
+        headers: {"apikey": SUPABASE_ANON_KEY, "Authorization": `Bearer ${SUPABASE_ANON_KEY}`}
+      });
+      const righe = await risposta.json();
+      const config = {};
+      righe.forEach(r => { if (r.parametro) config[r.parametro] = r.valore; });
 
       // "0" è la sentinella di nessun minimo (già supportata da app.py
       // ancora prima di questa modifica — vedi il commento accanto a
@@ -858,7 +875,7 @@
       aggiornaStatoConteggiaNonAnalizzate();
       aggiornaStatoTuttaItalia();
     } catch (e) {
-      statoEl.textContent = "Impossibile leggere la configurazione attuale. Controlla WEBAPP_URL in cima a questo file.";
+      statoEl.textContent = "Impossibile leggere la configurazione attuale. Controlla SUPABASE_URL in cima a questo file.";
     }
   }
 
@@ -1052,7 +1069,7 @@
     messaggioEl.className = "messaggio-attesa";
 
     try {
-      const risultato = await chiamaWebApp("set_config", {hash_password: hashPasswordCorrente, config: nuovaConfig});
+      const risultato = await chiamaRpc("imposta_configurazione", {password_tentativo: passwordCorrente, config_json: nuovaConfig});
       if (risultato.result === "success") {
         messaggioEl.textContent = "Salvato — verrà applicato dal prossimo giro dello scanner.";
         messaggioEl.className = "messaggio-ok";
@@ -1073,6 +1090,32 @@
   // fa nulla — protegge da un avvio per errore senza un popup invadente.
   let confermaAvvioInCorso = false;
   let timeoutConfermaAvvio = null;
+
+  // ==========================================================
+  // PONTE VERSO IL VECCHIO Code.gs — SOLO per avviaScanner() qui sotto.
+  // Questa è l'unica azione che non tocca mai il database (chiama
+  // l'API di GitHub per lanciare il workflow, niente di più): tenerla
+  // sul vecchio sistema evita di dover imparare/distribuire una Supabase
+  // Edge Function solo per questo, e il problema di affidabilità che ha
+  // motivato l'intera migrazione (scritture lente/senza lock su Sheets)
+  // qui non si applica per niente — questa azione non scrive mai sul
+  // foglio. Assumo che tu abbia ancora QUESTO STESSO Code.gs distribuito
+  // (era l'URL nel tuo file originale) — se l'hai nel frattempo tolto,
+  // dimmelo e troviamo un'alternativa.
+  //
+  // Il vecchio Code.gs si aspetta ancora l'hash SHA-256 di sempre (con
+  // SALE_PASSWORD_LEGACY), non la password in chiaro del nuovo sistema —
+  // calcolaHashLegacy() esiste SOLO per questo ponte, non fa parte del
+  // nuovo schema di autenticazione (che è tutto in chiaro, vedi sopra).
+  // ==========================================================
+  const LEGACY_WEBAPP_URL_AVVIA_SCANNER = "https://script.google.com/macros/s/AKfycbyVS9aTh7jx7fjCIaI6OziW8wwDr5Yj8QB9W5QRP5HHGJP7H-3NelKg35fmQhQ5s0yD/exec";
+  const SALE_PASSWORD_LEGACY = "aste-ct-8f3k2-sale"; // deve combaciare con SALE_PASSWORD in Code.gs
+
+  async function calcolaHashLegacy(testo) {
+    const dati = new TextEncoder().encode(SALE_PASSWORD_LEGACY + testo);
+    const bufferHash = await crypto.subtle.digest("SHA-256", dati);
+    return Array.from(new Uint8Array(bufferHash)).map(b => b.toString(16).padStart(2, "0")).join("");
+  }
 
   async function avviaScanner() {
     const bottone = document.getElementById("bottone-avvia-scanner");
@@ -1096,7 +1139,12 @@
     messaggioEl.className = "messaggio-attesa";
 
     try {
-      const risultato = await chiamaWebApp("avvia_scanner", {hash_password: hashPasswordCorrente});
+      const hashLegacy = await calcolaHashLegacy(passwordCorrente);
+      const rispostaLegacy = await fetch(LEGACY_WEBAPP_URL_AVVIA_SCANNER, {
+        method: "POST",
+        body: JSON.stringify({azione: "avvia_scanner", hash_password: hashLegacy})
+      });
+      const risultato = await rispostaLegacy.json();
       if (risultato.result === "success") {
         messaggioEl.innerHTML = escapeHtml(risultato.message || "Scanner avviato.")
           + (risultato.url ? ` <a href="${escapeHtml(risultato.url)}" target="_blank" rel="noopener">Apri esecuzione</a>` : "");
@@ -1141,9 +1189,9 @@
     messaggioEl.className = "messaggio-attesa";
 
     try {
-      const risultato = await chiamaWebApp("elimina_aste_scadute", {hash_password: hashPasswordCorrente});
+      const risultato = await chiamaRpc("elimina_aste_scadute", {password_tentativo: passwordCorrente});
       if (risultato.result === "success") {
-        messaggioEl.textContent = `Eliminate ${risultato.righe_eliminate} aste scadute dal foglio.`;
+        messaggioEl.textContent = `Eliminate ${risultato.righe_eliminate} aste scadute dal database.`;
         messaggioEl.className = "messaggio-ok";
       } else {
         messaggioEl.textContent = risultato.message || "Errore sconosciuto durante l'eliminazione.";
@@ -1155,14 +1203,22 @@
     }
   }
 
-  // Chiede la password ATTUALE (verificata lato server in
-  // gestisciCambiaPassword prima di accettare quella nuova, stessa idea
-  // di riconfermarla prima di un cambio su un account Google o simili —
-  // protegge da un cambio non voluto se qualcuno trova questa pagina già
-  // sbloccata, es. un tab dimenticato aperto) più la nuova, due volte per
-  // sicurezza contro un errore di battitura. Aggiorna sia hashPasswordCorrente
-  // sia l'hash ricordato in locale (vedi salvaHashRicordato): da questo
-  // momento entrambi riflettono la password nuova, non serve rifare login.
+  // Chiede la password ATTUALE (verificata lato server in cambia_password
+  // prima di accettare quella nuova, stessa idea di riconfermarla prima
+  // di un cambio su un account Google o simili — protegge da un cambio
+  // non voluto se qualcuno trova questa pagina già sbloccata, es. un tab
+  // dimenticato aperto) più la nuova, due volte per sicurezza contro un
+  // errore di battitura. Aggiorna sia passwordCorrente sia la password
+  // ricordata in locale (vedi salvaPasswordRicordata): da questo momento
+  // entrambe riflettono la password nuova, non serve rifare login.
+  //
+  // NOTA sul cambio password e il ponte legacy: dopo un cambio qui,
+  // avviaScanner() sopra calcolerà l'hash legacy dalla NUOVA password —
+  // se il vecchio Code.gs ha ancora la VECCHIA password impostata,
+  // "Avvia scanner" smetterebbe di funzionare finché non aggiorni anche
+  // quella (Code.gs -> impostaPasswordConfig, vedi il file), oppure
+  // finché non elimini il ponte legacy una volta deciso come gestire
+  // avvia_scanner in modo definitivo.
   async function cambiaPassword() {
     const messaggioEl = document.getElementById("messaggio-cambio-password");
     const attuale = document.getElementById("campo-password-attuale").value;
@@ -1188,14 +1244,11 @@
     messaggioEl.textContent = "Cambio in corso…";
     messaggioEl.className = "messaggio-attesa";
 
-    const hashAttuale = await calcolaHash(attuale);
-    const hashNuova = await calcolaHash(nuova);
-
     try {
-      const risultato = await chiamaWebApp("cambia_password", {hash_password: hashAttuale, hash_password_nuova: hashNuova});
+      const risultato = await chiamaRpc("cambia_password", {password_attuale: attuale, password_nuova: nuova});
       if (risultato.result === "success") {
-        hashPasswordCorrente = hashNuova;
-        salvaHashRicordato(hashNuova);
+        passwordCorrente = nuova;
+        salvaPasswordRicordata(nuova);
         document.getElementById("campo-password-attuale").value = "";
         document.getElementById("campo-password-nuova").value = "";
         document.getElementById("campo-password-conferma").value = "";
