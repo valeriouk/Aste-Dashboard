@@ -1394,7 +1394,6 @@
             Tipo <span class="freccia-tipologia">▾</span>
           </button>
         </div>
-        <div class="menu-tipologia nascosto" id="menu-tipologia"></div>
       </div>
       <div class="gruppo-pillole" id="gruppo-occupazione">
         <button type="button" class="pillola" data-stato="libero" onclick="attivaFiltroOccupazione('libero')">Libero</button>
@@ -1422,11 +1421,28 @@
             <span id="etichetta-ordinamento-corrente">Punteggio</span> <span class="freccia-direzione" id="freccia-direzione-ordinamento">↓</span>
           </button>
         </div>
-        <div class="menu-tipologia nascosto" id="menu-ordinamento"></div>
       </div>
     </div>
   </div>
   <div class="sfondo-foglio-filtri nascosto" id="sfondo-foglio-filtri" onclick="chiudiFoglioFiltri()"></div>
+
+  <!-- I due pannelli a comparsa (Tipo, Ordina per) vivono qui, FUORI da
+       .controlli/.controlli-estesi apposta — non solo dentro
+       .contenitore-filtro-tipologia come prima. Il foglio filtri mobile
+       (.controlli-estesi) anima l'apertura con un transform:
+       translateY(...), e un transform su un antenato cambia il punto di
+       riferimento di un figlio position:fixed: non è più la finestra,
+       ma l'antenato trasformato stesso — motivo per cui, dopo il primo
+       tentativo di correzione (solo position:fixed, senza spostare
+       questi due nel DOM), i due pannelli continuavano a posizionarsi
+       male SOLO da mobile con il foglio filtri aperto, e SOLO lì (da
+       desktop .controlli-estesi non è mai un box vero — display:contents
+       — quindi lì non c'è mai stato un transform di mezzo). Tenendoli
+       qui, mai discendenti di un antenato con un transform, restano
+       sempre relativi alla finestra per davvero, sia da mobile sia da
+       desktop — risolve la causa, non il sintomo. -->
+  <div class="menu-tipologia nascosto" id="menu-tipologia"></div>
+  <div class="menu-tipologia nascosto" id="menu-ordinamento"></div>
 
   <div id="stato-caricamento" class="stato-pagina">
     <h2>Apertura del registro…</h2>
@@ -2858,16 +2874,24 @@
 
   // Un solo ascoltatore "clic fuori" per ENTRAMBI i menu a comparsa
   // (tipologia e ordinamento) — ciascuno si chiude se il clic è avvenuto
-  // fuori dal SUO contenitore specifico, indipendentemente dall'altro.
+  // fuori dal SUO pulsante E fuori dal SUO pannello, indipendentemente
+  // dall'altro. Controlla pulsante E pannello separatamente, non più un
+  // contenitore condiviso: da quando il pannello vive fuori da
+  // .contenitore-filtro-tipologia (vedi il commento HTML su
+  // #menu-tipologia per il perché), pulsante e pannello non sono più
+  // annidati nello stesso contenitore — un clic su una voce DENTRO il
+  // pannello non sarebbe più stato "dentro" nulla secondo il vecchio
+  // controllo, chiudendo il menu nell'istante stesso in cui si prova a
+  // usarlo.
   document.addEventListener("click", evento => {
     [
-      {contenitoreSel: "#bottone-filtro-tipologia", menuId: "menu-tipologia", bottoneId: "bottone-filtro-tipologia"},
-      {contenitoreSel: "#bottone-ordinamento", menuId: "menu-ordinamento", bottoneId: "bottone-ordinamento"},
-    ].forEach(({contenitoreSel, menuId, bottoneId}) => {
+      {menuId: "menu-tipologia", bottoneId: "bottone-filtro-tipologia"},
+      {menuId: "menu-ordinamento", bottoneId: "bottone-ordinamento"},
+    ].forEach(({menuId, bottoneId}) => {
       const bottone = document.getElementById(bottoneId);
-      const contenitore = bottone ? bottone.closest(".contenitore-filtro-tipologia") : null;
       const menu = document.getElementById(menuId);
-      if (menu && !menu.classList.contains("nascosto") && contenitore && !contenitore.contains(evento.target)) {
+      if (menu && !menu.classList.contains("nascosto") && bottone &&
+          !bottone.contains(evento.target) && !menu.contains(evento.target)) {
         menu.classList.add("nascosto");
         bottone.setAttribute("aria-expanded", "false");
       }
