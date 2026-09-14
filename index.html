@@ -1366,7 +1366,7 @@
 
   <div class="controlli">
     <div class="controlli-riga-compatta">
-      <input type="text" id="ricerca" placeholder="Cerca per comune...">
+      <input type="text" id="ricerca" placeholder="Cerca comune, testo dell'analisi...">
       <button type="button" id="bottone-apri-filtri" class="bottone-apri-filtri" onclick="apriFoglioFiltri()">
         Filtri<span id="badge-filtri-attivi" class="badge-filtri nascosto">0</span>
       </button>
@@ -3187,7 +3187,23 @@
     const punteggioMassimo = Number(document.getElementById("punteggio-massimo").value);
 
     let filtrate = ASTE.filter(a => {
-      const passaRicerca = !ricerca || a.comune.toLowerCase().includes(ricerca);
+      // Estesa a più campi (non solo comune) apposta: comune resta il
+      // primo controllato, così un indirizzo continua a funzionare
+      // esattamente come prima — ma ora la stessa casella trova anche
+      // un termine che compare SOLO nell'analisi AI (es. "non
+      // cooperativo" dentro la sintesi della perizia) o in una TUA nota
+      // su un preferito/scarto (notaPreferito — diversa da "note", che
+      // è invece il campo di rischi scritto dall'AI durante la
+      // scansione: due cose distinte, entrambe cercate qui), senza
+      // bisogno di un secondo campo che nella barra dei filtri non c'è
+      // spazio per aggiungere. Non è ricerca semantica vera (nessun
+      // concetto "simile", solo il testo letterale) — per quello
+      // servirebbe un'infrastruttura diversa (embedding), volutamente
+      // non questa.
+      const passaRicerca = !ricerca || [
+        a.comune, a.descrizione, a.note, a.notaPreferito, a.tipologia,
+        a.statoOccupazione, a.formalitaPregiudizievoli, a.abusiEdilizi
+      ].some(campo => campo && campo.toLowerCase().includes(ricerca));
       const passaTipologia = categorieTipologiaAttive.size === 0
         || categorieDiAsta(a.tipologia).some(c => categorieTipologiaAttive.has(c));
       const passaOccupazione = !filtroOccupazioneAttivo || classificaOccupazione(a.statoOccupazione) === filtroOccupazioneAttivo;
