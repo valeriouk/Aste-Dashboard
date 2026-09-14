@@ -405,6 +405,9 @@
           Cerca su tutta Italia (ignora punto e raggio qui sotto)
         </label>
         <p class="nota-campo nota-tutta-italia">L'analisi in questa modalità è asincrona: le aste trovate vengono inviate a Gemini in un unico batch invece che una alla volta, per sfruttare lo sconto sui costi — può volerci da pochi minuti fino a 24 ore. Riceverai una notifica Telegram non appena l'invio è completato, e una notifica separata per ogni asta quando la sua analisi sarà pronta; il foglio non si aggiorna per queste aste nel frattempo.</p>
+        <button type="button" class="bottone-secondario" id="bottone-verifica-batch" onclick="avviaVerificaBatch()">🔄 Controlla batch ora</button>
+        <p class="nota-campo">Il controllo dei batch pronti gira comunque da solo ogni tanto (verifica-batch.yml), ma lo schedule di GitHub Actions non è sempre puntuale — questo pulsante lo forza subito, senza aspettare.</p>
+        <p id="messaggio-verifica-batch"></p>
         <div id="blocco-area-locale">
           <div class="riga-ricerca-indirizzo">
             <input type="text" id="campo-indirizzo" placeholder="Cerca un indirizzo o una città..." onkeydown="if(event.key==='Enter') cercaIndirizzo()">
@@ -1167,6 +1170,58 @@
       const risultato = await rispostaLegacy.json();
       if (risultato.result === "success") {
         messaggioEl.innerHTML = escapeHtml(risultato.message || "Scanner avviato.")
+          + (risultato.url ? ` <a href="${escapeHtml(risultato.url)}" target="_blank" rel="noopener">Apri esecuzione</a>` : "");
+        messaggioEl.className = "messaggio-ok";
+      } else {
+        messaggioEl.innerHTML = escapeHtml(risultato.message || "Errore sconosciuto durante l'avvio.")
+          + (risultato.url ? ` <a href="${escapeHtml(risultato.url)}" target="_blank" rel="noopener">Apri esecuzione</a>` : "");
+        messaggioEl.className = "messaggio-errore";
+      }
+    } catch (e) {
+      messaggioEl.textContent = "Richiesta non riuscita. Controlla la connessione e riprova.";
+      messaggioEl.className = "messaggio-errore";
+    }
+  }
+
+  // Stesso schema di avviaScanner() sopra — doppio tocco di conferma,
+  // stesso ponte legacy verso Code.gs, ma verso un workflow diverso
+  // (verifica-batch.yml invece di scheduler.yml). Variabili di conferma
+  // SEPARATE (confermaVerificaBatchInCorso, non confermaAvvioInCorso):
+  // i due pulsanti restano indipendenti, confermare l'uno non deve
+  // sfiorare lo stato dell'altro.
+  let confermaVerificaBatchInCorso = false;
+  let timeoutConfermaVerificaBatch = null;
+
+  async function avviaVerificaBatch() {
+    const bottone = document.getElementById("bottone-verifica-batch");
+    const messaggioEl = document.getElementById("messaggio-verifica-batch");
+
+    if (!confermaVerificaBatchInCorso) {
+      confermaVerificaBatchInCorso = true;
+      bottone.textContent = "Confermi il controllo?";
+      timeoutConfermaVerificaBatch = setTimeout(() => {
+        confermaVerificaBatchInCorso = false;
+        bottone.textContent = "🔄 Controlla batch ora";
+      }, 4000);
+      return;
+    }
+
+    clearTimeout(timeoutConfermaVerificaBatch);
+    confermaVerificaBatchInCorso = false;
+    bottone.textContent = "🔄 Controlla batch ora";
+
+    messaggioEl.textContent = "Avvio in corso…";
+    messaggioEl.className = "messaggio-attesa";
+
+    try {
+      const hashLegacy = await calcolaHashLegacy(passwordCorrente);
+      const rispostaLegacy = await fetch(LEGACY_WEBAPP_URL_AVVIA_SCANNER, {
+        method: "POST",
+        body: JSON.stringify({azione: "avvia_verifica_batch", hash_password: hashLegacy})
+      });
+      const risultato = await rispostaLegacy.json();
+      if (risultato.result === "success") {
+        messaggioEl.innerHTML = escapeHtml(risultato.message || "Controllo avviato.")
           + (risultato.url ? ` <a href="${escapeHtml(risultato.url)}" target="_blank" rel="noopener">Apri esecuzione</a>` : "");
         messaggioEl.className = "messaggio-ok";
       } else {
