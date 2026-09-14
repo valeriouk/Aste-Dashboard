@@ -2762,23 +2762,38 @@
     "ABITAZIONE_TIPO_ECO": "Abitazioni",
     "ABITAZIONE_TIPO_POP": "Abitazioni",
     "ABITAZIONE_TIPO_UPOP": "Abitazioni",
+    "ABITAZIONE_TIPO_RUR": "Abitazioni",
     "ABITAZIONE_IN_VILLINI": "Abitazioni",
     "APPARTAMENTO": "Abitazioni",
     "GARAGE_AUTORIMESSA": "Garage e posti auto",
     "POSTO_AUTO": "Garage e posti auto",
+    "TETTOIE_CHIUSE_APERTE": "Garage e posti auto",
     "NEGOZIO": "Negozi e uffici",
     "NEGOZI_BOTTEGHE": "Negozi e uffici",
     "UFFICIO": "Negozi e uffici",
+    "UFFICI_E_STUDI": "Negozi e uffici",
     "LABORATORI_ARTI": "Negozi e uffici",
+    "LABORATORIO_ARTIGIANO": "Negozi e uffici",
+    "ISTITUTO_CREDITO_CAMBIO": "Negozi e uffici",
     "TERRENO": "Terreni",
     "DEPOSITO": "Depositi e magazzini",
+    "MAGAZZINO": "Depositi e magazzini",
     "MAGAZZINI_E_DEPOSITO": "Depositi e magazzini",
+    "CANTINA": "Depositi e magazzini",
     "STALLE_SCUDERIE_RIMESSE": "Depositi e magazzini",
     "FABBRICATI_COSTRUITI_PER_ESIGENZE_IND": "Depositi e magazzini",
     "FABBRICATO": "Fabbricati e complessi",
     "FABBRICATO_IN_COSTR": "Fabbricati e complessi",
-    "COMPENDIO_PIGNORATO": "Fabbricati e complessi"
+    "FABBRICATI_COMMERCIALI": "Fabbricati e complessi",
+    "COMPENDIO_PIGNORATO": "Fabbricati e complessi",
+    "LASTRICO_SOLARE": "Fabbricati e complessi"
   };
+
+  // Codici visti nei dati reali ma troppo generici o non immobiliari per
+  // una macrocategoria propria — restano in "Altro" deliberatamente, non
+  // per una svista: PORZIONE_DI_IMMOBILE non specifica di che immobile si
+  // tratti, ARREDI_UFFICIO_E_VARIE sono beni mobili aggiunti al lotto, non
+  // un tipo di immobile.
 
   // Un annuncio può appartenere a più di una macro-categoria insieme (es.
   // "abitazione + garage") — così filtrando per Garage non sparisce
@@ -2883,11 +2898,26 @@
   // pannello non sarebbe più stato "dentro" nulla secondo il vecchio
   // controllo, chiudendo il menu nell'istante stesso in cui si prova a
   // usarlo.
+  // Elenco condiviso tra il gestore "clic fuori" e quello "scroll" qui
+  // sotto — un solo posto che sa quali sono i due menu a comparsa.
+  const MENU_A_COMPARSA = [
+    {menuId: "menu-tipologia", bottoneId: "bottone-filtro-tipologia"},
+    {menuId: "menu-ordinamento", bottoneId: "bottone-ordinamento"},
+  ];
+
+  function chiudiMenuAComparsaAperti() {
+    MENU_A_COMPARSA.forEach(({menuId, bottoneId}) => {
+      const bottone = document.getElementById(bottoneId);
+      const menu = document.getElementById(menuId);
+      if (menu && !menu.classList.contains("nascosto")) {
+        menu.classList.add("nascosto");
+        if (bottone) bottone.setAttribute("aria-expanded", "false");
+      }
+    });
+  }
+
   document.addEventListener("click", evento => {
-    [
-      {menuId: "menu-tipologia", bottoneId: "bottone-filtro-tipologia"},
-      {menuId: "menu-ordinamento", bottoneId: "bottone-ordinamento"},
-    ].forEach(({menuId, bottoneId}) => {
+    MENU_A_COMPARSA.forEach(({menuId, bottoneId}) => {
       const bottone = document.getElementById(bottoneId);
       const menu = document.getElementById(menuId);
       if (menu && !menu.classList.contains("nascosto") && bottone &&
@@ -2897,6 +2927,21 @@
       }
     });
   });
+
+  // Chiude i menu a comparsa allo scroll — sia quello della pagina sia
+  // quello interno al foglio filtri mobile (che ha un suo overflow-y
+  // proprio, un scroll lì non fa scorrere la pagina). Necessario perché
+  // i pannelli usano position:fixed (vedi il commento HTML su
+  // #menu-tipologia per il perché): restano ANCORATI ALLA FINESTRA per
+  // costruzione, quindi durante uno scroll il pulsante che li ha aperti
+  // si allontana mentre il pannello resta fermo — comportamento
+  // corretto per come funziona position:fixed, ma visivamente sembra un
+  // pannello "staccato" dal proprio pulsante (segnalato in chat).
+  // Chiuderlo allo scroll, invece di ricalcolarne la posizione a ogni
+  // fotogramma per inseguire il pulsante, è la soluzione standard per
+  // questo tipo di popup ancorato — più semplice ed economica.
+  window.addEventListener("scroll", chiudiMenuAComparsaAperti, {passive: true});
+  document.getElementById("controlli-estesi").addEventListener("scroll", chiudiMenuAComparsaAperti, {passive: true});
 
   function aggiornaFiltroTipologia() {
     const spuntate = document.querySelectorAll('#menu-tipologia input[type="checkbox"]:checked');
