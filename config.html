@@ -521,6 +521,23 @@
         <p id="messaggio-cambio-password"></p>
       </section>
 
+      <section class="blocco-config">
+        <h2>Password di lettura per index.html</h2>
+        <p class="nota-campo">Password SEPARATA da quella sopra — se attiva, serve per aprire il registro (index.html) stesso, non solo per stella/scarto/nota. Utile per evitare che chi ha solo il link possa vedere le tue card e le tue note. Facoltativa: se disattivata, index.html resta apribile da chiunque abbia il link, come oggi.</p>
+        <div class="campo-form">
+          <label class="etichetta-checkbox">
+            <input type="checkbox" id="campo-attiva-password-lettura" onchange="alternaCampoPasswordLettura()">
+            Richiedi una password per aprire index.html
+          </label>
+        </div>
+        <div class="campo-form" id="blocco-nuova-password-lettura">
+          <label for="campo-nuova-password-lettura">Nuova password di lettura</label>
+          <input type="password" id="campo-nuova-password-lettura" autocomplete="new-password" placeholder="Lascia vuoto per non modificarla">
+        </div>
+        <button type="button" class="bottone-secondario" onclick="salvaPasswordLettura()">Salva</button>
+        <p id="messaggio-password-lettura"></p>
+      </section>
+
       <div class="riga-salvataggio">
         <button type="button" class="bottone-salva" onclick="salvaConfigurazione()">Salva le modifiche</button>
         <button type="button" class="bottone-avvia" id="bottone-avvia-scanner" onclick="avviaScanner()">▶ Avvia scanner ora</button>
@@ -635,6 +652,7 @@
       document.getElementById("schermata-password").classList.add("nascosto");
       document.getElementById("schermata-config").classList.remove("nascosto");
       caricaConfigurazioneAttuale();
+      caricaStatoPasswordLettura();
     } else {
       erroreEl.textContent = "Password errata.";
       erroreEl.classList.remove("nascosto");
@@ -663,6 +681,7 @@
         document.getElementById("stato-verifica-automatica").classList.add("nascosto");
         document.getElementById("schermata-config").classList.remove("nascosto");
         caricaConfigurazioneAttuale();
+        caricaStatoPasswordLettura();
         return;
       }
       // Rifiutata esplicitamente (password cambiata altrove) — non ha
@@ -1219,6 +1238,97 @@
   // quella (Code.gs -> impostaPasswordConfig, vedi il file), oppure
   // finché non elimini il ponte legacy una volta deciso come gestire
   // avvia_scanner in modo definitivo.
+  // ==========================================================
+  // PASSWORD DI LETTURA per index.html — separata da passwordCorrente,
+  // gestita comunque DA QUI usando passwordCorrente come lasciapassare
+  // (stesso principio di elimina_aste_scadute/imposta_configurazione:
+  // azioni di amministrazione, protette dalla password che ha già
+  // sbloccato questa pagina, non da se stesse). Il valore attuale non
+  // viene MAI letto né mostrato — solo se è attiva o no (vedi
+  // stato_password_lettura sul database): non c'è motivo per farlo
+  // viaggiare fino al browser una volta impostato.
+  // ==========================================================
+  function alternaCampoPasswordLettura() {
+    const attiva = document.getElementById("campo-attiva-password-lettura").checked;
+    document.getElementById("blocco-nuova-password-lettura").classList.toggle("sezione-disattivata", !attiva);
+    document.getElementById("campo-nuova-password-lettura").disabled = !attiva;
+  }
+
+  // Tiene traccia di cosa c'era GIÀ prima di qualunque modifica in questa
+  // visita — serve a salvaPasswordLettura() qui sotto per distinguere
+  // "ho lasciato il campo vuoto perché non voglio cambiarla, è già
+  // attiva" da "ho spuntato la casella ma non ho scritto nulla, manca
+  // qualcosa" — due situazioni che altrimenti sembrerebbero identiche.
+  let passwordLetturaEraAttiva = false;
+
+  async function caricaStatoPasswordLettura() {
+    try {
+      const risultato = await chiamaRpc("stato_password_lettura", {password_tentativo: passwordCorrente});
+      if (risultato.result === "success") {
+        passwordLetturaEraAttiva = risultato.attiva;
+        document.getElementById("campo-attiva-password-lettura").checked = risultato.attiva;
+        alternaCampoPasswordLettura();
+      }
+    } catch (e) {
+      // Non critico: il resto della pagina (filtri di ricerca) è già
+      // caricato e usabile — questa sola sezione resta con lo stato
+      // predefinito (casella non spuntata) finché non si ricarica.
+    }
+  }
+
+  async function salvaPasswordLettura() {
+    const messaggioEl = document.getElementById("messaggio-password-lettura");
+    const attivaOra = document.getElementById("campo-attiva-password-lettura").checked;
+    const nuovoValore = document.getElementById("campo-nuova-password-lettura").value;
+
+    let valoreDaInviare;
+    if (!attivaOra) {
+      // Casella tolta: disattiva SEMPRE, qualunque cosa ci sia nel campo
+      // — spegnerla non ha bisogno di conoscere né confermare nessun
+      // valore.
+      valoreDaInviare = "";
+    } else if (nuovoValore) {
+      // Casella spuntata E un valore scritto: la imposta (che fosse già
+      // attiva con un valore diverso, o che si stia attivando ora per la
+      // prima volta, il risultato è lo stesso — sostituisce quella
+      // eventualmente esistente).
+      valoreDaInviare = nuovoValore;
+    } else if (passwordLetturaEraAttiva) {
+      // Casella spuntata, campo lasciato vuoto, MA era già attiva prima
+      // di aprire questa pagina: nessuna modifica da fare, resta quella
+      // di sempre — non è un errore, è la scelta di "lasciala com'è".
+      messaggioEl.textContent = "Nessuna modifica: la password di lettura era già attiva ed è rimasta quella di prima.";
+      messaggioEl.className = "messaggio-ok";
+      return;
+    } else {
+      // Casella spuntata per la prima volta, ma senza scrivere nessuna
+      // password con cui attivarla: qui sì che manca un'informazione
+      // necessaria, a differenza del caso sopra.
+      messaggioEl.textContent = "Scrivi una password nel campo per attivarla, oppure lascia la casella non spuntata.";
+      messaggioEl.className = "messaggio-errore";
+      return;
+    }
+
+    messaggioEl.textContent = "Salvataggio in corso…";
+    messaggioEl.className = "messaggio-attesa";
+
+    try {
+      const risultato = await chiamaRpc("imposta_password_lettura", {password_tentativo: passwordCorrente, nuova_password_lettura: valoreDaInviare});
+      if (risultato.result === "success") {
+        passwordLetturaEraAttiva = attivaOra;
+        document.getElementById("campo-nuova-password-lettura").value = "";
+        messaggioEl.textContent = attivaOra ? "Password di lettura attivata/aggiornata." : "Password di lettura disattivata — index.html torna apribile da chiunque abbia il link.";
+        messaggioEl.className = "messaggio-ok";
+      } else {
+        messaggioEl.textContent = risultato.message || "Errore sconosciuto durante il salvataggio.";
+        messaggioEl.className = "messaggio-errore";
+      }
+    } catch (e) {
+      messaggioEl.textContent = "Richiesta non riuscita. Controlla la connessione e riprova.";
+      messaggioEl.className = "messaggio-errore";
+    }
+  }
+
   async function cambiaPassword() {
     const messaggioEl = document.getElementById("messaggio-cambio-password");
     const attuale = document.getElementById("campo-password-attuale").value;
