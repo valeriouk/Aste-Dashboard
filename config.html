@@ -499,6 +499,7 @@
           <label>Aste scadute</label>
           <p class="nota-campo">Elimina dal foglio tutte le righe con data vendita già passata. Operazione irreversibile — lo storico di quelle aste va perso, quindi chiede conferma prima di procedere (stesso doppio tocco di "Avvia scanner ora").</p>
           <button type="button" class="bottone-elimina" id="bottone-elimina-scadute" onclick="eliminaAsteScadute()">🗑 Elimina aste scadute</button>
+          <p id="messaggio-elimina-scadute"></p>
         </div>
       </section>
 
@@ -1188,7 +1189,12 @@
 
   async function eliminaAsteScadute() {
     const bottone = document.getElementById("bottone-elimina-scadute");
-    const messaggioEl = document.getElementById("messaggio-salvataggio");
+    // Elemento dedicato, accanto al pulsante — prima puntava a
+    // messaggio-salvataggio, condiviso con "Salva le modifiche" molto
+    // più in basso nella pagina: il messaggio compariva per davvero, ma
+    // fuori dallo schermo, lasciando dubbi su se l'operazione fosse
+    // riuscita o no (segnalato in chat).
+    const messaggioEl = document.getElementById("messaggio-elimina-scadute");
 
     if (!confermaEliminazioneInCorso) {
       confermaEliminazioneInCorso = true;
