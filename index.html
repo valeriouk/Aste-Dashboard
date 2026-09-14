@@ -1486,16 +1486,23 @@
     </div>
   </div>
 
-  <!-- Gate di LETTURA — copre l'intera pagina finché non si inserisce la
+  <!-- Gate di LETTURA — copre l'intera pagina quando serve inserire la
        password di lettura (diversa da quella di scrittura sopra: quella
        protegge stella/scarto/nota, questa protegge la sola visione del
-       registro). Mostrato PRIMA di chiamare avvia(), vedi
-       provaSbloccoLetturaAutomatico() in fondo allo script — nessun
-       pulsante "Annulla": non è un'azione opzionale da poter rifiutare,
-       senza la password corretta non c'è pagina da vedere. z-index più
-       alto di qualunque altro overlay: deve restare sopra a tutto,
-       essendo la primissima cosa mostrata. -->
-  <div id="overlay-gate-lettura" class="overlay-password" style="z-index: 2500;">
+       registro). NASCOSTO di default apposta: mostrarlo subito e
+       nasconderlo poi via JS (come faceva prima) significa che chi apre
+       la pagina lo VEDE comunque per un istante mentre il controllo
+       "serve davvero?" (asincrono, un giro di rete) è ancora in corso —
+       un lampeggio fastidioso segnalato in chat, specialmente quando il
+       gate non serve affatto o quando la password è già ricordata. Con
+       "nascosto" di partenza, è provaSbloccoLetturaAutomatico() in fondo
+       allo script a doverlo esplicitamente MOSTRARE, ma solo nell'unico
+       ramo in cui scopre che serve davvero chiedere qualcosa all'utente
+       — mai nei rami che portano dritti a avvia(). Nessun pulsante
+       "Annulla": non è un'azione opzionale da poter rifiutare, senza la
+       password corretta non c'è pagina da vedere. z-index più alto di
+       qualunque altro overlay: deve restare sopra a tutto. -->
+  <div id="overlay-gate-lettura" class="overlay-password nascosto" style="z-index: 2500;">
     <div class="riquadro-password-inline">
       <h3>Registro protetto</h3>
       <p>Inserisci la password per aprire il registro.</p>
@@ -1629,11 +1636,13 @@
     // dovrebbe voler dire davvero. Se anche questo controllo fallisse
     // (rete irraggiungibile), meglio mostrare comunque il gate — fail
     // SAFE verso la richiesta di password, non verso l'apertura alla
-    // cieca senza sapere se ne serva una.
+    // cieca senza sapere se ne serva una. Il gate parte già nascosto
+    // (vedi il suo HTML) — qui non c'è mai bisogno di nasconderlo di
+    // nuovo, solo eventualmente di MOSTRARLO più sotto, nell'unico ramo
+    // dove risulta che serve davvero.
     try {
       const serve = await chiamaRpc("serve_password_lettura", {});
       if (!serve) {
-        document.getElementById("overlay-gate-lettura").classList.add("nascosto");
         avvia();
         return;
       }
@@ -1646,7 +1655,6 @@
       try {
         const valida = await chiamaRpc("verifica_password_lettura", {password_tentativo: ricordata});
         if (valida) {
-          document.getElementById("overlay-gate-lettura").classList.add("nascosto");
           avvia();
           return;
         }
@@ -1656,6 +1664,10 @@
         // si riprova da lì (stesso principio del resto della pagina).
       }
     }
+    // Solo qui, nell'unico punto della funzione dove risulta DAVVERO
+    // necessario chiedere qualcosa, il gate viene mostrato per la prima
+    // volta — mai in anticipo, mai per poi nasconderlo subito dopo.
+    document.getElementById("overlay-gate-lettura").classList.remove("nascosto");
     document.getElementById("campo-password-lettura").focus();
   }
 
