@@ -1622,6 +1622,25 @@
   // modale di scrittura non ha un modo per essere annullato: senza la
   // password giusta non c'è pagina da vedere.
   async function provaSbloccoLetturaAutomatico() {
+    // Primo controllo, PRIMA di chiedere qualunque cosa: se nessuna
+    // password di lettura è attiva (mai impostata, o disattivata da
+    // config.html), il gate salta interamente — niente prompt da
+    // superare con un valore qualunque, coerente con cosa "disattivata"
+    // dovrebbe voler dire davvero. Se anche questo controllo fallisse
+    // (rete irraggiungibile), meglio mostrare comunque il gate — fail
+    // SAFE verso la richiesta di password, non verso l'apertura alla
+    // cieca senza sapere se ne serva una.
+    try {
+      const serve = await chiamaRpc("serve_password_lettura", {});
+      if (!serve) {
+        document.getElementById("overlay-gate-lettura").classList.add("nascosto");
+        avvia();
+        return;
+      }
+    } catch (e) {
+      // prosegue mostrando il gate, vedi sopra
+    }
+
     const ricordata = leggiPasswordLetturaRicordata();
     if (ricordata) {
       try {
