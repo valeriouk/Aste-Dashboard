@@ -17,7 +17,6 @@
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,400..700&family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500;600&display=swap" rel="stylesheet">
-<script src="https://cdnjs.cloudflare.com/ajax/libs/PapaParse/5.4.1/papaparse.min.js"></script>
 <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/leaflet.min.css">
 <script src="https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/leaflet.js"></script>
 <style>
@@ -1422,17 +1421,17 @@
 
   <div id="stato-caricamento" class="stato-pagina">
     <h2>Apertura del registro…</h2>
-    <p>Lettura del foglio in corso.</p>
+    <p>Lettura del database in corso.</p>
   </div>
 
   <div id="stato-non-configurato" class="stato-pagina nascosto">
     <h2>Registro non collegato</h2>
-    <p>Apri il file <code>index.html</code> e incolla l'indirizzo CSV del tuo Google Sheet nella costante <code>CSV_URL</code>, in cima allo script.</p>
+    <p>Apri il file <code>index.html</code> e incolla l'indirizzo del tuo progetto Supabase nella costante <code>SUPABASE_URL</code>, in cima allo script.</p>
   </div>
 
   <div id="stato-errore" class="stato-pagina nascosto">
     <h2>Non riesco a leggere il registro</h2>
-    <p>Controlla che il foglio sia pubblicato sul web in formato CSV e che l'indirizzo in <code>CSV_URL</code> sia corretto.</p>
+    <p>Controlla che SUPABASE_URL e SUPABASE_ANON_KEY in cima al file siano corretti e che il progetto Supabase sia raggiungibile.</p>
     <p id="dettaglio-stato-errore" style="font-family: var(--font-mono); font-size: .78rem; color: var(--ink-faint); margin-top: 12px;"></p>
   </div>
 
@@ -1461,7 +1460,7 @@
     <p class="nota-mappa" id="nota-comuni-mancanti"></p>
   </div>
 
-  <footer>Aggiornato leggendo direttamente il Google Sheet · dati raccolti dal Portale delle Vendite Pubbliche</footer>
+  <footer>Aggiornato leggendo direttamente il database · dati raccolti dal Portale delle Vendite Pubbliche</footer>
 
   <!-- Modale password per Preferiti/Scarti/Note — compare solo alla prima
        azione di scrittura di una sessione, vedi richiediPasswordSeServe(). -->
@@ -1492,89 +1491,101 @@
 
 <script>
   // ==========================================================
-  // CONFIGURAZIONE — sostituisci con l'indirizzo del tuo foglio
-  // pubblicato in CSV (Google Sheet -> File -> Condividi ->
-  // Pubblica sul web -> scegli il foglio giusto -> formato CSV).
+  // CONFIGURAZIONE — incolla qui l'URL del tuo progetto Supabase e la
+  // relativa chiave "anon" (Project Settings -> API Keys nel pannello
+  // Supabase — la anon/publishable, MAI la service_role: quella è per
+  // il solo backend). Sostituisce sia CSV_URL sia CSV_URL_PREFERITI di
+  // prima: un'unica fonte, letta con due query invece di due fogli
+  // pubblicati separatamente — vedi avvia() più sotto.
   // ==========================================================
-  const CSV_URL = "https://docs.google.com/spreadsheets/d/e/2PACX-1vRhWMNfMFaIKJjJ1UYA7qYl7XnMkst04fr8LZj_c40OthHSyws8KuWHFJVfnRsEtOTahqFnDnDuCSVh/pub?gid=0&single=true&output=csv";
+  const SUPABASE_URL = "INCOLLA_QUI_URL_SUPABASE";
+  const SUPABASE_ANON_KEY = "INCOLLA_QUI_CHIAVE_ANON";
 
-  // URL del CSV pubblicato della scheda "Preferiti" (stella/scarto/nota) —
-  // scheda SEPARATA da quella principale, creata da Code.gs alla prima
-  // scrittura. Da compilare DOPO aver pubblicato quella scheda come CSV
-  // (Google Sheet -> File -> Condividi -> Pubblica sul web -> scegli la
-  // scheda "Preferiti" -> formato CSV), stesso identico procedimento già
-  // fatto per CSV_URL sopra. Finché resta vuota, la pagina funziona
-  // comunque normalmente — semplicemente nessuna asta risulta preferita o
-  // scartata finché questa non viene configurata.
-  const CSV_URL_PREFERITI = "https://docs.google.com/spreadsheets/d/e/2PACX-1vRhWMNfMFaIKJjJ1UYA7qYl7XnMkst04fr8LZj_c40OthHSyws8KuWHFJVfnRsEtOTahqFnDnDuCSVh/pub?gid=552285498&single=true&output=csv";
-
-  // Stesso identico principio di autenticazione già usato in config.html:
-  // l'hash calcolato qui viene verificato lato server (Code.gs), MAI una
-  // vera protezione lato client — vedi la conversazione sul perché una
-  // password qui ferma solo chi ci arriva per sbaglio, non chi guarda il
-  // codice sorgente. A differenza di config.html, però, qui NON blocca
-  // l'intera pagina: la lettura resta sempre aperta, la password viene
-  // chiesta solo alla PRIMA azione di scrittura (stella, scarto o nota) in
-  // questa sessione — vedi richiediPasswordSeServe più sotto.
-  const SALE_PASSWORD = "aste-ct-8f3k2-sale";
-  let hashPasswordCorrente = null;
+  // Non più un hash: le funzioni sul database (prepara_database.sql,
+  // Sezione 6) confrontano la password in chiaro — niente più
+  // crypto.subtle.digest lato browser. A differenza di config.html, qui
+  // NON blocca l'intera pagina: la lettura resta sempre aperta, la
+  // password viene chiesta solo alla PRIMA azione di scrittura (stella,
+  // scarto o nota) in questa sessione — vedi richiediPasswordSeServe più
+  // sotto. Stesso principio di sempre, MAI una vera protezione lato
+  // client — la password ferma solo chi ci arriva per sbaglio, non chi
+  // guarda il codice sorgente o chiama la funzione direttamente (per
+  // quello serve comunque conoscerla: la verifica reale è nella funzione
+  // stessa sul database).
+  let passwordCorrente = null;
 
   // ==========================================================
-  // PASSWORD RICORDATA SU QUESTO DEVICE — localStorage invece di un
-  // cookie vero: stesso risultato (resta impostata tra una visita e
-  // l'altra, senza scadenza), ma senza le complicazioni di dominio/path/
-  // scadenza di un cookie, e senza bisogno del server per leggerla. La
-  // STESSA chiave è usata anche in config.html: sono due file serviti
-  // dalla stessa origine, quindi condividono lo stesso localStorage —
-  // sbloccare da una pagina resta sbloccato anche sull'altra, senza
-  // bisogno di sincronizzarle esplicitamente tra loro.
-  // Quello che viene salvato è l'HASH, non la password in chiaro — ma è
-  // comunque, a tutti gli effetti, la credenziale stessa (chi legge
-  // l'hash può riusarlo per autenticarsi): un compromesso accettabile
-  // per uno strumento personale su un device proprio, non pensato per
-  // resistere a chi ha già accesso fisico al device stesso.
-  const CHIAVE_LOCALSTORAGE_HASH = "aste_hash_password_v1";
+  // PASSWORD RICORDATA SU QUESTO DEVICE — STESSA chiave localStorage di
+  // config.html (stessa origine, quindi stesso storage): sbloccare da una
+  // pagina resta sbloccato anche sull'altra. Chiave DIVERSA da quella
+  // usata ai tempi di Google Sheets (era "aste_hash_password_v1", conteneva
+  // un hash) apposta: un valore vecchio letto come se fosse la nuova
+  // forma (password in chiaro) manderebbe una password sbagliata al
+  // server invece di fallire in modo pulito.
+  // ==========================================================
+  const CHIAVE_LOCALSTORAGE_PASSWORD = "aste_password_v2";
 
-  function salvaHashRicordato(hash) {
-    try { localStorage.setItem(CHIAVE_LOCALSTORAGE_HASH, hash); } catch (e) { /* storage negato/pieno — si ridigita ogni volta, nessun blocco */ }
+  function salvaPasswordRicordata(password) {
+    try { localStorage.setItem(CHIAVE_LOCALSTORAGE_PASSWORD, password); } catch (e) { /* storage negato/pieno — si ridigita ogni volta, nessun blocco */ }
   }
-  function leggiHashRicordato() {
-    try { return localStorage.getItem(CHIAVE_LOCALSTORAGE_HASH); } catch (e) { return null; }
+  function leggiPasswordRicordata() {
+    try { return localStorage.getItem(CHIAVE_LOCALSTORAGE_PASSWORD); } catch (e) { return null; }
   }
-  function cancellaHashRicordato() {
-    try { localStorage.removeItem(CHIAVE_LOCALSTORAGE_HASH); } catch (e) {}
+  function cancellaPasswordRicordata() {
+    try { localStorage.removeItem(CHIAVE_LOCALSTORAGE_PASSWORD); } catch (e) {}
   }
 
   // Letto in modo OTTIMISTICO: nessuna chiamata di verifica dedicata al
   // caricamento pagina (un giro di rete in più a ogni visita, per un
-  // caso — password cambiata da un altro device — raro). Se l'hash
-  // ricordato non fosse più valido (es. cambiata da config.html), la
+  // caso — password cambiata da un altro device — raro). Se la password
+  // ricordata non fosse più valida (es. cambiata da config.html), la
   // PRIMA azione di scrittura fallirebbe normalmente con "Password
   // errata", e gestisceErroreAzionePassword più sotto lo ripulisce da
   // solo — stesso esito, un giro di rete risparmiato nel caso comune.
-  hashPasswordCorrente = leggiHashRicordato();
+  passwordCorrente = leggiPasswordRicordata();
 
   // Se l'esito di un'azione protetta indica password sbagliata, pulisce
-  // sia lo stato in memoria sia quello ricordato: un hash rimasto valido
-  // in memoria ma già rifiutato dal server continuerebbe a fallire in
-  // silenzio a ogni tentativo successivo, senza mai far ricomparire il
-  // modale per digitarne una corretta. Ritorna true se ha riconosciuto
-  // (e ripulito) proprio questo caso, false per qualunque altro errore
-  // (rete, timeout): quelli non devono far dimenticare una password che
-  // in realtà è ancora giusta.
+  // sia lo stato in memoria sia quello ricordato: una password rimasta
+  // valida in memoria ma già rifiutata dal server continuerebbe a
+  // fallire in silenzio a ogni tentativo successivo, senza mai far
+  // ricomparire il modale per digitarne una corretta. Ritorna true se ha
+  // riconosciuto (e ripulito) proprio questo caso, false per qualunque
+  // altro errore (rete, timeout): quelli non devono far dimenticare una
+  // password che in realtà è ancora giusta.
   function gestisceErroreAzionePassword(e) {
     if (e && e.message === "Password errata.") {
-      hashPasswordCorrente = null;
-      cancellaHashRicordato();
+      passwordCorrente = null;
+      cancellaPasswordRicordata();
       return true;
     }
     return false;
   }
 
-  // Stessa WebApp già usata da config.html per le scritture protette —
-  // qui serve solo per le tre azioni nuove (stella, scarto, nota), non
-  // per leggere: la lettura resta sempre via CSV, sopra.
-  const WEBAPP_URL = "https://script.google.com/macros/s/AKfycbyVS9aTh7jx7fjCIaI6OziW8wwDr5Yj8QB9W5QRP5HHGJP7H-3NelKg35fmQhQ5s0yD/exec";
+  // Un solo punto che sa come chiamare una funzione del database (RPC) —
+  // usata per le tre azioni di scrittura (stella, scarto, nota) e per la
+  // verifica password: la lettura resta sempre via query dirette, sotto.
+  // Timeout esplicito (20s) — prima non c'era, quindi se Supabase non
+  // rispondeva la pagina restava bloccata a tempo indefinito invece di
+  // fallire in modo pulito e recuperabile.
+  async function chiamaRpc(nomeFunzione, payload) {
+    const controller = new AbortController();
+    const scaduto = setTimeout(() => controller.abort(), 20000);
+    try {
+      const risposta = await fetch(`${SUPABASE_URL}/rest/v1/rpc/${nomeFunzione}`, {
+        method: "POST",
+        headers: {
+          "apikey": SUPABASE_ANON_KEY,
+          "Authorization": `Bearer ${SUPABASE_ANON_KEY}`,
+          "Content-Type": "application/json"
+        },
+        body: JSON.stringify(payload),
+        signal: controller.signal
+      });
+      return await risposta.json();
+    } finally {
+      clearTimeout(scaduto);
+    }
+  }
 
   let ASTE = [];
   let PREFERITI = {}; // id_annuncio -> {stato: "preferito"|"scartato", nota: string}
@@ -2032,64 +2043,32 @@
   }
 
   // ==========================================================
-  // PREFERITI / SCARTATE — autenticazione e chiamate alla WebApp.
-  // Stesso schema hash+verifica di config.html (vedi lì per i dettagli
-  // del perché il "sale" può stare in chiaro).
+  // PREFERITI / SCARTATE — autenticazione e chiamate al database.
   // ==========================================================
-  async function calcolaHash(testo) {
-    const dati = new TextEncoder().encode(SALE_PASSWORD + testo);
-    const bufferHash = await crypto.subtle.digest("SHA-256", dati);
-    return Array.from(new Uint8Array(bufferHash)).map(b => b.toString(16).padStart(2, "0")).join("");
-  }
-
-  // Timeout esplicito su OGNI chiamata alla WebApp (password, stella,
-  // scarto, nota) — prima non c'era, quindi se Google non rispondeva la
-  // pagina restava bloccata a tempo indefinito invece di fallire in modo
-  // pulito e recuperabile. Un solo punto centralizzato: tutte e quattro
-  // le azioni che passano da qui ne beneficiano senza bisogno di toccarle
-  // una per una.
-  async function chiamaWebApp(azione, extra) {
-    const controller = new AbortController();
-    const scaduto = setTimeout(() => controller.abort(), 20000);
-    try {
-      const risposta = await fetch(WEBAPP_URL, {
-        method: "POST",
-        body: JSON.stringify({azione, ...extra}),
-        signal: controller.signal
-      });
-      return await risposta.json();
-    } finally {
-      clearTimeout(scaduto);
-    }
-  }
 
   // Le tre scritture su preferiti/scarto/nota (mai la verifica password,
   // che capita una sola volta a inizio sessione e non si accumula mai in
-  // raffica) passano da QUI invece di chiamare chiamaWebApp() ciascuna
-  // per conto proprio — in coda, una alla volta, nello stesso ordine dei
-  // clic. Code.gs non usa LockService: più scritture arrivate davvero
-  // insieme rischiano di leggere il foglio Preferiti PRIMA che la
-  // precedente sia arrivata, calcolando la stessa "prima riga libera"
-  // per due ID diversi — una sovrascriverebbe l'altra, un rischio di
-  // dati persi, non solo di lentezza. In coda, ciascuna richiesta parte
-  // SOLO dopo che la precedente è del tutto completata lato server:
-  // elimina la corsa critica alla radice, non solo il timeout che ne era
-  // comunque un sintomo (tante richieste tutte insieme competono per la
-  // stessa esecuzione dello script, invece che una alla volta ciascuna
-  // nel proprio turno — verificato che il timeout si concentra proprio
-  // scartando più aste vicine in rapida sequenza). L'aggiornamento
-  // ottimistico (card che sparisce, toast) resta comunque immediato per
-  // ogni clic: solo la richiesta di RETE vera e propria aspetta il suo
-  // turno, in sottofondo, mai l'interazione stessa.
-  let codaScrittureWebApp = Promise.resolve();
+  // raffica) passano da QUI invece di chiamare chiamaRpc() ciascuna per
+  // conto proprio — in coda, una alla volta, nello stesso ordine dei
+  // clic. Anche se ogni funzione del database gira già in una propria
+  // transazione atomica (elimina da sola il rischio di due scritture che
+  // si leggono lo stato a vicenda — lo stesso problema di fondo trovato
+  // ai tempi di Code.gs, che non usava alcun lock), mettere in coda
+  // anche qui evita comunque di bombardare Supabase con decine di
+  // richieste tutte insieme quando si scartano più aste rapidamente in
+  // sequenza. L'aggiornamento ottimistico (card che sparisce, toast)
+  // resta comunque immediato per ogni clic: solo la richiesta di RETE
+  // vera e propria aspetta il suo turno, in sottofondo, mai l'interazione
+  // stessa.
+  let codaScrittureProtette = Promise.resolve();
 
-  function accodaScritturaWebApp(azione, extra) {
-    const richiesta = codaScrittureWebApp.then(() => chiamaWebApp(azione, extra));
+  function accodaScritturaProtetta(nomeFunzione, payload) {
+    const richiesta = codaScrittureProtette.then(() => chiamaRpc(nomeFunzione, payload));
     // .catch(()=>{}) SOLO per non interrompere la coda per le richieste
     // successive se questa fallisce — l'errore vero arriva comunque a
-    // chi ha chiamato accodaScritturaWebApp tramite "richiesta" stessa,
+    // chi ha chiamato accodaScritturaProtetta tramite "richiesta" stessa,
     // qui viene solo impedito di propagarsi alla PROSSIMA in coda.
-    codaScrittureWebApp = richiesta.catch(() => {});
+    codaScrittureProtette = richiesta.catch(() => {});
     return richiesta;
   }
 
@@ -2099,7 +2078,7 @@
   let azionePendente = null;
 
   function richiediPasswordSeServe(azione) {
-    if (hashPasswordCorrente) {
+    if (passwordCorrente) {
       azione();
       return;
     }
@@ -2120,19 +2099,18 @@
     const erroreEl = document.getElementById("errore-password-inline");
     if (!password) return;
 
-    const hash = await calcolaHash(password);
     let risultato;
     try {
-      risultato = await chiamaWebApp("verifica_password", {hash_password: hash});
+      risultato = await chiamaRpc("verifica_password", {password_tentativo: password});
     } catch (e) {
       console.error("Verifica password fallita:", e);
       erroreEl.textContent = `Richiesta non riuscita: ${dettaglioErrore(e)}`;
       return;
     }
 
-    if (risultato.valida) {
-      hashPasswordCorrente = hash;
-      salvaHashRicordato(hash);
+    if (risultato) {
+      passwordCorrente = password;
+      salvaPasswordRicordata(password);
       document.getElementById("overlay-password").classList.add("nascosto");
       const azione = azionePendente;
       azionePendente = null;
@@ -2150,7 +2128,7 @@
   // quelle sono azioni rare e più pesanti (elimina aste scadute, avvia
   // scanner), queste sono pensate per essere frequenti e leggere.
   // ==========================================================
-  // Riassume un'eccezione di chiamaWebApp in un dettaglio leggibile,
+  // Riassume un'eccezione di chiamaRpc in un dettaglio leggibile,
   // invece di un generico "errore di connessione" — distingue in
   // particolare un timeout VERO (il limite di 20s è scattato, la
   // richiesta era davvero bloccata) da un errore di rete di tutt'altra
@@ -2205,7 +2183,7 @@
   // riconoscibile, corto abbastanza da non sfondare la riga. Usata SOLO
   // per identificare a colpo d'occhio DI QUALE asta parla il toast: con
   // più scarti ravvicinati in sequenza (proprio quello per cui la coda
-  // delle scritture è pensata, vedi accodaScritturaWebApp) un unico
+  // delle scritture è pensata, vedi accodaScritturaProtetta) un unico
   // toast riusato ogni volta rischiava di riferirsi silenziosamente
   // all'ultima card scartata invece di quella che si pensava — verificato
   // per davvero: scartando due card di fila, "Aggiungi una nota" portava
@@ -2250,8 +2228,8 @@
 
   // Clic sulla stella: se già preferita, la toglie (torna neutro); se no,
   // la imposta a preferito (rimpiazzando uno scarto, se presente — la
-  // mutua esclusione è già garantita da Code.gs scrivendo lo stesso stato
-  // in un'unica colonna, qui basta scegliere quale delle due azioni
+  // mutua esclusione è già garantita da imposta_stato_preferito sul
+  // database, che scrive lo stesso stato in un'unica colonna, qui basta scegliere quale delle due azioni
   // chiamare in base allo stato attuale).
   function onClickStella(evento, id) {
     evento.stopPropagation(); // non deve aprire/chiudere "vedi dettagli" sotto
@@ -2317,7 +2295,7 @@
     }
 
     try {
-      const risultato = await accodaScritturaWebApp("imposta_stato_preferito", {hash_password: hashPasswordCorrente, id_annuncio: id, stato});
+      const risultato = await accodaScritturaProtetta("imposta_stato_preferito", {password_tentativo: passwordCorrente, id_annuncio_input: id, stato_input: stato});
       if (risultato.result !== "success") throw new Error(risultato.message || "");
     } catch (e) {
       console.error("imposta_stato_preferito fallita:", e);
@@ -2345,7 +2323,7 @@
     aggiornaFinestraSeApertaSu(id);
 
     try {
-      const risultato = await accodaScritturaWebApp("rimuovi_flag_preferito", {hash_password: hashPasswordCorrente, id_annuncio: id});
+      const risultato = await accodaScritturaProtetta("rimuovi_flag_preferito", {password_tentativo: passwordCorrente, id_annuncio_input: id});
       if (risultato.result !== "success") throw new Error(risultato.message || "");
     } catch (e) {
       console.error("rimuovi_flag_preferito fallita:", e);
@@ -2410,7 +2388,7 @@
     aggiornaCardSingola(id);
 
     try {
-      const risultato = await accodaScritturaWebApp("salva_nota_preferito", {hash_password: hashPasswordCorrente, id_annuncio: id, nota: testo});
+      const risultato = await accodaScritturaProtetta("salva_nota_preferito", {password_tentativo: passwordCorrente, id_annuncio_input: id, nota_input: testo});
       if (risultato.result !== "success") throw new Error(risultato.message || "");
     } catch (e) {
       console.error("salva_nota_preferito fallita:", e);
@@ -2509,58 +2487,30 @@
   }
 
   function avvia() {
-    if (!CSV_URL || CSV_URL.indexOf("INCOLLA_QUI") > -1) {
+    if (!SUPABASE_URL || SUPABASE_URL.indexOf("INCOLLA_QUI") > -1) {
       mostraStato("stato-non-configurato");
       return;
     }
 
-    // Le intestazioni vengono ripulite (spazi iniziali/finali) DOPO che i
-    // dati sono già tornati dal worker sul thread principale, non tramite
-    // l'opzione transformHeader di PapaParse — quell'opzione è una
-    // funzione, e le funzioni non si possono serializzare per mandarle a
-    // un worker (postMessage lancia DataCloneError, verificato) — questo
-    // ottiene lo stesso risultato senza passare nessuna funzione nella
-    // configurazione che il worker deve ricevere.
-    function pulisciChiaviRiga(riga) {
-      const pulita = {};
-      for (const chiave in riga) pulita[chiave.trim()] = riga[chiave];
-      return pulita;
-    }
+    const intestazioniLettura = {"apikey": SUPABASE_ANON_KEY, "Authorization": `Bearer ${SUPABASE_ANON_KEY}`};
 
-    const promessaAste = new Promise((resolve, reject) => {
-      Papa.parse(CSV_URL, {
-        download: true, header: true, skipEmptyLines: true,
-        // worker:true sposta l'ANALISI del CSV (non solo lo scaricamento,
-        // che è già di per sé asincrono) su un thread separato. Senza
-        // questo, PapaParse la esegue sul thread principale della pagina
-        // — con un foglio piccolo non si nota, ma con centinaia/migliaia
-        // di righe può bastare da solo a bloccare la pagina per qualche
-        // secondo mentre analizza, indipendentemente da quanto è
-        // veloce la connessione.
-        worker: true,
-        complete: risultato => {
-          const righe = (risultato.data || []).map(pulisciChiaviRiga);
-          console.log("Intestazioni lette dal CSV:", risultato.meta.fields);
-          resolve(righe.filter(r => r["ID Annuncio"]));
-        },
-        error: reject
-      });
-    });
+    // sheet1 per intero — stesso principio di sempre (tutte le aste, il
+    // filtro avviene lato client in applicaFiltri): un vero database
+    // permetterebbe di filtrare lato server, ma la virtualizzazione della
+    // griglia è già pensata per gestire comodamente migliaia di righe
+    // tutte scaricate insieme, nessun motivo di complicare qui.
+    const promessaAste = fetch(`${SUPABASE_URL}/rest/v1/sheet1?select=*`, {headers: intestazioniLettura})
+      .then(r => { if (!r.ok) throw new Error(`HTTP ${r.status}`); return r.json(); });
 
-    // Il CSV dei Preferiti non deve MAI bloccare il caricamento del
-    // registro principale: se non è ancora configurato (CSV_URL_PREFERITI
-    // vuoto) o irraggiungibile per qualunque motivo, si prosegue
-    // semplicemente senza nessuna stella/scarto già segnata — non è un
-    // errore che giustifichi lo stato "stato-errore" di tutta la pagina.
-    const promessaPreferiti = (!CSV_URL_PREFERITI || CSV_URL_PREFERITI.indexOf("INCOLLA_QUI") > -1)
-      ? Promise.resolve([])
-      : new Promise(resolve => {
-          Papa.parse(CSV_URL_PREFERITI, {
-            download: true, header: true, skipEmptyLines: true, worker: true,
-            complete: risultato => resolve((risultato.data || []).map(pulisciChiaviRiga)),
-            error: () => resolve([])
-          });
-        });
+    // Preferiti non deve MAI bloccare il caricamento del registro
+    // principale: se la richiesta fallisce per qualunque motivo, si
+    // prosegue semplicemente senza nessuna stella/scarto già segnata —
+    // non è un errore che giustifichi lo stato "stato-errore" di tutta
+    // la pagina (stesso principio di quando questa lettura passava dal
+    // CSV pubblicato dei preferiti, prima della migrazione a Supabase).
+    const promessaPreferiti = fetch(`${SUPABASE_URL}/rest/v1/preferiti?select=*`, {headers: intestazioniLettura})
+      .then(r => { if (!r.ok) throw new Error(`HTTP ${r.status}`); return r.json(); })
+      .catch(() => []);
 
     Promise.all([
       conTimeoutRigetta(promessaAste, 20000),
@@ -2568,8 +2518,8 @@
     ]).then(([righeAste, righePreferiti]) => {
       PREFERITI = {};
       righePreferiti.forEach(r => {
-        const id = r["ID Annuncio"];
-        if (id) PREFERITI[id] = {stato: r["Stato"] || "", nota: r["Nota"] || ""};
+        const id = r.id_annuncio;
+        if (id !== null && id !== undefined) PREFERITI[String(id)] = {stato: r.stato || "", nota: r.nota || ""};
       });
       ASTE = righeAste.map(normalizzaRiga).map(applicaStatoPreferito);
       document.getElementById("testo-aggiornato").textContent =
@@ -2577,10 +2527,10 @@
       popolaFiltroTipologia();
       applicaFiltri();
     }).catch(e => {
-      // Questo stesso .catch prende SIA un fallimento vero del CSV
+      // Questo stesso .catch prende SIA un fallimento vero della lettura
       // (rete, timeout) SIA un'eccezione lanciata più avanti dentro il
       // .then (es. un errore nel disegnare le card) — due cause ben
-      // diverse che il vecchio messaggio fisso confondeva in uno solo,
+      // diverse che un messaggio fisso confonderebbe in una sola,
       // costringendo a indovinare quale delle due fosse successa invece
       // di saperlo dal messaggio stesso. Stesso principio già applicato
       // a password/scrittura.
@@ -2591,45 +2541,50 @@
     });
   }
 
+  // I nomi dei campi qui sotto sono quelli delle COLONNE SU SUPABASE
+  // (snake_case, frutto della migrazione automatica dai nomi originali
+  // del Google Sheet — "Comune / Indirizzo" è diventato comune__indirizzo,
+  // doppio underscore dove c'erano sia uno spazio sia una barra, ecc.),
+  // non più le intestazioni del foglio con spazi e maiuscole di prima.
   function normalizzaRiga(r) {
-    const valoreStima = numeroSicuro(r["Valore Stima Perito"]);
+    const valoreStima = numeroSicuro(r.valore_stima_perito);
     return {
-      id: r["ID Annuncio"] || "",
-      comune: r["Comune / Indirizzo"] || "N/D",
-      distanza: numeroSicuro(r["Distanza (km)"], null),
-      tipologia: r["Tipologia"] || "N/D",
-      tribunale: r["Tribunale"] || "N/D",
-      lotto: r["N. Lotto"] || "",
-      disponibilita: r["Disponibilità (PVP)"] || "N/D",
-      offertaMinima: numeroSicuro(r["Offerta Minima"]),
-      prezzoBase: numeroSicuro(r["Prezzo Base"]),
-      rilancioMinimo: numeroSicuro(r["Rilancio Minimo"]),
+      id: r.id_annuncio !== null && r.id_annuncio !== undefined ? String(r.id_annuncio) : "",
+      comune: r.comune__indirizzo || "N/D",
+      distanza: numeroSicuro(r.distanza_km, null),
+      tipologia: r.tipologia || "N/D",
+      tribunale: r.tribunale || "N/D",
+      lotto: r.n__lotto || "",
+      disponibilita: r["disponibilità_pvp"] || "N/D",
+      offertaMinima: numeroSicuro(r.offerta_minima),
+      prezzoBase: numeroSicuro(r.prezzo_base),
+      rilancioMinimo: numeroSicuro(r.rilancio_minimo),
       valoreStima: valoreStima,
-      margine: r["Margine Stimato"] !== "" ? numeroSicuro(r["Margine Stimato"], null) : null,
-      superficieMq: numeroSicuro(r["Superficie (mq)"], null),
-      euroMq: numeroSicuro(r["€/mq Offerta Minima"], null),
-      formalitaPregiudizievoli: r["Formalità Pregiudizievoli"] || "N/D",
-      zonaSegnalata: r["Zona Segnalata"] || "",
-      punteggio: numeroSicuro(r["Score Flipping"]),
-      statoOccupazione: r["Stato Occupazione"] || "N/D",
-      speseSanatoria: numeroSicuro(r["Spese Sanatoria"]),
-      abusiEdilizi: r["Abusi Edilizi"] || "N/D",
-      note: r["Note & Rischi"] || "",
-      descrizione: r["Descrizione Lotto"] || "",
-      dataVendita: r["Data Vendita"] || "",
-      urlAsta: r["Link Asta"] || "",
-      urlPdf: r["Link PDF"] || "",
-      fonteDocumento: r["Fonte Documento"] || "",
-      modelloUsato: r["Modello AI Usato"] || "",
-      lat: numeroSicuro(r["Latitudine"], null),
-      lon: numeroSicuro(r["Longitudine"], null),
+      margine: r.margine_stimato !== null && r.margine_stimato !== undefined ? numeroSicuro(r.margine_stimato, null) : null,
+      superficieMq: numeroSicuro(r.superficie_mq, null),
+      euroMq: numeroSicuro(r.mq_offerta_minima, null),
+      formalitaPregiudizievoli: r["formalità_pregiudizievoli"] || "N/D",
+      zonaSegnalata: r.zona_segnalata || "",
+      punteggio: numeroSicuro(r.score_flipping),
+      statoOccupazione: r.stato_occupazione || "N/D",
+      speseSanatoria: numeroSicuro(r.spese_sanatoria),
+      abusiEdilizi: r.abusi_edilizi || "N/D",
+      note: r.note__rischi || "",
+      descrizione: r.descrizione_lotto || "",
+      dataVendita: r.data_vendita || "",
+      urlAsta: r.link_asta || "",
+      urlPdf: r.link_pdf || "",
+      fonteDocumento: r.fonte_documento || "",
+      modelloUsato: r.modello_ai_usato || "",
+      lat: numeroSicuro(r.latitudine, null),
+      lon: numeroSicuro(r.longitudine, null),
     };
   }
 
   // Applica lo stato preferito/scartato/nota a un'asta già normalizzata,
   // leggendo dalla mappa PREFERITI (caricata separatamente, vedi avvia()).
   // Funzione a parte invece che dentro normalizzaRiga: quest'ultima
-  // costruisce l'asta dal SOLO CSV principale, che non sa nulla di
+  // costruisce l'asta dalla SOLA tabella sheet1, che non sa nulla di
   // preferiti — tenerle separate rispecchia che sono due fonti dati
   // indipendenti, unite solo dopo che entrambe sono arrivate.
   function applicaStatoPreferito(asta) {
@@ -2899,7 +2854,7 @@
 
   // Di default le aste con data vendita già passata restano NASCOSTE (il
   // registro resta focalizzato sulle opportunità ancora aperte), ma non
-  // vengono mai tolte dal foglio. Il pulsante non le aggiunge alle attive:
+  // vengono mai tolte dal database. Il pulsante non le aggiunge alle attive:
   // scambia la vista — mostra SOLO le concluse invece di mischiarle alle
   // attive — così la griglia resta pulita sia prima sia dopo il clic.
   let mostraConcluse = false;
@@ -3282,8 +3237,8 @@
     const distanzaTesto = a.distanza !== null ? `${a.distanza} km` : "distanza N/D";
     const conclusa = astaConclusa(a.dataVendita);
 
-    // Celle superficie/€ al mq: solo se il dato è presente nel foglio (potrebbe
-    // non esserci ancora se Code.gs non è stato ridistribuito, o se Gemini
+    // Celle superficie/€ al mq: solo se il dato è presente nel database (potrebbe
+    // non esserci ancora se lo schema non è aggiornato, o se Gemini
     // non ha trovato la superficie in quella specifica perizia).
     const rigaSuperficie = a.superficieMq !== null ? `
           <div>
@@ -3309,7 +3264,7 @@
 
     // La nuvoletta compare solo se l'asta è preferita o scartata — una
     // nota senza uno dei due stati non esiste, stessa invarianza già
-    // imposta lato server in Code.gs (salva_nota_preferito la rifiuta).
+    // imposta lato server nella funzione salva_nota_preferito sul database.
     const notaHtml = (a.preferito || a.scartato) ? `
         <div class="nota-preferito" onclick="event.stopPropagation()">
           <button type="button" class="nota-preferito-bolla${a.notaPreferito ? ' compilata' : ''}" onclick="apriEditorNota(this)">${a.notaPreferito ? escapeHtml(a.notaPreferito) : '+ Aggiungi una nota'}</button>
