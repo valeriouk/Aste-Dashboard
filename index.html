@@ -378,16 +378,25 @@
   .contenitore-filtro-tipologia { position: relative; flex: 0 0 auto; }
   .freccia-tipologia { transition: transform .2s ease; display: inline-block; }
   #bottone-filtro-tipologia[aria-expanded="true"] .freccia-tipologia { transform: rotate(180deg); }
-  /* position:absolute (non fixed): segue il pulsante quando la pagina
-     scorre, comportamento normale di un menu a comparsa — le coordinate
-     restano comunque calcolate in JS (vedi posizionaMenuTipologia) per
-     tenerlo dentro i bordi dello schermo sia in orizzontale sia in
-     verticale, ma espresse relative al pulsante, non alla finestra.
-     z-index alzato a 1700 (era 1000): deve restare sopra anche al
-     foglio filtri mobile (1600), da cui può essere aperto — oltre che
-     sopra Leaflet, che usa internamente valori fino a ~700. */
+  /* position:fixed (era absolute): le coordinate calcolate in JS (vedi
+     posizionaMenuAComparsa) sono già relative alla FINESTRA
+     (getBoundingClientRect), quindi con fixed si applicano dirette,
+     nessuna conversione "relativa al contenitore" di mezzo. Cambiato da
+     absolute apposta: il pulsante che apre questo menu vive dentro
+     .controlli, che essendo position:sticky con un suo z-index (10)
+     crea un contesto di stacking a parte — un figlio con z-index alto
+     (anche 1700) resta comunque "intrappolato" dentro quel contesto
+     quando confrontato con elementi FUORI da .controlli, come la vista
+     Mappa più sotto nell'HTML: il numero da solo non basta a garantire
+     di restare sopra. position:fixed esce da qualunque contesto di
+     stacking degli antenati (tranne pochi casi, es. un antenato con una
+     transform — nessuno qui ne applica una), risolvendo il problema alla
+     radice invece che solo alzando ulteriormente il numero. z-index
+     comunque tenuto a 1700: deve restare sopra anche al foglio filtri
+     mobile (1600), da cui può essere aperto — oltre che sopra Leaflet,
+     che usa internamente valori fino a ~700. */
   .menu-tipologia {
-    position: absolute;
+    position: fixed;
     z-index: 1700;
     background: var(--surface);
     border: 1px solid var(--border);
@@ -1477,6 +1486,27 @@
     </div>
   </div>
 
+  <!-- Gate di LETTURA — copre l'intera pagina finché non si inserisce la
+       password di lettura (diversa da quella di scrittura sopra: quella
+       protegge stella/scarto/nota, questa protegge la sola visione del
+       registro). Mostrato PRIMA di chiamare avvia(), vedi
+       provaSbloccoLetturaAutomatico() in fondo allo script — nessun
+       pulsante "Annulla": non è un'azione opzionale da poter rifiutare,
+       senza la password corretta non c'è pagina da vedere. z-index più
+       alto di qualunque altro overlay: deve restare sopra a tutto,
+       essendo la primissima cosa mostrata. -->
+  <div id="overlay-gate-lettura" class="overlay-password" style="z-index: 2500;">
+    <div class="riquadro-password-inline">
+      <h3>Registro protetto</h3>
+      <p>Inserisci la password per aprire il registro.</p>
+      <input type="password" id="campo-password-lettura" placeholder="Password" autocomplete="current-password" onkeydown="if(event.key==='Enter') confermaPasswordLettura()">
+      <div class="riga-bottoni-password">
+        <button type="button" class="bottone-password-conferma" style="flex:1" onclick="confermaPasswordLettura()">Sblocca</button>
+      </div>
+      <p id="errore-password-lettura" class="messaggio-errore-password"></p>
+    </div>
+  </div>
+
   <!-- Finestra dettagli asta — sostituisce la vecchia espansione sul
        posto dentro la card, vedi apriDettagliAsta(). Il contenuto viene
        costruito e inserito al volo quando si apre, non tenuto qui in
@@ -1498,8 +1528,8 @@
   // prima: un'unica fonte, letta con due query invece di due fogli
   // pubblicati separatamente — vedi avvia() più sotto.
   // ==========================================================
-  const SUPABASE_URL = "https://igemwrrcmsgaotoqvdzt.supabase.co";
-  const SUPABASE_ANON_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImlnZW13cnJjbXNnYW90b3F2ZHp0Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODkzMDc2MjksImV4cCI6MjEwNDg4MzYyOX0.YkUOBTOb40C-N0TkuDN0o5N7fVvI_qX2F1grUp-SVe8";
+  const SUPABASE_URL = "INCOLLA_QUI_URL_SUPABASE";
+  const SUPABASE_ANON_KEY = "INCOLLA_QUI_CHIAVE_ANON";
 
   // Non più un hash: le funzioni sul database (prepara_database.sql,
   // Sezione 6) confrontano la password in chiaro — niente più
@@ -1559,6 +1589,77 @@
       return true;
     }
     return false;
+  }
+
+  // ==========================================================
+  // GATE DI LETTURA — password SEPARATA da passwordCorrente sopra
+  // (quella protegge solo stella/scarto/nota/config; questa protegge la
+  // sola VISIONE del registro, per chi ha solo il link ma non la
+  // password). Chiave localStorage diversa apposta: le due password
+  // restano indipendenti anche nel dispositivo che le ricorda, così
+  // conoscere l'una non implica conoscere l'altra. Stessa filosofia di
+  // sempre: ferma solo chi ci arriva per sbaglio, non chi guarda il
+  // codice sorgente — vedi la funzione verifica_password_lettura sul
+  // database per la verifica vera.
+  // ==========================================================
+  const CHIAVE_LOCALSTORAGE_PASSWORD_LETTURA = "aste_password_lettura_v1";
+
+  function salvaPasswordLetturaRicordata(password) {
+    try { localStorage.setItem(CHIAVE_LOCALSTORAGE_PASSWORD_LETTURA, password); } catch (e) {}
+  }
+  function leggiPasswordLetturaRicordata() {
+    try { return localStorage.getItem(CHIAVE_LOCALSTORAGE_PASSWORD_LETTURA); } catch (e) { return null; }
+  }
+
+  // Punto di ingresso reale della pagina (vedi in fondo allo script,
+  // sostituisce la chiamata diretta ad avvia()) — mostra il gate SOLO se
+  // serve davvero: se una password è già ricordata su questo device, la
+  // verifica col server PRIMA di mostrare qualunque cosa (stesso
+  // principio già usato per la password di scrittura in
+  // provaSbloccoAutomatico di config.html — non ci si fida ciecamente di
+  // un valore locale che potrebbe essere stato cambiato altrove). Solo
+  // se manca, o risulta scaduta, compare il gate — che a differenza del
+  // modale di scrittura non ha un modo per essere annullato: senza la
+  // password giusta non c'è pagina da vedere.
+  async function provaSbloccoLetturaAutomatico() {
+    const ricordata = leggiPasswordLetturaRicordata();
+    if (ricordata) {
+      try {
+        const valida = await chiamaRpc("verifica_password_lettura", {password_tentativo: ricordata});
+        if (valida) {
+          document.getElementById("overlay-gate-lettura").classList.add("nascosto");
+          avvia();
+          return;
+        }
+      } catch (e) {
+        // Rete irraggiungibile: non è detto che la password sia sbagliata,
+        // solo che non si è potuto controllare — mostro comunque il gate,
+        // si riprova da lì (stesso principio del resto della pagina).
+      }
+    }
+    document.getElementById("campo-password-lettura").focus();
+  }
+
+  async function confermaPasswordLettura() {
+    const password = document.getElementById("campo-password-lettura").value;
+    const erroreEl = document.getElementById("errore-password-lettura");
+    if (!password) return;
+
+    let valida;
+    try {
+      valida = await chiamaRpc("verifica_password_lettura", {password_tentativo: password});
+    } catch (e) {
+      erroreEl.textContent = `Richiesta non riuscita: ${dettaglioErrore(e)}`;
+      return;
+    }
+
+    if (valida) {
+      salvaPasswordLetturaRicordata(password);
+      document.getElementById("overlay-gate-lettura").classList.add("nascosto");
+      avvia();
+    } else {
+      erroreEl.textContent = "Password errata.";
+    }
   }
 
   // Un solo punto che sa come chiamare una funzione del database (RPC) —
@@ -2689,29 +2790,39 @@
   // pannello resta position:absolute — così segue il pulsante durante lo
   // scroll invece di restare fisso rispetto allo schermo. Generalizzata
   // per essere riusata da entrambi i menu, non solo quello tipologia.
+  // Calcola dove aprire il pannello: parte da sotto il pulsante, ma se
+  // sforerebbe il bordo destro o inferiore dello schermo si sposta
+  // abbastanza da restare tutto visibile — qualunque sia la posizione
+  // del pulsante nella riga di controlli (che su mobile può finire
+  // ovunque, a seconda di cosa va a capo prima di lui). Con
+  // position:fixed (vedi il commento CSS su .menu-tipologia) le
+  // coordinate da getBoundingClientRect() si applicano DIRETTE, senza
+  // nessuna conversione: sono già relative alla finestra, esattamente
+  // come richiede position:fixed — molto più semplice, e in più risolve
+  // da sola il problema del contesto di stacking di .controlli.
+  // Generalizzata per essere riusata da entrambi i menu (tipologia e
+  // ordinamento), non solo quello tipologia.
   function posizionaMenuAComparsa(menu, bottone) {
-    const contenitore = bottone.closest(".contenitore-filtro-tipologia");
     const rettBottone = bottone.getBoundingClientRect();
-    const rettContenitore = contenitore.getBoundingClientRect();
     const margine = 12;
     const larghezza = Math.min(240, window.innerWidth - margine * 2);
     menu.style.width = larghezza + "px";
 
-    let sinistraFinestra = rettBottone.left;
-    if (sinistraFinestra + larghezza > window.innerWidth - margine) {
-      sinistraFinestra = window.innerWidth - larghezza - margine;
+    let sinistra = rettBottone.left;
+    if (sinistra + larghezza > window.innerWidth - margine) {
+      sinistra = window.innerWidth - larghezza - margine;
     }
-    if (sinistraFinestra < margine) sinistraFinestra = margine;
-    menu.style.left = (sinistraFinestra - rettContenitore.left) + "px";
+    if (sinistra < margine) sinistra = margine;
+    menu.style.left = sinistra + "px";
 
     // Altezza vera, leggibile solo ora che il pannello è visibile.
     const altezzaMenu = menu.offsetHeight;
-    let altoFinestra = rettBottone.bottom + 6;
-    if (altoFinestra + altezzaMenu > window.innerHeight - margine) {
-      altoFinestra = window.innerHeight - altezzaMenu - margine;
+    let alto = rettBottone.bottom + 6;
+    if (alto + altezzaMenu > window.innerHeight - margine) {
+      alto = window.innerHeight - altezzaMenu - margine;
     }
-    if (altoFinestra < margine) altoFinestra = margine;
-    menu.style.top = (altoFinestra - rettContenitore.top) + "px";
+    if (alto < margine) alto = margine;
+    menu.style.top = alto + "px";
   }
 
   // Un solo ascoltatore "clic fuori" per ENTRAMBI i menu a comparsa
@@ -3475,7 +3586,7 @@ ${notaHtml}
 
   document.getElementById("ricerca").addEventListener("input", applicaFiltri);
 
-  avvia();
+  provaSbloccoLetturaAutomatico();
 </script>
 
 <script>
