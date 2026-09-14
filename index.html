@@ -98,8 +98,8 @@
     align-items: flex-end;
     flex-wrap: wrap;
     gap: 16px;
-    padding-bottom: 32px;
-    margin-bottom: 40px;
+    padding-bottom: 24px;
+    margin-bottom: 24px;
     border-bottom: 1px solid var(--border);
   }
 
@@ -137,32 +137,28 @@
   .versione-pagina a { color: inherit; text-decoration: none; }
   .versione-pagina a:hover { color: var(--primary); }
 
-  .aggiornato {
-    text-align: right;
-    font-family: var(--font-mono);
-    font-size: .8rem;
-    color: var(--ink-faint);
-  }
-  .aggiornato strong { color: var(--ink-muted); font-weight: 500; display: block; margin-bottom: 3px;}
-
   /* ============================================================
-     STATISTICHE
+     STATISTICHE — due gruppi di elementi per gli STESSI tre dati
+     (totale/punteggio/margine), non uno solo: .statistiche-compatte
+     per desktop (in riga, accanto al titolo — vedi .intestazione
+     sopra, che li tiene sulla stessa riga della testata invece che in
+     una sezione separata sotto, a differenza di come funzionava
+     prima) e .statistiche-mobili-ibride per mobile (card bianca a tre
+     colonne strette, non più tre righe impilate). Solo uno dei due è
+     visibile alla volta, deciso dalla media query sotto — ma la
+     scrittura dei valori (vedi aggiornaStatistiche più avanti nello
+     script) aggiorna SEMPRE entrambi i gruppi, senza sapere quale dei
+     due è attualmente mostrato: più semplice che dover ricalcolare
+     quale sia visibile ogni volta, e nessun costo reale nel tenere
+     aggiornato anche il gruppo nascosto.
   ============================================================ */
-  .statistiche {
-    display: grid;
-    grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
-    gap: 1px;
-    background: var(--border);
-    border: 1px solid var(--border);
-    border-radius: 10px;
-    overflow: hidden;
-    margin-bottom: 32px;
-  }
+  .statistiche-compatte { display: flex; gap: 28px; }
+  .stat-compatta { text-align: right; }
+  .stat-compatta .stat-etichetta { margin: 0 0 2px; white-space: nowrap; }
+  .stat-compatta .stat-valore { font-family: var(--font-mono); font-weight: 500; color: var(--primary); font-size: 1.25rem; margin: 0; }
+  .stat-compatta .stat-nota { font-size: .85rem; font-weight: 500; color: var(--ink-faint); }
 
-  .stat {
-    background: var(--surface);
-    padding: 20px 22px;
-  }
+  .statistiche-mobili-ibride { display: none; }
 
   .stat-etichetta {
     font-size: .78rem;
@@ -170,17 +166,22 @@
     margin: 0 0 8px;
   }
 
-  .stat-valore {
-    font-family: var(--font-mono);
-    font-size: 1.6rem;
-    font-weight: 500;
-    color: var(--primary);
-    margin: 0;
-  }
-  .stat-nota {
-    font-size: .85rem;
-    font-weight: 500;
-    color: var(--ink-faint);
+  @media (max-width: 640px) {
+    .intestazione { display: block; border-bottom: none; padding-bottom: 0; margin-bottom: 20px; }
+    .statistiche-compatte { display: none; }
+    .statistiche-mobili-ibride {
+      display: grid;
+      margin-top: 16px;
+      grid-template-columns: repeat(3, 1fr);
+      gap: 1px;
+      background: var(--border);
+      border: 1px solid var(--border);
+      border-radius: 10px;
+      overflow: hidden;
+    }
+    .stat-mobile-ibrida { background: var(--surface); padding: 12px 10px; text-align: center; }
+    .stat-mobile-ibrida .stat-etichetta { font-size: .68rem; margin: 0 0 4px; line-height: 1.25; }
+    .stat-mobile-ibrida .stat-valore { font-family: var(--font-mono); font-weight: 500; color: var(--primary); font-size: 1.05rem; margin: 0; }
   }
 
   /* ============================================================
@@ -1076,8 +1077,6 @@
 
   @media (max-width: 640px) {
     .contenitore { padding: 32px 16px 64px; }
-    .intestazione { flex-direction: column; align-items: flex-start; }
-    .aggiornato { text-align: left; }
     .lotto-cifre { grid-template-columns: 1fr; }
     /* Sotto i 16px, Safari su iOS ingrandisce automaticamente la pagina
        quando il campo riceve il focus (pensato per rendere leggibile un
@@ -1341,26 +1340,35 @@
       <p class="eyebrow">Scansione Aste Giudiziarie</p>
       <h1><a href="brochure.pdf" target="_blank" rel="noopener" style="color:inherit;text-decoration:none;">Registro Opportunità</a></h1>
       <p class="sottotitolo">Aste residenziali filtrate per prezzo, distanza e margine potenziale stimato.</p>
-      <p class="versione-pagina">v2.1 · <a href="config.html">Configurazione</a></p>
+      <p class="versione-pagina">v2.1 · <a href="config.html">Configurazione</a> · aggiornato <strong id="testo-aggiornato">—</strong></p>
     </div>
-    <div class="aggiornato">
-      <strong id="testo-aggiornato">—</strong>
-      aggiornamento pagina
+    <div class="statistiche-compatte">
+      <div class="stat-compatta">
+        <p class="stat-etichetta">Aste nel registro</p>
+        <p class="stat-valore" id="stat-totale">—</p>
+      </div>
+      <div class="stat-compatta">
+        <p class="stat-etichetta">Punteggio più alto</p>
+        <p class="stat-valore" id="stat-punteggio">—</p>
+      </div>
+      <div class="stat-compatta">
+        <p class="stat-etichetta">Margine positivo</p>
+        <p class="stat-valore" id="stat-margine">—</p>
+      </div>
     </div>
-  </div>
-
-  <div class="statistiche" id="blocco-statistiche">
-    <div class="stat">
-      <p class="stat-etichetta">Aste nel registro</p>
-      <p class="stat-valore" id="stat-totale">—</p>
-    </div>
-    <div class="stat">
-      <p class="stat-etichetta">Punteggio più alto</p>
-      <p class="stat-valore" id="stat-punteggio">—</p>
-    </div>
-    <div class="stat">
-      <p class="stat-etichetta">Aste con margine positivo</p>
-      <p class="stat-valore" id="stat-margine">—</p>
+    <div class="statistiche-mobili-ibride">
+      <div class="stat-mobile-ibrida">
+        <p class="stat-etichetta">Nel registro</p>
+        <p class="stat-valore" id="stat-totale-mobile">—</p>
+      </div>
+      <div class="stat-mobile-ibrida">
+        <p class="stat-etichetta">Punteggio</p>
+        <p class="stat-valore" id="stat-punteggio-mobile">—</p>
+      </div>
+      <div class="stat-mobile-ibrida">
+        <p class="stat-etichetta">Margine +</p>
+        <p class="stat-valore" id="stat-margine-mobile">—</p>
+      </div>
     </div>
   </div>
 
@@ -3191,18 +3199,22 @@
       // primo controllato, così un indirizzo continua a funzionare
       // esattamente come prima — ma ora la stessa casella trova anche
       // un termine che compare SOLO nell'analisi AI (es. "non
-      // cooperativo" dentro la sintesi della perizia) o in una TUA nota
+      // cooperativo" dentro la sintesi della perizia), in una TUA nota
       // su un preferito/scarto (notaPreferito — diversa da "note", che
       // è invece il campo di rischi scritto dall'AI durante la
-      // scansione: due cose distinte, entrambe cercate qui), senza
-      // bisogno di un secondo campo che nella barra dei filtri non c'è
-      // spazio per aggiungere. Non è ricerca semantica vera (nessun
-      // concetto "simile", solo il testo letterale) — per quello
-      // servirebbe un'infrastruttura diversa (embedding), volutamente
-      // non questa.
+      // scansione: due cose distinte, entrambe cercate qui), o nella
+      // data di vendita — formattata GG/MM/AAAA con la stessa
+      // formattaData già usata per mostrarla in pagina, non l'ISO grezzo
+      // di Supabase: "15/09" trova un'asta che vende il 15 settembre
+      // perché è letteralmente una sottostringa di "15/09/2026", non
+      // servirebbe con "2026-09-15". Non è ricerca semantica vera
+      // (nessun concetto "simile", solo il testo letterale) — per
+      // quello servirebbe un'infrastruttura diversa (embedding),
+      // volutamente non questa.
       const passaRicerca = !ricerca || [
         a.comune, a.descrizione, a.note, a.notaPreferito, a.tipologia,
-        a.statoOccupazione, a.formalitaPregiudizievoli, a.abusiEdilizi
+        a.statoOccupazione, a.formalitaPregiudizievoli, a.abusiEdilizi,
+        formattaData(a.dataVendita)
       ].some(campo => campo && campo.toLowerCase().includes(ricerca));
       const passaTipologia = categorieTipologiaAttive.size === 0
         || categorieDiAsta(a.tipologia).some(c => categorieTipologiaAttive.has(c));
@@ -3278,6 +3290,11 @@
     document.getElementById("stat-totale").innerHTML = mostraConcluse
       ? `${totaleConcluse} concluse<span class="stat-nota"> di ${ASTE.length}</span>`
       : `${totaleAttive} attive<span class="stat-nota"> di ${ASTE.length}</span>`;
+    // Stessa cifra, versione più corta — sulla card mobile lo spazio per
+    // colonna è stretto (tre colonne su ~390px), l'etichetta "Nel
+    // registro" sopra il numero basta da sola come contesto, senza
+    // bisogno di ripetere "attive"/"concluse di N" per esteso qui.
+    document.getElementById("stat-totale-mobile").textContent = mostraConcluse ? totaleConcluse : totaleAttive;
     // Filtri separati apposta: punteggio e margine dipendono da dati diversi.
     // Un'asta con solo il punteggio inserito (senza valore di stima) ha un
     // punteggio valido ma nessun margine calcolabile — un filtro unico
@@ -3291,9 +3308,11 @@
     // scala, solo della sua presenza — molto più robusto come prima cifra
     // da guardare.
     const conMarginePositivo = ASTE.filter(a => a.margine !== null && a.margine > 0);
-    document.getElementById("stat-punteggio").textContent =
-      conPunteggio.length ? Math.max(...conPunteggio.map(a => a.punteggio)) + "/100" : "—";
+    const puntoMassimoTesto = conPunteggio.length ? Math.max(...conPunteggio.map(a => a.punteggio)) + "/100" : "—";
+    document.getElementById("stat-punteggio").textContent = puntoMassimoTesto;
+    document.getElementById("stat-punteggio-mobile").textContent = puntoMassimoTesto;
     document.getElementById("stat-margine").textContent = conMarginePositivo.length;
+    document.getElementById("stat-margine-mobile").textContent = conMarginePositivo.length;
 
     nascondiTuttiGliStati();
     document.getElementById("conteggio-filtrati").textContent = `${elenco.length} di ${ASTE.length} aste mostrate`;
