@@ -1893,6 +1893,7 @@
       <button type="button" id="bottone-confronta" onclick="apriConfronto()">⇄ Confronta</button>
     </div>
     <div class="barra-selezione-azioni">
+      <button type="button" onclick="esportaCSV('selezionate')">Esporta selezionate</button>
       <button type="button" onclick="deselezionaTutto()">Deseleziona tutto</button>
     </div>
   </div>
@@ -2942,9 +2943,17 @@
   }
 
   function esportaCSV(ambito) {
-    const elenco = ambito === "preferiti" ? ASTE.filter(a => a.preferito) : ultimoElencoFiltrato;
+    let elenco;
+    if (ambito === "preferiti") elenco = ASTE.filter(a => a.preferito);
+    else if (ambito === "selezionate") elenco = Array.from(astaSelezionate).map(id => ASTE.find(a => a.id === id)).filter(Boolean);
+    else elenco = ultimoElencoFiltrato;
+
     if (elenco.length === 0) {
-      mostraToast(ambito === "preferiti" ? "Nessuna asta preferita da esportare." : "Nessuna asta da esportare con i filtri attuali.");
+      const messaggiVuoto = {
+        preferiti: "Nessuna asta preferita da esportare.",
+        selezionate: "Nessuna asta selezionata da esportare.",
+      };
+      mostraToast(messaggiVuoto[ambito] || "Nessuna asta da esportare con i filtri attuali.");
       return;
     }
     const righe = [INTESTAZIONI_CSV.join(";"), ...elenco.map(rigaCSV)];
@@ -2953,7 +2962,8 @@
     // (città, più, perché...) come caratteri illeggibili.
     const contenuto = "\uFEFF" + righe.join("\r\n");
     const dataOggi = new Date().toISOString().slice(0, 10);
-    const nomeFile = `aste-${ambito === "preferiti" ? "preferiti" : "filtrate"}-${dataOggi}.csv`;
+    const suffissi = { preferiti: "preferiti", selezionate: "selezionate" };
+    const nomeFile = `aste-${suffissi[ambito] || "filtrate"}-${dataOggi}.csv`;
     scaricaTestoComeFile(contenuto, nomeFile, "text/csv;charset=utf-8;");
     mostraToast(elenco.length === 1 ? "1 asta esportata." : `${elenco.length} aste esportate.`);
   }
