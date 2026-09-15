@@ -508,6 +508,13 @@
     padding: 0;
   }
   .link-seleziona-tutte:hover { text-decoration: underline; }
+  .azioni-conteggio-filtrati {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    flex-wrap: wrap;
+  }
+  .separatore-azioni-conteggio { color: var(--border); font-size: .78rem; }
 
   .bottone-toggle-tutti {
     background: var(--surface);
@@ -1797,7 +1804,13 @@
 
   <div class="riga-conteggio-filtrati">
     <p class="conteggio-filtrati" id="conteggio-filtrati"></p>
-    <button type="button" class="link-seleziona-tutte" id="link-seleziona-tutte" onclick="selezionaTutteFiltrate()">Seleziona tutte</button>
+    <div class="azioni-conteggio-filtrati">
+      <button type="button" class="link-seleziona-tutte" id="link-seleziona-tutte" onclick="selezionaTutteFiltrate()">Seleziona tutte</button>
+      <span class="separatore-azioni-conteggio">·</span>
+      <button type="button" class="link-seleziona-tutte" onclick="esportaCSV('filtrate')">Esporta CSV</button>
+      <span class="separatore-azioni-conteggio">·</span>
+      <button type="button" class="link-seleziona-tutte" onclick="esportaCSV('preferiti')">Esporta preferiti</button>
+    </div>
   </div>
 
   <div class="griglia" id="griglia-lotti"></div>
@@ -2860,6 +2873,89 @@
     astaSelezionate.clear();
     aggiornaBarraSelezione();
     sincronizzaCheckboxSelezione();
+  }
+
+  // ==========================================================
+  // ESPORTAZIONE CSV — "filtrate" (ultimoElencoFiltrato, esattamente
+  // quello che si vede a schermo in quel momento, filtri e ricerca
+  // inclusi) oppure "preferiti" (TUTTE le preferite, ASTE.filter,
+  // indipendentemente dai filtri attivi — chi vuole l'elenco dei
+  // preferiti se lo aspetta completo, non ridotto da un filtro
+  // dimenticato acceso).
+  // ==========================================================
+
+  function scaricaTestoComeFile(testo, nomeFile, tipoMime) {
+    const blob = new Blob([testo], { type: tipoMime });
+    const url = URL.createObjectURL(blob);
+    const link = document.createElement("a");
+    link.href = url;
+    link.download = nomeFile;
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+    URL.revokeObjectURL(url);
+  }
+
+  // Un campo va tra virgolette SOLO se contiene il separatore, le
+  // virgolette stesse, o un a-capo — altrimenti resta nudo, più
+  // leggibile aprendo il file a occhio nudo in un editor di testo.
+  // Punto e virgola come separatore, non virgola: in Excel con impostazioni
+  // italiane la virgola è il separatore decimale dei numeri, non delle
+  // colonne — un CSV con la virgola come delimitatore si apre come
+  // un'unica colonna illeggibile invece di colonne separate.
+  function campoCSV(valore) {
+    const testo = valore === null || valore === undefined ? "" : String(valore);
+    if (/[;"\n\r]/.test(testo)) return '"' + testo.replace(/"/g, '""') + '"';
+    return testo;
+  }
+
+  const INTESTAZIONI_CSV = [
+    "ID annuncio", "Comune / indirizzo", "Tipologia", "Lotto", "Tribunale",
+    "Punteggio", "Margine stimato", "Offerta minima", "Prezzo base",
+    "Valore stima", "Superficie mq", "Euro/mq offerta", "Stato occupazione",
+    "Disponibilita PVP", "Formalita pregiudizievoli", "Abusi edilizi",
+    "Spese sanatoria", "Probabile tentativo", "Data vendita", "Stato",
+    "Nota", "Link PVP",
+  ];
+
+  function rigaCSV(a) {
+    const stato = a.preferito ? "Preferito" : (a.scartato ? "Scartato" : "");
+    const tentativoTesto = a.tentativoStimato ? `${a.tentativoStimato.tentativo}\u00B0 - ${a.tentativoStimato.percentuale}%` : "";
+    const valori = [
+      a.id, a.comune, a.tipologia, a.lotto, a.tribunale,
+      a.punteggio > 0 ? a.punteggio : "",
+      a.margine !== null ? a.margine : "",
+      a.offertaMinima || "",
+      a.prezzoBase || "",
+      a.valoreStima > 0 ? a.valoreStima : "",
+      a.superficieMq !== null ? a.superficieMq : "",
+      a.euroMq !== null ? a.euroMq : "",
+      a.statoOccupazione, a.disponibilita, a.formalitaPregiudizievoli, a.abusiEdilizi,
+      a.speseSanatoria || "",
+      tentativoTesto,
+      formattaData(a.dataVendita),
+      stato,
+      a.notaPreferito || "",
+      a.urlAsta || "",
+    ];
+    return valori.map(campoCSV).join(";");
+  }
+
+  function esportaCSV(ambito) {
+    const elenco = ambito === "preferiti" ? ASTE.filter(a => a.preferito) : ultimoElencoFiltrato;
+    if (elenco.length === 0) {
+      mostraToast(ambito === "preferiti" ? "Nessuna asta preferita da esportare." : "Nessuna asta da esportare con i filtri attuali.");
+      return;
+    }
+    const righe = [INTESTAZIONI_CSV.join(";"), ...elenco.map(rigaCSV)];
+    // BOM UTF-8 in testa (\uFEFF): senza, Excel su diversi sistemi non
+    // riconosce la codifica da solo e mostra le lettere accentate
+    // (città, più, perché...) come caratteri illeggibili.
+    const contenuto = "\uFEFF" + righe.join("\r\n");
+    const dataOggi = new Date().toISOString().slice(0, 10);
+    const nomeFile = `aste-${ambito === "preferiti" ? "preferiti" : "filtrate"}-${dataOggi}.csv`;
+    scaricaTestoComeFile(contenuto, nomeFile, "text/csv;charset=utf-8;");
+    mostraToast(elenco.length === 1 ? "1 asta esportata." : `${elenco.length} aste esportate.`);
   }
 
   // Azione in blocco — preferito o scartato per tutte le aste
