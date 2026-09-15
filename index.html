@@ -490,8 +490,24 @@
     font-family: var(--font-mono);
     font-size: .78rem;
     color: var(--ink-faint);
+    margin: 0;
+  }
+  .riga-conteggio-filtrati {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
     margin: 0 0 14px;
   }
+  .link-seleziona-tutte {
+    font-family: var(--font-mono);
+    font-size: .78rem;
+    color: var(--primary);
+    background: none;
+    border: none;
+    cursor: pointer;
+    padding: 0;
+  }
+  .link-seleziona-tutte:hover { text-decoration: underline; }
 
   .bottone-toggle-tutti {
     background: var(--surface);
@@ -843,7 +859,9 @@
     padding: 12px 16px;
     display: flex;
     align-items: center;
-    gap: 14px;
+    justify-content: center;
+    flex-wrap: wrap;
+    gap: 10px 14px;
     box-shadow: 0 12px 28px -8px rgba(0,0,0,.35);
     max-width: calc(100vw - 32px);
   }
@@ -866,6 +884,19 @@
     white-space: nowrap;
   }
   .barra-selezione button:hover { background: rgba(255,255,255,.12); }
+  /* Due gruppi distinti nella stessa barra (azioni vere vs
+     meta-selezione) — un separatore sottile tra loro invece di farli
+     sembrare un'unica fila indistinta di sei pulsanti. */
+  .barra-selezione-azioni + .barra-selezione-azioni {
+    border-left: 1px solid rgba(255,255,255,.2);
+    padding-left: 14px;
+  }
+  /* Accenno di colore SOLO al passaggio del mouse, non a riposo — i
+     colori --primary/--danger sono pensati per sfondi chiari (testo su
+     card bianche altrove nell'app), su questo sfondo scuro userli come
+     colore del testo a riposo comprometterebbe la leggibilità. */
+  .barra-selezione-preferisci:hover { background: rgba(52,110,150,.35); border-color: rgba(52,110,150,.6); }
+  .barra-selezione-scarta:hover { background: rgba(180,90,70,.32); border-color: rgba(180,90,70,.55); }
 
   /* La classe "conclusa" viene comunque assegnata (vedi cartellaLotto in
      JS) ma qui non applichiamo più un'attenuazione: da quando la vista è
@@ -1059,6 +1090,87 @@
     box-shadow: 0 16px 48px rgba(30, 35, 32, .3);
     transition: max-width .22s ease, max-height .22s ease;
   }
+
+  /* ============================================================
+     CONFRONTO — 2 o 3 aste affiancate. Stesso overlay/sfondo della
+     finestra dettagli (classe overlay-dettagli-asta condivisa), ma un
+     contenitore proprio, più largo, per stare affiancate.
+  ============================================================ */
+  .finestra-confronto {
+    position: relative;
+    background: var(--surface);
+    border-radius: 16px;
+    max-width: 920px;
+    width: 100%;
+    max-height: 85vh;
+    overflow-y: auto;
+    box-shadow: 0 16px 48px rgba(30, 35, 32, .3);
+    padding: 20px;
+  }
+  .chiudi-finestra-confronto {
+    position: sticky;
+    top: 0;
+    float: right;
+    width: 32px;
+    height: 32px;
+    border-radius: 50%;
+    border: none;
+    background: var(--surface-2);
+    color: var(--ink-muted);
+    font-size: 1rem;
+    cursor: pointer;
+    z-index: 2;
+  }
+  .chiudi-finestra-confronto:hover { background: var(--border); }
+
+  .confronto-griglia {
+    display: grid;
+    gap: 2px;
+    background: var(--border);
+    border: 1px solid var(--border);
+    border-radius: 10px;
+    overflow: hidden;
+    clear: both;
+  }
+  .confronto-griglia > div {
+    background: var(--surface);
+    padding: 10px 12px;
+    font-size: .85rem;
+  }
+  .confronto-etichetta {
+    color: var(--ink-muted);
+    font-size: .78rem;
+    display: flex;
+    align-items: center;
+  }
+  .confronto-cella { font-family: var(--font-mono); }
+  .confronto-intestazione {
+    text-align: center;
+    padding: 16px 10px !important;
+  }
+  .confronto-intestazione .sigillo { margin: 0 auto 8px; }
+  .confronto-comune {
+    font-weight: 600;
+    font-size: .88rem;
+    margin: 0 0 10px;
+    line-height: 1.3;
+  }
+  .confronto-azioni {
+    display: flex;
+    justify-content: center;
+    gap: 6px;
+  }
+
+  /* Il pulsante Confronta si disabilita da solo fuori dal range 2-3 —
+     vedi aggiornaBarraSelezione(). Disabled ≠ nascosto apposta: resta
+     visibile per far capire che l'azione esiste, solo non ancora
+     disponibile con il numero attuale di selezionate. */
+  #bottone-confronta:disabled {
+    opacity: .4;
+    cursor: not-allowed;
+  }
+  #bottone-confronta:disabled:hover { background: transparent; }
+
   /* Attivata dal pulsante "espandi" nell'intestazione — solo desktop
      (su mobile la finestra occupa già quasi tutto lo schermo, non c'è
      altro spazio utile da guadagnare). Persiste finché non viene
@@ -1583,7 +1695,10 @@
     <p>Nessuna asta soddisfa questi criteri di ricerca — prova ad ampliarli.</p>
   </div>
 
-  <p class="conteggio-filtrati" id="conteggio-filtrati"></p>
+  <div class="riga-conteggio-filtrati">
+    <p class="conteggio-filtrati" id="conteggio-filtrati"></p>
+    <button type="button" class="link-seleziona-tutte" id="link-seleziona-tutte" onclick="selezionaTutteFiltrate()">Seleziona tutte</button>
+  </div>
 
   <div class="griglia" id="griglia-lotti"></div>
 
@@ -1660,8 +1775,23 @@
   <div id="barra-selezione" class="barra-selezione nascosto">
     <span class="barra-selezione-conteggio" id="barra-selezione-conteggio"></span>
     <div class="barra-selezione-azioni">
-      <button type="button" onclick="selezionaTutteFiltrate()">Seleziona tutte le filtrate</button>
+      <button type="button" class="barra-selezione-preferisci" onclick="eseguiAzioneInBlocco('preferito')">★ Preferisci tutte</button>
+      <button type="button" class="barra-selezione-scarta" onclick="eseguiAzioneInBlocco('scartato')">✕ Scarta tutte</button>
+      <button type="button" id="bottone-confronta" onclick="apriConfronto()">⇄ Confronta</button>
+    </div>
+    <div class="barra-selezione-azioni">
       <button type="button" onclick="deselezionaTutto()">Deseleziona tutto</button>
+    </div>
+  </div>
+
+  <!-- Finestra di confronto — 2 o 3 aste selezionate, affiancate.
+       Stesso pattern della finestra dettagli: contenuto costruito al
+       volo quando si apre (vedi apriConfronto()), non tenuto qui in
+       partenza. -->
+  <div id="overlay-confronto" class="overlay-dettagli-asta nascosto" onclick="if (event.target === this) chiudiConfronto()">
+    <div class="finestra-confronto">
+      <button type="button" class="chiudi-finestra-confronto" onclick="chiudiConfronto()" aria-label="Chiudi confronto">✕</button>
+      <div id="finestra-confronto-contenuto"></div>
     </div>
   </div>
 
@@ -2458,6 +2588,15 @@
       const asta = ASTE.find(a => a.id === id);
       if (asta) document.getElementById("finestra-dettagli-contenuto").innerHTML = contenutoFinestraDettagli(asta);
     }
+    // Stesso principio, per il confronto: id può comparire in una
+    // qualunque delle 2-3 colonne aperte, non solo la prima — un
+    // cambio su una qualsiasi di loro (stella/scarto cliccati DENTRO
+    // il confronto stesso) deve aggiornare l'intera griglia, visto che
+    // le colonne si ridisegnano tutte insieme, non una alla volta.
+    if (idAsteConfrontoAperto && idAsteConfrontoAperto.includes(id)) {
+      const aste = idAsteConfrontoAperto.map(i => ASTE.find(a => a.id === i)).filter(Boolean);
+      document.getElementById("finestra-confronto-contenuto").innerHTML = contenutoConfronto(aste);
+    }
   }
 
   // Tronca un indirizzo per un toast — largo abbastanza da restare
@@ -2557,6 +2696,16 @@
     barra.classList.remove("nascosto");
     document.getElementById("barra-selezione-conteggio").textContent =
       n === 1 ? "1 selezionata" : `${n} selezionate`;
+
+    // Confronto ammesso solo con 2 o 3 selezionate (deciso in chat: oltre
+    // 3 diventa illeggibile affiancato sullo schermo) — il pulsante resta
+    // visibile ma disabilitato fuori da quel range, con un titolo che
+    // spiega perché, invece di sparire e far sembrare che l'azione non
+    // esista affatto.
+    const bottoneConfronta = document.getElementById("bottone-confronta");
+    const ammesso = n >= 2 && n <= 3;
+    bottoneConfronta.disabled = !ammesso;
+    bottoneConfronta.title = ammesso ? "" : (n < 2 ? "Seleziona almeno 2 aste per confrontarle" : "Puoi confrontare al massimo 3 aste alla volta");
   }
 
   // Aggiorna SOLO le checkbox già presenti nel DOM in questo momento
@@ -2593,6 +2742,72 @@
     astaSelezionate.clear();
     aggiornaBarraSelezione();
     sincronizzaCheckboxSelezione();
+  }
+
+  // Azione in blocco — preferito o scartato per tutte le aste
+  // selezionate insieme. Nessuna funzione SQL nuova: riusa
+  // imposta_stato_preferito (la stessa di sempre, via
+  // accodaScritturaProtetta) chiamata una volta per ogni ID — la coda
+  // già esistente le serializza da sola lato rete, non serve
+  // costruire nient'altro per farlo in sicurezza. Un'unica richiesta
+  // di password per l'intero blocco (richiediPasswordSeServe la
+  // chiede una volta sola se non è già sbloccata, vedi sopra — non
+  // una volta per asta), un solo aggiornamento della griglia e un
+  // solo messaggio di riepilogo alla fine, non uno per asta: con
+  // "nessun limite" di selezione (voluto, per lo smistamento dopo
+  // uno scan tutta Italia) un blocco può contenere anche centinaia di
+  // aste, e un toast per ciascuna sarebbe inutilizzabile.
+  //
+  // Le note esistenti su un'asta selezionata vengono azzerate da un
+  // cambio di stato in blocco esattamente come lo sarebbero da un
+  // cambio singolo (stessa regola, in imposta_stato_preferito lato
+  // server) — nessuna eccezione speciale per il blocco, per non avere
+  // due comportamenti diversi per la stessa azione a seconda di come
+  // viene lanciata.
+  function eseguiAzioneInBlocco(stato) {
+    if (astaSelezionate.size === 0) return;
+    richiediPasswordSeServe(() => eseguiAzioneInBloccoOra(stato));
+  }
+
+  async function eseguiAzioneInBloccoOra(stato) {
+    const ids = Array.from(astaSelezionate);
+    const precedenti = new Map(); // id -> stato prima del tentativo, per rollback mirato SOLO sui falliti
+
+    const esiti = await Promise.allSettled(ids.map(async id => {
+      const asta = ASTE.find(a => a.id === id);
+      if (!asta) return;
+      precedenti.set(id, {preferito: asta.preferito, scartato: asta.scartato, notaPreferito: asta.notaPreferito});
+      asta.preferito = (stato === "preferito");
+      asta.scartato = (stato === "scartato");
+      asta.notaPreferito = "";
+      PREFERITI[id] = {stato, nota: ""};
+
+      const risultato = await accodaScritturaProtetta("imposta_stato_preferito", {password_tentativo: passwordCorrente, id_annuncio_input: id, stato_input: stato});
+      if (risultato.result !== "success") throw new Error(risultato.message || "");
+    }));
+
+    let falliti = 0;
+    esiti.forEach((esito, indice) => {
+      if (esito.status !== "rejected") return;
+      falliti++;
+      const id = ids[indice];
+      const asta = ASTE.find(a => a.id === id);
+      const precedente = precedenti.get(id);
+      if (!asta || !precedente) return;
+      Object.assign(asta, precedente);
+      if (precedente.preferito) PREFERITI[id] = {stato: "preferito", nota: precedente.notaPreferito};
+      else if (precedente.scartato) PREFERITI[id] = {stato: "scartato", nota: precedente.notaPreferito};
+      else delete PREFERITI[id];
+    });
+
+    applicaFiltri();
+    deselezionaTutto();
+
+    const riuscite = ids.length - falliti;
+    const agg = stato === "preferito" ? "preferita" : "scartata";
+    const aggPlurale = stato === "preferito" ? "preferite" : "scartate";
+    const etichettaRiuscite = riuscite === 1 ? `1 asta ${agg}` : `${riuscite} aste ${aggPlurale}`;
+    mostraToast(falliti === 0 ? `${etichettaRiuscite}.` : `${etichettaRiuscite}, ${falliti} non riuscite.`);
   }
 
   // Chiamata SOLO su un vero cambio di stato (mai una riconferma dello
@@ -3836,6 +4051,79 @@ ${notaHtml}
   function chiudiDettagliAsta() {
     idAstaModaleDettagli = null;
     document.getElementById("overlay-dettagli-asta").classList.add("nascosto");
+    document.body.style.overflow = "";
+  }
+
+  // Righe mostrate nel confronto, in ordine — una entry per riga, non
+  // per asta: ogni entry sa come estrarre/formattare il proprio valore
+  // da UNA asta qualsiasi, applicata poi a ciascuna delle 2-3 aste
+  // selezionate per costruire la griglia (vedi contenutoConfronto).
+  const RIGHE_CONFRONTO = [
+    {etichetta: "Margine stimato", formatta: a => a.margine !== null ? formattaEuro(a.margine) : "—"},
+    {etichetta: "Offerta minima", formatta: a => formattaEuro(a.offertaMinima)},
+    {etichetta: "Valore stima", formatta: a => a.valoreStima > 0 ? formattaEuro(a.valoreStima) : "—"},
+    {etichetta: "Superficie", formatta: a => a.superficieMq !== null ? `${a.superficieMq.toFixed(0)} mq` : "—"},
+    {etichetta: "€/mq (offerta)", formatta: a => a.euroMq !== null ? formattaEuro(a.euroMq) + "/mq" : "—"},
+    {etichetta: "Stato occupazione", formatta: a => escapeHtml(a.statoOccupazione)},
+    {etichetta: "Distanza", formatta: a => a.distanza !== null ? `${a.distanza} km` : "N/D"},
+    {etichetta: "Vendita", formatta: a => formattaData(a.dataVendita)},
+    {etichetta: "Probabile riproposizione", formatta: a => a.tentativoStimato ? `${a.tentativoStimato.tentativo}° · -${a.tentativoStimato.percentuale}%` : "—"},
+  ];
+
+  function contenutoConfronto(aste) {
+    // prima colonna riservata alle etichette (140px fissi), una colonna
+    // 1fr per ciascuna asta — 2 o 3, mai altrimenti (vedi apriConfronto)
+    const intestazioni = aste.map(a => {
+      const livello = livelloPunteggio(a.punteggio, a.valoreStima);
+      const contenutoSigillo = livello === "non-valutato" ? "—" : a.punteggio;
+      const iconaStella = a.preferito
+        ? `<svg viewBox="0 0 24 24" fill="currentColor" width="18" height="18"><path d="M12 2.5l2.9 6.5 7.1.6-5.4 4.6 1.6 6.9-6.2-3.6-6.2 3.6 1.6-6.9L2 9.6l7.1-.6z"/></svg>`
+        : `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linejoin="round" width="18" height="18"><path d="M12 2.5l2.9 6.5 7.1.6-5.4 4.6 1.6 6.9-6.2-3.6-6.2 3.6 1.6-6.9L2 9.6l7.1-.6z"/></svg>`;
+      const iconaScarta = a.scartato
+        ? `<svg viewBox="0 0 24 24" fill="currentColor" width="18" height="18"><circle cx="12" cy="12" r="10"/><path d="M8.7 8.7l6.6 6.6m0-6.6l-6.6 6.6" stroke="var(--surface)" stroke-width="1.8" stroke-linecap="round" fill="none"/></svg>`
+        : `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" width="18" height="18"><circle cx="12" cy="12" r="9.2" stroke-linecap="butt"/><path d="M9 9l6 6m0-6l-6 6"/></svg>`;
+      return `
+        <div class="confronto-intestazione">
+          <div class="sigillo ${livello}" style="width:44px;height:44px;font-size:1rem;">${contenutoSigillo}</div>
+          <p class="confronto-comune">${escapeHtml(a.comune)}</p>
+          <div class="confronto-azioni">
+            <button type="button" class="bottone-azione-lotto${a.preferito ? ' preferito-attivo' : ''}" title="Preferito" onclick="onClickStella(event, '${a.id}')">${iconaStella}</button>
+            <button type="button" class="bottone-azione-lotto${a.scartato ? ' scartato-attivo' : ''}" title="Non interessa" onclick="onClickScarta(event, '${a.id}')">${iconaScarta}</button>
+          </div>
+        </div>`;
+    }).join("");
+
+    const righe = RIGHE_CONFRONTO.map(riga => {
+      const celle = aste.map(a => `<div class="confronto-cella">${riga.formatta(a)}</div>`).join("");
+      return `<div class="confronto-etichetta">${escapeHtml(riga.etichetta)}</div>${celle}`;
+    }).join("");
+
+    return `
+      <div class="confronto-griglia" style="grid-template-columns: 140px repeat(${aste.length}, 1fr)">
+        <div></div>
+        ${intestazioni}
+        ${righe}
+      </div>`;
+  }
+
+  let idAsteConfrontoAperto = null; // array di id — null quando il confronto è chiuso
+
+  function apriConfronto() {
+    const ids = Array.from(astaSelezionate);
+    if (ids.length < 2) { mostraToast("Seleziona almeno 2 aste per confrontarle."); return; }
+    if (ids.length > 3) { mostraToast("Puoi confrontare al massimo 3 aste alla volta."); return; }
+    const aste = ids.map(id => ASTE.find(a => a.id === id)).filter(Boolean);
+    if (aste.length < 2) return; // una delle selezionate non esiste più nei dati correnti
+
+    idAsteConfrontoAperto = aste.map(a => a.id);
+    document.getElementById("finestra-confronto-contenuto").innerHTML = contenutoConfronto(aste);
+    document.getElementById("overlay-confronto").classList.remove("nascosto");
+    document.body.style.overflow = "hidden";
+  }
+
+  function chiudiConfronto() {
+    idAsteConfrontoAperto = null;
+    document.getElementById("overlay-confronto").classList.add("nascosto");
     document.body.style.overflow = "";
   }
 
