@@ -873,6 +873,31 @@
     max-width: calc(100vw - 32px);
   }
   .barra-selezione.nascosto { display: none; }
+
+  /* Sempre 70px più in alto del bordo (non 20px come la barra di
+     selezione sopra) apposta: quando entrambi sono visibili insieme
+     (selezione attiva DOPO aver scrollato parecchio — lo scenario
+     esatto discusso in chat) non si sovrappongono mai, senza dover
+     coordinare i due elementi da JS in base a quale dei due è
+     presente in un dato momento. */
+  .bottone-torna-su {
+    position: fixed;
+    right: 20px;
+    bottom: 70px;
+    z-index: 850;
+    width: 42px;
+    height: 42px;
+    border-radius: 50%;
+    border: 1px solid var(--border);
+    background: var(--surface);
+    color: var(--ink-muted);
+    font-size: 1.1rem;
+    cursor: pointer;
+    box-shadow: 0 6px 16px -4px rgba(0,0,0,.2);
+  }
+  .bottone-torna-su:hover { color: var(--primary); border-color: var(--primary); }
+  .bottone-torna-su.nascosto { display: none; }
+
   .barra-selezione-conteggio {
     font-family: var(--font-mono);
     font-size: .85rem;
@@ -1808,8 +1833,6 @@
       <button type="button" class="link-seleziona-tutte" id="link-seleziona-tutte" onclick="selezionaTutteFiltrate()">Seleziona tutte</button>
       <span class="separatore-azioni-conteggio">·</span>
       <button type="button" class="link-seleziona-tutte" onclick="esportaCSV('filtrate')">Esporta CSV</button>
-      <span class="separatore-azioni-conteggio">·</span>
-      <button type="button" class="link-seleziona-tutte" onclick="esportaCSV('preferiti')">Esporta preferiti</button>
     </div>
   </div>
 
@@ -1908,6 +1931,12 @@
       <div id="finestra-confronto-contenuto"></div>
     </div>
   </div>
+
+  <!-- Compare solo dopo un po' di scroll (vedi lo scroll listener più
+       sotto) — la riga con "Seleziona tutte"/"Esporta CSV" NON è fissa
+       come la barra controlli sopra di lei, quindi scorrendo lontano
+       diventa irraggiungibile senza risalire a mano. -->
+  <button type="button" id="bottone-torna-su" class="bottone-torna-su nascosto" onclick="window.scrollTo({top:0, behavior:'smooth'})" aria-label="Torna all'inizio">↑</button>
 
 </div>
 
@@ -2942,18 +2971,18 @@
     return valori.map(campoCSV).join(";");
   }
 
+  // ambito: "filtrate" (default, ultimoElencoFiltrato) oppure
+  // "selezionate" (astaSelezionate) — "preferiti" era un terzo ambito,
+  // tolto dall'interfaccia: filtrare su ★ e poi usare "Esporta CSV"
+  // ottiene lo stesso risultato con un pulsante in meno, più intuitivo
+  // di un caso speciale dedicato.
   function esportaCSV(ambito) {
-    let elenco;
-    if (ambito === "preferiti") elenco = ASTE.filter(a => a.preferito);
-    else if (ambito === "selezionate") elenco = Array.from(astaSelezionate).map(id => ASTE.find(a => a.id === id)).filter(Boolean);
-    else elenco = ultimoElencoFiltrato;
+    const elenco = ambito === "selezionate"
+      ? Array.from(astaSelezionate).map(id => ASTE.find(a => a.id === id)).filter(Boolean)
+      : ultimoElencoFiltrato;
 
     if (elenco.length === 0) {
-      const messaggiVuoto = {
-        preferiti: "Nessuna asta preferita da esportare.",
-        selezionate: "Nessuna asta selezionata da esportare.",
-      };
-      mostraToast(messaggiVuoto[ambito] || "Nessuna asta da esportare con i filtri attuali.");
+      mostraToast(ambito === "selezionate" ? "Nessuna asta selezionata da esportare." : "Nessuna asta da esportare con i filtri attuali.");
       return;
     }
     const righe = [INTESTAZIONI_CSV.join(";"), ...elenco.map(rigaCSV)];
@@ -2962,7 +2991,7 @@
     // (città, più, perché...) come caratteri illeggibili.
     const contenuto = "\uFEFF" + righe.join("\r\n");
     const dataOggi = new Date().toISOString().slice(0, 10);
-    const suffissi = { preferiti: "preferiti", selezionate: "selezionate" };
+    const suffissi = { selezionate: "selezionate" };
     const nomeFile = `aste-${suffissi[ambito] || "filtrate"}-${dataOggi}.csv`;
     scaricaTestoComeFile(contenuto, nomeFile, "text/csv;charset=utf-8;");
     mostraToast(elenco.length === 1 ? "1 asta esportata." : `${elenco.length} aste esportate.`);
@@ -4381,6 +4410,14 @@ ${notaHtml}
   }
 
   document.addEventListener("keydown", gestisciScorciatoieTastiera);
+
+  // Compare dopo 600px di scroll verticale — soglia scelta a sensazione
+  // (non legata al numero di card filtrate: è la posizione dello scroll
+  // a contare per il bisogno reale, non quante ce ne sono in totale).
+  // passive:true perché non serve mai bloccare lo scroll stesso da qui.
+  document.addEventListener("scroll", () => {
+    document.getElementById("bottone-torna-su").classList.toggle("nascosto", window.scrollY < 600);
+  }, { passive: true });
 
   // Scorciatoie da tastiera per la finestra dettagli — frecce per
   // scorrere tra le aste senza chiudere e riaprire, S per preferito, X
