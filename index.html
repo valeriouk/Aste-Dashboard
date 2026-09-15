@@ -4316,6 +4316,22 @@ ${notaHtml}
     if (evento.key === "x" || evento.key === "X") {
       evento.preventDefault();
       onClickScarta(evento, idAstaModaleDettagli);
+      return;
+    }
+    if (evento.key === "Enter") {
+      // Apre e mette a fuoco la nota — solo se l'asta è preferita o
+      // scartata (altrimenti la bolla della nota non esiste proprio nel
+      // DOM, vedi notaHtml in cartellaLotto/contenutoFinestraDettagli).
+      // Flusso pensato: S (o X) per segnare l'asta, poi Invio per
+      // scrivere subito una nota senza staccare le mani dalla tastiera
+      // per cercare il pulsante, poi Invio di nuovo DENTRO la textarea
+      // per salvarla (vedi l'onkeydown sulla textarea stessa, gestito
+      // separatamente da questa funzione — qui non arriva perché il
+      // controllo su INPUT/TEXTAREA più sopra fa uscire prima).
+      const asta = ASTE.find(a => a.id === idAstaModaleDettagli);
+      if (!asta || (!asta.preferito && !asta.scartato)) return;
+      const bolla = document.querySelector("#finestra-dettagli-contenuto .nota-preferito-bolla");
+      if (bolla) { evento.preventDefault(); apriEditorNota(bolla); }
     }
   }
 
