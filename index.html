@@ -741,6 +741,7 @@
   }
 
   .lotto {
+    position: relative;
     background: var(--surface);
     border: 1px solid var(--border);
     border-radius: 10px;
@@ -777,6 +778,94 @@
     box-shadow: 0 2px 3px rgba(30,35,32,.06), 0 10px 22px rgba(30,35,32,.08);
   }
   .lotto:hover .sigillo { transform: rotate(-1.5deg); }
+
+  /* Card selezionata (per confronto/azioni in blocco) — bordo e alone
+     nel colore --primary, via :has() invece di una classe JS: il
+     browser aggiorna da solo l'aspetto della card quando la checkbox
+     dentro di lei cambia stato, senza bisogno di codice che tenga
+     sincronizzato un attributo separato — un possibile disallineamento
+     in meno da poter creare per sbaglio. Supportato da tutti i
+     browser principali da anni, sicuro da usare senza ripiego. */
+  .lotto:has(.checkbox-selezione:checked) {
+    border-color: var(--primary);
+    box-shadow: 0 0 0 2px var(--primary-soft);
+  }
+
+  /* Checkbox personalizzata — non la spunta minuscola di default del
+     browser: stessa cura visiva del resto dell'interfaccia, non un
+     controllo di sistema lasciato al suo aspetto grezzo. appearance:none
+     toglie il disegno nativo, il resto lo ridisegna da capo. */
+  .checkbox-selezione {
+    appearance: none;
+    -webkit-appearance: none;
+    width: 22px;
+    height: 22px;
+    margin: 0;
+    border: 2px solid var(--border);
+    border-radius: 6px;
+    background: var(--surface);
+    cursor: pointer;
+    flex-shrink: 0;
+    position: relative;
+    transition: background-color .15s ease, border-color .15s ease;
+  }
+  .checkbox-selezione:hover { border-color: var(--primary); }
+  .checkbox-selezione:checked {
+    background: var(--primary);
+    border-color: var(--primary);
+  }
+  .checkbox-selezione:checked::after {
+    content: "";
+    position: absolute;
+    left: 6px;
+    top: 2px;
+    width: 6px;
+    height: 11px;
+    border: solid var(--surface);
+    border-width: 0 2px 2px 0;
+    transform: rotate(45deg);
+  }
+
+  /* Barra azioni di selezione — flottante e ancorata al fondo, non
+     dentro il flusso normale della pagina: appare/scompare senza
+     spostare nient'altro attorno a lei, e su mobile resta comoda da
+     raggiungere col pollice invece di dover salire fino alla barra
+     filtri già fissa in alto. */
+  .barra-selezione {
+    position: fixed;
+    left: 50%;
+    bottom: 20px;
+    transform: translateX(-50%);
+    z-index: 900;
+    background: var(--ink);
+    color: var(--surface);
+    border-radius: 12px;
+    padding: 12px 16px;
+    display: flex;
+    align-items: center;
+    gap: 14px;
+    box-shadow: 0 12px 28px -8px rgba(0,0,0,.35);
+    max-width: calc(100vw - 32px);
+  }
+  .barra-selezione.nascosto { display: none; }
+  .barra-selezione-conteggio {
+    font-family: var(--font-mono);
+    font-size: .85rem;
+    white-space: nowrap;
+  }
+  .barra-selezione-azioni { display: flex; gap: 8px; flex-wrap: wrap; }
+  .barra-selezione button {
+    font-family: var(--font-body);
+    font-size: .82rem;
+    padding: 7px 12px;
+    border-radius: 8px;
+    border: 1px solid rgba(255,255,255,.25);
+    background: transparent;
+    color: var(--surface);
+    cursor: pointer;
+    white-space: nowrap;
+  }
+  .barra-selezione button:hover { background: rgba(255,255,255,.12); }
 
   /* La classe "conclusa" viene comunque assegnata (vedi cartellaLotto in
      JS) ma qui non applichiamo più un'attenuazione: da quando la vista è
@@ -1564,6 +1653,18 @@
     </div>
   </div>
 
+  <!-- Barra di selezione multipla — nascosta finché astaSelezionate è
+       vuoto (vedi aggiornaBarraSelezione), non tenuta fuori dal DOM del
+       tutto: comparire/scomparire cambiando solo una classe è più
+       semplice che costruire/distruggere l'elemento ogni volta. -->
+  <div id="barra-selezione" class="barra-selezione nascosto">
+    <span class="barra-selezione-conteggio" id="barra-selezione-conteggio"></span>
+    <div class="barra-selezione-azioni">
+      <button type="button" onclick="selezionaTutteFiltrate()">Seleziona tutte le filtrate</button>
+      <button type="button" onclick="deselezionaTutto()">Deseleziona tutto</button>
+    </div>
+  </div>
+
 </div>
 
 <script>
@@ -1761,6 +1862,14 @@
 
   let ASTE = [];
   let PREFERITI = {}; // id_annuncio -> {stato: "preferito"|"scartato", nota: string}
+  // Selezione multipla (confronto, azioni in blocco) — un Set di ID, non
+  // un array: aggiunta/rimozione/controllo "è selezionato?" tutti O(1),
+  // e duplicati impossibili per costruzione. Sopravvive a filtri e
+  // scroll perché è l'UNICA fonte di verità: cartellaLotto() la
+  // consulta a ogni ridisegno (anche quelli innescati dalla
+  // virtualizzazione scorrendo), non c'è nessuno stato duplicato da
+  // tenere sincronizzato a mano.
+  let astaSelezionate = new Set();
 
   // ==========================================================
   // VISTA MAPPA — posizionamento a livello di COMUNE, non di indirizzo
@@ -2423,6 +2532,67 @@
     } else {
       richiediPasswordSeServe(() => eseguiImpostaStato(id, "scartato"));
     }
+  }
+
+  // ==========================================================
+  // SELEZIONE MULTIPLA — passo 1 (solo il meccanismo: checkbox, barra,
+  // conteggio, seleziona/deseleziona tutte le filtrate). Le azioni vere
+  // e proprie (confronto, preferito/scarto in blocco) arrivano in un
+  // passo successivo, riusando questo stesso Set come base.
+  // ==========================================================
+
+  function onCambiaSelezione(id, selezionata) {
+    if (selezionata) astaSelezionate.add(id);
+    else astaSelezionate.delete(id);
+    aggiornaBarraSelezione();
+  }
+
+  function aggiornaBarraSelezione() {
+    const barra = document.getElementById("barra-selezione");
+    const n = astaSelezionate.size;
+    if (n === 0) {
+      barra.classList.add("nascosto");
+      return;
+    }
+    barra.classList.remove("nascosto");
+    document.getElementById("barra-selezione-conteggio").textContent =
+      n === 1 ? "1 selezionata" : `${n} selezionate`;
+  }
+
+  // Aggiorna SOLO le checkbox già presenti nel DOM in questo momento
+  // (le card fuori dallo schermo, con la griglia virtualizzata, non
+  // esistono ancora nel DOM — vedi il commento su astaSelezionate più
+  // sopra). Non serve fare altro per quelle: quando la virtualizzazione
+  // le disegnerà scorrendo, cartellaLotto() legge lo stato corretto da
+  // astaSelezionate comunque, da sola. Passare da qui invece che da
+  // richiediRenderVirtuale() è deliberato: quest'ultimo salta il
+  // ridisegno se l'intervallo di righe visibili non è cambiato (ottimo
+  // per lo scroll, ma qui lo scroll non c'entra — servirebbe comunque
+  // un ridisegno delle checkbox già a schermo anche stando fermi).
+  function sincronizzaCheckboxSelezione() {
+    document.querySelectorAll("#griglia-lotti .lotto").forEach(card => {
+      const id = card.id.replace("lotto-", "");
+      const checkbox = card.querySelector(".checkbox-selezione");
+      if (checkbox) checkbox.checked = astaSelezionate.has(id);
+    });
+  }
+
+  // Tutte le aste ATTUALMENTE filtrate (ultimoElencoFiltrato, non solo
+  // la fetta visibile a schermo per via della virtualizzazione) — non
+  // tutte le aste esistenti in assoluto. Cambiare filtro dopo aver
+  // selezionato non deseleziona nulla: la selezione resta quello che
+  // hai scelto finché non la cambi tu, anche per aste che un filtro
+  // successivo nasconde temporaneamente alla vista.
+  function selezionaTutteFiltrate() {
+    ultimoElencoFiltrato.forEach(a => astaSelezionate.add(a.id));
+    aggiornaBarraSelezione();
+    sincronizzaCheckboxSelezione();
+  }
+
+  function deselezionaTutto() {
+    astaSelezionate.clear();
+    aggiornaBarraSelezione();
+    sincronizzaCheckboxSelezione();
   }
 
   // Chiamata SOLO su un vero cambio di stato (mai una riconferma dello
@@ -3603,6 +3773,7 @@
     return `
       <article class="lotto${conclusa ? ' conclusa' : ''}${a.scartato ? ' scartato' : ''}" id="lotto-${a.id}" onclick="apriDettagliAsta('${a.id}')" tabindex="0" aria-label="Vedi dettagli di ${escapeHtml(a.comune)}" onkeydown="if(event.key==='Enter'){apriDettagliAsta('${a.id}')}">
         <div class="lotto-testata">
+          <input type="checkbox" class="checkbox-selezione" aria-label="Seleziona per confronto o azioni multiple" ${astaSelezionate.has(a.id) ? "checked" : ""} onclick="event.stopPropagation()" onkeydown="event.stopPropagation()" onchange="onCambiaSelezione('${a.id}', this.checked)">
           <div class="sigillo ${livello}">${contenutoSigillo}</div>
           <div>
             <p class="lotto-id">${a.lotto ? "Lotto " + escapeHtml(a.lotto) + " · " : ""}${escapeHtml(a.tipologia)}</p>
