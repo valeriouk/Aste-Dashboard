@@ -1145,10 +1145,12 @@
   .overlay-dettagli-asta.aperto .finestra-dettagli-asta {
     opacity: 1;
     transform: translateY(0) scale(1);
-    /* Apertura: cubic-bezier con overshoot (supera per un attimo il
-       punto di arrivo, poi torna) — la sensazione di "molla" chiesta
-       in chat, non un semplice ease-out. */
-    transition: max-width .22s ease, max-height .22s ease, opacity .22s ease, transform .38s cubic-bezier(.34, 1.56, .64, 1);
+    /* Segnalato in chat: il rimbalzo con overshoot era troppo marcato
+       su mobile. Sostituito con una decelerazione morbida senza mai
+       superare il punto di arrivo (cubic-bezier "ease-out" pura, non
+       "back-out") — scivola su e si ferma con dolcezza, niente su e
+       giù alla fine. */
+    transition: max-width .22s ease, max-height .22s ease, opacity .22s ease, transform .32s cubic-bezier(.25, 1, .5, 1);
   }
 
   /* ============================================================
@@ -1398,6 +1400,20 @@
     /* Su mobile la finestra è già quasi a schermo intero — niente da
        espandere, il pulsante non avrebbe alcun effetto visibile. */
     .finestra-dettagli-espandi { display: none; }
+    /* Maniglia per chiudere trascinando verso il basso — visibile solo
+       qui: su desktop non c'è touch da gestire, l'icona di chiusura
+       basta. touch-action:none impedisce allo scroll nativo del
+       browser di intromettersi nel trascinamento gestito a mano più
+       sotto (vedi configuraTrascinamentoChiusura). */
+    .finestra-dettagli-maniglia {
+      display: block;
+      width: 36px;
+      height: 4px;
+      border-radius: 2px;
+      background: var(--border);
+      margin: 10px auto 4px;
+      touch-action: none;
+    }
   }
 
   .lotto-note {
@@ -1936,6 +1952,7 @@
        partenza: una sola asta alla volta, mai serve prima di allora. -->
   <div id="overlay-dettagli-asta" class="overlay-dettagli-asta" onclick="if (event.target === this) chiudiDettagliAsta()">
     <div class="finestra-dettagli-asta">
+      <div class="finestra-dettagli-maniglia" id="finestra-dettagli-maniglia" aria-hidden="true"></div>
       <div id="finestra-dettagli-contenuto"></div>
     </div>
   </div>
@@ -4452,6 +4469,61 @@ ${notaHtml}
   }
 
   document.addEventListener("keydown", gestisciScorciatoieTastiera);
+
+  // Trascinare la maniglia verso il basso chiude la finestra — SOLO
+  // dalla maniglia, non da tutta la scheda: il corpo sotto è
+  // scrollabile (perizie lunghe), trascinare da lì deve scorrere il
+  // contenuto, non chiudere la finestra. Nessun conflitto con un
+  // eventuale pull-to-refresh futuro: quello vivrebbe nella griglia
+  // sotto, non qui dentro.
+  function configuraTrascinamentoChiusuraDettagli() {
+    const maniglia = document.getElementById("finestra-dettagli-maniglia");
+    const finestra = document.querySelector("#overlay-dettagli-asta .finestra-dettagli-asta");
+    if (!maniglia || !finestra) return;
+
+    let yIniziale = null;
+    let distanzaAttuale = 0;
+    const SOGLIA_CHIUSURA_PX = 110;
+
+    const ripristinaSenzaChiudere = () => {
+      finestra.style.transition = "";
+      finestra.style.transform = "";
+      yIniziale = null;
+      distanzaAttuale = 0;
+    };
+
+    maniglia.addEventListener("touchstart", evento => {
+      yIniziale = evento.touches[0].clientY;
+      distanzaAttuale = 0;
+      finestra.style.transition = "none"; // segue il dito senza scia elastica di mezzo
+    }, { passive: true });
+
+    maniglia.addEventListener("touchmove", evento => {
+      if (yIniziale === null) return;
+      // Mai verso l'alto oltre il punto di partenza — si tira solo giù.
+      distanzaAttuale = Math.max(0, evento.touches[0].clientY - yIniziale);
+      finestra.style.transform = `translateY(${distanzaAttuale}px)`;
+    }, { passive: true });
+
+    maniglia.addEventListener("touchend", () => {
+      if (yIniziale === null) return;
+      const distanzaFinale = distanzaAttuale;
+      // Transizione e transform ripristinati PRIMA di eventualmente
+      // chiudere, nello stesso istante sincrono — il browser anima da
+      // dove il dito ha lasciato la presa dritto fino allo stato
+      // finale (aperta se sotto soglia, chiusa se sopra), senza scatti
+      // intermedi visibili: i due cambi sincroni non vengono mai
+      // dipinti separatamente.
+      finestra.style.transition = "";
+      finestra.style.transform = "";
+      yIniziale = null;
+      distanzaAttuale = 0;
+      if (distanzaFinale > SOGLIA_CHIUSURA_PX) chiudiDettagliAsta();
+    });
+
+    maniglia.addEventListener("touchcancel", ripristinaSenzaChiudere);
+  }
+  configuraTrascinamentoChiusuraDettagli();
 
   // Compare dopo 600px di scroll verticale — soglia scelta a sensazione
   // (non legata al numero di card filtrate: è la posizione dello scroll
