@@ -1129,7 +1129,7 @@
     background: var(--border);
     border: 1px solid var(--border);
     border-radius: 10px;
-    overflow: hidden;
+    overflow-x: auto;
     clear: both;
   }
   .confronto-griglia > div {
@@ -1142,6 +1142,28 @@
     font-size: .78rem;
     display: flex;
     align-items: center;
+    /* Colonna fissa a sinistra durante lo scroll orizzontale — su
+       mobile, con 2-3 aste affiancate, la tabella non stava mai nei
+       390px di uno schermo di telefono (segnalato in chat: "non
+       scrollabile a destra" era in realtà "non scrollabile affatto",
+       vedi overflow-x aggiunto sopra su .confronto-griglia). Fissare
+       SOLO la colonna delle etichette invece di lasciare scorrere
+       tutto insieme: mentre scorri per vedere la terza asta, sai
+       sempre a quale riga (margine? offerta?) stai guardando, un
+       problema reale del solo "aggiungere lo scroll" senza altro —
+       stesso principio delle intestazioni bloccate in un foglio di
+       calcolo. */
+    position: sticky;
+    left: 0;
+    z-index: 1;
+    background: var(--surface);
+    box-shadow: 2px 0 4px -2px rgba(0,0,0,.08);
+  }
+  .confronto-angolo {
+    position: sticky;
+    left: 0;
+    z-index: 2;
+    background: var(--surface);
   }
   .confronto-cella { font-family: var(--font-mono); }
   .confronto-intestazione {
@@ -4082,7 +4104,7 @@
         <div class="nota-preferito" onclick="event.stopPropagation()">
           <button type="button" class="nota-preferito-bolla${a.notaPreferito ? ' compilata' : ''}" onclick="apriEditorNota(this)">${a.notaPreferito ? escapeHtml(a.notaPreferito) : '+ Aggiungi una nota'}</button>
           <div class="nota-preferito-editor">
-            <textarea placeholder="Es. interessante, valuta meglio i costi di ristrutturazione...">${escapeHtml(a.notaPreferito)}</textarea>
+            <textarea placeholder="Es. interessante, valuta meglio i costi di ristrutturazione..." onkeydown="if(event.key==='Enter' && !event.shiftKey){ event.preventDefault(); salvaNotaDaEditor(this, '${a.id}'); }">${escapeHtml(a.notaPreferito)}</textarea>
             <div class="nota-preferito-azioni">
               <button type="button" class="nota-preferito-salva" onclick="salvaNotaDaEditor(this, '${a.id}')">Salva</button>
               ${a.notaPreferito ? `<button type="button" class="nota-preferito-elimina" onclick="eliminaNotaDaEditor(this, '${a.id}')">Elimina</button>` : ""}
@@ -4215,8 +4237,8 @@ ${notaHtml}
     }).join("");
 
     return `
-      <div class="confronto-griglia" style="grid-template-columns: 140px repeat(${aste.length}, 1fr)">
-        <div></div>
+      <div class="confronto-griglia" style="grid-template-columns: 130px repeat(${aste.length}, minmax(150px, 1fr))">
+        <div class="confronto-angolo"></div>
         ${intestazioni}
         ${righe}
       </div>`;
@@ -4327,7 +4349,7 @@ ${notaHtml}
         <div class="nota-preferito" onclick="event.stopPropagation()">
           <button type="button" class="nota-preferito-bolla${a.notaPreferito ? ' compilata' : ''}" onclick="apriEditorNota(this)">${a.notaPreferito ? escapeHtml(a.notaPreferito) : '+ Aggiungi una nota'}</button>
           <div class="nota-preferito-editor">
-            <textarea placeholder="Es. interessante, valuta meglio i costi di ristrutturazione...">${escapeHtml(a.notaPreferito)}</textarea>
+            <textarea placeholder="Es. interessante, valuta meglio i costi di ristrutturazione..." onkeydown="if(event.key==='Enter' && !event.shiftKey){ event.preventDefault(); salvaNotaDaEditor(this, '${a.id}'); }">${escapeHtml(a.notaPreferito)}</textarea>
             <div class="nota-preferito-azioni">
               <button type="button" class="nota-preferito-salva" onclick="salvaNotaDaEditor(this, '${a.id}')">Salva</button>
               ${a.notaPreferito ? `<button type="button" class="nota-preferito-elimina" onclick="eliminaNotaDaEditor(this, '${a.id}')">Elimina</button>` : ""}
