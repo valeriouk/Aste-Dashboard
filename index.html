@@ -1105,12 +1105,28 @@
   .overlay-dettagli-asta {
     position: fixed;
     inset: 0;
-    background: rgba(30, 35, 32, .5);
+    background: rgba(30, 35, 32, 0);
     z-index: 1800;
     display: flex;
     align-items: center;
     justify-content: center;
     padding: 24px;
+    /* Invisibile di base (non display:none — quella proprietà non è
+       animabile, saltava direttamente da "assente" a "presente" senza
+       nessun fotogramma intermedio da cui transizionare). Il ritardo
+       sulla transizione di visibility fa sì che, chiudendo, l'elemento
+       resti cliccabile/visibile finché la dissolvenza dello sfondo non
+       è finita davvero, poi sparisce per davvero — niente click che
+       attraversano un elemento ancora a mezz'aria. */
+    visibility: hidden;
+    pointer-events: none;
+    transition: background-color .2s ease, visibility 0s linear .2s;
+  }
+  .overlay-dettagli-asta.aperto {
+    background: rgba(30, 35, 32, .5);
+    visibility: visible;
+    pointer-events: auto;
+    transition: background-color .2s ease;
   }
   .finestra-dettagli-asta {
     background: var(--surface);
@@ -1120,7 +1136,19 @@
     max-height: 85vh;
     overflow-y: auto;
     box-shadow: 0 16px 48px rgba(30, 35, 32, .3);
-    transition: max-width .22s ease, max-height .22s ease;
+    opacity: 0;
+    transform: translateY(18px) scale(.97);
+    /* Chiusura: veloce e senza rimbalzo — non deve "intrattenere",
+       deve solo togliersi di mezzo. */
+    transition: max-width .22s ease, max-height .22s ease, opacity .16s ease, transform .16s ease;
+  }
+  .overlay-dettagli-asta.aperto .finestra-dettagli-asta {
+    opacity: 1;
+    transform: translateY(0) scale(1);
+    /* Apertura: cubic-bezier con overshoot (supera per un attimo il
+       punto di arrivo, poi torna) — la sensazione di "molla" chiesta
+       in chat, non un semplice ease-out. */
+    transition: max-width .22s ease, max-height .22s ease, opacity .22s ease, transform .38s cubic-bezier(.34, 1.56, .64, 1);
   }
 
   /* ============================================================
@@ -1330,6 +1358,7 @@
       background: none !important;
       padding: 0 !important;
       display: block !important;
+      visibility: visible !important;
     }
     .finestra-dettagli-asta {
       position: static !important;
@@ -1338,6 +1367,8 @@
       overflow: visible !important;
       box-shadow: none !important;
       border-radius: 0 !important;
+      opacity: 1 !important;
+      transform: none !important;
     }
     .solo-stampa {
       display: block;
@@ -1359,6 +1390,11 @@
     .overlay-dettagli-asta { padding: 0; align-items: flex-end; }
     .finestra-dettagli-asta,
     .finestra-dettagli-asta.espansa { max-width: 100%; max-height: 92vh; border-radius: 16px 16px 0 0; }
+    /* Su mobile la "molla" è verticale, non una scala — scivola su da
+       sotto il bordo, un vero bottom sheet, non solo una finestra
+       piccola che appare al centro. */
+    .finestra-dettagli-asta { transform: translateY(100%); }
+    .overlay-dettagli-asta.aperto .finestra-dettagli-asta { transform: translateY(0); }
     /* Su mobile la finestra è già quasi a schermo intero — niente da
        espandere, il pulsante non avrebbe alcun effetto visibile. */
     .finestra-dettagli-espandi { display: none; }
@@ -1898,7 +1934,7 @@
        posto dentro la card, vedi apriDettagliAsta(). Il contenuto viene
        costruito e inserito al volo quando si apre, non tenuto qui in
        partenza: una sola asta alla volta, mai serve prima di allora. -->
-  <div id="overlay-dettagli-asta" class="overlay-dettagli-asta nascosto" onclick="if (event.target === this) chiudiDettagliAsta()">
+  <div id="overlay-dettagli-asta" class="overlay-dettagli-asta" onclick="if (event.target === this) chiudiDettagliAsta()">
     <div class="finestra-dettagli-asta">
       <div id="finestra-dettagli-contenuto"></div>
     </div>
@@ -1925,7 +1961,7 @@
        Stesso pattern della finestra dettagli: contenuto costruito al
        volo quando si apre (vedi apriConfronto()), non tenuto qui in
        partenza. -->
-  <div id="overlay-confronto" class="overlay-dettagli-asta nascosto" onclick="if (event.target === this) chiudiConfronto()">
+  <div id="overlay-confronto" class="overlay-dettagli-asta" onclick="if (event.target === this) chiudiConfronto()">
     <div class="finestra-confronto">
       <button type="button" class="chiudi-finestra-confronto" onclick="chiudiConfronto()" aria-label="Chiudi confronto">✕</button>
       <div id="finestra-confronto-contenuto"></div>
@@ -4305,7 +4341,13 @@ ${notaHtml}
     }
     idAstaModaleDettagli = id;
     document.getElementById("finestra-dettagli-contenuto").innerHTML = contenutoFinestraDettagli(asta);
-    document.getElementById("overlay-dettagli-asta").classList.remove("nascosto");
+    // "aperto", non più "nascosto" da togliere — vedi il CSS di
+    // .overlay-dettagli-asta: parte invisibile di suo (visibility:hidden),
+    // e la classe "aperto" fa scattare la transizione verso lo stato
+    // visibile — su mobile la finestra scivola su da sotto con un
+    // leggero rimbalzo (cubic-bezier con overshoot), non compare di
+    // colpo come prima.
+    document.getElementById("overlay-dettagli-asta").classList.add("aperto");
     document.body.style.overflow = "hidden"; // la pagina sotto non scorre mentre la finestra è aperta
   }
 
@@ -4323,7 +4365,7 @@ ${notaHtml}
 
   function chiudiDettagliAsta() {
     idAstaModaleDettagli = null;
-    document.getElementById("overlay-dettagli-asta").classList.add("nascosto");
+    document.getElementById("overlay-dettagli-asta").classList.remove("aperto");
     document.body.style.overflow = "";
   }
 
@@ -4390,13 +4432,13 @@ ${notaHtml}
 
     idAsteConfrontoAperto = aste.map(a => a.id);
     document.getElementById("finestra-confronto-contenuto").innerHTML = contenutoConfronto(aste);
-    document.getElementById("overlay-confronto").classList.remove("nascosto");
+    document.getElementById("overlay-confronto").classList.add("aperto");
     document.body.style.overflow = "hidden";
   }
 
   function chiudiConfronto() {
     idAsteConfrontoAperto = null;
-    document.getElementById("overlay-confronto").classList.add("nascosto");
+    document.getElementById("overlay-confronto").classList.remove("aperto");
     document.body.style.overflow = "";
   }
 
