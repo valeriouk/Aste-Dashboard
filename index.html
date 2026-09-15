@@ -1438,14 +1438,32 @@
        basta. touch-action:none impedisce allo scroll nativo del
        browser di intromettersi nel trascinamento gestito a mano più
        sotto (vedi configuraTrascinamentoChiusura). */
+    /* Segnalato in chat: l'area toccabile era grande quanto la
+       barretta visibile (4px di altezza) — troppo piccola da centrare
+       col dito in modo affidabile, con tocchi che ogni tanto mancavano
+       il bersaglio del tutto. L'elemento ora è molto più grande (28px,
+       tutta la larghezza) per la rilevazione del tocco, ma la barretta
+       resta piccola ed elegante: disegnata con ::before, non
+       ingrandita anche lei — solo l'AREA che risponde al dito cresce,
+       non l'aspetto. */
     .finestra-dettagli-maniglia {
       display: block;
+      position: relative;
+      width: 100%;
+      height: 28px;
+      margin: 0;
+      touch-action: none;
+    }
+    .finestra-dettagli-maniglia::before {
+      content: "";
+      position: absolute;
+      top: 11px;
+      left: 50%;
+      transform: translateX(-50%);
       width: 36px;
       height: 4px;
       border-radius: 2px;
       background: var(--border);
-      margin: 10px auto 4px;
-      touch-action: none;
     }
   }
 
@@ -4539,7 +4557,7 @@ ${notaHtml}
 
     let yIniziale = null;
     let distanzaAttuale = 0;
-    const SOGLIA_CHIUSURA_PX = 110;
+    const SOGLIA_CHIUSURA_PX = 75;
 
     const ripristinaSenzaChiudere = () => {
       finestra.style.transition = "";
