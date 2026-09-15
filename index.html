@@ -898,6 +898,38 @@
   .bottone-torna-su:hover { color: var(--primary); border-color: var(--primary); }
   .bottone-torna-su.nascosto { display: none; }
 
+  /* Solo mobile — su desktop non c'è touch da intercettare, un
+     indicatore che non risponderebbe mai a nulla sarebbe solo confuso.
+     Posizione e rotazione durante il trascinamento sono gestite via
+     style inline da JS (vedi configuraPullToRefresh) — qui solo
+     l'aspetto e l'animazione di caricamento. */
+  .indicatore-refresh {
+    display: none;
+    position: fixed;
+    top: 0;
+    left: 50%;
+    transform: translate(-50%, -100%);
+    z-index: 850;
+    width: 38px;
+    height: 38px;
+    border-radius: 50%;
+    background: var(--surface);
+    border: 1px solid var(--border);
+    box-shadow: 0 4px 14px -2px rgba(0,0,0,.2);
+    align-items: center;
+    justify-content: center;
+    color: var(--primary);
+  }
+  .indicatore-refresh-icona { width: 19px; height: 19px; }
+  .indicatore-refresh.che-carica .indicatore-refresh-icona {
+    animation: girare-indicatore-refresh .7s linear infinite;
+  }
+  @keyframes girare-indicatore-refresh { to { transform: rotate(360deg); } }
+
+  @media (max-width: 640px) {
+    .indicatore-refresh { display: flex; }
+  }
+
   .barra-selezione-conteggio {
     font-family: var(--font-mono);
     font-size: .85rem;
@@ -1990,6 +2022,14 @@
        come la barra controlli sopra di lei, quindi scorrendo lontano
        diventa irraggiungibile senza risalire a mano. -->
   <button type="button" id="bottone-torna-su" class="bottone-torna-su nascosto" onclick="window.scrollTo({top:0, behavior:'smooth'})" aria-label="Torna all'inizio">↑</button>
+
+  <!-- Pull-to-refresh — posizionata fuori schermo sopra di default
+       (translateY(-100%)), portata giù via JS in proporzione a quanto
+       si tira (vedi configuraPullToRefresh). Solo mobile: la CSS sotto
+       la nasconde su desktop, dove non c'è gesto touch da intercettare. -->
+  <div id="indicatore-refresh" class="indicatore-refresh" aria-hidden="true">
+    <svg class="indicatore-refresh-icona" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 12a9 9 0 11-3-6.7"/><path d="M21 3v6h-6"/></svg>
+  </div>
 
 </div>
 
@@ -3432,7 +3472,14 @@
       .then(r => { if (!r.ok) throw new Error(`HTTP ${r.status}`); return r.json(); })
       .catch(() => []);
 
-    Promise.all([
+    // return qui: chi chiama avvia() può ora concatenare .then/.catch per
+    // sapere DAVVERO quando il caricamento finisce (successo o fallito),
+    // invece di indovinare con un timeout fisso — usato dal
+    // pull-to-refresh più sotto. Il chiamante originale (avvio pagina)
+    // ignora semplicemente il valore restituito, nessuna differenza per
+    // lui: aggiungere un return non cambia il comportamento di chi non
+    // lo usa.
+    return Promise.all([
       conTimeoutRigetta(promessaAste, 20000),
       conTimeoutRipiego(promessaPreferiti, 8000, [])
     ]).then(([righeAste, righePreferiti]) => {
@@ -3593,8 +3640,16 @@
 
   function popolaFiltroTipologia() {
     const menu = document.getElementById("menu-tipologia");
+    // checked ricalcolato da categorieTipologiaAttive, non lasciato vuoto
+    // di default: questa funzione ricostruisce le checkbox da zero ogni
+    // volta che viene chiamata, e con il pull-to-refresh (vedi più sotto)
+    // non è più garantito che sia SOLO al primissimo caricamento — senza
+    // questo, un filtro tipo attivo prima di un refresh apparirebbe
+    // spento visivamente pur restando davvero applicato ai dati
+    // (categorieTipologiaAttive non viene toccata da questa funzione,
+    // solo la spunta a schermo lo era).
     menu.innerHTML = MACROCATEGORIE_TIPOLOGIA.map(categoria =>
-      `<label class="voce-menu-tipologia"><input type="checkbox" value="${escapeHtml(categoria)}" onchange="aggiornaFiltroTipologia()"><span>${escapeHtml(categoria)}</span></label>`
+      `<label class="voce-menu-tipologia"><input type="checkbox" value="${escapeHtml(categoria)}" ${categorieTipologiaAttive.has(categoria) ? "checked" : ""} onchange="aggiornaFiltroTipologia()"><span>${escapeHtml(categoria)}</span></label>`
     ).join("");
   }
 
@@ -4524,6 +4579,98 @@ ${notaHtml}
     maniglia.addEventListener("touchcancel", ripristinaSenzaChiudere);
   }
   configuraTrascinamentoChiusuraDettagli();
+
+  // Pull-to-refresh — solo mobile (l'indicatore stesso è nascosto via
+  // CSS su desktop, ma i listener non farebbero comunque nulla senza un
+  // gesto touch). Attivo SOLO se già in cima alla pagina (altrimenti
+  // sarebbe solo scroll normale verso il basso) e SOLO se nessun altro
+  // pannello è aperto sopra (dettagli, confronto, filtri estesi,
+  // password) — tirare giù mentre uno di questi è visibile non deve
+  // avviare un ricaricamento a sorpresa dietro le quinte.
+  function configuraPullToRefresh() {
+    const indicatore = document.getElementById("indicatore-refresh");
+    const icona = indicatore ? indicatore.querySelector(".indicatore-refresh-icona") : null;
+    if (!indicatore || !icona) return;
+
+    const SOGLIA_ATTIVAZIONE_PX = 70;
+    const TETTO_VISIVO_PX = 100;
+    let yIniziale = null;
+    let distanzaAttuale = 0;
+    let staCaricando = false;
+
+    function qualchePannelloAperto() {
+      return document.getElementById("overlay-dettagli-asta").classList.contains("aperto")
+        || document.getElementById("overlay-confronto").classList.contains("aperto")
+        || document.getElementById("controlli-estesi").classList.contains("aperto")
+        || !document.getElementById("overlay-password").classList.contains("nascosto")
+        || !document.getElementById("overlay-gate-lettura").classList.contains("nascosto");
+    }
+
+    function aggiornaIndicatoreDurante(px) {
+      const spostamento = Math.min(px, TETTO_VISIVO_PX);
+      const progresso = Math.min(px / SOGLIA_ATTIVAZIONE_PX, 1);
+      indicatore.style.transition = "none"; // segue il dito senza scia, come la maniglia dei dettagli
+      indicatore.style.transform = `translate(-50%, ${spostamento}px)`;
+      icona.style.transform = `rotate(${progresso * 250}deg)`;
+    }
+
+    function riportaIndicatoreSu() {
+      indicatore.style.transition = "transform .25s ease";
+      indicatore.style.transform = "translate(-50%, -100%)";
+      icona.style.transform = "";
+      distanzaAttuale = 0;
+    }
+
+    function avviaCaricamento() {
+      staCaricando = true;
+      indicatore.classList.add("che-carica");
+      indicatore.style.transition = "transform .2s ease";
+      indicatore.style.transform = "translate(-50%, 16px)"; // resta ancorata visibile, non torna su finché non è finito davvero
+      icona.style.transform = "";
+      const fine = () => {
+        staCaricando = false;
+        indicatore.classList.remove("che-carica");
+        riportaIndicatoreSu();
+      };
+      // avvia() ora restituisce la propria promise (vedi sopra) — sparisce
+      // quando il caricamento è DAVVERO concluso, non dopo un tempo
+      // indovinato. .catch qui non nasconde l'errore: avvia() lo gestisce
+      // già da sola (stato-errore), questo serve solo a far sparire
+      // comunque l'indicatore anche in quel caso.
+      avvia().then(fine).catch(fine);
+    }
+
+    document.addEventListener("touchstart", evento => {
+      if (staCaricando || window.scrollY > 0 || qualchePannelloAperto()) { yIniziale = null; return; }
+      yIniziale = evento.touches[0].clientY;
+      distanzaAttuale = 0;
+    }, { passive: true });
+
+    document.addEventListener("touchmove", evento => {
+      if (yIniziale === null || staCaricando) return;
+      const delta = evento.touches[0].clientY - yIniziale;
+      // Anche se iniziato in cima, la pagina potrebbe essersi mossa nel
+      // frattempo per altri motivi — ricontrollato ad ogni movimento,
+      // non solo all'inizio del gesto.
+      if (delta <= 0 || window.scrollY > 0) { yIniziale = null; riportaIndicatoreSu(); return; }
+      distanzaAttuale = delta;
+      // preventDefault SOLO qui, mentre stiamo davvero tirando dall'alto
+      // della pagina — sopprime il rimbalzo nativo del browser durante
+      // QUESTO gesto specifico, senza toccare lo scroll normale in ogni
+      // altro momento (vedi { passive: false } sotto, necessario perché
+      // preventDefault non ha effetto su un listener passive).
+      if (evento.cancelable) evento.preventDefault();
+      aggiornaIndicatoreDurante(distanzaAttuale);
+    }, { passive: false });
+
+    document.addEventListener("touchend", () => {
+      if (yIniziale === null || staCaricando) return;
+      if (distanzaAttuale > SOGLIA_ATTIVAZIONE_PX) avviaCaricamento();
+      else riportaIndicatoreSu();
+      yIniziale = null;
+    });
+  }
+  configuraPullToRefresh();
 
   // Compare dopo 600px di scroll verticale — soglia scelta a sensazione
   // (non legata al numero di card filtrate: è la posizione dello scroll
