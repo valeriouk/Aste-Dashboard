@@ -2239,6 +2239,24 @@
   // aggiornaCardSingola.
   let idAstaModaleDettagli = null;
 
+  // Fotografia dell'ordine di ultimoElencoFiltrato nel momento esatto in
+  // cui si apre una scheda da un'azione "fresca" (click su una card, dal
+  // popup mappa, dalla nota di un toast — vedi apriDettagliAsta più
+  // sotto) — NON ricalcolata a ogni freccia. Motivo: segnalato in chat un
+  // problema concreto — scartando un'asta con X mentre si scorre con le
+  // frecce, quella stessa azione la sposta in fondo all'elenco filtrato
+  // (gli scartati vanno in coda), quindi ricalcolare "il prossimo" dal
+  // vivo dopo l'azione portava alla card sbagliata (un altro scartato, o
+  // a un vicolo cieco). Stesso problema, forma diversa, filtrando solo
+  // sui preferiti: togliere il preferito con S fa sparire la scheda
+  // corrente dall'elenco filtrato all'istante, quindi cercarla lì per
+  // trovare "il prossimo" falliva del tutto (indexOf -1), bloccando le
+  // frecce. Congelare l'ordine una volta, all'apertura, e usare SOLO
+  // quello per tutta la sessione di frecce risolve entrambi i casi allo
+  // stesso modo: il "prossimo" resta quello di prima dell'azione, non
+  // quello ricalcolato dopo.
+  let sequenzaNavigazioneDettagli = [];
+
   // Quante colonne la griglia sta effettivamente mostrando in questo
   // momento — stessa aritmetica di "auto-fill" del CSS Grid (colonne di
   // almeno LARGHEZZA_MIN_CARD, quante ce ne stanno), calcolata a mano
@@ -4115,9 +4133,19 @@ ${notaHtml}
     `;
   }
 
-  function apriDettagliAsta(id) {
+  // mantieniSequenzaNavigazione: true SOLO quando la chiamata arriva
+  // dalla navigazione a frecce (vedi gestisciScorciatoieTastiera) — in
+  // quel caso non si tocca sequenzaNavigazioneDettagli, che deve
+  // restare quella catturata all'apertura originale della sessione di
+  // navigazione. In ogni altro caso (click su una card, dal popup
+  // mappa, dalla nota di un toast) è un'apertura fresca, e la sequenza
+  // va ricatturata da capo sull'elenco filtrato attuale.
+  function apriDettagliAsta(id, mantieniSequenzaNavigazione) {
     const asta = ASTE.find(a => a.id === id);
     if (!asta) return;
+    if (!mantieniSequenzaNavigazione) {
+      sequenzaNavigazioneDettagli = ultimoElencoFiltrato.map(a => a.id);
+    }
     idAstaModaleDettagli = id;
     document.getElementById("finestra-dettagli-contenuto").innerHTML = contenutoFinestraDettagli(asta);
     document.getElementById("overlay-dettagli-asta").classList.remove("nascosto");
@@ -4242,14 +4270,19 @@ ${notaHtml}
     if (evento.ctrlKey || evento.metaKey || evento.altKey) return;
 
     if (evento.key === "ArrowLeft" || evento.key === "ArrowRight") {
-      const indiceAttuale = ultimoElencoFiltrato.findIndex(a => a.id === idAstaModaleDettagli);
-      if (indiceAttuale === -1) return; // l'asta aperta non è (più) nell'elenco filtrato corrente
+      const indiceAttuale = sequenzaNavigazioneDettagli.indexOf(idAstaModaleDettagli);
+      if (indiceAttuale === -1) return; // non dovrebbe succedere: l'id aperto è sempre stato messo in sequenzaNavigazioneDettagli alla sua apertura
       const nuovoIndice = indiceAttuale + (evento.key === "ArrowRight" ? 1 : -1);
       // Nessun "giro" da un capo all'altro apposta: più prevedibile
       // fermarsi ai bordi che saltare all'improvviso in fondo/inizio.
-      if (nuovoIndice < 0 || nuovoIndice >= ultimoElencoFiltrato.length) return;
+      if (nuovoIndice < 0 || nuovoIndice >= sequenzaNavigazioneDettagli.length) return;
+      const prossimoId = sequenzaNavigazioneDettagli[nuovoIndice];
+      // L'asta al prossimo indice potrebbe non esistere più in ASTE
+      // (rarissimo — solo se sparita dai dati tra un caricamento e
+      // l'altro) — apriDettagliAsta gestisce già da sola questo caso
+      // (non fa nulla se non la trova), niente da controllare qui.
       evento.preventDefault();
-      apriDettagliAsta(ultimoElencoFiltrato[nuovoIndice].id);
+      apriDettagliAsta(prossimoId, true); // true: mantieni questa stessa sequenza, non ricatturarla
       return;
     }
 
