@@ -1242,14 +1242,48 @@
      a meno di essere esplicitamente rimostrata qui).
   ============================================================ */
   @media print {
-    body { background: #fff !important; }
-    body * { visibility: hidden; }
-    #finestra-dettagli-contenuto, #finestra-dettagli-contenuto * { visibility: visible; }
-    #finestra-dettagli-contenuto {
-      position: absolute;
-      left: 0;
-      top: 0;
-      width: 100%;
+    body {
+      background: #fff !important;
+      overflow: visible !important;
+      height: auto !important;
+    }
+    /* CORREZIONE: #overlay-dettagli-asta è FIGLIO di .contenitore nel
+       DOM vero (verificato risalendo parentElement fino a <body> — la
+       lettura precedente, fatta a occhio sull'indentazione del sorgente,
+       era sbagliata) — non un fratello come pensavo alla prima stesura.
+       Nascondere .contenitore per intero nascondeva quindi ANCHE
+       l'overlay al suo interno, producendo una pagina bianca (altezza
+       0 a ogni livello, verificato) — un secondo bug, distinto dal
+       primo (centinaia di pagine) e introdotto proprio nel tentativo di
+       risolverlo. Corretto qui: si nasconde ogni figlio diretto di
+       .contenitore TRANNE l'overlay dei dettagli, che così resta
+       visibile e .contenitore stesso resta come contenitore neutro. */
+    .contenitore > *:not(#overlay-dettagli-asta) { display: none !important; }
+    .contenitore { max-width: 100% !important; margin: 0 !important; padding: 0 !important; }
+    /* toast-preferiti fa eccezione: creato da mostraToast() con
+       document.body.appendChild, è figlio DIRETTO di body, non di
+       .contenitore — non lo coprirebbe la regola sopra. */
+    #toast-preferiti { display: none !important; }
+
+    /* position:fixed sull'overlay va disattivato per la stampa: un
+       elemento fixed viene ripaginato su OGNI pagina da diversi motori
+       di stampa (Chrome incluso) — la seconda metà del bug originale
+       segnalato ("si ripetono"). Tornando a un posizionamento normale
+       nel flusso, la finestra stampa una volta sola e si impagina su
+       più fogli da sola se il contenuto è lungo, come qualunque testo. */
+    .overlay-dettagli-asta {
+      position: static !important;
+      background: none !important;
+      padding: 0 !important;
+      display: block !important;
+    }
+    .finestra-dettagli-asta {
+      position: static !important;
+      max-width: 100% !important;
+      max-height: none !important;
+      overflow: visible !important;
+      box-shadow: none !important;
+      border-radius: 0 !important;
     }
     .solo-stampa {
       display: block;
@@ -1263,9 +1297,7 @@
     /* Chrome interattivo senza senso su carta — pulsanti di stato,
        editor della nota, azioni di chiusura/espansione. */
     .lotto-azioni, .finestra-dettagli-azioni-header,
-    .nota-preferito-editor, .checkbox-selezione,
-    .barra-selezione, #overlay-confronto, #overlay-password,
-    #overlay-gate-lettura, #toast-preferiti { display: none !important; }
+    .nota-preferito-editor, .checkbox-selezione { display: none !important; }
   }
 
 
