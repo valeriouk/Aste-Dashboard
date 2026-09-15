@@ -4224,9 +4224,45 @@ ${notaHtml}
     document.querySelector(".finestra-dettagli-asta").classList.toggle("espansa");
   }
 
-  document.addEventListener("keydown", evento => {
-    if (evento.key === "Escape" && idAstaModaleDettagli !== null) chiudiDettagliAsta();
-  });
+  document.addEventListener("keydown", gestisciScorciatoieTastiera);
+
+  // Scorciatoie da tastiera per la finestra dettagli — frecce per
+  // scorrere tra le aste senza chiudere e riaprire, S per preferito, X
+  // per scarta. SOLO con la finestra aperta, MAI mentre si sta
+  // scrivendo (casella di ricerca, editor di una nota — altrimenti
+  // digitare "s" in una nota scarterebbe l'asta per sbaglio), e MAI con
+  // un tasto modificatore premuto (Ctrl/Cmd/Alt), per non rubare
+  // scorciatoie vere del browser (es. Cmd+S "salva pagina").
+  function gestisciScorciatoieTastiera(evento) {
+    if (evento.key === "Escape" && idAstaModaleDettagli !== null) { chiudiDettagliAsta(); return; }
+
+    if (idAstaModaleDettagli === null) return;
+    const bersaglio = evento.target;
+    if (bersaglio.tagName === "INPUT" || bersaglio.tagName === "TEXTAREA") return;
+    if (evento.ctrlKey || evento.metaKey || evento.altKey) return;
+
+    if (evento.key === "ArrowLeft" || evento.key === "ArrowRight") {
+      const indiceAttuale = ultimoElencoFiltrato.findIndex(a => a.id === idAstaModaleDettagli);
+      if (indiceAttuale === -1) return; // l'asta aperta non è (più) nell'elenco filtrato corrente
+      const nuovoIndice = indiceAttuale + (evento.key === "ArrowRight" ? 1 : -1);
+      // Nessun "giro" da un capo all'altro apposta: più prevedibile
+      // fermarsi ai bordi che saltare all'improvviso in fondo/inizio.
+      if (nuovoIndice < 0 || nuovoIndice >= ultimoElencoFiltrato.length) return;
+      evento.preventDefault();
+      apriDettagliAsta(ultimoElencoFiltrato[nuovoIndice].id);
+      return;
+    }
+
+    if (evento.key === "s" || evento.key === "S") {
+      evento.preventDefault();
+      onClickStella(evento, idAstaModaleDettagli);
+      return;
+    }
+    if (evento.key === "x" || evento.key === "X") {
+      evento.preventDefault();
+      onClickScarta(evento, idAstaModaleDettagli);
+    }
+  }
 
   // Tutto il contenuto della finestra — testata (sigillo, comune, badge),
   // stella/scarto/nota, cifre principali, e i dettagli che prima erano
