@@ -2635,23 +2635,38 @@
   const ORDINALI_TENTATIVO = ["", "", "secondo", "terzo", "quarto", "quinto"];
 
   // Stima — MAI un fatto certo — se questa sia una riproposizione a
-  // ribasso di un'asta andata deserta, guardando quanto l'offerta minima
-  // si discosta dal valore di stima del perito. Le aste giudiziarie
-  // italiane, quando la vendita va deserta, vengono tipicamente
-  // ripubblicate con un ribasso del 25% sul prezzo precedente (non è una
-  // regola scritta uguale in ogni tribunale, ma è la convenzione più
-  // diffusa) — quindi un secondo tentativo tende a un ~25% di sconto sul
-  // valore di stima, un terzo a un ~44% (0.75² = 0.5625, cioè uno sconto
-  // del 43.75%), un quarto a un ~58% (0.75³), e così via componendo.
-  // Fasce ampie apposta attorno a questi centri: la percentuale REALE
-  // varia da tribunale a tribunale (alcuni usano 20% invece di 25%), e
-  // PVP stesso non dichiara mai esplicitamente "questo è il terzo
-  // tentativo" — non c'è NESSUN campo che lo dica con certezza, questo è
-  // un indizio dedotto dai numeri, non un dato letto da qualche parte.
-  // Per questo il testo mostrato dice sempre "probabile", mai un fatto.
-  function stimaTentativoAsta(offertaMinima, valoreStima) {
-    if (!valoreStima || valoreStima <= 0 || !offertaMinima || offertaMinima <= 0) return null;
-    const sconto = 1 - (offertaMinima / valoreStima);
+  // ribasso di un'asta andata deserta, guardando quanto il PREZZO BASE
+  // di questo annuncio si discosta dal valore di stima del perito.
+  //
+  // PREZZO BASE, non offerta minima — trovato un errore reale qui,
+  // segnalato in chat con un caso preciso (prezzo base ~86.251, stima
+  // 115.000: 25% di sconto, secondo tentativo — ma calcolato
+  // sull'offerta minima di 64.688 risultava 44%, terzo tentativo,
+  // SBAGLIATO). Il motivo: l'offerta minima è per regola SEMPRE circa il
+  // 75% del prezzo base DELLO STESSO turno d'asta (non è un ribasso tra
+  // un turno e l'altro, è la soglia minima di rilancio ammessa DENTRO
+  // ogni singolo turno) — usare l'offerta minima come riferimento
+  // sommava questo 25% "interno al turno" al ribasso vero "tra un turno
+  // e l'altro", contando lo stesso tipo di sconto due volte e facendo
+  // risultare un tentativo di troppo. Il prezzo base invece si riduce
+  // SOLO tra un turno e l'altro, è il riferimento giusto.
+  //
+  // Le aste giudiziarie italiane, quando la vendita va deserta, vengono
+  // tipicamente ripubblicate con un ribasso del 25% sul prezzo base
+  // precedente (non è una regola scritta uguale in ogni tribunale, ma è
+  // la convenzione più diffusa) — quindi un secondo tentativo tende a un
+  // ~25% di sconto sul valore di stima, un terzo a un ~44% (0.75² =
+  // 0.5625, cioè uno sconto del 43.75%), un quarto a un ~58% (0.75³), e
+  // così via componendo. Fasce ampie apposta attorno a questi centri: la
+  // percentuale REALE varia da tribunale a tribunale (alcuni usano 20%
+  // invece di 25%), e PVP stesso non dichiara mai esplicitamente
+  // "questo è il terzo tentativo" — non c'è NESSUN campo che lo dica con
+  // certezza, questo è un indizio dedotto dai numeri, non un dato letto
+  // da qualche parte. Per questo il testo mostrato dice sempre
+  // "probabile", mai un fatto.
+  function stimaTentativoAsta(prezzoBase, valoreStima) {
+    if (!valoreStima || valoreStima <= 0 || !prezzoBase || prezzoBase <= 0) return null;
+    const sconto = 1 - (prezzoBase / valoreStima);
     if (sconto < 0.12) return null; // vicino al valore pieno: nessun indizio di riproposizione
     let tentativo;
     if (sconto < 0.34) tentativo = 2;
@@ -2753,7 +2768,8 @@
   function normalizzaRiga(r) {
     const valoreStima = numeroSicuro(r.valore_stima_perito);
     const offertaMinima = numeroSicuro(r.offerta_minima);
-    const tentativoStimato = stimaTentativoAsta(offertaMinima, valoreStima);
+    const prezzoBase = numeroSicuro(r.prezzo_base);
+    const tentativoStimato = stimaTentativoAsta(prezzoBase, valoreStima);
     // Testo dedicato SOLO per la ricerca, più generoso di come viene
     // mostrato in un badge: include sia la forma ordinale ("3°") sia la
     // parola per esteso ("terzo") sia la percentuale nuda ("44%"),
@@ -2771,7 +2787,7 @@
       lotto: r.n__lotto || "",
       disponibilita: r["disponibilità_pvp"] || "N/D",
       offertaMinima: offertaMinima,
-      prezzoBase: numeroSicuro(r.prezzo_base),
+      prezzoBase: prezzoBase,
       rilancioMinimo: numeroSicuro(r.rilancio_minimo),
       valoreStima: valoreStima,
       margine: r.margine_stimato !== null && r.margine_stimato !== undefined ? numeroSicuro(r.margine_stimato, null) : null,
