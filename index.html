@@ -1001,10 +1001,10 @@
      con "questo è un dato numerico da valutare", non un allarme. */
   .badge-tentativo {
     display: inline-block;
-    background: var(--primary-soft);
+    background: rgba(35, 76, 106, .06);
     color: var(--primary);
     font-size: .72rem;
-    font-weight: 600;
+    font-weight: 500;
     padding: 3px 9px;
     border-radius: 5px;
     margin: 4px 6px 6px 0;
@@ -1204,6 +1204,7 @@
     flex-shrink: 0;
   }
   .finestra-dettagli-chiudi,
+  .finestra-dettagli-stampa,
   .finestra-dettagli-espandi {
     background: var(--surface-2);
     border: none;
@@ -1218,10 +1219,55 @@
     justify-content: center;
   }
   .finestra-dettagli-chiudi { font-size: 1.4rem; line-height: 1; }
-  .finestra-dettagli-espandi svg { width: 16px; height: 16px; }
+  .finestra-dettagli-espandi svg,
+  .finestra-dettagli-stampa svg { width: 16px; height: 16px; }
   .finestra-dettagli-espandi:hover,
+  .finestra-dettagli-stampa:hover,
   .finestra-dettagli-chiudi:hover { color: var(--ink); }
   .finestra-dettagli-corpo { padding: 20px 24px 28px; }
+
+  /* Testo visibile SOLO nel PDF/stampa (vedi @media print più sotto) —
+     a schermo non serve, la finestra stessa è già il contesto. */
+  .solo-stampa { display: none; }
+
+  /* ============================================================
+     STAMPA / ESPORTA PDF — un foglio di stile dedicato, non una
+     libreria PDF: per una pagina statica come questa, "Salva come PDF"
+     dalla finestra di stampa nativa del browser (Ctrl+P / Cmd+P) è già
+     tutto quello che serve, senza aggiungere nessuna dipendenza.
+     "Nascondi tutto, poi rimostra solo il contenuto della finestra
+     dettagli" invece di elencare una per una tutte le sezioni della
+     pagina da nascondere — più corto, e automaticamente al sicuro da
+     qualunque nuova sezione aggiunta in futuro (nascosta di default,
+     a meno di essere esplicitamente rimostrata qui).
+  ============================================================ */
+  @media print {
+    body { background: #fff !important; }
+    body * { visibility: hidden; }
+    #finestra-dettagli-contenuto, #finestra-dettagli-contenuto * { visibility: visible; }
+    #finestra-dettagli-contenuto {
+      position: absolute;
+      left: 0;
+      top: 0;
+      width: 100%;
+    }
+    .solo-stampa {
+      display: block;
+      font-family: var(--font-mono);
+      font-size: .72rem;
+      color: #666;
+      margin-bottom: 14px;
+      padding-bottom: 10px;
+      border-bottom: 1px solid #ccc;
+    }
+    /* Chrome interattivo senza senso su carta — pulsanti di stato,
+       editor della nota, azioni di chiusura/espansione. */
+    .lotto-azioni, .finestra-dettagli-azioni-header,
+    .nota-preferito-editor, .checkbox-selezione,
+    .barra-selezione, #overlay-confronto, #overlay-password,
+    #overlay-gate-lettura, #toast-preferiti { display: none !important; }
+  }
+
 
   @media (max-width: 640px) {
     .overlay-dettagli-asta { padding: 0; align-items: flex-end; }
@@ -2964,6 +3010,16 @@
     return `${parti[2]}/${parti[1]}/${parti[0]}`;
   }
 
+  // Solo per l'intestazione visibile in stampa/PDF (vedi .solo-stampa) —
+  // "adesso", non una data letta dal database, quindi non riusa
+  // formattaData sopra (pensata per l'ISO di Supabase, non per Date()).
+  function formattaDataOraCorrente() {
+    const ora = new Date();
+    const data = ora.toLocaleDateString("it-IT");
+    const orario = ora.toLocaleTimeString("it-IT", { hour: "2-digit", minute: "2-digit" });
+    return `${data} ${orario}`;
+  }
+
   // Data di oggi in locale, come stringa ISO YYYY-MM-DD. Costruita a mano
   // (non new Date().toISOString(), che è in UTC) per evitare che nelle ore
   // vicine alla mezzanotte un'asta di oggi risulti erroneamente "conclusa"
@@ -4193,6 +4249,9 @@ ${notaHtml}
           </div>
         </div>
         <div class="finestra-dettagli-azioni-header">
+          <button type="button" class="finestra-dettagli-stampa" onclick="window.print()" aria-label="Esporta PDF" title="Esporta PDF (stampa)">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M6 9V2h12v7M6 18H4a2 2 0 01-2-2v-5a2 2 0 012-2h16a2 2 0 012 2v5a2 2 0 01-2 2h-2M6 14h12v8H6z"/></svg>
+          </button>
           <button type="button" class="finestra-dettagli-espandi" onclick="alternaEspansioneDettagli()" aria-label="Espandi">
             <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M15 3h6v6M9 21H3v-6M21 3l-7 7M3 21l7-7"/></svg>
           </button>
@@ -4200,6 +4259,7 @@ ${notaHtml}
         </div>
       </div>
       <div class="finestra-dettagli-corpo">
+        <p class="solo-stampa">Scansione Aste Giudiziarie — scheda generata il ${formattaDataOraCorrente()}${a.urlAsta ? ` — ${escapeHtml(a.urlAsta)}` : ""}</p>
         <div class="lotto-azioni" style="margin:0 0 18px">
           <button type="button" class="bottone-azione-lotto${a.preferito ? ' preferito-attivo' : ''}" title="Preferito" onclick="onClickStella(event, '${a.id}')">${iconaStella}</button>
           <button type="button" class="bottone-azione-lotto${a.scartato ? ' scartato-attivo' : ''}" title="Non interessa" onclick="onClickScarta(event, '${a.id}')">${iconaScarta}</button>
