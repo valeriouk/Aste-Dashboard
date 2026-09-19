@@ -223,6 +223,15 @@
     flex-wrap: wrap;
     margin-bottom: 28px;
   }
+  .barra-ripristino {
+    background: var(--surface);
+    border: 1px dashed var(--border);
+    border-radius: 12px;
+    padding: 14px 18px;
+    margin-bottom: 20px;
+  }
+  .barra-ripristino .nota-campo { margin-top: 8px; margin-bottom: 0; }
+  .barra-ripristino .messaggio-salvataggio-card { display: block; margin-top: 8px; }
   .bottone-avvia {
     background: var(--secondary);
     color: var(--surface);
@@ -527,6 +536,12 @@
         <button type="button" class="bottone-avvia" id="bottone-avvia-scanner" onclick="avviaScanner()">▶ Avvia scanner ora</button>
         <button type="button" class="bottone-avvia secondario" id="bottone-verifica-batch" onclick="avviaVerificaBatch()">🔄 Controlla batch ora</button>
         <span id="messaggio-azioni-principali"></span>
+      </div>
+
+      <div class="barra-ripristino">
+        <button type="button" class="bottone-secondario" id="bottone-ripristina-predefiniti" onclick="confermaRipristinaPredefiniti()">↺ Ripristina tutti i valori predefiniti</button>
+        <p class="nota-campo">Riporta le cinque card di ricerca qui sotto (area, prezzo, tipologia, altri filtri, modelli) ai valori con cui hai avviato il progetto — non tocca le due card di pianificazione. Salva subito, come ogni altra modifica in questa pagina.</p>
+        <p id="messaggio-ripristina-predefiniti" class="messaggio-salvataggio-card"></p>
       </div>
 
       <div class="elenco-card">
@@ -1366,6 +1381,97 @@
     return {errori, prezzoMin, prezzoMax};
   }
 
+  // Costruisce il payload nella forma che imposta_configurazione si
+  // aspetta e lo invia, a partire da configAttuale — estratta a parte
+  // perché serve in due punti: il salvataggio di ognuna delle cinque
+  // card di ricerca (sotto) e il ripristino ai valori predefiniti (più
+  // sotto), che è esattamente lo stesso invio con configAttuale
+  // popolato diversamente prima di chiamarla.
+  async function salvaConfigCompletaSulServer() {
+    return chiamaRpc("imposta_configurazione", {
+      password_tentativo: passwordCorrente,
+      config_json: {
+        prezzo_base_min: configAttuale.prezzo_base_min,
+        prezzo_base_max: configAttuale.prezzo_base_max === null ? "illimitato" : configAttuale.prezzo_base_max,
+        lat_riferimento: configAttuale.lat_riferimento,
+        lon_riferimento: configAttuale.lon_riferimento,
+        raggio_km: configAttuale.raggio_km,
+        cerca_tutta_italia: String(configAttuale.cerca_tutta_italia),
+        tipologie_incluse: JSON.stringify(configAttuale.tipologie_incluse),
+        solo_aste_future: String(configAttuale.solo_aste_future),
+        usa_astegiudiziarie_perizia: String(configAttuale.usa_astegiudiziarie_perizia),
+        pausa_tra_aste_secondi: configAttuale.pausa_tra_aste_secondi,
+        solo_conteggio: String(configAttuale.solo_conteggio),
+        conteggia_non_analizzate: String(configAttuale.conteggia_non_analizzate),
+        cascata_modelli_gemini: JSON.stringify(configAttuale.cascata_modelli_gemini)
+      }
+    });
+  }
+
+  // Stessi valori con cui il progetto è partito — invariati rispetto alla
+  // versione precedente della pagina, solo spostati qui. Copre le sole
+  // cinque card di ricerca: le due di pianificazione sono nuove e non
+  // ne facevano parte.
+  const VALORI_PREDEFINITI = {
+    prezzoMin: 0,
+    prezzoMax: 110000,
+    lat: 37.5078836,
+    lon: 15.0830032,
+    raggio: 22,
+    cercaTuttaItalia: false,
+    tipologieIncluse: [],
+    soloFuture: true,
+    astegiudiziarie: true,
+    pausa: 1,
+    soloConteggio: false,
+    conteggiaNonAnalizzate: false,
+    cascataModelli: ["gemini-3.7-flash", "gemini-3.6-flash", "gemini-3.5-flash", "gemini-3.5-flash-lite"]
+  };
+
+  function confermaRipristinaPredefiniti() {
+    const bottone = document.getElementById("bottone-ripristina-predefiniti");
+    richiedeDoppioTocco("ripristina-predefiniti", bottone, "↺ Ripristina tutti i valori predefiniti", "Confermi il ripristino?", ripristinaValoriPredefiniti);
+  }
+
+  async function ripristinaValoriPredefiniti() {
+    const msgEl = document.getElementById("messaggio-ripristina-predefiniti");
+    msgEl.textContent = "Ripristino in corso…";
+    msgEl.className = "messaggio-salvataggio-card messaggio-attesa";
+
+    configAttuale.prezzo_base_min = VALORI_PREDEFINITI.prezzoMin;
+    configAttuale.prezzo_base_max = VALORI_PREDEFINITI.prezzoMax;
+    configAttuale.lat_riferimento = VALORI_PREDEFINITI.lat;
+    configAttuale.lon_riferimento = VALORI_PREDEFINITI.lon;
+    configAttuale.raggio_km = VALORI_PREDEFINITI.raggio;
+    configAttuale.cerca_tutta_italia = VALORI_PREDEFINITI.cercaTuttaItalia;
+    configAttuale.tipologie_incluse = [...VALORI_PREDEFINITI.tipologieIncluse];
+    configAttuale.solo_aste_future = VALORI_PREDEFINITI.soloFuture;
+    configAttuale.usa_astegiudiziarie_perizia = VALORI_PREDEFINITI.astegiudiziarie;
+    configAttuale.pausa_tra_aste_secondi = VALORI_PREDEFINITI.pausa;
+    configAttuale.solo_conteggio = VALORI_PREDEFINITI.soloConteggio;
+    configAttuale.conteggia_non_analizzate = VALORI_PREDEFINITI.conteggiaNonAnalizzate;
+    configAttuale.cascata_modelli_gemini = [...VALORI_PREDEFINITI.cascataModelli];
+
+    try {
+      const risultato = await salvaConfigCompletaSulServer();
+      if (risultato.result === "success") {
+        msgEl.textContent = "Valori predefiniti ripristinati e salvati.";
+        msgEl.className = "messaggio-salvataggio-card messaggio-ok";
+        renderizzaRiepilogoArea();
+        renderizzaRiepilogoPrezzo();
+        renderizzaRiepilogoTipologia();
+        renderizzaRiepilogoAltri();
+        renderizzaRiepilogoModelli();
+      } else {
+        msgEl.textContent = risultato.message || "Errore sconosciuto durante il ripristino.";
+        msgEl.className = "messaggio-salvataggio-card messaggio-errore";
+      }
+    } catch (e) {
+      msgEl.textContent = "Richiesta non riuscita. Controlla la connessione e riprova.";
+      msgEl.className = "messaggio-salvataggio-card messaggio-errore";
+    }
+  }
+
   async function salvaCard(nomeCard) {
     const msgEl = document.getElementById(`messaggio-salva-${nomeCard}`);
     msgEl.textContent = "Salvataggio in corso…";
@@ -1441,24 +1547,7 @@
           verifica_batch_minuti: pianificazioneAttuale.verifica_batch_minuti
         });
       } else {
-        risultato = await chiamaRpc("imposta_configurazione", {
-          password_tentativo: passwordCorrente,
-          config_json: {
-            prezzo_base_min: configAttuale.prezzo_base_min,
-            prezzo_base_max: configAttuale.prezzo_base_max === null ? "illimitato" : configAttuale.prezzo_base_max,
-            lat_riferimento: configAttuale.lat_riferimento,
-            lon_riferimento: configAttuale.lon_riferimento,
-            raggio_km: configAttuale.raggio_km,
-            cerca_tutta_italia: String(configAttuale.cerca_tutta_italia),
-            tipologie_incluse: JSON.stringify(configAttuale.tipologie_incluse),
-            solo_aste_future: String(configAttuale.solo_aste_future),
-            usa_astegiudiziarie_perizia: String(configAttuale.usa_astegiudiziarie_perizia),
-            pausa_tra_aste_secondi: configAttuale.pausa_tra_aste_secondi,
-            solo_conteggio: String(configAttuale.solo_conteggio),
-            conteggia_non_analizzate: String(configAttuale.conteggia_non_analizzate),
-            cascata_modelli_gemini: JSON.stringify(configAttuale.cascata_modelli_gemini)
-          }
-        });
+        risultato = await salvaConfigCompletaSulServer();
       }
 
       if (risultato.result === "success") {
