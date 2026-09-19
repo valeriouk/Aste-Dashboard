@@ -313,6 +313,17 @@
   .campo-form input[type="time"],
   .campo-form select {
     width: 100%;
+    /* Difesa in profondità per input[type="time"] dentro una riga
+       flessibile (vedi .riga-due-orari più sotto): il rendering nativo
+       di un campo orario su alcuni browser mobile ha una larghezza
+       minima legata al proprio contenuto che può superare lo spazio
+       assegnato dal flex, invadendo l'elemento accanto (segnalato in
+       chat: il pulsante × rosso). Qui non ha alcun effetto sugli altri
+       usi block-level di questa stessa regola (prezzo, pausa, ecc) —
+       min-width conta solo per il restringimento dentro un contenitore
+       flessibile.
+    */
+    min-width: 0;
     background: var(--bg);
     border: 1px solid var(--border);
     border-radius: 8px;
@@ -439,7 +450,7 @@
   .giorno-toggle input:focus-visible + span { outline: 2px solid var(--primary); outline-offset: 2px; }
 
   .riga-due-orari { display: flex; gap: 10px; }
-  .riga-due-orari .campo-form { flex: 1; margin-bottom: 0; }
+  .riga-due-orari .campo-form { flex: 1; margin-bottom: 0; min-width: 0; }
   .bottone-rimuovi-orario {
     background: var(--danger-soft);
     color: var(--danger);
