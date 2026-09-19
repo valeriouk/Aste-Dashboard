@@ -540,7 +540,7 @@
 
       <div class="barra-ripristino">
         <button type="button" class="bottone-secondario" id="bottone-ripristina-predefiniti" onclick="confermaRipristinaPredefiniti()">↺ Ripristina tutti i valori predefiniti</button>
-        <p class="nota-campo">Riporta le cinque card di ricerca qui sotto (area, prezzo, tipologia, altri filtri, modelli) ai valori con cui hai avviato il progetto — non tocca le due card di pianificazione. Salva subito, come ogni altra modifica in questa pagina.</p>
+        <p class="nota-campo">Riporta tutte le sette card qui sotto — area, prezzo, tipologia, altri filtri, modelli, e le due di pianificazione (lun-ven alle 16:00, verifica batch ogni 15 minuti) — ai valori di partenza del progetto. Salva subito, come ogni altra modifica in questa pagina.</p>
         <p id="messaggio-ripristina-predefiniti" class="messaggio-salvataggio-card"></p>
       </div>
 
@@ -1425,7 +1425,16 @@
     pausa: 1,
     soloConteggio: false,
     conteggiaNonAnalizzate: false,
-    cascataModelli: ["gemini-3.7-flash", "gemini-3.6-flash", "gemini-3.5-flash", "gemini-3.5-flash-lite"]
+    cascataModelli: ["gemini-3.7-flash", "gemini-3.6-flash", "gemini-3.5-flash", "gemini-3.5-flash-lite"],
+    // Pianificazione: lun-ven perché i tribunali (fonte di PVP) non
+    // pubblicano nel weekend — un giro sabato/domenica non troverebbe
+    // comunque nulla di nuovo. 15 minuti per la verifica batch è lo
+    // stesso ritmo che aveva sempre avuto prima che questa impostazione
+    // fosse configurabile.
+    scannerAttivo: true,
+    scannerGiorni: ["lun", "mar", "mer", "gio", "ven"],
+    scannerOrari: ["16:00"],
+    verificaBatchMinuti: 15
   };
 
   function confermaRipristinaPredefiniti() {
@@ -1452,20 +1461,52 @@
     configAttuale.conteggia_non_analizzate = VALORI_PREDEFINITI.conteggiaNonAnalizzate;
     configAttuale.cascata_modelli_gemini = [...VALORI_PREDEFINITI.cascataModelli];
 
+    pianificazioneAttuale.scanner_attivo = VALORI_PREDEFINITI.scannerAttivo;
+    pianificazioneAttuale.scanner_giorni = [...VALORI_PREDEFINITI.scannerGiorni];
+    pianificazioneAttuale.scanner_orari = [...VALORI_PREDEFINITI.scannerOrari];
+    pianificazioneAttuale.verifica_batch_minuti = VALORI_PREDEFINITI.verificaBatchMinuti;
+
+    // Due funzioni separate (imposta_configurazione, imposta_pianificazione),
+    // quindi due chiamate — in sequenza, non in parallelo, così un
+    // fallimento della seconda non si confonde con quello della prima:
+    // se una delle due fallisce, il messaggio dice ESATTAMENTE quale,
+    // invece di un errore generico che lascerebbe capire poco su cosa
+    // riprovare.
     try {
-      const risultato = await salvaConfigCompletaSulServer();
-      if (risultato.result === "success") {
-        msgEl.textContent = "Valori predefiniti ripristinati e salvati.";
-        msgEl.className = "messaggio-salvataggio-card messaggio-ok";
+      const risultatoConfig = await salvaConfigCompletaSulServer();
+      if (risultatoConfig.result !== "success") {
+        msgEl.textContent = "Ricerca/filtri: " + (risultatoConfig.message || "errore sconosciuto") + " — pianificazione non toccata.";
+        msgEl.className = "messaggio-salvataggio-card messaggio-errore";
+        return;
+      }
+
+      const risultatoPianificazione = await chiamaRpc("imposta_pianificazione", {
+        password_tentativo: passwordCorrente,
+        scanner_attivo: pianificazioneAttuale.scanner_attivo,
+        scanner_giorni: pianificazioneAttuale.scanner_giorni,
+        scanner_orari: pianificazioneAttuale.scanner_orari,
+        verifica_batch_minuti: pianificazioneAttuale.verifica_batch_minuti
+      });
+      if (risultatoPianificazione.result !== "success") {
+        msgEl.textContent = "Ricerca/filtri ripristinati, ma la pianificazione no: " + (risultatoPianificazione.message || "errore sconosciuto");
+        msgEl.className = "messaggio-salvataggio-card messaggio-errore";
         renderizzaRiepilogoArea();
         renderizzaRiepilogoPrezzo();
         renderizzaRiepilogoTipologia();
         renderizzaRiepilogoAltri();
         renderizzaRiepilogoModelli();
-      } else {
-        msgEl.textContent = risultato.message || "Errore sconosciuto durante il ripristino.";
-        msgEl.className = "messaggio-salvataggio-card messaggio-errore";
+        return;
       }
+
+      msgEl.textContent = "Valori predefiniti ripristinati e salvati (ricerca, filtri e pianificazione).";
+      msgEl.className = "messaggio-salvataggio-card messaggio-ok";
+      renderizzaRiepilogoArea();
+      renderizzaRiepilogoPrezzo();
+      renderizzaRiepilogoTipologia();
+      renderizzaRiepilogoAltri();
+      renderizzaRiepilogoModelli();
+      renderizzaRiepilogoPianificazioneScanner();
+      renderizzaRiepilogoPianificazioneBatch();
     } catch (e) {
       msgEl.textContent = "Richiesta non riuscita. Controlla la connessione e riprova.";
       msgEl.className = "messaggio-salvataggio-card messaggio-errore";
