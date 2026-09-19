@@ -488,8 +488,10 @@
   <div id="schermata-password" class="riquadro-gate nascosto">
     <h2>Accesso protetto</h2>
     <p>Inserisci la password per modificare la configurazione.</p>
-    <input type="password" id="campo-password" placeholder="Password" autocomplete="current-password" onkeydown="if(event.key==='Enter') sblocca()">
-    <button class="bottone-primario" onclick="sblocca()">Sblocca</button>
+    <form onsubmit="return false;">
+      <input type="password" id="campo-password" placeholder="Password" autocomplete="current-password" onkeydown="if(event.key==='Enter') sblocca()">
+      <button class="bottone-primario" onclick="sblocca()">Sblocca</button>
+    </form>
     <p id="errore-gate" class="messaggio-errore nascosto"></p>
   </div>
 
@@ -575,36 +577,40 @@
       <section class="blocco-semplice">
         <h2>Cambia password</h2>
         <p class="nota-campo">Un'unica password protegge sia questa pagina sia preferiti/scarti/note su index.html — cambiarla qui vale per entrambe, subito.</p>
-        <div class="campo-form">
-          <label for="campo-password-attuale">Password attuale</label>
-          <input type="password" id="campo-password-attuale" autocomplete="current-password">
-        </div>
-        <div class="campo-form">
-          <label for="campo-password-nuova">Nuova password</label>
-          <input type="password" id="campo-password-nuova" autocomplete="new-password">
-        </div>
-        <div class="campo-form">
-          <label for="campo-password-conferma">Conferma nuova password</label>
-          <input type="password" id="campo-password-conferma" autocomplete="new-password" onkeydown="if(event.key==='Enter') cambiaPassword()">
-        </div>
-        <button type="button" class="bottone-secondario" id="bottone-cambia-password" onclick="cambiaPassword()">Cambia password</button>
+        <form onsubmit="return false;">
+          <div class="campo-form">
+            <label for="campo-password-attuale">Password attuale</label>
+            <input type="password" id="campo-password-attuale" autocomplete="current-password">
+          </div>
+          <div class="campo-form">
+            <label for="campo-password-nuova">Nuova password</label>
+            <input type="password" id="campo-password-nuova" autocomplete="new-password">
+          </div>
+          <div class="campo-form">
+            <label for="campo-password-conferma">Conferma nuova password</label>
+            <input type="password" id="campo-password-conferma" autocomplete="new-password" onkeydown="if(event.key==='Enter') cambiaPassword()">
+          </div>
+          <button type="button" class="bottone-secondario" id="bottone-cambia-password" onclick="cambiaPassword()">Cambia password</button>
+        </form>
         <p id="messaggio-cambio-password"></p>
       </section>
 
       <section class="blocco-semplice">
         <h2>Password di lettura per index.html</h2>
         <p class="nota-campo">Password SEPARATA da quella sopra — se attiva, serve per aprire il registro (index.html) stesso, non solo per stella/scarto/nota. Facoltativa: se disattivata, index.html resta apribile da chiunque abbia il link.</p>
-        <div class="campo-form">
-          <label class="etichetta-checkbox">
-            <input type="checkbox" id="campo-attiva-password-lettura" onchange="alternaCampoPasswordLettura()">
-            Richiedi una password per aprire index.html
-          </label>
-        </div>
-        <div class="campo-form" id="blocco-nuova-password-lettura">
-          <label for="campo-nuova-password-lettura">Nuova password di lettura</label>
-          <input type="password" id="campo-nuova-password-lettura" autocomplete="new-password" placeholder="Lascia vuoto per non modificarla">
-        </div>
-        <button type="button" class="bottone-secondario" onclick="salvaPasswordLettura()">Salva</button>
+        <form onsubmit="return false;">
+          <div class="campo-form">
+            <label class="etichetta-checkbox">
+              <input type="checkbox" id="campo-attiva-password-lettura" onchange="alternaCampoPasswordLettura()">
+              Richiedi una password per aprire index.html
+            </label>
+          </div>
+          <div class="campo-form" id="blocco-nuova-password-lettura">
+            <label for="campo-nuova-password-lettura">Nuova password di lettura</label>
+            <input type="password" id="campo-nuova-password-lettura" autocomplete="new-password" placeholder="Lascia vuoto per non modificarla">
+          </div>
+          <button type="button" class="bottone-secondario" onclick="salvaPasswordLettura()">Salva</button>
+        </form>
         <p id="messaggio-password-lettura"></p>
       </section>
 
