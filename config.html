@@ -5,7 +5,6 @@
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>Configurazione · Registro Opportunità</title>
 
-<!-- PWA — installabilità minima: manifest, icone, meta per iOS -->
 <link rel="manifest" href="manifest.json">
 <link rel="icon" href="favicon-32.png" sizes="32x32">
 <link rel="apple-touch-icon" href="apple-touch-icon.png">
@@ -21,12 +20,7 @@
 <script src="https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/leaflet.js"></script>
 <style>
 
-  /* ============================================================
-     TOKEN DI DESIGN — identici a index.html, per coerenza visiva
-  ============================================================ */
   :root {
-    /* Stessa palette "Registro" di index.html — vedi i commenti lì per
-       il ragionamento completo. */
     --bg: #eef1ec;
     --surface: #ffffff;
     --surface-2: #e3e7e0;
@@ -105,9 +99,6 @@
   }
   .link-torna:hover { color: var(--primary); }
 
-  /* ============================================================
-     SCHERMATA PASSWORD
-  ============================================================ */
   .riquadro-gate {
     max-width: 380px;
     margin: 40px auto;
@@ -155,9 +146,6 @@
   .messaggio-ok { color: var(--secondary); font-size: .85rem; margin-top: 12px; font-weight: 600; }
   .messaggio-attesa { color: var(--ink-faint); font-size: .85rem; margin-top: 12px; }
 
-  /* ============================================================
-     FORM DI CONFIGURAZIONE
-  ============================================================ */
   .stato-caricamento-config {
     text-align: center;
     color: var(--ink-muted);
@@ -165,25 +153,153 @@
     font-size: .92rem;
   }
 
-  .blocco-config {
+  .elenco-card { display: flex; flex-direction: column; gap: 10px; margin-bottom: 28px; }
+  .card-riepilogo {
     background: var(--surface);
     border: 1px solid var(--border);
     border-radius: 12px;
-    padding: 24px;
-    margin-bottom: 20px;
+    padding: 16px 18px;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 16px;
     box-shadow: 0 1px 2px rgba(30,35,32,.05);
-    transition: opacity .2s ease;
   }
-  .blocco-config h2 {
+  .card-riepilogo-testo { min-width: 0; }
+  .card-riepilogo-titolo {
     font-family: var(--font-display);
     font-weight: 500;
-    font-size: 1.1rem;
-    margin: 0 0 18px;
-    padding-bottom: 12px;
-    border-bottom: 1px solid var(--border);
+    font-size: 1rem;
+    margin: 0 0 4px;
+  }
+  .card-riepilogo-valore {
+    font-size: .85rem;
+    color: var(--ink-muted);
+    margin: 0;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+  }
+  .card-riepilogo-extra {
+    font-family: var(--font-mono);
+    font-size: .74rem;
+    color: var(--ink-faint);
+    margin: 4px 0 0;
+  }
+  .card-riepilogo-modifica {
+    background: var(--surface-2);
+    color: var(--ink);
+    border: none;
+    border-radius: 8px;
+    padding: 9px 16px;
+    font-family: var(--font-body);
+    font-size: .82rem;
+    font-weight: 600;
+    cursor: pointer;
+    white-space: nowrap;
+    flex-shrink: 0;
+  }
+  .card-riepilogo-modifica:hover { background: var(--primary-soft); color: var(--primary); }
+  .card-riepilogo.in-pausa .card-riepilogo-valore { color: var(--ink-faint); font-style: italic; }
+
+  .blocco-semplice {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 12px;
+    padding: 22px;
+    margin-bottom: 20px;
+    box-shadow: 0 1px 2px rgba(30,35,32,.05);
+  }
+  .blocco-semplice h2 {
+    font-family: var(--font-display);
+    font-weight: 500;
+    font-size: 1.05rem;
+    margin: 0 0 16px;
   }
 
-  .campo-form { margin-bottom: 16px; transition: opacity .2s ease; }
+  .azioni-principali {
+    display: flex;
+    gap: 12px;
+    flex-wrap: wrap;
+    margin-bottom: 28px;
+  }
+  .bottone-avvia {
+    background: var(--secondary);
+    color: var(--surface);
+    border: none;
+    border-radius: 8px;
+    padding: 13px 22px;
+    font-family: var(--font-body);
+    font-size: .9rem;
+    font-weight: 600;
+    cursor: pointer;
+    transition: background .2s ease;
+  }
+  .bottone-avvia:hover { background: #7a4530; }
+  .bottone-avvia.secondario { background: var(--primary); }
+  .bottone-avvia.secondario:hover { background: #1a3a52; }
+  #messaggio-azioni-principali { flex-basis: 100%; font-size: .85rem; }
+
+  .overlay-modale {
+    display: none;
+    position: fixed;
+    inset: 0;
+    background: rgba(30, 35, 32, .5);
+    z-index: 1000;
+    align-items: center;
+    justify-content: center;
+    padding: 20px;
+  }
+  .overlay-modale.aperta { display: flex; }
+  .finestra-modale {
+    background: var(--surface);
+    border-radius: 14px;
+    max-width: 520px;
+    width: 100%;
+    max-height: 88vh;
+    overflow-y: auto;
+    box-shadow: 0 16px 48px rgba(30,35,32,.3);
+  }
+  .finestra-modale-intestazione {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 18px 22px;
+    border-bottom: 1px solid var(--border);
+    position: sticky;
+    top: 0;
+    background: var(--surface);
+    border-radius: 14px 14px 0 0;
+  }
+  .finestra-modale-intestazione h2 {
+    font-family: var(--font-display);
+    font-weight: 500;
+    font-size: 1.15rem;
+    margin: 0;
+  }
+  .finestra-modale-chiudi {
+    background: var(--surface-2);
+    border: none;
+    color: var(--ink-muted);
+    width: 32px;
+    height: 32px;
+    border-radius: 50%;
+    font-size: 1.2rem;
+    cursor: pointer;
+    flex-shrink: 0;
+  }
+  .finestra-modale-chiudi:hover { color: var(--ink); }
+  .finestra-modale-corpo { padding: 20px 22px 24px; }
+  .finestra-modale-azioni {
+    display: flex;
+    align-items: center;
+    gap: 14px;
+    margin-top: 20px;
+    padding-top: 18px;
+    border-top: 1px solid var(--border);
+  }
+
+  .campo-form { margin-bottom: 16px; }
   .campo-form:last-child { margin-bottom: 0; }
   .campo-form label {
     display: block;
@@ -194,6 +310,7 @@
   }
   .campo-form input[type="text"],
   .campo-form input[type="number"],
+  .campo-form input[type="time"],
   .campo-form select {
     width: 100%;
     background: var(--bg);
@@ -206,7 +323,8 @@
   }
   .campo-form input:disabled,
   .campo-form select:disabled { color: var(--ink-faint); cursor: not-allowed; }
-  .campo-form input[type="number"] { font-family: var(--font-mono); }
+  .campo-form input[type="number"],
+  .campo-form input[type="time"] { font-family: var(--font-mono); }
   .nota-campo { font-size: .78rem; color: var(--ink-faint); margin: 6px 0 0; line-height: 1.4; }
   .bottone-secondario {
     background: var(--secondary-soft);
@@ -221,7 +339,6 @@
     margin-top: 8px;
   }
   .bottone-secondario:hover { background: rgba(161,92,62,.20); }
-  .barra-ripristino { margin-bottom: 20px; }
 
   .etichetta-checkbox {
     display: flex !important;
@@ -236,20 +353,9 @@
   .etichetta-checkbox input { width: auto !important; }
   .etichetta-checkbox input:disabled { cursor: not-allowed; }
 
-  /* Applicata al blocco di area/raggio locale quando "tutta Italia" è
-     spuntato: attenua visivamente. pointer-events copre anche la mappa,
-     che non è un controllo nativamente disattivabile con .disabled — gli
-     altri campi dentro lo stesso blocco lo sono comunque esplicitamente
-     via JS, per bloccare pure la tastiera, non solo il puntatore. */
   .sezione-disattivata { opacity: .45; pointer-events: none; }
 
-  /* Lista tipologia: stesse etichette-checkbox già usate per "nessun
-     limite", solo impilate — niente CSS nuovo da inventare, la prima
-     perde il margin-top per non avere un vuoto sopra la label del blocco. */
   #lista-tipologia .etichetta-checkbox:first-child { margin-top: 0; }
-  /* "Cerca su tutta Italia": prima cosa nella sezione, niente margine
-     sopra; un po' di spazio sotto per staccarla dal blocco locale che
-     attenua quando è spuntata. */
   .etichetta-tutta-italia { margin-top: 0; margin-bottom: 8px; }
   .nota-tutta-italia { margin-bottom: 16px; }
 
@@ -279,7 +385,7 @@
   .messaggio-ricerca { font-size: .78rem; color: var(--danger); margin: -6px 0 14px; }
 
   .contenitore-mappa {
-    height: 360px;
+    height: 320px;
     border-radius: 10px;
     border: 1px solid var(--border);
     margin-bottom: 16px;
@@ -293,70 +399,70 @@
     color: var(--ink-muted);
     margin-bottom: 8px;
   }
-  .controllo-raggio input[type="range"] {
-    width: 100%;
-    accent-color: var(--primary);
-  }
-  .nota-coordinate {
-    font-family: var(--font-mono);
-    font-size: .78rem;
-    color: var(--ink-faint);
-    margin: 10px 0 0;
-  }
+  .controllo-raggio input[type="range"] { width: 100%; accent-color: var(--primary); }
+  .nota-coordinate { font-family: var(--font-mono); font-size: .78rem; color: var(--ink-faint); margin: 10px 0 0; }
 
-  .riga-salvataggio {
-    display: flex;
-    align-items: center;
-    gap: 16px;
-    flex-wrap: wrap;
-    margin-top: 8px;
-  }
-  .bottone-salva {
+  .bottone-salva-card {
     background: var(--primary);
     color: var(--surface);
     border: none;
     border-radius: 8px;
-    padding: 13px 24px;
-    font-family: var(--font-body);
-    font-size: .92rem;
-    font-weight: 600;
-    cursor: pointer;
-    transition: background .2s ease;
-  }
-  .bottone-salva:hover { background: #1a3a52; }
-  .bottone-avvia {
-    background: var(--secondary);
-    color: var(--surface);
-    border: none;
-    border-radius: 8px;
-    padding: 13px 24px;
-    font-family: var(--font-body);
-    font-size: .92rem;
-    font-weight: 600;
-    cursor: pointer;
-    transition: background .2s ease;
-  }
-  .bottone-avvia:hover { background: #7a4530; }
-  .bottone-elimina {
-    background: var(--danger-soft);
-    color: var(--danger);
-    border: 1px solid var(--danger);
-    border-radius: 8px;
-    padding: 10px 18px;
+    padding: 11px 20px;
     font-family: var(--font-body);
     font-size: .88rem;
     font-weight: 600;
     cursor: pointer;
-    transition: background .2s ease, color .2s ease;
+    transition: background .2s ease;
   }
-  .bottone-elimina:hover { background: var(--danger); color: var(--surface); }
-  #messaggio-salvataggio, #messaggio-cambio-password { font-size: .85rem; }
+  .bottone-salva-card:hover { background: #1a3a52; }
+  .messaggio-salvataggio-card { font-size: .82rem; }
+
+  .griglia-giorni { display: grid; grid-template-columns: repeat(7, 1fr); gap: 6px; margin-top: 8px; }
+  .giorno-toggle { position: relative; }
+  .giorno-toggle input { position: absolute; opacity: 0; width: 100%; height: 100%; margin: 0; cursor: pointer; }
+  .giorno-toggle span {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    height: 40px;
+    border-radius: 8px;
+    border: 1px solid var(--border);
+    background: var(--bg);
+    font-family: var(--font-mono);
+    font-size: .76rem;
+    font-weight: 600;
+    color: var(--ink-muted);
+    text-transform: uppercase;
+    user-select: none;
+  }
+  .giorno-toggle input:checked + span { background: var(--primary); border-color: var(--primary); color: var(--surface); }
+  .giorno-toggle input:focus-visible + span { outline: 2px solid var(--primary); outline-offset: 2px; }
+
+  .riga-due-orari { display: flex; gap: 10px; }
+  .riga-due-orari .campo-form { flex: 1; margin-bottom: 0; }
+  .bottone-rimuovi-orario {
+    background: var(--danger-soft);
+    color: var(--danger);
+    border: none;
+    border-radius: 8px;
+    width: 38px;
+    flex-shrink: 0;
+    cursor: pointer;
+    font-size: 1rem;
+    align-self: flex-end;
+    height: 40px;
+  }
+  .bottone-rimuovi-orario:hover { background: var(--danger); color: var(--surface); }
 
   .nascosto { display: none !important; }
 
   @media (max-width: 640px) {
     .contenitore { padding: 32px 16px 64px; }
-    .contenitore-mappa { height: 280px; }
+    .contenitore-mappa { height: 260px; }
+    .card-riepilogo { flex-wrap: wrap; }
+    .card-riepilogo-modifica { width: 100%; text-align: center; }
+    .overlay-modale { padding: 0; align-items: flex-end; }
+    .finestra-modale { max-width: 100%; max-height: 92vh; border-radius: 16px 16px 0 0; }
   }
 </style>
 </head>
@@ -368,8 +474,8 @@
     <div>
       <p class="eyebrow">Pannello di controllo</p>
       <h1>Configurazione Scanner</h1>
-      <p class="sottotitolo">Modifica i parametri di ricerca letti da app.py a ogni run, senza toccare il codice.</p>
-      <p class="versione-pagina">v2.0</p>
+      <p class="sottotitolo">Ogni sezione mostra lo stato attuale — tocca "Modifica" per cambiarlo, si salva da sola.</p>
+      <p class="versione-pagina">v3.0</p>
     </div>
     <a href="index.html" class="link-torna">← Torna al registro</a>
   </div>
@@ -391,122 +497,82 @@
 
     <div id="stato-caricamento-config" class="stato-caricamento-config">Lettura della configurazione attuale…</div>
 
-    <form id="modulo-config" class="nascosto" onsubmit="return false;">
+    <div id="contenuto-config" class="nascosto">
 
-      <div class="barra-ripristino">
-        <button type="button" class="bottone-secondario" onclick="ripristinaValoriPredefiniti()">↺ Ripristina tutti i valori predefiniti</button>
-        <p class="nota-campo">Riporta ogni campo qui sotto ai valori con cui hai avviato il progetto — utile dopo aver sperimentato. Non salva da sola: serve comunque "Salva le modifiche".</p>
+      <div class="azioni-principali">
+        <button type="button" class="bottone-avvia" id="bottone-avvia-scanner" onclick="avviaScanner()">▶ Avvia scanner ora</button>
+        <button type="button" class="bottone-avvia secondario" id="bottone-verifica-batch" onclick="avviaVerificaBatch()">🔄 Controlla batch ora</button>
+        <span id="messaggio-azioni-principali"></span>
       </div>
 
-      <section class="blocco-config">
-        <h2>Area di ricerca</h2>
-        <label class="etichetta-checkbox etichetta-tutta-italia">
-          <input type="checkbox" id="campo-tutta-italia" onchange="aggiornaStatoTuttaItalia()">
-          Cerca su tutta Italia (ignora punto e raggio qui sotto)
-        </label>
-        <p class="nota-campo nota-tutta-italia">L'analisi in questa modalità è asincrona: le aste trovate vengono inviate a Gemini in un unico batch invece che una alla volta, per sfruttare lo sconto sui costi — può volerci da pochi minuti fino a 24 ore. Riceverai una notifica Telegram non appena l'invio è completato, e una notifica separata per ogni asta quando la sua analisi sarà pronta; il foglio non si aggiorna per queste aste nel frattempo.</p>
-        <button type="button" class="bottone-secondario" id="bottone-verifica-batch" onclick="avviaVerificaBatch()">🔄 Controlla batch ora</button>
-        <p class="nota-campo">Il controllo dei batch pronti gira comunque da solo ogni tanto (verifica-batch.yml), ma lo schedule di GitHub Actions non è sempre puntuale — questo pulsante lo forza subito, senza aspettare.</p>
-        <p id="messaggio-verifica-batch"></p>
-        <div id="blocco-area-locale">
-          <div class="riga-ricerca-indirizzo">
-            <input type="text" id="campo-indirizzo" placeholder="Cerca un indirizzo o una città..." onkeydown="if(event.key==='Enter') cercaIndirizzo()">
-            <button type="button" onclick="cercaIndirizzo()">Cerca</button>
+      <div class="elenco-card">
+        <div class="card-riepilogo">
+          <div class="card-riepilogo-testo">
+            <p class="card-riepilogo-titolo">Area di ricerca</p>
+            <p class="card-riepilogo-valore" id="riepilogo-area">—</p>
           </div>
-          <p id="messaggio-ricerca" class="messaggio-ricerca nascosto"></p>
-          <div id="mappa" class="contenitore-mappa"></div>
-          <div class="controllo-raggio">
-            <label>Raggio di ricerca: <span id="etichetta-raggio">22</span> km</label>
-            <input type="range" id="campo-raggio" min="1" max="300" value="22">
+          <button type="button" class="card-riepilogo-modifica" onclick="apriModale('area')">Modifica</button>
+        </div>
+
+        <div class="card-riepilogo">
+          <div class="card-riepilogo-testo">
+            <p class="card-riepilogo-titolo">Filtri di prezzo</p>
+            <p class="card-riepilogo-valore" id="riepilogo-prezzo">—</p>
           </div>
-          <p class="nota-coordinate">Punto selezionato: <span id="etichetta-coordinate">—</span> · clicca sulla mappa o trascina il segnaposto per spostarlo</p>
+          <button type="button" class="card-riepilogo-modifica" onclick="apriModale('prezzo')">Modifica</button>
         </div>
-      </section>
 
-      <section class="blocco-config">
-        <h2>Filtri di prezzo</h2>
-        <div class="campo-form">
-          <label for="campo-prezzo-min">Prezzo base minimo (€)</label>
-          <input type="number" id="campo-prezzo-min" min="0" max="5000000" step="1000">
-          <label class="etichetta-checkbox">
-            <input type="checkbox" id="campo-prezzo-minimo-illimitato" onchange="alternaPrezzoMinimoIllimitato()">
-            Nessun limite minimo
-          </label>
+        <div class="card-riepilogo">
+          <div class="card-riepilogo-testo">
+            <p class="card-riepilogo-titolo">Tipologia immobili</p>
+            <p class="card-riepilogo-valore" id="riepilogo-tipologia">—</p>
+          </div>
+          <button type="button" class="card-riepilogo-modifica" onclick="apriModale('tipologia')">Modifica</button>
         </div>
-        <div class="campo-form">
-          <label for="campo-prezzo-max">Prezzo base massimo (€)</label>
-          <input type="number" id="campo-prezzo-max" min="0" max="5000000" step="1000">
-          <label class="etichetta-checkbox">
-            <input type="checkbox" id="campo-prezzo-illimitato" onchange="alternaPrezzoIllimitato()">
-            Nessun limite massimo
-          </label>
-        </div>
-      </section>
 
-      <section class="blocco-config">
-        <h2>Tipologia immobili</h2>
-        <div class="campo-form">
-          <label>Categorie da includere nella ricerca</label>
-          <div id="lista-tipologia"></div>
-          <p class="nota-campo">Nessuna spunta = cerca tutte le tipologie. Spuntane una o più per restringere — es. solo "Garage e posti auto", o "Garage e posti auto" insieme a "Negozi e uffici".</p>
+        <div class="card-riepilogo">
+          <div class="card-riepilogo-testo">
+            <p class="card-riepilogo-titolo">Altri filtri</p>
+            <p class="card-riepilogo-valore" id="riepilogo-altri">—</p>
+          </div>
+          <button type="button" class="card-riepilogo-modifica" onclick="apriModale('altri')">Modifica</button>
         </div>
-      </section>
 
-      <section class="blocco-config">
-        <h2>Altri filtri</h2>
-        <div class="campo-form">
-          <label for="campo-solo-future">Aste da includere</label>
-          <select id="campo-solo-future">
-            <option value="true">Solo aste future</option>
-            <option value="false">Includi anche concluse (analisi storiche)</option>
-          </select>
+        <div class="card-riepilogo">
+          <div class="card-riepilogo-testo">
+            <p class="card-riepilogo-titolo">Modelli Gemini</p>
+            <p class="card-riepilogo-valore" id="riepilogo-modelli">—</p>
+          </div>
+          <button type="button" class="card-riepilogo-modifica" onclick="apriModale('modelli')">Modifica</button>
         </div>
-        <div class="campo-form">
-          <label for="campo-astegiudiziarie">Perizia da astegiudiziarie.it</label>
-          <select id="campo-astegiudiziarie">
-            <option value="true">Attiva</option>
-            <option value="false">Disattiva</option>
-          </select>
-          <p class="nota-campo">Le condizioni d'uso di astegiudiziarie.it vietano lo scraping automatico — attivala solo se è già una scelta consapevole tua, non cambiarla per abitudine.</p>
-        </div>
-        <div class="campo-form">
-          <label for="campo-pausa">Pausa tra un'asta e l'altra (secondi)</label>
-          <input type="number" id="campo-pausa" min="0" max="60" step="1">
-        </div>
-        <div class="campo-form">
-          <label for="campo-solo-conteggio">Modalità di esecuzione</label>
-          <select id="campo-solo-conteggio" onchange="aggiornaStatoConteggiaNonAnalizzate()">
-            <option value="false">Normale</option>
-            <option value="true">Solo conteggio (nessuna notifica né scrittura)</option>
-          </select>
-          <label class="etichetta-checkbox">
-            <input type="checkbox" id="campo-conteggia-non-analizzate" disabled>
-            Conteggia anche le aste non analizzate (tutto il foglio, non solo i filtri qui sopra)
-          </label>
-        </div>
-      </section>
 
-      <section class="blocco-config">
-        <h2>Modelli Gemini</h2>
-        <div class="campo-form">
-          <label for="campo-modelli">Cascata modelli, in ordine di priorità (separati da virgola)</label>
-          <input type="text" id="campo-modelli" placeholder="gemini-3.7-flash, gemini-3.6-flash, gemini-3.5-flash, gemini-3.5-flash-lite">
-          <button type="button" class="bottone-secondario" onclick="ripristinaCascataConsigliata()">↺ Ripristina cascata consigliata</button>
-          <p class="nota-campo">Con la fatturazione a consumo attiva sul progetto Gemini, la cascata consigliata include anche gemini-3.7-flash in testa — vedi il commento accanto a CASCATA_MODELLI_GEMINI in app.py per il dettaglio.</p>
+        <div class="card-riepilogo" id="card-pianificazione-scanner">
+          <div class="card-riepilogo-testo">
+            <p class="card-riepilogo-titolo">Pianificazione scansione</p>
+            <p class="card-riepilogo-valore" id="riepilogo-pianificazione-scanner">—</p>
+            <p class="card-riepilogo-extra" id="riepilogo-ultima-scansione"></p>
+          </div>
+          <button type="button" class="card-riepilogo-modifica" onclick="apriModale('pianificazioneScanner')">Modifica</button>
         </div>
-      </section>
 
-      <section class="blocco-config">
+        <div class="card-riepilogo">
+          <div class="card-riepilogo-testo">
+            <p class="card-riepilogo-titolo">Pianificazione verifica batch</p>
+            <p class="card-riepilogo-valore" id="riepilogo-pianificazione-batch">—</p>
+            <p class="card-riepilogo-extra" id="riepilogo-ultimo-controllo-batch"></p>
+          </div>
+          <button type="button" class="card-riepilogo-modifica" onclick="apriModale('pianificazioneBatch')">Modifica</button>
+        </div>
+      </div>
+
+      <section class="blocco-semplice">
         <h2>Manutenzione</h2>
-        <div class="campo-form">
-          <label>Aste scadute</label>
-          <p class="nota-campo">Elimina dal foglio tutte le righe con data vendita già passata. Operazione irreversibile — lo storico di quelle aste va perso, quindi chiede conferma prima di procedere (stesso doppio tocco di "Avvia scanner ora").</p>
-          <button type="button" class="bottone-elimina" id="bottone-elimina-scadute" onclick="eliminaAsteScadute()">🗑 Elimina aste scadute</button>
-          <p id="messaggio-elimina-scadute"></p>
-        </div>
+        <p class="nota-campo">Elimina dal foglio tutte le righe con data vendita già passata. Operazione irreversibile — lo storico di quelle aste va perso, chiede conferma prima di procedere.</p>
+        <button type="button" class="bottone-secondario" id="bottone-elimina-scadute" onclick="eliminaAsteScadute()" style="background:var(--danger-soft);color:var(--danger)">🗑 Elimina aste scadute</button>
+        <p id="messaggio-elimina-scadute"></p>
       </section>
 
-      <section class="blocco-config">
+      <section class="blocco-semplice">
         <h2>Cambia password</h2>
         <p class="nota-campo">Un'unica password protegge sia questa pagina sia preferiti/scarti/note su index.html — cambiarla qui vale per entrambe, subito.</p>
         <div class="campo-form">
@@ -525,9 +591,9 @@
         <p id="messaggio-cambio-password"></p>
       </section>
 
-      <section class="blocco-config">
+      <section class="blocco-semplice">
         <h2>Password di lettura per index.html</h2>
-        <p class="nota-campo">Password SEPARATA da quella sopra — se attiva, serve per aprire il registro (index.html) stesso, non solo per stella/scarto/nota. Utile per evitare che chi ha solo il link possa vedere le tue card e le tue note. Facoltativa: se disattivata, index.html resta apribile da chiunque abbia il link, come oggi.</p>
+        <p class="nota-campo">Password SEPARATA da quella sopra — se attiva, serve per aprire il registro (index.html) stesso, non solo per stella/scarto/nota. Facoltativa: se disattivata, index.html resta apribile da chiunque abbia il link.</p>
         <div class="campo-form">
           <label class="etichetta-checkbox">
             <input type="checkbox" id="campo-attiva-password-lettura" onchange="alternaCampoPasswordLettura()">
@@ -542,76 +608,240 @@
         <p id="messaggio-password-lettura"></p>
       </section>
 
-      <div class="riga-salvataggio">
-        <button type="button" class="bottone-salva" onclick="salvaConfigurazione()">Salva le modifiche</button>
-        <button type="button" class="bottone-avvia" id="bottone-avvia-scanner" onclick="avviaScanner()">▶ Avvia scanner ora</button>
-        <span id="messaggio-salvataggio"></span>
-      </div>
-
-    </form>
+    </div>
   </div>
 
 </div>
 
+<div id="modale-area" class="overlay-modale" onclick="if(event.target===this) chiudiModale('area')">
+  <div class="finestra-modale">
+    <div class="finestra-modale-intestazione">
+      <h2>Area di ricerca</h2>
+      <button type="button" class="finestra-modale-chiudi" onclick="chiudiModale('area')" aria-label="Chiudi">×</button>
+    </div>
+    <div class="finestra-modale-corpo">
+      <label class="etichetta-checkbox etichetta-tutta-italia">
+        <input type="checkbox" id="campo-tutta-italia" onchange="aggiornaStatoTuttaItalia()">
+        Cerca su tutta Italia (ignora punto e raggio qui sotto)
+      </label>
+      <p class="nota-campo nota-tutta-italia">L'analisi in questa modalità è asincrona: le aste trovate vengono inviate a Gemini in un unico batch invece che una alla volta — può volerci da pochi minuti fino a 24 ore. Riceverai una notifica Telegram non appena l'invio è completato, e una notifica separata per ogni asta quando la sua analisi sarà pronta.</p>
+      <div id="blocco-area-locale">
+        <div class="riga-ricerca-indirizzo">
+          <input type="text" id="campo-indirizzo" placeholder="Cerca un indirizzo o una città..." onkeydown="if(event.key==='Enter') cercaIndirizzo()">
+          <button type="button" onclick="cercaIndirizzo()">Cerca</button>
+        </div>
+        <p id="messaggio-ricerca" class="messaggio-ricerca nascosto"></p>
+        <div id="mappa" class="contenitore-mappa"></div>
+        <div class="controllo-raggio">
+          <label>Raggio di ricerca: <span id="etichetta-raggio">22</span> km</label>
+          <input type="range" id="campo-raggio" min="1" max="300" value="22">
+        </div>
+        <p class="nota-coordinate">Punto selezionato: <span id="etichetta-coordinate">—</span> · clicca sulla mappa o trascina il segnaposto</p>
+      </div>
+      <div class="finestra-modale-azioni">
+        <button type="button" class="bottone-salva-card" id="bottone-salva-area" onclick="confermaSalvaCard('area')">Salva</button>
+        <span id="messaggio-salva-area" class="messaggio-salvataggio-card"></span>
+      </div>
+    </div>
+  </div>
+</div>
+
+<div id="modale-prezzo" class="overlay-modale" onclick="if(event.target===this) chiudiModale('prezzo')">
+  <div class="finestra-modale">
+    <div class="finestra-modale-intestazione">
+      <h2>Filtri di prezzo</h2>
+      <button type="button" class="finestra-modale-chiudi" onclick="chiudiModale('prezzo')" aria-label="Chiudi">×</button>
+    </div>
+    <div class="finestra-modale-corpo">
+      <div class="campo-form">
+        <label for="campo-prezzo-min">Prezzo base minimo (€)</label>
+        <input type="number" id="campo-prezzo-min" min="0" max="5000000" step="1000">
+        <label class="etichetta-checkbox">
+          <input type="checkbox" id="campo-prezzo-minimo-illimitato" onchange="alternaPrezzoMinimoIllimitato()">
+          Nessun limite minimo
+        </label>
+      </div>
+      <div class="campo-form">
+        <label for="campo-prezzo-max">Prezzo base massimo (€)</label>
+        <input type="number" id="campo-prezzo-max" min="0" max="5000000" step="1000">
+        <label class="etichetta-checkbox">
+          <input type="checkbox" id="campo-prezzo-illimitato" onchange="alternaPrezzoIllimitato()">
+          Nessun limite massimo
+        </label>
+      </div>
+      <div class="finestra-modale-azioni">
+        <button type="button" class="bottone-salva-card" id="bottone-salva-prezzo" onclick="confermaSalvaCard('prezzo')">Salva</button>
+        <span id="messaggio-salva-prezzo" class="messaggio-salvataggio-card"></span>
+      </div>
+    </div>
+  </div>
+</div>
+
+<div id="modale-tipologia" class="overlay-modale" onclick="if(event.target===this) chiudiModale('tipologia')">
+  <div class="finestra-modale">
+    <div class="finestra-modale-intestazione">
+      <h2>Tipologia immobili</h2>
+      <button type="button" class="finestra-modale-chiudi" onclick="chiudiModale('tipologia')" aria-label="Chiudi">×</button>
+    </div>
+    <div class="finestra-modale-corpo">
+      <div class="campo-form">
+        <label>Categorie da includere nella ricerca</label>
+        <div id="lista-tipologia"></div>
+        <p class="nota-campo">Nessuna spunta = cerca tutte le tipologie.</p>
+      </div>
+      <div class="finestra-modale-azioni">
+        <button type="button" class="bottone-salva-card" id="bottone-salva-tipologia" onclick="confermaSalvaCard('tipologia')">Salva</button>
+        <span id="messaggio-salva-tipologia" class="messaggio-salvataggio-card"></span>
+      </div>
+    </div>
+  </div>
+</div>
+
+<div id="modale-altri" class="overlay-modale" onclick="if(event.target===this) chiudiModale('altri')">
+  <div class="finestra-modale">
+    <div class="finestra-modale-intestazione">
+      <h2>Altri filtri</h2>
+      <button type="button" class="finestra-modale-chiudi" onclick="chiudiModale('altri')" aria-label="Chiudi">×</button>
+    </div>
+    <div class="finestra-modale-corpo">
+      <div class="campo-form">
+        <label for="campo-solo-future">Aste da includere</label>
+        <select id="campo-solo-future">
+          <option value="true">Solo aste future</option>
+          <option value="false">Includi anche concluse (analisi storiche)</option>
+        </select>
+      </div>
+      <div class="campo-form">
+        <label for="campo-astegiudiziarie">Perizia da astegiudiziarie.it</label>
+        <select id="campo-astegiudiziarie">
+          <option value="true">Attiva</option>
+          <option value="false">Disattiva</option>
+        </select>
+        <p class="nota-campo">Le condizioni d'uso di astegiudiziarie.it vietano lo scraping automatico — attivala solo se è già una scelta consapevole tua.</p>
+      </div>
+      <div class="campo-form">
+        <label for="campo-pausa">Pausa tra un'asta e l'altra (secondi)</label>
+        <input type="number" id="campo-pausa" min="0" max="60" step="1">
+      </div>
+      <div class="campo-form">
+        <label for="campo-solo-conteggio">Modalità di esecuzione</label>
+        <select id="campo-solo-conteggio" onchange="aggiornaStatoConteggiaNonAnalizzate()">
+          <option value="false">Normale</option>
+          <option value="true">Solo conteggio (nessuna notifica né scrittura)</option>
+        </select>
+        <label class="etichetta-checkbox">
+          <input type="checkbox" id="campo-conteggia-non-analizzate" disabled>
+          Conteggia anche le aste non analizzate (tutto il foglio)
+        </label>
+      </div>
+      <div class="finestra-modale-azioni">
+        <button type="button" class="bottone-salva-card" id="bottone-salva-altri" onclick="confermaSalvaCard('altri')">Salva</button>
+        <span id="messaggio-salva-altri" class="messaggio-salvataggio-card"></span>
+      </div>
+    </div>
+  </div>
+</div>
+
+<div id="modale-modelli" class="overlay-modale" onclick="if(event.target===this) chiudiModale('modelli')">
+  <div class="finestra-modale">
+    <div class="finestra-modale-intestazione">
+      <h2>Modelli Gemini</h2>
+      <button type="button" class="finestra-modale-chiudi" onclick="chiudiModale('modelli')" aria-label="Chiudi">×</button>
+    </div>
+    <div class="finestra-modale-corpo">
+      <div class="campo-form">
+        <label for="campo-modelli">Cascata modelli, in ordine di priorità (separati da virgola)</label>
+        <input type="text" id="campo-modelli" placeholder="gemini-3.7-flash, gemini-3.6-flash">
+        <button type="button" class="bottone-secondario" onclick="ripristinaCascataConsigliata()">↺ Ripristina cascata consigliata</button>
+      </div>
+      <div class="finestra-modale-azioni">
+        <button type="button" class="bottone-salva-card" id="bottone-salva-modelli" onclick="confermaSalvaCard('modelli')">Salva</button>
+        <span id="messaggio-salva-modelli" class="messaggio-salvataggio-card"></span>
+      </div>
+    </div>
+  </div>
+</div>
+
+<div id="modale-pianificazioneScanner" class="overlay-modale" onclick="if(event.target===this) chiudiModale('pianificazioneScanner')">
+  <div class="finestra-modale">
+    <div class="finestra-modale-intestazione">
+      <h2>Pianificazione scansione</h2>
+      <button type="button" class="finestra-modale-chiudi" onclick="chiudiModale('pianificazioneScanner')" aria-label="Chiudi">×</button>
+    </div>
+    <div class="finestra-modale-corpo">
+      <div class="campo-form">
+        <label class="etichetta-checkbox" style="margin-top:0">
+          <input type="checkbox" id="campo-scanner-attivo" checked>
+          Scansione automatica attiva
+        </label>
+        <p class="nota-campo">Disattivala per mettere in pausa gli avvii automatici senza perdere giorni/orari già scelti — "Avvia scanner ora" resta comunque disponibile in ogni momento, a prescindere da questo interruttore.</p>
+      </div>
+      <div class="campo-form" id="blocco-giorni-orari-scanner">
+        <label>Giorni</label>
+        <div class="griglia-giorni" id="griglia-giorni-scanner"></div>
+        <p class="nota-campo">Nessun giorno selezionato = tutti i giorni.</p>
+      </div>
+      <div class="campo-form">
+        <label>Orari (ora italiana, fino a 2 al giorno)</label>
+        <div id="elenco-orari-scanner"></div>
+        <button type="button" class="bottone-secondario" id="bottone-aggiungi-orario" onclick="aggiungiCampoOrario()">+ Aggiungi un secondo orario</button>
+        <p class="nota-campo">Il controllo vero passa ogni 15 minuti circa — GitHub non garantisce il minuto esatto, quindi l'avvio può avvenire con qualche minuto di scarto rispetto all'orario scelto.</p>
+      </div>
+      <div class="finestra-modale-azioni">
+        <button type="button" class="bottone-salva-card" id="bottone-salva-pianificazioneScanner" onclick="confermaSalvaCard('pianificazioneScanner')">Salva</button>
+        <span id="messaggio-salva-pianificazioneScanner" class="messaggio-salvataggio-card"></span>
+      </div>
+    </div>
+  </div>
+</div>
+
+<div id="modale-pianificazioneBatch" class="overlay-modale" onclick="if(event.target===this) chiudiModale('pianificazioneBatch')">
+  <div class="finestra-modale">
+    <div class="finestra-modale-intestazione">
+      <h2>Pianificazione verifica batch</h2>
+      <button type="button" class="finestra-modale-chiudi" onclick="chiudiModale('pianificazioneBatch')" aria-label="Chiudi">×</button>
+    </div>
+    <div class="finestra-modale-corpo">
+      <div class="campo-form">
+        <label for="campo-frequenza-batch">Ogni quanto controllare</label>
+        <select id="campo-frequenza-batch">
+          <option value="15">15 minuti</option>
+          <option value="30">30 minuti</option>
+          <option value="60">1 ora</option>
+          <option value="120">2 ore</option>
+          <option value="240">4 ore</option>
+          <option value="360">6 ore</option>
+          <option value="720">12 ore</option>
+          <option value="1440">24 ore</option>
+        </select>
+        <p class="nota-campo">Rilevante solo in modalità "tutta Italia" (vedi la card "Area di ricerca") — è quella che invia le perizie a Gemini in un unico batch invece che una alla volta, e questo controllo è ciò che ne recupera il risultato quando è pronto. Un controllo più frequente non lo fa finire prima, solo te ne accorgi prima.</p>
+      </div>
+      <div class="finestra-modale-azioni">
+        <button type="button" class="bottone-salva-card" id="bottone-salva-pianificazioneBatch" onclick="confermaSalvaCard('pianificazioneBatch')">Salva</button>
+        <span id="messaggio-salva-pianificazioneBatch" class="messaggio-salvataggio-card"></span>
+      </div>
+    </div>
+  </div>
+</div>
+
 <script>
-  // ==========================================================
-  // CONFIGURAZIONE — incolla qui l'URL del tuo progetto Supabase e la
-  // relativa chiave "anon" (Project Settings -> API Keys nel pannello
-  // Supabase — la anon/publishable, MAI la service_role: quella è per
-  // il solo backend, vedi la chat sul perché). La chiave anon è pensata
-  // per stare in un file pubblico come questo: la sicurezza vera sta
-  // nelle funzioni protette da password sul database (vedi
-  // prepara_database.sql), non nel nasconderla.
-  // ==========================================================
   const SUPABASE_URL = "https://igemwrrcmsgaotoqvdzt.supabase.co";
   const SUPABASE_ANON_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImlnZW13cnJjbXNnYW90b3F2ZHp0Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODkzMDc2MjksImV4cCI6MjEwNDg4MzYyOX0.YkUOBTOb40C-N0TkuDN0o5N7fVvI_qX2F1grUp-SVe8";
 
   let mappa, segnaposto, cerchio;
-  // Non più un hash: le funzioni sul database (vedi prepara_database.sql,
-  // Sezione 6) confrontano la password in chiaro — niente più
-  // crypto.subtle.digest lato browser, il confronto vero avviene comunque
-  // sul server, non qui. Il nome della variabile resta lo stesso concetto
-  // di sempre ("la credenziale attuale, pronta per essere riusata"), solo
-  // senza più l'hashing di mezzo.
   let passwordCorrente = null;
 
-  // ==========================================================
-  // PASSWORD RICORDATA SU QUESTO DEVICE — STESSA chiave localStorage di
-  // index.html (stessa origine, quindi stesso storage): sbloccare da una
-  // pagina resta sbloccato anche sull'altra. Chiave DIVERSA da quella
-  // usata ai tempi di Google Sheets (era "aste_hash_password_v1", conteneva
-  // un hash) apposta: un valore vecchio letto come se fosse la nuova
-  // forma (password in chiaro) manderebbe una password sbagliata al
-  // server invece di fallire in modo pulito — meglio ripartire da un
-  // nome di chiave pulito, che ignora automaticamente qualunque valore
-  // residuo dal sistema precedente.
   const CHIAVE_LOCALSTORAGE_PASSWORD = "aste_password_v2";
+  function salvaPasswordRicordata(password) { try { localStorage.setItem(CHIAVE_LOCALSTORAGE_PASSWORD, password); } catch (e) {} }
+  function leggiPasswordRicordata() { try { return localStorage.getItem(CHIAVE_LOCALSTORAGE_PASSWORD); } catch (e) { return null; } }
+  function cancellaPasswordRicordata() { try { localStorage.removeItem(CHIAVE_LOCALSTORAGE_PASSWORD); } catch (e) {} }
 
-  function salvaPasswordRicordata(password) {
-    try { localStorage.setItem(CHIAVE_LOCALSTORAGE_PASSWORD, password); } catch (e) { /* storage negato/pieno — si ridigita ogni volta, nessun blocco */ }
-  }
-  function leggiPasswordRicordata() {
-    try { return localStorage.getItem(CHIAVE_LOCALSTORAGE_PASSWORD); } catch (e) { return null; }
-  }
-  function cancellaPasswordRicordata() {
-    try { localStorage.removeItem(CHIAVE_LOCALSTORAGE_PASSWORD); } catch (e) {}
-  }
-
-  // ==========================================================
-  // UTILITY
-  // ==========================================================
   function escapeHtml(testo) {
     const d = document.createElement("div");
     d.textContent = testo === null || testo === undefined ? "" : String(testo);
     return d.innerHTML;
   }
 
-  // Un solo punto che sa come chiamare una funzione del database (RPC) —
-  // stesso ruolo di chiamaWebApp() di prima, ma verso Supabase invece che
-  // verso Apps Script. "payload" deve avere ESATTAMENTE i nomi dei
-  // parametri che la funzione SQL si aspetta (es. password_tentativo, non
-  // più hash_password) — vedi ogni singola chiamata più sotto per la
-  // forma esatta di ciascuna.
   async function chiamaRpc(nomeFunzione, payload) {
     const risposta = await fetch(`${SUPABASE_URL}/rest/v1/rpc/${nomeFunzione}`, {
       method: "POST",
@@ -625,22 +855,11 @@
     return risposta.json();
   }
 
-  // ==========================================================
-  // GATE PASSWORD — la verifica vera è lato server (vedi
-  // verifica_password in prepara_database.sql); questo è solo lo
-  // schermo che decide se mostrare il modulo.
-  // ==========================================================
-
-  // Eseguita al caricamento pagina, PRIMA di mostrare il gate manuale —
-  // vedi provaSbloccoAutomatico() più sotto per il perché la richiesta di
-  // verifica va comunque fatta (non ci si fida ciecamente della password
-  // ricordata) invece di saltare dritti alla configurazione.
   async function sblocca() {
     const password = document.getElementById("campo-password").value;
     const erroreEl = document.getElementById("errore-gate");
     erroreEl.classList.add("nascosto");
     if (!password) return;
-
     let risultato;
     try {
       risultato = await chiamaRpc("verifica_password", {password_tentativo: password});
@@ -649,7 +868,6 @@
       erroreEl.classList.remove("nascosto");
       return;
     }
-
     if (risultato) {
       passwordCorrente = password;
       salvaPasswordRicordata(password);
@@ -663,21 +881,9 @@
     }
   }
 
-  // Prova a sbloccare da sola con la password ricordata su questo device,
-  // PRIMA di mostrare il gate manuale — chiamata al caricamento pagina
-  // (vedi in fondo al file). Verifica comunque col server invece di
-  // fidarsi ciecamente: la password ricordata potrebbe essere superata
-  // (es. cambiata da config.html stesso, o da un altro device), scoprirlo
-  // solo al primo salvataggio fallito sarebbe più confuso che un
-  // controllo esplicito qui, un solo giro di rete in più al caricamento
-  // di questa pagina (che capita una volta per visita, non ripetutamente
-  // come le azioni di index.html).
   async function provaSbloccoAutomatico() {
     const passwordRicordata = leggiPasswordRicordata();
-    if (!passwordRicordata) {
-      mostraGateManuale();
-      return;
-    }
+    if (!passwordRicordata) { mostraGateManuale(); return; }
     try {
       const risultato = await chiamaRpc("verifica_password", {password_tentativo: passwordRicordata});
       if (risultato) {
@@ -688,18 +894,10 @@
         caricaStatoPasswordLettura();
         return;
       }
-      // Rifiutata esplicitamente (password cambiata altrove) — non ha
-      // più senso tenerla in memoria per i prossimi caricamenti.
       cancellaPasswordRicordata();
-    } catch (e) {
-      // Rete irraggiungibile: non è detto che la password sia sbagliata,
-      // solo che non si è potuto controllare — la lascio intatta per il
-      // prossimo tentativo invece di costringere a reinserirla per un
-      // problema che potrebbe risolversi da solo.
-    }
+    } catch (e) { }
     mostraGateManuale();
   }
-
 
   function mostraGateManuale() {
     document.getElementById("stato-verifica-automatica").classList.add("nascosto");
@@ -707,27 +905,50 @@
     document.getElementById("campo-password").focus();
   }
 
-  // ==========================================================
-  // MAPPA
-  // ==========================================================
+  function apriModale(nome) {
+    document.getElementById(`modale-${nome}`).classList.add("aperta");
+    if (nome === "area") {
+      if (!mappa) inizializzaMappa();
+      setTimeout(() => mappa.invalidateSize(), 50);
+    }
+  }
+  function chiudiModale(nome) {
+    document.getElementById(`modale-${nome}`).classList.remove("aperta");
+  }
+
+  const statoConfermaDoppioTocco = {};
+  function richiedeDoppioTocco(chiave, bottone, testoNormale, testoConferma, azioneVera) {
+    if (!statoConfermaDoppioTocco[chiave]) {
+      statoConfermaDoppioTocco[chiave] = setTimeout(() => {
+        statoConfermaDoppioTocco[chiave] = null;
+        bottone.textContent = testoNormale;
+      }, 4000);
+      bottone.textContent = testoConferma;
+      return;
+    }
+    clearTimeout(statoConfermaDoppioTocco[chiave]);
+    statoConfermaDoppioTocco[chiave] = null;
+    bottone.textContent = testoNormale;
+    azioneVera();
+  }
+
+  function confermaSalvaCard(nomeCard) {
+    const bottone = document.getElementById(`bottone-salva-${nomeCard}`);
+    richiedeDoppioTocco(`salva-${nomeCard}`, bottone, "Salva", "Confermi?", () => salvaCard(nomeCard));
+  }
+
   function inizializzaMappa() {
     mappa = L.map("mappa").setView([37.5078836, 15.0830032], 10);
     L.tileLayer("https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png", {
       attribution: '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a>',
       maxZoom: 18
     }).addTo(mappa);
-
     segnaposto = L.marker([37.5078836, 15.0830032], {draggable: true}).addTo(mappa);
     cerchio = L.circle([37.5078836, 15.0830032], {
       radius: 22000, color: "#234c6a", fillColor: "#234c6a", fillOpacity: 0.08, weight: 1.5
     }).addTo(mappa);
-
     mappa.on("click", e => spostaPunto(e.latlng.lat, e.latlng.lng));
-    segnaposto.on("dragend", () => {
-      const p = segnaposto.getLatLng();
-      spostaPunto(p.lat, p.lng);
-    });
-
+    segnaposto.on("dragend", () => { const p = segnaposto.getLatLng(); spostaPunto(p.lat, p.lng); });
     document.getElementById("campo-raggio").addEventListener("input", e => {
       const km = Number(e.target.value);
       document.getElementById("etichetta-raggio").textContent = km;
@@ -748,7 +969,6 @@
   }
 
   function stimaZoomDaRaggio(km) {
-    // Stima grezza solo per la vista iniziale, non un calcolo esatto.
     if (km <= 10) return 11;
     if (km <= 25) return 10;
     if (km <= 50) return 9;
@@ -761,19 +981,15 @@
     const msgEl = document.getElementById("messaggio-ricerca");
     msgEl.classList.add("nascosto");
     if (!query) return;
-
     try {
-      const risposta = await fetch(`https://nominatim.openstreetmap.org/search?format=json&limit=1&q=${encodeURIComponent(query)}`, {
-        headers: {"Accept-Language": "it"}
-      });
+      const risposta = await fetch(`https://nominatim.openstreetmap.org/search?format=json&limit=1&q=${encodeURIComponent(query)}`, {headers: {"Accept-Language": "it"}});
       const risultati = await risposta.json();
       if (risultati.length === 0) {
         msgEl.textContent = "Nessun risultato per questo indirizzo.";
         msgEl.classList.remove("nascosto");
         return;
       }
-      const lat = Number(risultati[0].lat);
-      const lon = Number(risultati[0].lon);
+      const lat = Number(risultati[0].lat), lon = Number(risultati[0].lon);
       mappa.setView([lat, lon], 12);
       spostaPunto(lat, lon);
     } catch (e) {
@@ -782,13 +998,17 @@
     }
   }
 
-  // ==========================================================
-  // TIPOLOGIA — stesse macro-categorie di index.html (MAPPA_TIPOLOGIA),
-  // qui però senza "Altro": per il filtro di RICERCA non ha senso,
-  // non esiste un insieme di codici PVP per "tutto il resto" da passare
-  // allo scanner — vedi il commento su CODICI_PER_MACROCATEGORIA in
-  // app.py. Deve restare in sincrono con le chiavi di quel dizionario.
-  // ==========================================================
+  async function nomePosizioneLeggibile(lat, lon) {
+    try {
+      const risposta = await fetch(`https://nominatim.openstreetmap.org/reverse?lat=${lat}&lon=${lon}&format=jsonv2&zoom=10&addresslookup=1`, {headers: {"Accept-Language": "it"}});
+      const dati = await risposta.json();
+      const indirizzo = dati.address || {};
+      return indirizzo.city || indirizzo.town || indirizzo.village || indirizzo.municipality || null;
+    } catch (e) {
+      return null;
+    }
+  }
+
   const MACROCATEGORIE_TIPOLOGIA = [
     "Abitazioni", "Garage e posti auto", "Negozi e uffici", "Terreni",
     "Depositi e magazzini", "Fabbricati e complessi"
@@ -804,16 +1024,69 @@
     `).join("");
   }
 
-  // ==========================================================
-  // CARICAMENTO CONFIGURAZIONE ATTUALE (lettura libera, nessuna password
-  // — stessa apertura di prima: la tabella "config" non ha RLS attiva
-  // apposta, vedi prepara_database.sql. Il gate qui sopra resta comunque
-  // un passaggio UX voluto, non una vera barriera di sicurezza — stesso
-  // principio di sempre, solo il meccanismo sotto è cambiato).
-  // ==========================================================
+  const GIORNI_CODICE = [
+    {codice: "lun", etichetta: "Lun"}, {codice: "mar", etichetta: "Mar"},
+    {codice: "mer", etichetta: "Mer"}, {codice: "gio", etichetta: "Gio"},
+    {codice: "ven", etichetta: "Ven"}, {codice: "sab", etichetta: "Sab"},
+    {codice: "dom", etichetta: "Dom"}
+  ];
+
+  function popolaGrigliaGiorni() {
+    const contenitore = document.getElementById("griglia-giorni-scanner");
+    contenitore.innerHTML = GIORNI_CODICE.map(g => `
+      <label class="giorno-toggle">
+        <input type="checkbox" value="${g.codice}" class="checkbox-giorno-scanner">
+        <span>${g.etichetta}</span>
+      </label>
+    `).join("");
+  }
+
+  function rigaOrario(valore) {
+    const div = document.createElement("div");
+    div.className = "riga-due-orari campo-form";
+    div.innerHTML = `
+      <div class="campo-form" style="margin-bottom:0">
+        <input type="time" class="campo-orario-scanner" value="${escapeHtml(valore || '16:00')}">
+      </div>
+      <button type="button" class="bottone-rimuovi-orario" onclick="rimuoviCampoOrario(this)" aria-label="Rimuovi orario">×</button>
+    `;
+    return div;
+  }
+
+  function popolaOrariScanner(orari) {
+    const contenitore = document.getElementById("elenco-orari-scanner");
+    contenitore.innerHTML = "";
+    const valori = (orari && orari.length) ? orari : ["16:00"];
+    valori.forEach(v => contenitore.appendChild(rigaOrario(v)));
+    aggiornaVisibilitaBottoneAggiungiOrario();
+  }
+
+  function aggiungiCampoOrario() {
+    const contenitore = document.getElementById("elenco-orari-scanner");
+    if (contenitore.children.length >= 2) return;
+    contenitore.appendChild(rigaOrario("08:00"));
+    aggiornaVisibilitaBottoneAggiungiOrario();
+  }
+
+  function rimuoviCampoOrario(bottone) {
+    const contenitore = document.getElementById("elenco-orari-scanner");
+    if (contenitore.children.length <= 1) return;
+    bottone.closest(".riga-due-orari").remove();
+    aggiornaVisibilitaBottoneAggiungiOrario();
+  }
+
+  function aggiornaVisibilitaBottoneAggiungiOrario() {
+    const contenitore = document.getElementById("elenco-orari-scanner");
+    document.getElementById("bottone-aggiungi-orario").classList.toggle("nascosto", contenitore.children.length >= 2);
+  }
+
+  let configAttuale = {};
+  let pianificazioneAttuale = {};
+
   async function caricaConfigurazioneAttuale() {
     const statoEl = document.getElementById("stato-caricamento-config");
     popolaListaTipologia();
+    popolaGrigliaGiorni();
     try {
       const risposta = await fetch(`${SUPABASE_URL}/rest/v1/config?select=parametro,valore`, {
         headers: {"apikey": SUPABASE_ANON_KEY, "Authorization": `Bearer ${SUPABASE_ANON_KEY}`}
@@ -822,317 +1095,368 @@
       const config = {};
       righe.forEach(r => { if (r.parametro) config[r.parametro] = r.valore; });
 
-      // "0" è la sentinella di nessun minimo (già supportata da app.py
-      // ancora prima di questa modifica — vedi il commento accanto a
-      // PREZZO_BASE_MIN nel file), diversa da "illimitato" usata per il
-      // massimo qui sotto: due campi, due convenzioni diverse già in uso.
-      // minGrezzo === undefined (nessuna configurazione ancora salvata)
-      // conta come illimitato allo stesso modo di uno 0 esplicito: il
-      // default è "nessun limite minimo", non più un numero specifico —
-      // vedi VALORI_PREDEFINITI più sotto per lo stesso principio
-      // applicato al pulsante di ripristino.
+      configAttuale.lat_riferimento = Number(config.lat_riferimento ?? 37.5078836);
+      configAttuale.lon_riferimento = Number(config.lon_riferimento ?? 15.0830032);
+      configAttuale.raggio_km = Number(config.raggio_km ?? 22);
+      configAttuale.cerca_tutta_italia = String(config.cerca_tutta_italia ?? false).toLowerCase() === "true";
+
       const minGrezzo = config.prezzo_base_min;
-      const minIllimitato = minGrezzo === undefined || Number(minGrezzo) === 0;
-      document.getElementById("campo-prezzo-minimo-illimitato").checked = minIllimitato;
-      document.getElementById("campo-prezzo-min").disabled = minIllimitato;
-      document.getElementById("campo-prezzo-min").value = minIllimitato ? "" : minGrezzo;
-
+      configAttuale.prezzo_base_min = (minGrezzo === undefined || Number(minGrezzo) === 0) ? 0 : Number(minGrezzo);
       const maxGrezzo = config.prezzo_base_max;
-      const maxIllimitato = maxGrezzo === undefined || maxGrezzo === "" ||
-        String(maxGrezzo).trim().toLowerCase() === "illimitato";
-      document.getElementById("campo-prezzo-illimitato").checked = maxIllimitato;
-      document.getElementById("campo-prezzo-max").disabled = maxIllimitato;
-      document.getElementById("campo-prezzo-max").value = maxIllimitato ? "" : maxGrezzo;
+      const maxIllimitato = maxGrezzo === undefined || maxGrezzo === "" || String(maxGrezzo).trim().toLowerCase() === "illimitato";
+      configAttuale.prezzo_base_max = maxIllimitato ? null : Number(maxGrezzo);
 
-      document.getElementById("campo-tutta-italia").checked =
-        String(config.cerca_tutta_italia ?? false).toLowerCase() === "true";
-
-      let tipologieSelezionate = [];
+      configAttuale.tipologie_incluse = [];
       if (config.tipologie_incluse) {
         try {
           const parsed = JSON.parse(config.tipologie_incluse);
-          if (Array.isArray(parsed)) tipologieSelezionate = parsed;
-        } catch (e) { /* nessuna selezione valida trovata: tratta come "tutte" */ }
+          if (Array.isArray(parsed)) configAttuale.tipologie_incluse = parsed;
+        } catch (e) {}
       }
-      document.querySelectorAll("#lista-tipologia .checkbox-tipologia").forEach(cb => {
-        cb.checked = tipologieSelezionate.includes(cb.value);
-      });
 
-      document.getElementById("campo-solo-future").value = String(config.solo_aste_future ?? true).toLowerCase();
-      document.getElementById("campo-astegiudiziarie").value = String(config.usa_astegiudiziarie_perizia ?? true).toLowerCase();
-      document.getElementById("campo-pausa").value = config.pausa_tra_aste_secondi ?? 3;
-      document.getElementById("campo-solo-conteggio").value = String(config.solo_conteggio ?? false).toLowerCase();
-      document.getElementById("campo-conteggia-non-analizzate").checked =
-        String(config.conteggia_non_analizzate ?? false).toLowerCase() === "true";
+      configAttuale.solo_aste_future = String(config.solo_aste_future ?? true).toLowerCase() === "true";
+      configAttuale.usa_astegiudiziarie_perizia = String(config.usa_astegiudiziarie_perizia ?? true).toLowerCase() === "true";
+      configAttuale.pausa_tra_aste_secondi = Number(config.pausa_tra_aste_secondi ?? 3);
+      configAttuale.solo_conteggio = String(config.solo_conteggio ?? false).toLowerCase() === "true";
+      configAttuale.conteggia_non_analizzate = String(config.conteggia_non_analizzate ?? false).toLowerCase() === "true";
 
-      let modelli = ["gemini-3.7-flash", "gemini-3.6-flash", "gemini-3.5-flash", "gemini-3.5-flash-lite"];
+      configAttuale.cascata_modelli_gemini = ["gemini-3.7-flash", "gemini-3.6-flash", "gemini-3.5-flash", "gemini-3.5-flash-lite"];
       if (config.cascata_modelli_gemini) {
         try {
           const parsed = JSON.parse(config.cascata_modelli_gemini);
-          if (Array.isArray(parsed) && parsed.length > 0) modelli = parsed;
-        } catch (e) { /* tiene il default sopra */ }
+          if (Array.isArray(parsed) && parsed.length > 0) configAttuale.cascata_modelli_gemini = parsed;
+        } catch (e) {}
       }
-      document.getElementById("campo-modelli").value = modelli.join(", ");
 
-      // Il modulo (quindi anche il contenitore della mappa) diventa
-      // visibile QUI, PRIMA di creare la mappa — non dopo. Leaflet misura
-      // le proprie dimensioni sul contenitore nell'istante esatto in cui
-      // viene creato: crearla mentre è ancora dentro un antenato con
-      // display:none la blocca piccola in un angolo per sempre, anche
-      // quando il contenitore torna visibile subito dopo.
+      pianificazioneAttuale.scanner_attivo = String(config.pianificazione_scanner_attiva ?? true).toLowerCase() !== "false";
+      pianificazioneAttuale.scanner_giorni = [];
+      if (config.pianificazione_scanner_giorni) {
+        try {
+          const parsed = JSON.parse(config.pianificazione_scanner_giorni);
+          if (Array.isArray(parsed)) pianificazioneAttuale.scanner_giorni = parsed;
+        } catch (e) {}
+      }
+      pianificazioneAttuale.scanner_orari = ["16:00"];
+      if (config.pianificazione_scanner_orari) {
+        try {
+          const parsed = JSON.parse(config.pianificazione_scanner_orari);
+          if (Array.isArray(parsed) && parsed.length > 0) pianificazioneAttuale.scanner_orari = parsed;
+        } catch (e) {}
+      }
+      pianificazioneAttuale.verifica_batch_minuti = Number(config.pianificazione_verifica_batch_minuti ?? 15);
+
       statoEl.classList.add("nascosto");
-      document.getElementById("modulo-config").classList.remove("nascosto");
+      document.getElementById("contenuto-config").classList.remove("nascosto");
 
-      const lat = Number(config.lat_riferimento ?? 37.5078836);
-      const lon = Number(config.lon_riferimento ?? 15.0830032);
-      const raggio = Number(config.raggio_km ?? 22);
-      document.getElementById("campo-raggio").value = raggio;
-      document.getElementById("etichetta-raggio").textContent = raggio;
-      inizializzaMappa();
-      impostaPuntoMappa(lat, lon, raggio);
-      mappa.invalidateSize();
-
-      // Applicati per ultimi, DOPO aver impostato i rispettivi campi
-      // sopra: attivano lo stato disattivato/attenuato corretto in base
-      // ai valori appena caricati, non a quelli di default dei controlli.
-      aggiornaStatoConteggiaNonAnalizzate();
-      aggiornaStatoTuttaItalia();
+      renderizzaTuttiIRiepiloghi();
+      caricaStatoEsecuzioniPianificazione();
     } catch (e) {
       statoEl.textContent = "Impossibile leggere la configurazione attuale. Controlla SUPABASE_URL in cima a questo file.";
     }
   }
 
+  function formattaEuro(numero) {
+    return new Intl.NumberFormat("it-IT").format(numero);
+  }
+
+  async function renderizzaRiepilogoArea() {
+    const el = document.getElementById("riepilogo-area");
+    if (configAttuale.cerca_tutta_italia) {
+      el.textContent = "Tutta Italia";
+      return;
+    }
+    el.textContent = `Raggio ${configAttuale.raggio_km} km da ${configAttuale.lat_riferimento.toFixed(3)}, ${configAttuale.lon_riferimento.toFixed(3)}`;
+    const nome = await nomePosizioneLeggibile(configAttuale.lat_riferimento, configAttuale.lon_riferimento);
+    if (nome) el.textContent = `Raggio ${configAttuale.raggio_km} km da ${nome}`;
+  }
+
+  function renderizzaRiepilogoPrezzo() {
+    const minTesto = configAttuale.prezzo_base_min > 0 ? `€ ${formattaEuro(configAttuale.prezzo_base_min)}` : "Nessun minimo";
+    const maxTesto = configAttuale.prezzo_base_max === null ? "nessun massimo" : `€ ${formattaEuro(configAttuale.prezzo_base_max)}`;
+    document.getElementById("riepilogo-prezzo").textContent = `${minTesto} – ${maxTesto}`;
+  }
+
+  function renderizzaRiepilogoTipologia() {
+    document.getElementById("riepilogo-tipologia").textContent =
+      configAttuale.tipologie_incluse.length ? configAttuale.tipologie_incluse.join(", ") : "Tutte le tipologie";
+  }
+
+  function renderizzaRiepilogoAltri() {
+    const parti = [
+      configAttuale.solo_aste_future ? "Solo future" : "Anche concluse",
+      configAttuale.usa_astegiudiziarie_perizia ? "Perizia esterna attiva" : "Perizia esterna disattiva",
+      `pausa ${configAttuale.pausa_tra_aste_secondi}s`
+    ];
+    if (configAttuale.solo_conteggio) parti.push("SOLO CONTEGGIO");
+    document.getElementById("riepilogo-altri").textContent = parti.join(" · ");
+  }
+
+  function renderizzaRiepilogoModelli() {
+    document.getElementById("riepilogo-modelli").textContent = configAttuale.cascata_modelli_gemini.join(" → ");
+  }
+
+  function renderizzaRiepilogoPianificazioneScanner() {
+    const card = document.getElementById("card-pianificazione-scanner");
+    const el = document.getElementById("riepilogo-pianificazione-scanner");
+    if (!pianificazioneAttuale.scanner_attivo) {
+      card.classList.add("in-pausa");
+      el.textContent = "In pausa — nessun avvio automatico";
+      return;
+    }
+    card.classList.remove("in-pausa");
+    const giorniTesto = pianificazioneAttuale.scanner_giorni.length
+      ? pianificazioneAttuale.scanner_giorni.map(g => g.charAt(0).toUpperCase() + g.slice(1)).join(", ")
+      : "Tutti i giorni";
+    el.textContent = `${giorniTesto} alle ${pianificazioneAttuale.scanner_orari.join(" e ")}`;
+  }
+
+  function formattaMinutiComeFrequenza(minuti) {
+    if (minuti % 60 === 0) {
+      const ore = minuti / 60;
+      return ore === 1 ? "Ogni ora" : `Ogni ${ore} ore`;
+    }
+    return `Ogni ${minuti} minuti`;
+  }
+
+  function renderizzaRiepilogoPianificazioneBatch() {
+    document.getElementById("riepilogo-pianificazione-batch").textContent = formattaMinutiComeFrequenza(pianificazioneAttuale.verifica_batch_minuti);
+  }
+
+  function renderizzaTuttiIRiepiloghi() {
+    renderizzaRiepilogoArea();
+    renderizzaRiepilogoPrezzo();
+    renderizzaRiepilogoTipologia();
+    renderizzaRiepilogoAltri();
+    renderizzaRiepilogoModelli();
+    renderizzaRiepilogoPianificazioneScanner();
+    renderizzaRiepilogoPianificazioneBatch();
+  }
+
+  async function caricaStatoEsecuzioniPianificazione() {
+    try {
+      const stato = await chiamaRpc("stato_pianificazione", {});
+      const formatta = iso => {
+        if (!iso) return null;
+        const d = new Date(iso);
+        return d.toLocaleString("it-IT", {day:"2-digit", month:"2-digit", hour:"2-digit", minute:"2-digit"});
+      };
+      const scanner = formatta(stato?.scanner?.ultima_esecuzione);
+      const batch = formatta(stato?.verifica_batch?.ultima_esecuzione);
+      document.getElementById("riepilogo-ultima-scansione").textContent = scanner ? `Ultima esecuzione: ${scanner}` : "Non ancora eseguita automaticamente";
+      document.getElementById("riepilogo-ultimo-controllo-batch").textContent = batch ? `Ultimo controllo: ${batch}` : "Non ancora eseguito";
+    } catch (e) { }
+  }
+
+  const _apriModaleOriginale = apriModale;
+  apriModale = function(nome) {
+    if (nome === "area") {
+      document.getElementById("campo-tutta-italia").checked = configAttuale.cerca_tutta_italia;
+      document.getElementById("campo-raggio").value = configAttuale.raggio_km;
+      document.getElementById("etichetta-raggio").textContent = configAttuale.raggio_km;
+    } else if (nome === "prezzo") {
+      const minIllimitato = configAttuale.prezzo_base_min === 0;
+      document.getElementById("campo-prezzo-minimo-illimitato").checked = minIllimitato;
+      document.getElementById("campo-prezzo-min").disabled = minIllimitato;
+      document.getElementById("campo-prezzo-min").value = minIllimitato ? "" : configAttuale.prezzo_base_min;
+      const maxIllimitato = configAttuale.prezzo_base_max === null;
+      document.getElementById("campo-prezzo-illimitato").checked = maxIllimitato;
+      document.getElementById("campo-prezzo-max").disabled = maxIllimitato;
+      document.getElementById("campo-prezzo-max").value = maxIllimitato ? "" : configAttuale.prezzo_base_max;
+    } else if (nome === "tipologia") {
+      document.querySelectorAll("#lista-tipologia .checkbox-tipologia").forEach(cb => {
+        cb.checked = configAttuale.tipologie_incluse.includes(cb.value);
+      });
+    } else if (nome === "altri") {
+      document.getElementById("campo-solo-future").value = String(configAttuale.solo_aste_future);
+      document.getElementById("campo-astegiudiziarie").value = String(configAttuale.usa_astegiudiziarie_perizia);
+      document.getElementById("campo-pausa").value = configAttuale.pausa_tra_aste_secondi;
+      document.getElementById("campo-solo-conteggio").value = String(configAttuale.solo_conteggio);
+      document.getElementById("campo-conteggia-non-analizzate").checked = configAttuale.conteggia_non_analizzate;
+      aggiornaStatoConteggiaNonAnalizzate();
+    } else if (nome === "modelli") {
+      document.getElementById("campo-modelli").value = configAttuale.cascata_modelli_gemini.join(", ");
+    } else if (nome === "pianificazioneScanner") {
+      document.getElementById("campo-scanner-attivo").checked = pianificazioneAttuale.scanner_attivo;
+      document.querySelectorAll(".checkbox-giorno-scanner").forEach(cb => {
+        cb.checked = pianificazioneAttuale.scanner_giorni.includes(cb.value);
+      });
+      popolaOrariScanner(pianificazioneAttuale.scanner_orari);
+    } else if (nome === "pianificazioneBatch") {
+      document.getElementById("campo-frequenza-batch").value = String(pianificazioneAttuale.verifica_batch_minuti);
+    }
+    _apriModaleOriginale(nome);
+    if (nome === "area") aggiornaStatoTuttaItalia();
+  };
+
   function alternaPrezzoIllimitato() {
     const illimitato = document.getElementById("campo-prezzo-illimitato").checked;
-    const campo = document.getElementById("campo-prezzo-max");
-    campo.disabled = illimitato;
-    if (illimitato) campo.value = "";
+    document.getElementById("campo-prezzo-max").disabled = illimitato;
+    if (illimitato) document.getElementById("campo-prezzo-max").value = "";
   }
-
   function alternaPrezzoMinimoIllimitato() {
     const illimitato = document.getElementById("campo-prezzo-minimo-illimitato").checked;
-    const campo = document.getElementById("campo-prezzo-min");
-    campo.disabled = illimitato;
-    if (illimitato) campo.value = "";
+    document.getElementById("campo-prezzo-min").disabled = illimitato;
+    if (illimitato) document.getElementById("campo-prezzo-min").value = "";
   }
-
-  // ==========================================================
-  // "Cerca su tutta Italia": disattiva E attenua visivamente il blocco
-  // indirizzo/mappa/raggio, che in quel caso non ha alcun effetto (vedi
-  // nota accanto al campo in HTML e il commento su CERCA_TUTTA_ITALIA in
-  // app.py). Non tocca i valori sottostanti — se rispunti la modalità
-  // locale, ritrovi punto e raggio esattamente come li avevi lasciati.
-  // ==========================================================
   function aggiornaStatoTuttaItalia() {
     const attivo = document.getElementById("campo-tutta-italia").checked;
     document.getElementById("blocco-area-locale").classList.toggle("sezione-disattivata", attivo);
     document.getElementById("campo-indirizzo").disabled = attivo;
     document.getElementById("campo-raggio").disabled = attivo;
   }
-
-  // ==========================================================
-  // "Conteggia aste non analizzate" ha senso solo insieme a "Solo
-  // conteggio" (Modalità di esecuzione): disabilitata finché quella non
-  // è attiva. Non forza mai lo stato spuntato — se la spunti, poi torni
-  // su "Normale" e infine di nuovo su "Solo conteggio", la tua scelta
-  // resta quella, semplicemente inerte nel mezzo.
-  // ==========================================================
   function aggiornaStatoConteggiaNonAnalizzate() {
-    const soloConteggioAttivo = document.getElementById("campo-solo-conteggio").value === "true";
-    document.getElementById("campo-conteggia-non-analizzate").disabled = !soloConteggioAttivo;
+    document.getElementById("campo-conteggia-non-analizzate").disabled = document.getElementById("campo-solo-conteggio").value !== "true";
   }
 
-  // Deve restare IDENTICA alla CASCATA_MODELLI_GEMINI di default in
-  // app.py — se un giorno cambi quella lì con una motivazione nuova,
-  // aggiorna anche questa riga, altrimenti "ripristina" riporterebbe a
-  // una cascata vecchia invece di quella davvero consigliata.
   const CASCATA_CONSIGLIATA = ["gemini-3.7-flash", "gemini-3.6-flash", "gemini-3.5-flash", "gemini-3.5-flash-lite"];
-
   function ripristinaCascataConsigliata() {
-    // Scrive solo nel campo di testo — non salva nulla da sola, esattamente
-    // come qualunque altra modifica al modulo: serve comunque "Salva le
-    // modifiche" per renderla effettiva.
     document.getElementById("campo-modelli").value = CASCATA_CONSIGLIATA.join(", ");
   }
 
-  // Valori con cui il progetto è partito (gli stessi della prima scheda
-  // Config mai caricata). Tenuta SEPARATA da CASCATA_CONSIGLIATA sopra
-  // anche se oggi coincidono: quella è una scelta tecnica motivata (vedi
-  // il commento in app.py) che potrebbe evolvere da sola in futuro (es.
-  // quando un modello nuovo matura); questa è solo un punto di riferimento
-  // personale a cui tornare — non è detto restino sempre uguali.
-  const VALORI_PREDEFINITI = {
-    prezzoMax: 110000,
-    lat: 37.5078836,
-    lon: 15.0830032,
-    raggio: 22,
-    soloFuture: "true",
-    astegiudiziarie: "true",
-    pausa: 1,
-    soloConteggio: "false"
-  };
-
-  function ripristinaValoriPredefiniti() {
-    // Default: nessun limite minimo (checkbox spuntata, campo vuoto e
-    // disattivato) — non più un valore numerico specifico.
-    document.getElementById("campo-prezzo-minimo-illimitato").checked = true;
-    document.getElementById("campo-prezzo-min").disabled = true;
-    document.getElementById("campo-prezzo-min").value = "";
-
-    document.getElementById("campo-prezzo-illimitato").checked = false;
-    document.getElementById("campo-prezzo-max").disabled = false;
-    document.getElementById("campo-prezzo-max").value = VALORI_PREDEFINITI.prezzoMax;
-
-    document.getElementById("campo-raggio").value = VALORI_PREDEFINITI.raggio;
-    document.getElementById("etichetta-raggio").textContent = VALORI_PREDEFINITI.raggio;
-    impostaPuntoMappa(VALORI_PREDEFINITI.lat, VALORI_PREDEFINITI.lon, VALORI_PREDEFINITI.raggio);
-
-    document.getElementById("campo-tutta-italia").checked = false;
-    aggiornaStatoTuttaItalia();
-
-    document.querySelectorAll("#lista-tipologia .checkbox-tipologia").forEach(cb => cb.checked = false);
-
-    document.getElementById("campo-solo-future").value = VALORI_PREDEFINITI.soloFuture;
-    document.getElementById("campo-astegiudiziarie").value = VALORI_PREDEFINITI.astegiudiziarie;
-    document.getElementById("campo-pausa").value = VALORI_PREDEFINITI.pausa;
-    document.getElementById("campo-solo-conteggio").value = VALORI_PREDEFINITI.soloConteggio;
-    document.getElementById("campo-conteggia-non-analizzate").checked = false;
-    aggiornaStatoConteggiaNonAnalizzate();
-
-    ripristinaCascataConsigliata();
-
-    // Stesso avviso mostrato dopo il salvataggio, riusato qui per
-    // ricordare — proprio dove poi guarderai per salvare — che questo
-    // ripristino è ancora solo nel modulo, non sul foglio.
-    const messaggioEl = document.getElementById("messaggio-salvataggio");
-    messaggioEl.textContent = 'Campi ripristinati ai valori predefiniti — premi "Salva le modifiche" per renderlo effettivo.';
-    messaggioEl.className = "messaggio-attesa";
-  }
-
-  // ==========================================================
-  // VALIDAZIONE E SALVATAGGIO — stessi limiti della validazione server-side
-  // in Code.gs (validaConfigurazione). Questa qui evita un giro a vuoto per
-  // un errore banale; quella lì è quella che conta davvero, perché una
-  // pagina web si può sempre aggirare.
-  // ==========================================================
-  function validaForm() {
+  function validaCardPrezzo() {
     const errori = [];
-
     const illimitatoMin = document.getElementById("campo-prezzo-minimo-illimitato").checked;
     let prezzoMin = 0;
     if (!illimitatoMin) {
-      const prezzoMinTesto = document.getElementById("campo-prezzo-min").value;
-      prezzoMin = Number(prezzoMinTesto);
-      if (prezzoMinTesto === "" || isNaN(prezzoMin) || prezzoMin < 0 || prezzoMin > 5000000) {
+      const testo = document.getElementById("campo-prezzo-min").value;
+      prezzoMin = Number(testo);
+      if (testo === "" || isNaN(prezzoMin) || prezzoMin < 0 || prezzoMin > 5000000) {
         errori.push('Il prezzo minimo deve essere un numero tra 0 e 5.000.000 €, oppure spunta "Nessun limite".');
       }
     }
-
-    const illimitato = document.getElementById("campo-prezzo-illimitato").checked;
+    const illimitatoMax = document.getElementById("campo-prezzo-illimitato").checked;
     let prezzoMax = null;
-    if (!illimitato) {
-      const prezzoMaxTesto = document.getElementById("campo-prezzo-max").value;
-      prezzoMax = Number(prezzoMaxTesto);
-      if (prezzoMaxTesto === "" || isNaN(prezzoMax) || prezzoMax < 0 || prezzoMax > 5000000) {
+    if (!illimitatoMax) {
+      const testo = document.getElementById("campo-prezzo-max").value;
+      prezzoMax = Number(testo);
+      if (testo === "" || isNaN(prezzoMax) || prezzoMax < 0 || prezzoMax > 5000000) {
         errori.push('Il prezzo massimo deve essere un numero tra 0 e 5.000.000 €, oppure spunta "Nessun limite".');
       } else if (prezzoMax < prezzoMin) {
         errori.push("Il prezzo massimo non può essere inferiore al minimo.");
       }
     }
-
-    const raggio = Number(document.getElementById("campo-raggio").value);
-    if (isNaN(raggio) || raggio < 1 || raggio > 300) {
-      errori.push("Il raggio deve essere tra 1 e 300 km.");
-    }
-
-    const pausaTesto = document.getElementById("campo-pausa").value;
-    const pausa = Number(pausaTesto);
-    if (pausaTesto === "" || isNaN(pausa) || pausa < 0 || pausa > 60) {
-      errori.push("La pausa tra le aste deve essere tra 0 e 60 secondi.");
-    }
-
-    const modelli = document.getElementById("campo-modelli").value.trim().split(",").map(m => m.trim()).filter(Boolean);
-    if (modelli.length === 0) {
-      errori.push("Serve almeno un modello Gemini nella cascata.");
-    }
-
-    return {errori, prezzoMin, prezzoMax, raggio, pausa, modelli, illimitato};
+    return {errori, prezzoMin, prezzoMax};
   }
 
-  async function salvaConfigurazione() {
-    const messaggioEl = document.getElementById("messaggio-salvataggio");
-    const {errori, prezzoMin, prezzoMax, raggio, pausa, modelli, illimitato} = validaForm();
+  async function salvaCard(nomeCard) {
+    const msgEl = document.getElementById(`messaggio-salva-${nomeCard}`);
+    msgEl.textContent = "Salvataggio in corso…";
+    msgEl.className = "messaggio-salvataggio-card messaggio-attesa";
 
-    if (errori.length > 0) {
-      messaggioEl.textContent = errori[0];
-      messaggioEl.className = "messaggio-errore";
-      return;
+    if (nomeCard === "area") {
+      const punto = segnaposto.getLatLng();
+      const raggio = Number(document.getElementById("campo-raggio").value);
+      if (isNaN(raggio) || raggio < 1 || raggio > 300) {
+        msgEl.textContent = "Il raggio deve essere tra 1 e 300 km.";
+        msgEl.className = "messaggio-salvataggio-card messaggio-errore";
+        return;
+      }
+      configAttuale.cerca_tutta_italia = document.getElementById("campo-tutta-italia").checked;
+      configAttuale.lat_riferimento = punto.lat;
+      configAttuale.lon_riferimento = punto.lng;
+      configAttuale.raggio_km = raggio;
+    } else if (nomeCard === "prezzo") {
+      const {errori, prezzoMin, prezzoMax} = validaCardPrezzo();
+      if (errori.length) {
+        msgEl.textContent = errori[0];
+        msgEl.className = "messaggio-salvataggio-card messaggio-errore";
+        return;
+      }
+      configAttuale.prezzo_base_min = prezzoMin;
+      configAttuale.prezzo_base_max = prezzoMax;
+    } else if (nomeCard === "tipologia") {
+      configAttuale.tipologie_incluse = [...document.querySelectorAll("#lista-tipologia .checkbox-tipologia:checked")].map(cb => cb.value);
+    } else if (nomeCard === "altri") {
+      const pausaTesto = document.getElementById("campo-pausa").value;
+      const pausa = Number(pausaTesto);
+      if (pausaTesto === "" || isNaN(pausa) || pausa < 0 || pausa > 60) {
+        msgEl.textContent = "La pausa tra le aste deve essere tra 0 e 60 secondi.";
+        msgEl.className = "messaggio-salvataggio-card messaggio-errore";
+        return;
+      }
+      configAttuale.solo_aste_future = document.getElementById("campo-solo-future").value === "true";
+      configAttuale.usa_astegiudiziarie_perizia = document.getElementById("campo-astegiudiziarie").value === "true";
+      configAttuale.pausa_tra_aste_secondi = pausa;
+      configAttuale.solo_conteggio = document.getElementById("campo-solo-conteggio").value === "true";
+      configAttuale.conteggia_non_analizzate = document.getElementById("campo-conteggia-non-analizzate").checked;
+    } else if (nomeCard === "modelli") {
+      const modelli = document.getElementById("campo-modelli").value.trim().split(",").map(m => m.trim()).filter(Boolean);
+      if (modelli.length === 0) {
+        msgEl.textContent = "Serve almeno un modello Gemini nella cascata.";
+        msgEl.className = "messaggio-salvataggio-card messaggio-errore";
+        return;
+      }
+      configAttuale.cascata_modelli_gemini = modelli;
+    } else if (nomeCard === "pianificazioneScanner") {
+      const giorni = [...document.querySelectorAll(".checkbox-giorno-scanner:checked")].map(cb => cb.value);
+      const orari = [...document.querySelectorAll(".campo-orario-scanner")].map(el => el.value).filter(Boolean);
+      if (orari.length === 0) {
+        msgEl.textContent = "Serve almeno un orario.";
+        msgEl.className = "messaggio-salvataggio-card messaggio-errore";
+        return;
+      }
+      pianificazioneAttuale.scanner_attivo = document.getElementById("campo-scanner-attivo").checked;
+      pianificazioneAttuale.scanner_giorni = giorni;
+      pianificazioneAttuale.scanner_orari = orari;
+    } else if (nomeCard === "pianificazioneBatch") {
+      pianificazioneAttuale.verifica_batch_minuti = Number(document.getElementById("campo-frequenza-batch").value);
     }
-
-    const tipologieSelezionate = [...document.querySelectorAll("#lista-tipologia .checkbox-tipologia:checked")].map(cb => cb.value);
-
-    const punto = segnaposto.getLatLng();
-    const nuovaConfig = {
-      prezzo_base_min: prezzoMin,
-      prezzo_base_max: illimitato ? "illimitato" : prezzoMax,
-      lat_riferimento: punto.lat,
-      lon_riferimento: punto.lng,
-      raggio_km: raggio,
-      cerca_tutta_italia: document.getElementById("campo-tutta-italia").checked ? "true" : "false",
-      tipologie_incluse: JSON.stringify(tipologieSelezionate),
-      solo_aste_future: document.getElementById("campo-solo-future").value,
-      usa_astegiudiziarie_perizia: document.getElementById("campo-astegiudiziarie").value,
-      pausa_tra_aste_secondi: pausa,
-      solo_conteggio: document.getElementById("campo-solo-conteggio").value,
-      conteggia_non_analizzate: document.getElementById("campo-conteggia-non-analizzate").checked ? "true" : "false",
-      cascata_modelli_gemini: JSON.stringify(modelli)
-    };
-
-    messaggioEl.textContent = "Salvataggio in corso…";
-    messaggioEl.className = "messaggio-attesa";
 
     try {
-      const risultato = await chiamaRpc("imposta_configurazione", {password_tentativo: passwordCorrente, config_json: nuovaConfig});
-      if (risultato.result === "success") {
-        messaggioEl.textContent = "Salvato — verrà applicato dal prossimo giro dello scanner.";
-        messaggioEl.className = "messaggio-ok";
+      let risultato;
+      if (nomeCard === "pianificazioneScanner" || nomeCard === "pianificazioneBatch") {
+        risultato = await chiamaRpc("imposta_pianificazione", {
+          password_tentativo: passwordCorrente,
+          scanner_attivo: pianificazioneAttuale.scanner_attivo,
+          scanner_giorni: pianificazioneAttuale.scanner_giorni,
+          scanner_orari: pianificazioneAttuale.scanner_orari,
+          verifica_batch_minuti: pianificazioneAttuale.verifica_batch_minuti
+        });
       } else {
-        messaggioEl.textContent = risultato.message || "Errore sconosciuto durante il salvataggio.";
-        messaggioEl.className = "messaggio-errore";
+        risultato = await chiamaRpc("imposta_configurazione", {
+          password_tentativo: passwordCorrente,
+          config_json: {
+            prezzo_base_min: configAttuale.prezzo_base_min,
+            prezzo_base_max: configAttuale.prezzo_base_max === null ? "illimitato" : configAttuale.prezzo_base_max,
+            lat_riferimento: configAttuale.lat_riferimento,
+            lon_riferimento: configAttuale.lon_riferimento,
+            raggio_km: configAttuale.raggio_km,
+            cerca_tutta_italia: String(configAttuale.cerca_tutta_italia),
+            tipologie_incluse: JSON.stringify(configAttuale.tipologie_incluse),
+            solo_aste_future: String(configAttuale.solo_aste_future),
+            usa_astegiudiziarie_perizia: String(configAttuale.usa_astegiudiziarie_perizia),
+            pausa_tra_aste_secondi: configAttuale.pausa_tra_aste_secondi,
+            solo_conteggio: String(configAttuale.solo_conteggio),
+            conteggia_non_analizzate: String(configAttuale.conteggia_non_analizzate),
+            cascata_modelli_gemini: JSON.stringify(configAttuale.cascata_modelli_gemini)
+          }
+        });
+      }
+
+      if (risultato.result === "success") {
+        msgEl.textContent = "Salvato.";
+        msgEl.className = "messaggio-salvataggio-card messaggio-ok";
+        const funzioniRiepilogo = {
+          area: renderizzaRiepilogoArea, prezzo: renderizzaRiepilogoPrezzo,
+          tipologia: renderizzaRiepilogoTipologia, altri: renderizzaRiepilogoAltri,
+          modelli: renderizzaRiepilogoModelli, pianificazioneScanner: renderizzaRiepilogoPianificazioneScanner,
+          pianificazioneBatch: renderizzaRiepilogoPianificazioneBatch
+        };
+        funzioniRiepilogo[nomeCard]();
+        setTimeout(() => chiudiModale(nomeCard), 700);
+      } else {
+        msgEl.textContent = risultato.message || "Errore sconosciuto durante il salvataggio.";
+        msgEl.className = "messaggio-salvataggio-card messaggio-errore";
       }
     } catch (e) {
-      messaggioEl.textContent = "Richiesta non riuscita. Controlla la connessione e riprova.";
-      messaggioEl.className = "messaggio-errore";
+      msgEl.textContent = "Richiesta non riuscita. Controlla la connessione e riprova.";
+      msgEl.className = "messaggio-salvataggio-card messaggio-errore";
     }
   }
 
-  // Conferma a due tocchi invece di un dialogo nativo del browser (fuori
-  // stile rispetto al resto della pagina): il primo clic arma il
-  // pulsante per pochi secondi, il secondo clic entro quella finestra
-  // avvia davvero. Un clic isolato, o nessun secondo clic in tempo, non
-  // fa nulla — protegge da un avvio per errore senza un popup invadente.
-  let confermaAvvioInCorso = false;
-  let timeoutConfermaAvvio = null;
-
-  // ==========================================================
-  // PONTE VERSO IL VECCHIO Code.gs — SOLO per avviaScanner() qui sotto.
-  // Questa è l'unica azione che non tocca mai il database (chiama
-  // l'API di GitHub per lanciare il workflow, niente di più): tenerla
-  // sul vecchio sistema evita di dover imparare/distribuire una Supabase
-  // Edge Function solo per questo, e il problema di affidabilità che ha
-  // motivato l'intera migrazione (scritture lente/senza lock su Sheets)
-  // qui non si applica per niente — questa azione non scrive mai sul
-  // foglio. Assumo che tu abbia ancora QUESTO STESSO Code.gs distribuito
-  // (era l'URL nel tuo file originale) — se l'hai nel frattempo tolto,
-  // dimmelo e troviamo un'alternativa.
-  //
-  // Il vecchio Code.gs si aspetta ancora l'hash SHA-256 di sempre (con
-  // SALE_PASSWORD_LEGACY), non la password in chiaro del nuovo sistema —
-  // calcolaHashLegacy() esiste SOLO per questo ponte, non fa parte del
-  // nuovo schema di autenticazione (che è tutto in chiaro, vedi sopra).
-  // ==========================================================
+  let confermaAvvioInCorso = false, timeoutConfermaAvvio = null;
   const LEGACY_WEBAPP_URL_AVVIA_SCANNER = "https://script.google.com/macros/s/AKfycby_QUehipA5ru-H82hUWoQqmfkbKDv8wsh_dJpWLAaFkdgGaOyfvtg-2qyuNoiER-Zk/exec";
-  const SALE_PASSWORD_LEGACY = "aste-ct-8f3k2-sale"; // deve combaciare con SALE_PASSWORD in Code.gs
+  const SALE_PASSWORD_LEGACY = "aste-ct-8f3k2-sale";
 
   async function calcolaHashLegacy(testo) {
     const dati = new TextEncoder().encode(SALE_PASSWORD_LEGACY + testo);
@@ -1142,39 +1466,27 @@
 
   async function avviaScanner() {
     const bottone = document.getElementById("bottone-avvia-scanner");
-    const messaggioEl = document.getElementById("messaggio-salvataggio");
-
+    const messaggioEl = document.getElementById("messaggio-azioni-principali");
     if (!confermaAvvioInCorso) {
       confermaAvvioInCorso = true;
       bottone.textContent = "Conferma avvio?";
-      timeoutConfermaAvvio = setTimeout(() => {
-        confermaAvvioInCorso = false;
-        bottone.textContent = "▶ Avvia scanner ora";
-      }, 4000);
+      timeoutConfermaAvvio = setTimeout(() => { confermaAvvioInCorso = false; bottone.textContent = "▶ Avvia scanner ora"; }, 4000);
       return;
     }
-
     clearTimeout(timeoutConfermaAvvio);
     confermaAvvioInCorso = false;
     bottone.textContent = "▶ Avvia scanner ora";
-
     messaggioEl.textContent = "Avvio in corso…";
     messaggioEl.className = "messaggio-attesa";
-
     try {
       const hashLegacy = await calcolaHashLegacy(passwordCorrente);
-      const rispostaLegacy = await fetch(LEGACY_WEBAPP_URL_AVVIA_SCANNER, {
-        method: "POST",
-        body: JSON.stringify({azione: "avvia_scanner", hash_password: hashLegacy})
-      });
+      const rispostaLegacy = await fetch(LEGACY_WEBAPP_URL_AVVIA_SCANNER, {method: "POST", body: JSON.stringify({azione: "avvia_scanner", hash_password: hashLegacy})});
       const risultato = await rispostaLegacy.json();
       if (risultato.result === "success") {
-        messaggioEl.innerHTML = escapeHtml(risultato.message || "Scanner avviato.")
-          + (risultato.url ? ` <a href="${escapeHtml(risultato.url)}" target="_blank" rel="noopener">Apri esecuzione</a>` : "");
+        messaggioEl.innerHTML = escapeHtml(risultato.message || "Scanner avviato.") + (risultato.url ? ` <a href="${escapeHtml(risultato.url)}" target="_blank" rel="noopener">Apri esecuzione</a>` : "");
         messaggioEl.className = "messaggio-ok";
       } else {
-        messaggioEl.innerHTML = escapeHtml(risultato.message || "Errore sconosciuto durante l'avvio.")
-          + (risultato.url ? ` <a href="${escapeHtml(risultato.url)}" target="_blank" rel="noopener">Apri esecuzione</a>` : "");
+        messaggioEl.innerHTML = escapeHtml(risultato.message || "Errore sconosciuto durante l'avvio.") + (risultato.url ? ` <a href="${escapeHtml(risultato.url)}" target="_blank" rel="noopener">Apri esecuzione</a>` : "");
         messaggioEl.className = "messaggio-errore";
       }
     } catch (e) {
@@ -1183,50 +1495,30 @@
     }
   }
 
-  // Stesso schema di avviaScanner() sopra — doppio tocco di conferma,
-  // stesso ponte legacy verso Code.gs, ma verso un workflow diverso
-  // (verifica-batch.yml invece di scheduler.yml). Variabili di conferma
-  // SEPARATE (confermaVerificaBatchInCorso, non confermaAvvioInCorso):
-  // i due pulsanti restano indipendenti, confermare l'uno non deve
-  // sfiorare lo stato dell'altro.
-  let confermaVerificaBatchInCorso = false;
-  let timeoutConfermaVerificaBatch = null;
-
+  let confermaVerificaBatchInCorso = false, timeoutConfermaVerificaBatch = null;
   async function avviaVerificaBatch() {
     const bottone = document.getElementById("bottone-verifica-batch");
-    const messaggioEl = document.getElementById("messaggio-verifica-batch");
-
+    const messaggioEl = document.getElementById("messaggio-azioni-principali");
     if (!confermaVerificaBatchInCorso) {
       confermaVerificaBatchInCorso = true;
       bottone.textContent = "Confermi il controllo?";
-      timeoutConfermaVerificaBatch = setTimeout(() => {
-        confermaVerificaBatchInCorso = false;
-        bottone.textContent = "🔄 Controlla batch ora";
-      }, 4000);
+      timeoutConfermaVerificaBatch = setTimeout(() => { confermaVerificaBatchInCorso = false; bottone.textContent = "🔄 Controlla batch ora"; }, 4000);
       return;
     }
-
     clearTimeout(timeoutConfermaVerificaBatch);
     confermaVerificaBatchInCorso = false;
     bottone.textContent = "🔄 Controlla batch ora";
-
     messaggioEl.textContent = "Avvio in corso…";
     messaggioEl.className = "messaggio-attesa";
-
     try {
       const hashLegacy = await calcolaHashLegacy(passwordCorrente);
-      const rispostaLegacy = await fetch(LEGACY_WEBAPP_URL_AVVIA_SCANNER, {
-        method: "POST",
-        body: JSON.stringify({azione: "avvia_verifica_batch", hash_password: hashLegacy})
-      });
+      const rispostaLegacy = await fetch(LEGACY_WEBAPP_URL_AVVIA_SCANNER, {method: "POST", body: JSON.stringify({azione: "avvia_verifica_batch", hash_password: hashLegacy})});
       const risultato = await rispostaLegacy.json();
       if (risultato.result === "success") {
-        messaggioEl.innerHTML = escapeHtml(risultato.message || "Controllo avviato.")
-          + (risultato.url ? ` <a href="${escapeHtml(risultato.url)}" target="_blank" rel="noopener">Apri esecuzione</a>` : "");
+        messaggioEl.innerHTML = escapeHtml(risultato.message || "Controllo avviato.") + (risultato.url ? ` <a href="${escapeHtml(risultato.url)}" target="_blank" rel="noopener">Apri esecuzione</a>` : "");
         messaggioEl.className = "messaggio-ok";
       } else {
-        messaggioEl.innerHTML = escapeHtml(risultato.message || "Errore sconosciuto durante l'avvio.")
-          + (risultato.url ? ` <a href="${escapeHtml(risultato.url)}" target="_blank" rel="noopener">Apri esecuzione</a>` : "");
+        messaggioEl.innerHTML = escapeHtml(risultato.message || "Errore sconosciuto durante l'avvio.") + (risultato.url ? ` <a href="${escapeHtml(risultato.url)}" target="_blank" rel="noopener">Apri esecuzione</a>` : "");
         messaggioEl.className = "messaggio-errore";
       }
     } catch (e) {
@@ -1235,39 +1527,21 @@
     }
   }
 
-  // Stessa conferma a due tocchi di avviaScanner() sopra, stesso motivo:
-  // un'azione distruttiva (qui, irreversibile — niente "esecuzione in
-  // corso" da poter guardare o annullare) non merita un dialogo nativo
-  // del browser, ma nemmeno di partire al primo clic.
-  let confermaEliminazioneInCorso = false;
-  let timeoutConfermaEliminazione = null;
-
+  let confermaEliminazioneInCorso = false, timeoutConfermaEliminazione = null;
   async function eliminaAsteScadute() {
     const bottone = document.getElementById("bottone-elimina-scadute");
-    // Elemento dedicato, accanto al pulsante — prima puntava a
-    // messaggio-salvataggio, condiviso con "Salva le modifiche" molto
-    // più in basso nella pagina: il messaggio compariva per davvero, ma
-    // fuori dallo schermo, lasciando dubbi su se l'operazione fosse
-    // riuscita o no (segnalato in chat).
     const messaggioEl = document.getElementById("messaggio-elimina-scadute");
-
     if (!confermaEliminazioneInCorso) {
       confermaEliminazioneInCorso = true;
       bottone.textContent = "Confermi l'eliminazione?";
-      timeoutConfermaEliminazione = setTimeout(() => {
-        confermaEliminazioneInCorso = false;
-        bottone.textContent = "🗑 Elimina aste scadute";
-      }, 4000);
+      timeoutConfermaEliminazione = setTimeout(() => { confermaEliminazioneInCorso = false; bottone.textContent = "🗑 Elimina aste scadute"; }, 4000);
       return;
     }
-
     clearTimeout(timeoutConfermaEliminazione);
     confermaEliminazioneInCorso = false;
     bottone.textContent = "🗑 Elimina aste scadute";
-
     messaggioEl.textContent = "Eliminazione in corso…";
     messaggioEl.className = "messaggio-attesa";
-
     try {
       const risultato = await chiamaRpc("elimina_aste_scadute", {password_tentativo: passwordCorrente});
       if (risultato.result === "success") {
@@ -1283,119 +1557,11 @@
     }
   }
 
-  // Chiede la password ATTUALE (verificata lato server in cambia_password
-  // prima di accettare quella nuova, stessa idea di riconfermarla prima
-  // di un cambio su un account Google o simili — protegge da un cambio
-  // non voluto se qualcuno trova questa pagina già sbloccata, es. un tab
-  // dimenticato aperto) più la nuova, due volte per sicurezza contro un
-  // errore di battitura. Aggiorna sia passwordCorrente sia la password
-  // ricordata in locale (vedi salvaPasswordRicordata): da questo momento
-  // entrambe riflettono la password nuova, non serve rifare login.
-  //
-  // NOTA sul cambio password e il ponte legacy: dopo un cambio qui,
-  // avviaScanner() sopra calcolerà l'hash legacy dalla NUOVA password —
-  // se il vecchio Code.gs ha ancora la VECCHIA password impostata,
-  // "Avvia scanner" smetterebbe di funzionare finché non aggiorni anche
-  // quella (Code.gs -> impostaPasswordConfig, vedi il file), oppure
-  // finché non elimini il ponte legacy una volta deciso come gestire
-  // avvia_scanner in modo definitivo.
-  // ==========================================================
-  // PASSWORD DI LETTURA per index.html — separata da passwordCorrente,
-  // gestita comunque DA QUI usando passwordCorrente come lasciapassare
-  // (stesso principio di elimina_aste_scadute/imposta_configurazione:
-  // azioni di amministrazione, protette dalla password che ha già
-  // sbloccato questa pagina, non da se stesse). Il valore attuale non
-  // viene MAI letto né mostrato — solo se è attiva o no (vedi
-  // stato_password_lettura sul database): non c'è motivo per farlo
-  // viaggiare fino al browser una volta impostato.
-  // ==========================================================
-  function alternaCampoPasswordLettura() {
-    const attiva = document.getElementById("campo-attiva-password-lettura").checked;
-    document.getElementById("blocco-nuova-password-lettura").classList.toggle("sezione-disattivata", !attiva);
-    document.getElementById("campo-nuova-password-lettura").disabled = !attiva;
-  }
-
-  // Tiene traccia di cosa c'era GIÀ prima di qualunque modifica in questa
-  // visita — serve a salvaPasswordLettura() qui sotto per distinguere
-  // "ho lasciato il campo vuoto perché non voglio cambiarla, è già
-  // attiva" da "ho spuntato la casella ma non ho scritto nulla, manca
-  // qualcosa" — due situazioni che altrimenti sembrerebbero identiche.
-  let passwordLetturaEraAttiva = false;
-
-  async function caricaStatoPasswordLettura() {
-    try {
-      const risultato = await chiamaRpc("stato_password_lettura", {password_tentativo: passwordCorrente});
-      if (risultato.result === "success") {
-        passwordLetturaEraAttiva = risultato.attiva;
-        document.getElementById("campo-attiva-password-lettura").checked = risultato.attiva;
-        alternaCampoPasswordLettura();
-      }
-    } catch (e) {
-      // Non critico: il resto della pagina (filtri di ricerca) è già
-      // caricato e usabile — questa sola sezione resta con lo stato
-      // predefinito (casella non spuntata) finché non si ricarica.
-    }
-  }
-
-  async function salvaPasswordLettura() {
-    const messaggioEl = document.getElementById("messaggio-password-lettura");
-    const attivaOra = document.getElementById("campo-attiva-password-lettura").checked;
-    const nuovoValore = document.getElementById("campo-nuova-password-lettura").value;
-
-    let valoreDaInviare;
-    if (!attivaOra) {
-      // Casella tolta: disattiva SEMPRE, qualunque cosa ci sia nel campo
-      // — spegnerla non ha bisogno di conoscere né confermare nessun
-      // valore.
-      valoreDaInviare = "";
-    } else if (nuovoValore) {
-      // Casella spuntata E un valore scritto: la imposta (che fosse già
-      // attiva con un valore diverso, o che si stia attivando ora per la
-      // prima volta, il risultato è lo stesso — sostituisce quella
-      // eventualmente esistente).
-      valoreDaInviare = nuovoValore;
-    } else if (passwordLetturaEraAttiva) {
-      // Casella spuntata, campo lasciato vuoto, MA era già attiva prima
-      // di aprire questa pagina: nessuna modifica da fare, resta quella
-      // di sempre — non è un errore, è la scelta di "lasciala com'è".
-      messaggioEl.textContent = "Nessuna modifica: la password di lettura era già attiva ed è rimasta quella di prima.";
-      messaggioEl.className = "messaggio-ok";
-      return;
-    } else {
-      // Casella spuntata per la prima volta, ma senza scrivere nessuna
-      // password con cui attivarla: qui sì che manca un'informazione
-      // necessaria, a differenza del caso sopra.
-      messaggioEl.textContent = "Scrivi una password nel campo per attivarla, oppure lascia la casella non spuntata.";
-      messaggioEl.className = "messaggio-errore";
-      return;
-    }
-
-    messaggioEl.textContent = "Salvataggio in corso…";
-    messaggioEl.className = "messaggio-attesa";
-
-    try {
-      const risultato = await chiamaRpc("imposta_password_lettura", {password_tentativo: passwordCorrente, nuova_password_lettura: valoreDaInviare});
-      if (risultato.result === "success") {
-        passwordLetturaEraAttiva = attivaOra;
-        document.getElementById("campo-nuova-password-lettura").value = "";
-        messaggioEl.textContent = attivaOra ? "Password di lettura attivata/aggiornata." : "Password di lettura disattivata — index.html torna apribile da chiunque abbia il link.";
-        messaggioEl.className = "messaggio-ok";
-      } else {
-        messaggioEl.textContent = risultato.message || "Errore sconosciuto durante il salvataggio.";
-        messaggioEl.className = "messaggio-errore";
-      }
-    } catch (e) {
-      messaggioEl.textContent = "Richiesta non riuscita. Controlla la connessione e riprova.";
-      messaggioEl.className = "messaggio-errore";
-    }
-  }
-
   async function cambiaPassword() {
     const messaggioEl = document.getElementById("messaggio-cambio-password");
     const attuale = document.getElementById("campo-password-attuale").value;
     const nuova = document.getElementById("campo-password-nuova").value;
     const conferma = document.getElementById("campo-password-conferma").value;
-
     if (!attuale || !nuova || !conferma) {
       messaggioEl.textContent = "Compila tutti e tre i campi.";
       messaggioEl.className = "messaggio-errore";
@@ -1411,10 +1577,8 @@
       messaggioEl.className = "messaggio-errore";
       return;
     }
-
     messaggioEl.textContent = "Cambio in corso…";
     messaggioEl.className = "messaggio-attesa";
-
     try {
       const risultato = await chiamaRpc("cambia_password", {password_attuale: attuale, password_nuova: nuova});
       if (risultato.result === "success") {
@@ -1435,11 +1599,65 @@
     }
   }
 
+  function alternaCampoPasswordLettura() {
+    const attiva = document.getElementById("campo-attiva-password-lettura").checked;
+    document.getElementById("blocco-nuova-password-lettura").classList.toggle("sezione-disattivata", !attiva);
+    document.getElementById("campo-nuova-password-lettura").disabled = !attiva;
+  }
+
+  let passwordLetturaEraAttiva = false;
+  async function caricaStatoPasswordLettura() {
+    try {
+      const risultato = await chiamaRpc("stato_password_lettura", {password_tentativo: passwordCorrente});
+      if (risultato.result === "success") {
+        passwordLetturaEraAttiva = risultato.attiva;
+        document.getElementById("campo-attiva-password-lettura").checked = risultato.attiva;
+        alternaCampoPasswordLettura();
+      }
+    } catch (e) {}
+  }
+
+  async function salvaPasswordLettura() {
+    const messaggioEl = document.getElementById("messaggio-password-lettura");
+    const attivaOra = document.getElementById("campo-attiva-password-lettura").checked;
+    const nuovoValore = document.getElementById("campo-nuova-password-lettura").value;
+    let valoreDaInviare;
+    if (!attivaOra) {
+      valoreDaInviare = "";
+    } else if (nuovoValore) {
+      valoreDaInviare = nuovoValore;
+    } else if (passwordLetturaEraAttiva) {
+      messaggioEl.textContent = "Nessuna modifica: la password di lettura era già attiva ed è rimasta quella di prima.";
+      messaggioEl.className = "messaggio-ok";
+      return;
+    } else {
+      messaggioEl.textContent = "Scrivi una password nel campo per attivarla, oppure lascia la casella non spuntata.";
+      messaggioEl.className = "messaggio-errore";
+      return;
+    }
+    messaggioEl.textContent = "Salvataggio in corso…";
+    messaggioEl.className = "messaggio-attesa";
+    try {
+      const risultato = await chiamaRpc("imposta_password_lettura", {password_tentativo: passwordCorrente, nuova_password_lettura: valoreDaInviare});
+      if (risultato.result === "success") {
+        passwordLetturaEraAttiva = attivaOra;
+        document.getElementById("campo-nuova-password-lettura").value = "";
+        messaggioEl.textContent = attivaOra ? "Password di lettura attivata/aggiornata." : "Password di lettura disattivata — index.html torna apribile da chiunque abbia il link.";
+        messaggioEl.className = "messaggio-ok";
+      } else {
+        messaggioEl.textContent = risultato.message || "Errore sconosciuto durante il salvataggio.";
+        messaggioEl.className = "messaggio-errore";
+      }
+    } catch (e) {
+      messaggioEl.textContent = "Richiesta non riuscita. Controlla la connessione e riprova.";
+      messaggioEl.className = "messaggio-errore";
+    }
+  }
+
   provaSbloccoAutomatico();
 </script>
 
 <script>
-  // Registrazione PWA — vedi sw.js per cosa fa (nulla, di proposito).
   if ("serviceWorker" in navigator) {
     navigator.serviceWorker.register("sw.js").catch(() => {});
   }
