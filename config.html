@@ -449,18 +449,29 @@
   .giorno-toggle input:checked + span { background: var(--primary); border-color: var(--primary); color: var(--surface); }
   .giorno-toggle input:focus-visible + span { outline: 2px solid var(--primary); outline-offset: 2px; }
 
-  .riga-due-orari { display: flex; gap: 10px; }
-  .riga-due-orari .campo-form { flex: 1; margin-bottom: 0; min-width: 0; }
+  /* Griglia, non più flexbox, apposta: su iPhone (Safari) il fix
+     precedente (min-width:0 sul contenitore flessibile) non è bastato —
+     segnalato in chat con screenshot, la X restava comunque
+     sovrapposta al campo. La resa nativa di input[type="time"] varia
+     parecchio da motore a motore (Safari la disegna diversamente da
+     Chromium, che è quanto potevo verificare qui), e il restringimento
+     flessibile dipende in parte dal contenuto — con un controllo
+     nativo come questo, quel contenuto non è mai del tutto prevedibile.
+     Una griglia con colonne dichiarate esplicitamente (1fr + 38px fissi)
+     non lascia spazio a questa ambiguità: il pulsante ha SEMPRE
+     esattamente 38px, qualunque cosa il browser decida di fare dentro
+     l'input — non serve indovinare come si restringe, la larghezza
+     non dipende dal contenuto in primo luogo. */
+  .riga-due-orari { display: grid; grid-template-columns: 1fr 38px; gap: 10px; align-items: center; }
+  .riga-due-orari .campo-form { margin-bottom: 0; min-width: 0; }
   .bottone-rimuovi-orario {
     background: var(--danger-soft);
     color: var(--danger);
     border: none;
     border-radius: 8px;
-    width: 38px;
-    flex-shrink: 0;
+    width: 100%;
     cursor: pointer;
     font-size: 1rem;
-    align-self: flex-end;
     height: 40px;
   }
   .bottone-rimuovi-orario:hover { background: var(--danger); color: var(--surface); }
