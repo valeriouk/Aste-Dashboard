@@ -2024,6 +2024,7 @@
         <span class="legenda-voce"><span class="pallino-legenda anello-nuova"></span>Nuova (24h)</span>
       </p>
       <button type="button" class="pillola" id="pillola-valutati-mappa" onclick="alternaValutatiSullaMappa()" title="Preferiti e scartati sono nascosti dalla mappa per evitare di riaprirli per errore — questo pulsante li rimostra, con un distintivo per riconoscerli">★/✕ sulla mappa</button>
+      <button type="button" class="pillola" id="pillola-solo-nuove-mappa" onclick="alternaSoloNuoveSullaMappa()" title="Mostra sulla mappa solo le aste trovate nelle ultime 24 ore">✨ Solo nuove</button>
     </div>
     <p class="nota-mappa" id="nota-comuni-mancanti"></p>
   </div>
@@ -2435,6 +2436,11 @@
   // per una nuova — nasconderla del tutto è la correzione più diretta
   // per quel problema specifico, non solo distinguerla meglio.
   let mostraValutatiSullaMappa = false;
+  // Spento di default (mostra tutto): a differenza del toggle sopra, qui
+  // non c'è un rischio da evitare per default — è una vista mirata che
+  // ha senso accendere apposta dopo un giro di scanner, non uno stato di
+  // partenza sicuro come quello.
+  let mostraSoloNuoveSullaMappa = false;
   // id asta -> indice in ultimoElencoFiltrato — ricostruita in blocco
   // ogni volta che l'elenco filtrato cambia (dentro renderizza), non
   // cercata da capo con una scansione a ogni singolo uso. Usata da
@@ -4049,6 +4055,18 @@
     renderizzaMappa(ultimoElencoFiltrato, true);
   }
 
+  // Stesso schema di alternaValutatiSullaMappa sopra — variabile propria,
+  // non tocca applicaFiltri(), vista mantenuta ferma al clic. Si compone
+  // con gli altri filtri della mappa invece di sostituirli: con "solo
+  // preferiti" attivo in cima alla pagina, questo mostra i preferiti che
+  // SONO ANCHE nuovi, non tutti i nuovi a prescindere — vedi il filtro
+  // dentro renderizzaMappa().
+  function alternaSoloNuoveSullaMappa() {
+    mostraSoloNuoveSullaMappa = !mostraSoloNuoveSullaMappa;
+    document.getElementById("pillola-solo-nuove-mappa").classList.toggle("attiva", mostraSoloNuoveSullaMappa);
+    renderizzaMappa(ultimoElencoFiltrato, true);
+  }
+
   // Filtro Preferiti/Scartati: mutualmente esclusivo, stesso principio
   // già usato per Libero/Occupato — un clic su una pillola già attiva
   // la disattiva (torna a "tutte"), un clic sull'altra la sostituisce.
@@ -4433,6 +4451,7 @@
     const puntiValidi = [];
     let senzaCoordinate = 0;
     let valutateNascoste = 0;
+    let nonNuoveNascoste = 0;
 
     // Il pulsante mostra/nascondi si disattiva da solo quando il filtro
     // ★/✕ in cima alla pagina è attivo (vedi
@@ -4451,6 +4470,15 @@
       // differenti nello stesso messaggio.
       if ((a.preferito || a.scartato) && nascondiValutati) {
         valutateNascoste++;
+        return;
+      }
+
+      // "Solo nuove" — si COMPONE col filtro sopra invece di sostituirlo:
+      // se sono entrambi attivi, resta visibile solo ciò che passa
+      // ENTRAMBI i controlli (es. un preferito nuovo, se i valutati sono
+      // mostrati). Stesso motivo di conteggio separato del blocco sopra.
+      if (mostraSoloNuoveSullaMappa && !eNuova(a.dataInserimento)) {
+        nonNuoveNascoste++;
         return;
       }
 
@@ -4519,6 +4547,9 @@
     }
     if (valutateNascoste > 0) {
       parti.push(`${valutateNascoste} già preferit${valutateNascoste === 1 ? "a" : "e"}/scartat${valutateNascoste === 1 ? "a" : "e"} nascost${valutateNascoste === 1 ? "a" : "e"} (★/✕ sulla mappa per mostrarle)`);
+    }
+    if (nonNuoveNascoste > 0) {
+      parti.push(`${nonNuoveNascoste} non recent${nonNuoveNascoste === 1 ? "e" : "i"} nascost${nonNuoveNascoste === 1 ? "a" : "e"} (Solo nuove attivo)`);
     }
     notaEl.textContent = parti.length ? parti.join(" · ") + "." : "";
 
