@@ -1632,13 +1632,23 @@
   }
 
   let confermaAvvioInCorso = false, timeoutConfermaAvvio = null;
-  const LEGACY_WEBAPP_URL_AVVIA_SCANNER = "https://script.google.com/macros/s/AKfycbyGxWREG8CBkJK0aRJwBPLmaNxvmSU9Wo3eLqIFaGDGw3VQtgelyrsg3hL4DvQgK7jY/exec";
-  const SALE_PASSWORD_LEGACY = "aste-ct-8f3k2-sale";
 
-  async function calcolaHashLegacy(testo) {
-    const dati = new TextEncoder().encode(SALE_PASSWORD_LEGACY + testo);
-    const bufferHash = await crypto.subtle.digest("SHA-256", dati);
-    return Array.from(new Uint8Array(bufferHash)).map(b => b.toString(16).padStart(2, "0")).join("");
+  // Sostituisce Code.gs/Apps Script — stessa funzione parametrizzata per
+  // tutti e tre i pulsanti sotto, invece di tre ponti quasi identici.
+  // Nessun hash da calcolare qui: la password viaggia in chiaro come per
+  // ogni altra chiamata RPC di questa pagina (stesso principio già in
+  // uso — il confronto vero avviene lato server).
+  const URL_FUNZIONE_AVVIA_WORKFLOW = `${SUPABASE_URL}/functions/v1/avvia-workflow`;
+
+  async function avviaWorkflowGitHub(nomeWorkflow, inputsExtra) {
+    const corpo = {password_tentativo: passwordCorrente, workflow: nomeWorkflow};
+    if (inputsExtra) corpo.inputs = inputsExtra;
+    const risposta = await fetch(URL_FUNZIONE_AVVIA_WORKFLOW, {
+      method: "POST",
+      headers: {"Content-Type": "application/json", "apikey": SUPABASE_ANON_KEY, "Authorization": `Bearer ${SUPABASE_ANON_KEY}`},
+      body: JSON.stringify(corpo),
+    });
+    return risposta.json();
   }
 
   async function avviaScanner() {
@@ -1656,9 +1666,7 @@
     messaggioEl.textContent = "Avvio in corso…";
     messaggioEl.className = "messaggio-attesa";
     try {
-      const hashLegacy = await calcolaHashLegacy(passwordCorrente);
-      const rispostaLegacy = await fetch(LEGACY_WEBAPP_URL_AVVIA_SCANNER, {method: "POST", body: JSON.stringify({azione: "avvia_scanner", hash_password: hashLegacy})});
-      const risultato = await rispostaLegacy.json();
+      const risultato = await avviaWorkflowGitHub("scheduler.yml");
       if (risultato.result === "success") {
         messaggioEl.innerHTML = escapeHtml(risultato.message || "Scanner avviato.") + (risultato.url ? ` <a href="${escapeHtml(risultato.url)}" target="_blank" rel="noopener">Apri esecuzione</a>` : "");
         messaggioEl.className = "messaggio-ok";
@@ -1688,9 +1696,7 @@
     messaggioEl.textContent = "Avvio in corso…";
     messaggioEl.className = "messaggio-attesa";
     try {
-      const hashLegacy = await calcolaHashLegacy(passwordCorrente);
-      const rispostaLegacy = await fetch(LEGACY_WEBAPP_URL_AVVIA_SCANNER, {method: "POST", body: JSON.stringify({azione: "avvia_verifica_batch", hash_password: hashLegacy})});
-      const risultato = await rispostaLegacy.json();
+      const risultato = await avviaWorkflowGitHub("verifica-batch.yml");
       if (risultato.result === "success") {
         messaggioEl.innerHTML = escapeHtml(risultato.message || "Controllo avviato.") + (risultato.url ? ` <a href="${escapeHtml(risultato.url)}" target="_blank" rel="noopener">Apri esecuzione</a>` : "");
         messaggioEl.className = "messaggio-ok";
@@ -1704,12 +1710,12 @@
     }
   }
 
-  // Stesso identico schema dei due sopra — vedi Code.gs
-  // (gestisciAvviaNotificaPreferiti): passa modalita_immediata:"true" al
-  // workflow_dispatch di notifiche-preferiti.yml, che notifica subito su
-  // Telegram le preferite entro 15 giorni ignorando le soglie già
-  // inviate dal giro automatico di stamattina — un controllo su
-  // richiesta apposta diverso da quello giornaliero (vedi la chat).
+  // Stesso identico schema dei due sopra — modalita_immediata:"true"
+  // passata come inputsExtra al workflow_dispatch di
+  // notifiche-preferiti.yml, che notifica subito su Telegram le preferite
+  // entro 15 giorni ignorando le soglie già inviate dal giro automatico
+  // di stamattina — un controllo su richiesta apposta diverso da quello
+  // giornaliero (vedi la chat).
   let confermaControllaPreferitiInCorso = false, timeoutConfermaControllaPreferiti = null;
   async function avviaControllaPreferiti() {
     const bottone = document.getElementById("bottone-controlla-preferiti");
@@ -1726,9 +1732,7 @@
     messaggioEl.textContent = "Avvio in corso…";
     messaggioEl.className = "messaggio-attesa";
     try {
-      const hashLegacy = await calcolaHashLegacy(passwordCorrente);
-      const rispostaLegacy = await fetch(LEGACY_WEBAPP_URL_AVVIA_SCANNER, {method: "POST", body: JSON.stringify({azione: "avvia_notifica_preferiti", hash_password: hashLegacy})});
-      const risultato = await rispostaLegacy.json();
+      const risultato = await avviaWorkflowGitHub("notifiche-preferiti.yml", {modalita_immediata: "true"});
       if (risultato.result === "success") {
         messaggioEl.innerHTML = escapeHtml(risultato.message || "Controllo avviato.") + (risultato.url ? ` <a href="${escapeHtml(risultato.url)}" target="_blank" rel="noopener">Apri esecuzione</a>` : "");
         messaggioEl.className = "messaggio-ok";
