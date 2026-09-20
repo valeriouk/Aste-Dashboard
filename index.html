@@ -582,6 +582,11 @@
   .pallino-legenda.medio { background: #E6A23C; border: 1.5px solid #B87A1E; }
   .pallino-legenda.basso { background: #B98177; border: 1.5px solid #96635A; }
   .pallino-legenda.non-valutato { background: var(--surface-2); border: 1.5px dashed var(--ink-faint); }
+  /* Stesso anello disegnato sui marcatori veri (renderizzaMappa) — vuoto
+     al centro, non un pallino pieno come gli altri tre sopra: qui
+     rappresenta un CONTORNO che si aggiunge attorno a un marcatore
+     esistente, non un colore di punteggio a parte. */
+  .pallino-legenda.anello-nuova { background: none; border: 2px solid #a15c3e; }
   .nota-mappa {
     font-family: var(--font-mono);
     font-size: .78rem;
@@ -1110,6 +1115,23 @@
     color: var(--primary);
     font-size: .72rem;
     font-weight: 500;
+    padding: 3px 9px;
+    border-radius: 5px;
+    margin: 4px 6px 6px 0;
+  }
+
+  /* Colore deliberatamente diverso dagli altri tre badge sopra
+     (--secondary, non --primary/--danger/grigio): deve risaltare come
+     "cosa nuova da notare", non confondersi con un avviso di rischio
+     (badge-zona) né con un dato numerico da valutare (badge-tentativo).
+     Stesso --secondary già usato altrove nell'app per gli accenti
+     "positivi/da guardare". */
+  .badge-nuova {
+    display: inline-block;
+    background: var(--secondary-soft);
+    color: var(--secondary);
+    font-size: .72rem;
+    font-weight: 600;
     padding: 3px 9px;
     border-radius: 5px;
     margin: 4px 6px 6px 0;
@@ -1999,6 +2021,7 @@
         <span class="legenda-voce"><span class="pallino-legenda medio"></span>Punteggio medio</span>
         <span class="legenda-voce"><span class="pallino-legenda basso"></span>Punteggio basso</span>
         <span class="legenda-voce"><span class="pallino-legenda non-valutato"></span>Non valutato</span>
+        <span class="legenda-voce"><span class="pallino-legenda anello-nuova"></span>Nuova (24h)</span>
       </p>
       <button type="button" class="pillola" id="pillola-valutati-mappa" onclick="alternaValutatiSullaMappa()" title="Preferiti e scartati sono nascosti dalla mappa per evitare di riaprirli per errore — questo pulsante li rimostra, con un distintivo per riconoscerli">★/✕ sulla mappa</button>
     </div>
@@ -3420,6 +3443,19 @@
     return String(dataVendita).slice(0, 10) < dataOggiISO();
   }
 
+  // Soglia badge "Nuova" — scelta in chat (24 ore, non 48). Confronta un
+  // vero timestamp (data_inserimento è timestamptz, non solo una data
+  // senza ora come dataVendita sopra) contro l'istante attuale: qui SERVE
+  // l'orario esatto, non solo il giorno di calendario, altrimenti un'asta
+  // inserita alle 23:59 di ieri e una delle 00:01 di oggi risulterebbero
+  // ugualmente "di ieri"/"di oggi" invece che a due minuti di distanza.
+  const SOGLIA_NUOVA_ORE = 24;
+  function eNuova(dataInserimento) {
+    if (!dataInserimento) return false;
+    const trascorseMs = Date.now() - new Date(dataInserimento).getTime();
+    return trascorseMs >= 0 && trascorseMs < SOGLIA_NUOVA_ORE * 3600 * 1000;
+  }
+
   // Distanza assoluta in giorni tra una data ISO e oggi, indipendentemente
   // dal verso (prima o dopo). Serve al comparatore "vicina → lontana": con
   // le due viste ora separate (Attive / Concluse), "vicina" deve poter
@@ -3636,6 +3672,7 @@
       testoTentativoRicerca: testoTentativoRicerca,
       lat: numeroSicuro(r.latitudine, null),
       lon: numeroSicuro(r.longitudine, null),
+      dataInserimento: r.data_inserimento || "",
     };
   }
 
@@ -3899,6 +3936,8 @@
                  comparatore: (a, b) => distanzaGiorni(a.dataVendita) - distanzaGiorni(b.dataVendita) },
     distanza:  { etichetta: "Distanza", ascLabel: "vicina → lontana", descLabel: "lontana → vicina", direzioneDefault: "asc",
                  comparatore: (a, b) => (a.distanza ?? 9999) - (b.distanza ?? 9999) },
+    inserimento: { etichetta: "Più recenti", ascLabel: "vecchie → nuove", descLabel: "nuove → vecchie", direzioneDefault: "desc",
+                 comparatore: (a, b) => (a.dataInserimento ? new Date(a.dataInserimento).getTime() : 0) - (b.dataInserimento ? new Date(b.dataInserimento).getTime() : 0) },
   };
   let criterioOrdinamento = "punteggio";
   let direzioneOrdinamento = "desc";
@@ -4441,6 +4480,21 @@
       // di punti, non solo per chi distingue bene i colori.
       const raggioMarcatore = {alto: 9, medio: 8, basso: 6, "non-valutato": 7}[livello] ?? 8;
 
+      // Anello "Nuova" (24h) — un cerchio SEPARATO, non riempito, attorno
+      // al marcatore vero, non un secondo distintivo nell'angolo: con lo
+      // stesso trattamento a distintivo già usato per preferito/scartato
+      // (iconaMarcatoreValutato), due badge minuscoli sullo stesso cerchio
+      // si scontrerebbero visivamente. Un anello funziona identico per
+      // ENTRAMBI i tipi di marcatore sotto (cerchio semplice o con
+      // distintivo) senza dover toccare la loro logica. interactive:false
+      // e aggiunto PRIMA del marcatore vero: resta dietro, non intercetta
+      // mai i clic — quelli arrivano sempre al marcatore sopra.
+      if (eNuova(a.dataInserimento)) {
+        L.circleMarker([lat, lon], {
+          radius: raggioMarcatore + 5, color: "#a15c3e", weight: 2, fill: false, interactive: false
+        }).addTo(gruppoMarcatori);
+      }
+
       if (a.preferito || a.scartato) {
         // Qui solo se non nascosta (vedi il return anticipato più sopra,
         // che copre sia il pulsante attivo sia il filtro ★/✕ attivo) —
@@ -4538,6 +4592,7 @@
           <div>
             <p class="lotto-id">${a.lotto ? "Lotto " + escapeHtml(a.lotto) + " · " : ""}${escapeHtml(a.tipologia)}</p>
             <p class="lotto-comune">${escapeHtml(a.comune)}</p>
+            ${eNuova(a.dataInserimento) ? `<span class="badge-nuova" title="Trovata nelle ultime 24 ore">✨ Nuova</span>` : ""}
             ${conclusa ? `<span class="badge-conclusa">🏁 Conclusa</span>` : ""}
             ${a.zonaSegnalata ? `<span class="badge-zona">🚩 ${escapeHtml(a.zonaSegnalata)}</span>` : ""}
             ${a.tentativoStimato ? `<span class="badge-tentativo">↓ ${a.tentativoStimato.tentativo}° tentativo probabile · -${a.tentativoStimato.percentuale}%</span>` : ""}
@@ -4959,6 +5014,7 @@ ${notaHtml}
           <div>
             <p class="lotto-id">${a.lotto ? "Lotto " + escapeHtml(a.lotto) + " · " : ""}${escapeHtml(a.tipologia)}</p>
             <p class="lotto-comune">${escapeHtml(a.comune)}</p>
+            ${eNuova(a.dataInserimento) ? `<span class="badge-nuova" title="Trovata nelle ultime 24 ore">✨ Nuova</span>` : ""}
             ${conclusa ? `<span class="badge-conclusa">🏁 Conclusa</span>` : ""}
             ${a.zonaSegnalata ? `<span class="badge-zona">🚩 ${escapeHtml(a.zonaSegnalata)}</span>` : ""}
             ${a.tentativoStimato ? `<span class="badge-tentativo" title="Stima dedotta dallo sconto sulla perizia, non un dato dichiarato da PVP">↓ ${a.tentativoStimato.tentativo}° tentativo probabile · sconto ${a.tentativoStimato.percentuale}% sulla stima</span>` : ""}
