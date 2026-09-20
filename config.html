@@ -535,6 +535,7 @@
       <div class="azioni-principali">
         <button type="button" class="bottone-avvia" id="bottone-avvia-scanner" onclick="avviaScanner()">▶ Avvia scanner ora</button>
         <button type="button" class="bottone-avvia secondario" id="bottone-verifica-batch" onclick="avviaVerificaBatch()">🔄 Controlla batch ora</button>
+        <button type="button" class="bottone-avvia secondario" id="bottone-controlla-preferiti" onclick="avviaControllaPreferiti()" title="Notifica subito su Telegram i preferiti in scadenza entro 15 giorni, ignorando le soglie già inviate oggi">⭐ Controlla preferiti ora</button>
         <span id="messaggio-azioni-principali"></span>
       </div>
 
@@ -1671,6 +1672,44 @@
     try {
       const hashLegacy = await calcolaHashLegacy(passwordCorrente);
       const rispostaLegacy = await fetch(LEGACY_WEBAPP_URL_AVVIA_SCANNER, {method: "POST", body: JSON.stringify({azione: "avvia_verifica_batch", hash_password: hashLegacy})});
+      const risultato = await rispostaLegacy.json();
+      if (risultato.result === "success") {
+        messaggioEl.innerHTML = escapeHtml(risultato.message || "Controllo avviato.") + (risultato.url ? ` <a href="${escapeHtml(risultato.url)}" target="_blank" rel="noopener">Apri esecuzione</a>` : "");
+        messaggioEl.className = "messaggio-ok";
+      } else {
+        messaggioEl.innerHTML = escapeHtml(risultato.message || "Errore sconosciuto durante l'avvio.") + (risultato.url ? ` <a href="${escapeHtml(risultato.url)}" target="_blank" rel="noopener">Apri esecuzione</a>` : "");
+        messaggioEl.className = "messaggio-errore";
+      }
+    } catch (e) {
+      messaggioEl.textContent = "Richiesta non riuscita. Controlla la connessione e riprova.";
+      messaggioEl.className = "messaggio-errore";
+    }
+  }
+
+  // Stesso identico schema dei due sopra — vedi Code.gs
+  // (gestisciAvviaNotificaPreferiti): passa modalita_immediata:"true" al
+  // workflow_dispatch di notifiche-preferiti.yml, che notifica subito su
+  // Telegram le preferite entro 15 giorni ignorando le soglie già
+  // inviate dal giro automatico di stamattina — un controllo su
+  // richiesta apposta diverso da quello giornaliero (vedi la chat).
+  let confermaControllaPreferitiInCorso = false, timeoutConfermaControllaPreferiti = null;
+  async function avviaControllaPreferiti() {
+    const bottone = document.getElementById("bottone-controlla-preferiti");
+    const messaggioEl = document.getElementById("messaggio-azioni-principali");
+    if (!confermaControllaPreferitiInCorso) {
+      confermaControllaPreferitiInCorso = true;
+      bottone.textContent = "Confermi il controllo?";
+      timeoutConfermaControllaPreferiti = setTimeout(() => { confermaControllaPreferitiInCorso = false; bottone.textContent = "⭐ Controlla preferiti ora"; }, 4000);
+      return;
+    }
+    clearTimeout(timeoutConfermaControllaPreferiti);
+    confermaControllaPreferitiInCorso = false;
+    bottone.textContent = "⭐ Controlla preferiti ora";
+    messaggioEl.textContent = "Avvio in corso…";
+    messaggioEl.className = "messaggio-attesa";
+    try {
+      const hashLegacy = await calcolaHashLegacy(passwordCorrente);
+      const rispostaLegacy = await fetch(LEGACY_WEBAPP_URL_AVVIA_SCANNER, {method: "POST", body: JSON.stringify({azione: "avvia_notifica_preferiti", hash_password: hashLegacy})});
       const risultato = await rispostaLegacy.json();
       if (risultato.result === "success") {
         messaggioEl.innerHTML = escapeHtml(risultato.message || "Controllo avviato.") + (risultato.url ? ` <a href="${escapeHtml(risultato.url)}" target="_blank" rel="noopener">Apri esecuzione</a>` : "");
