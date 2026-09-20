@@ -345,6 +345,24 @@
   .campo-form select:disabled { color: var(--ink-faint); cursor: not-allowed; }
   .campo-form input[type="number"],
   .campo-form input[type="time"] { font-family: var(--font-mono); }
+  /* Bug Safari/iOS documentato, DIVERSO da quello risolto sopra con la
+     griglia (quello era sulla larghezza della COLONNA; questo è
+     sull'input stesso): WebKit disegna input[type="time"] con un
+     dimensionamento interno proprio (display:inline-flex nativo,
+     calcolato sul proprio contenuto formattato) che ignora width:100%
+     del CSS di pagina — succede solo con la resa nativa vera di Safari,
+     l'emulazione mobile di Chrome/Chromium non la riproduce, per questo
+     il tentativo precedente (verificato solo lì) non l'aveva presa.
+     -webkit-appearance:none toglie a Safari quel dimensionamento
+     interno proprio (l'input resta comunque un campo orario funzionante,
+     tocca solo come SI CALCOLA la propria larghezza in stato chiuso);
+     display:block è necessario perché — sempre su Safari — width:100%
+     viene ignorato sugli input finché restano inline. */
+  .campo-form input[type="time"] {
+    -webkit-appearance: none;
+    appearance: none;
+    display: block;
+  }
   .nota-campo { font-size: .78rem; color: var(--ink-faint); margin: 6px 0 0; line-height: 1.4; }
   .bottone-secondario {
     background: var(--secondary-soft);
@@ -1614,7 +1632,7 @@
   }
 
   let confermaAvvioInCorso = false, timeoutConfermaAvvio = null;
-  const LEGACY_WEBAPP_URL_AVVIA_SCANNER = "https://script.google.com/macros/s/AKfycbyGxWREG8CBkJK0aRJwBPLmaNxvmSU9Wo3eLqIFaGDGw3VQtgelyrsg3hL4DvQgK7jY/exec";
+  const LEGACY_WEBAPP_URL_AVVIA_SCANNER = "https://script.google.com/macros/s/AKfycby_QUehipA5ru-H82hUWoQqmfkbKDv8wsh_dJpWLAaFkdgGaOyfvtg-2qyuNoiER-Zk/exec";
   const SALE_PASSWORD_LEGACY = "aste-ct-8f3k2-sale";
 
   async function calcolaHashLegacy(testo) {
