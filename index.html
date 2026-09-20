@@ -588,6 +588,47 @@
     color: var(--ink-faint);
     margin: 4px 0 0;
   }
+  .controlli-mappa {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    flex-wrap: wrap;
+    gap: 10px;
+    margin-top: 4px;
+  }
+  /* Distintivo preferito/scartato sui marcatori mappa — canale ANCORA
+     diverso sia dal semaforo punteggio (.pallino-legenda, sopra) sia
+     dagli accenti generali dell'interfaccia: qui invece --primary/
+     --danger sono voluti, sono gli STESSI colori già usati per
+     stella/scarto ovunque altrove in questa pagina (card, popup,
+     finestra dettagli) — un terzo canale visivo, non uno nuovo
+     inventato apposta, così chi già riconosce quei colori come "mio
+     preferito"/"scartato" li riconosce identici anche qui. */
+  .marcatore-valutato-contenitore { background: none !important; border: none !important; }
+  .marcatore-valutato {
+    display: block;
+    width: 100%;
+    height: 100%;
+    border-radius: 50%;
+    box-sizing: border-box;
+    position: relative;
+  }
+  .marcatore-valutato-badge {
+    position: absolute;
+    top: -5px;
+    right: -5px;
+    width: 13px;
+    height: 13px;
+    border-radius: 50%;
+    background: var(--surface);
+    box-shadow: 0 1px 3px rgba(30,35,32,.45);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+  }
+  .marcatore-valutato-badge svg { width: 9px; height: 9px; }
+  .marcatore-valutato-badge--preferito { color: var(--primary); }
+  .marcatore-valutato-badge--scartato { color: var(--danger); }
   .popup-lotto { font-family: var(--font-body); font-size: .85rem; min-width: 180px; }
   .popup-lotto strong { font-family: var(--font-display); font-size: 1rem; display: block; margin-bottom: 6px; }
   .popup-lotto div { margin-bottom: 3px; color: var(--ink-muted); }
@@ -1943,12 +1984,15 @@
 
   <div id="vista-mappa" class="nascosto">
     <div id="mappa-lotti" class="contenitore-mappa-dashboard"></div>
-    <p class="legenda-mappa">
-      <span class="legenda-voce"><span class="pallino-legenda alto"></span>Punteggio alto</span>
-      <span class="legenda-voce"><span class="pallino-legenda medio"></span>Punteggio medio</span>
-      <span class="legenda-voce"><span class="pallino-legenda basso"></span>Punteggio basso</span>
-      <span class="legenda-voce"><span class="pallino-legenda non-valutato"></span>Non valutato</span>
-    </p>
+    <div class="controlli-mappa">
+      <p class="legenda-mappa">
+        <span class="legenda-voce"><span class="pallino-legenda alto"></span>Punteggio alto</span>
+        <span class="legenda-voce"><span class="pallino-legenda medio"></span>Punteggio medio</span>
+        <span class="legenda-voce"><span class="pallino-legenda basso"></span>Punteggio basso</span>
+        <span class="legenda-voce"><span class="pallino-legenda non-valutato"></span>Non valutato</span>
+      </p>
+      <button type="button" class="pillola" id="pillola-valutati-mappa" onclick="alternaValutatiSullaMappa()" title="Preferiti e scartati sono nascosti dalla mappa per evitare di riaprirli per errore — questo pulsante li rimostra, con un distintivo per riconoscerli">★/✕ sulla mappa</button>
+    </div>
     <p class="nota-mappa" id="nota-comuni-mancanti"></p>
   </div>
 
@@ -2353,6 +2397,12 @@
   let mappaLotti = null;
   let gruppoMarcatori = null;
   let ultimoElencoFiltrato = [];
+  // Di default nascosti dalla mappa (non dalla griglia, dove hanno già
+  // icone chiare su ogni card): il problema segnalato in chat era
+  // proprio l'apertura per errore di un'asta già valutata, scambiata
+  // per una nuova — nasconderla del tutto è la correzione più diretta
+  // per quel problema specifico, non solo distinguerla meglio.
+  let mostraValutatiSullaMappa = false;
   // id asta -> indice in ultimoElencoFiltrato — ricostruita in blocco
   // ogni volta che l'elenco filtrato cambia (dentro renderizza), non
   // cercata da capo con una scansione a ogni singolo uso. Usata da
@@ -3935,6 +3985,18 @@
     applicaFiltri();
   }
 
+  // Solo per la mappa — non tocca applicaFiltri()/ultimoElencoFiltrato,
+  // quindi non ha alcun effetto sulla griglia (che non ne ha bisogno,
+  // vedi commento sulla dichiarazione di mostraValutatiSullaMappa più
+  // sopra). renderizzaMappa() legge questa variabile a ogni chiamata,
+  // quindi basta ridisegnare la mappa con l'ultimo elenco per farla
+  // valere — nessun bisogno di ripassare da applicaFiltri().
+  function alternaValutatiSullaMappa() {
+    mostraValutatiSullaMappa = !mostraValutatiSullaMappa;
+    document.getElementById("pillola-valutati-mappa").classList.toggle("attiva", mostraValutatiSullaMappa);
+    renderizzaMappa(ultimoElencoFiltrato);
+  }
+
   // Filtro Preferiti/Scartati: mutualmente esclusivo, stesso principio
   // già usato per Libero/Occupato — un clic su una pillola già attiva
   // la disattiva (torna a "tutte"), un clic sull'altra la sostituisce.
@@ -4273,6 +4335,26 @@
     `;
   }
 
+  // Marcatore per un'asta preferita/scartata quando la mappa le mostra
+  // (vedi mostraValutatiSullaMappa) — un L.divIcon, non un circleMarker
+  // come gli altri: un circleMarker è un cerchio SVG puro, non ha modo
+  // di ospitare un distintivo nell'angolo. Stesso colore per livello di
+  // COLORI_LIVELLO di sempre (il punteggio resta leggibile anche per
+  // un'asta già valutata), più un piccolo cerchio bianco con l'icona
+  // stella/scarto — stesse identiche icone SVG già usate su
+  // card/popup/dettagli, non ridisegnate qui apposta.
+  function iconaMarcatoreValutato(tipo, colore, diametro) {
+    const svgBadge = tipo === "preferito"
+      ? `<svg viewBox="0 0 24 24" fill="currentColor"><path d="M12 2.5l2.9 6.5 7.1.6-5.4 4.6 1.6 6.9-6.2-3.6-6.2 3.6 1.6-6.9L2 9.6l7.1-.6z"/></svg>`
+      : `<svg viewBox="0 0 24 24" fill="currentColor"><circle cx="12" cy="12" r="10"/><path d="M8.7 8.7l6.6 6.6m0-6.6l-6.6 6.6" stroke="var(--surface)" stroke-width="1.8" stroke-linecap="round" fill="none"/></svg>`;
+    return L.divIcon({
+      className: "marcatore-valutato-contenitore",
+      html: `<span class="marcatore-valutato" style="background:${colore.riempimento};border:1.5px solid ${colore.bordo}"><span class="marcatore-valutato-badge marcatore-valutato-badge--${tipo}">${svgBadge}</span></span>`,
+      iconSize: [diametro, diametro],
+      iconAnchor: [diametro / 2, diametro / 2]
+    });
+  }
+
   function renderizzaMappa(elenco) {
     // Non ancora inizializzata (la vista Mappa non è mai stata aperta in
     // questa sessione) — inutile calcolare marcatori che nessuno vede.
@@ -4281,8 +4363,18 @@
     gruppoMarcatori.clearLayers();
     const puntiValidi = [];
     let senzaCoordinate = 0;
+    let valutateNascoste = 0;
 
     elenco.forEach(a => {
+      // Nascosta dal filtro mostra/nascondi valutati — non conta come
+      // "senza coordinate" (nota diversa, motivo diverso): tenute
+      // separate per non mischiare due conteggi che dicono cose
+      // differenti nello stesso messaggio.
+      if ((a.preferito || a.scartato) && !mostraValutatiSullaMappa) {
+        valutateNascoste++;
+        return;
+      }
+
       // Preferisce sempre la coordinata reale (colonne Latitudine/
       // Longitudine, salvate da app.py per le aste raccolte da qui in poi
       // o recuperate dal backfill) — ricade sul centro del comune solo
@@ -4309,17 +4401,31 @@
       // di punti, non solo per chi distingue bene i colori.
       const raggioMarcatore = {alto: 9, medio: 8, basso: 6, "non-valutato": 7}[livello] ?? 8;
 
-      L.circleMarker([lat, lon], {
-        radius: raggioMarcatore, color: colore.bordo, fillColor: colore.riempimento, fillOpacity: 0.85, weight: 1.5
-      }).bindPopup(popupLotto(a, precisa)).addTo(gruppoMarcatori);
+      if (a.preferito || a.scartato) {
+        // Qui solo se mostraValutatiSullaMappa è attivo (vedi il return
+        // anticipato più sopra) — marcatore con distintivo, non il
+        // cerchio semplice. Diametro coerente con raggioMarcatore*2,
+        // stessa gerarchia di dimensione per livello di punteggio.
+        L.marker([lat, lon], {icon: iconaMarcatoreValutato(a.preferito ? "preferito" : "scartato", colore, raggioMarcatore * 2)})
+          .bindPopup(popupLotto(a, precisa)).addTo(gruppoMarcatori);
+      } else {
+        L.circleMarker([lat, lon], {
+          radius: raggioMarcatore, color: colore.bordo, fillColor: colore.riempimento, fillOpacity: 0.85, weight: 1.5
+        }).bindPopup(popupLotto(a, precisa)).addTo(gruppoMarcatori);
+      }
 
       puntiValidi.push([lat, lon]);
     });
 
     const notaEl = document.getElementById("nota-comuni-mancanti");
-    notaEl.textContent = senzaCoordinate > 0
-      ? `${senzaCoordinate} ast${senzaCoordinate === 1 ? "a" : "e"} non mostrat${senzaCoordinate === 1 ? "a" : "e"} sulla mappa (comune non riconosciuto).`
-      : "";
+    const parti = [];
+    if (senzaCoordinate > 0) {
+      parti.push(`${senzaCoordinate} ast${senzaCoordinate === 1 ? "a" : "e"} non mostrat${senzaCoordinate === 1 ? "a" : "e"} sulla mappa (comune non riconosciuto)`);
+    }
+    if (valutateNascoste > 0) {
+      parti.push(`${valutateNascoste} già preferit${valutateNascoste === 1 ? "a" : "e"}/scartat${valutateNascoste === 1 ? "a" : "e"} nascost${valutateNascoste === 1 ? "a" : "e"} (★/✕ sulla mappa per mostrarle)`);
+    }
+    notaEl.textContent = parti.length ? parti.join(" · ") + "." : "";
 
     if (puntiValidi.length > 0) {
       mappaLotti.fitBounds(puntiValidi, {padding: [30, 30], maxZoom: 13});
