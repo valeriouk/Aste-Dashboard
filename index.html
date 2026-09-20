@@ -1327,6 +1327,15 @@
     cursor: not-allowed;
   }
   #bottone-confronta:disabled:hover { background: transparent; }
+  /* Stesso principio: visibile ma non cliccabile quando il filtro ★/✕ in
+     cima alla pagina è attivo (solo preferiti o solo scartati) — con
+     quello attivo, nascondere qui sarebbe contraddittorio (l'intera
+     mappa mostrerebbe zero risultati), vedi aggiornaStatoPillolaValutatiMappa(). */
+  #pillola-valutati-mappa:disabled {
+    opacity: .4;
+    cursor: not-allowed;
+  }
+  #pillola-valutati-mappa:disabled:hover { color: inherit; }
 
   /* Attivata dal pulsante "espandi" nell'intestazione — solo desktop
      (su mobile la finestra occupa già quasi tutto lo schermo, non c'è
@@ -3990,11 +3999,15 @@
   // vedi commento sulla dichiarazione di mostraValutatiSullaMappa più
   // sopra). renderizzaMappa() legge questa variabile a ogni chiamata,
   // quindi basta ridisegnare la mappa con l'ultimo elenco per farla
-  // valere — nessun bisogno di ripassare da applicaFiltri().
+  // valere — nessun bisogno di ripassare da applicaFiltri(). Secondo
+  // argomento true = non spostare la vista (segnalato in chat: mostrare/
+  // nascondere alcuni marcatori non deve far "saltare" zoom/centro a
+  // dove l'utente li aveva lasciati — diverso da un vero cambio di
+  // filtro di ricerca, dove inquadrare il nuovo risultato ha senso).
   function alternaValutatiSullaMappa() {
     mostraValutatiSullaMappa = !mostraValutatiSullaMappa;
     document.getElementById("pillola-valutati-mappa").classList.toggle("attiva", mostraValutatiSullaMappa);
-    renderizzaMappa(ultimoElencoFiltrato);
+    renderizzaMappa(ultimoElencoFiltrato, true);
   }
 
   // Filtro Preferiti/Scartati: mutualmente esclusivo, stesso principio
@@ -4004,11 +4017,28 @@
   // scartate attenuate in fondo, comportamento di sempre).
   let filtroPreferitiScartatiAttivo = null; // null | "preferito" | "scartato"
 
+  // Il pulsante ★/✕ sulla mappa si disattiva da solo quando QUESTO filtro
+  // è attivo (segnalato in chat: con "solo preferiti" attivo,
+  // ultimoElencoFiltrato contiene ORMAI solo preferiti — nasconderli
+  // anche dalla mappa mostrerebbe zero risultati, contraddittorio).
+  // Disabled, non nascosto: resta visibile per far capire perché non è
+  // disponibile in questo momento, stesso principio già usato per
+  // #bottone-confronta.
+  function aggiornaStatoPillolaValutatiMappa() {
+    const bottone = document.getElementById("pillola-valutati-mappa");
+    const bloccato = !!filtroPreferitiScartatiAttivo;
+    bottone.disabled = bloccato;
+    bottone.title = bloccato
+      ? "Non disponibile mentre il filtro ★/✕ qui sopra è attivo — con quel filtro, preferiti/scartati sono già l'unica cosa mostrata."
+      : "Preferiti e scartati sono nascosti dalla mappa per evitare di riaprirli per errore — questo pulsante li rimostra, con un distintivo per riconoscerli";
+  }
+
   function attivaFiltroPreferitiScartati(stato) {
     filtroPreferitiScartatiAttivo = (filtroPreferitiScartatiAttivo === stato) ? null : stato;
     document.querySelectorAll("#gruppo-preferiti .pillola").forEach(p => {
       p.classList.toggle("attiva", p.dataset.statoPref === filtroPreferitiScartatiAttivo);
     });
+    aggiornaStatoPillolaValutatiMappa();
     applicaFiltri();
   }
 
@@ -4355,7 +4385,7 @@
     });
   }
 
-  function renderizzaMappa(elenco) {
+  function renderizzaMappa(elenco, mantieniVista) {
     // Non ancora inizializzata (la vista Mappa non è mai stata aperta in
     // questa sessione) — inutile calcolare marcatori che nessuno vede.
     if (!mappaLotti) return;
@@ -4365,12 +4395,22 @@
     let senzaCoordinate = 0;
     let valutateNascoste = 0;
 
+    // Il pulsante mostra/nascondi si disattiva da solo quando il filtro
+    // ★/✕ in cima alla pagina è attivo (vedi
+    // aggiornaStatoPillolaValutatiMappa) — ma questo controllo resta
+    // comunque anche QUI, non solo lì: con quel filtro attivo,
+    // ultimoElencoFiltrato contiene GIÀ solo preferiti o solo scartati,
+    // quindi nascondere in base a mostraValutatiSullaMappa (che di
+    // default è false) farebbe sparire l'intera mappa — nessun senso
+    // cliccare "solo preferiti" e poi non vederne nessuno.
+    const nascondiValutati = !mostraValutatiSullaMappa && !filtroPreferitiScartatiAttivo;
+
     elenco.forEach(a => {
       // Nascosta dal filtro mostra/nascondi valutati — non conta come
       // "senza coordinate" (nota diversa, motivo diverso): tenute
       // separate per non mischiare due conteggi che dicono cose
       // differenti nello stesso messaggio.
-      if ((a.preferito || a.scartato) && !mostraValutatiSullaMappa) {
+      if ((a.preferito || a.scartato) && nascondiValutati) {
         valutateNascoste++;
         return;
       }
@@ -4402,10 +4442,11 @@
       const raggioMarcatore = {alto: 9, medio: 8, basso: 6, "non-valutato": 7}[livello] ?? 8;
 
       if (a.preferito || a.scartato) {
-        // Qui solo se mostraValutatiSullaMappa è attivo (vedi il return
-        // anticipato più sopra) — marcatore con distintivo, non il
-        // cerchio semplice. Diametro coerente con raggioMarcatore*2,
-        // stessa gerarchia di dimensione per livello di punteggio.
+        // Qui solo se non nascosta (vedi il return anticipato più sopra,
+        // che copre sia il pulsante attivo sia il filtro ★/✕ attivo) —
+        // marcatore con distintivo, non il cerchio semplice. Diametro
+        // coerente con raggioMarcatore*2, stessa gerarchia di dimensione
+        // per livello di punteggio.
         L.marker([lat, lon], {icon: iconaMarcatoreValutato(a.preferito ? "preferito" : "scartato", colore, raggioMarcatore * 2)})
           .bindPopup(popupLotto(a, precisa)).addTo(gruppoMarcatori);
       } else {
@@ -4426,6 +4467,14 @@
       parti.push(`${valutateNascoste} già preferit${valutateNascoste === 1 ? "a" : "e"}/scartat${valutateNascoste === 1 ? "a" : "e"} nascost${valutateNascoste === 1 ? "a" : "e"} (★/✕ sulla mappa per mostrarle)`);
     }
     notaEl.textContent = parti.length ? parti.join(" · ") + "." : "";
+
+    // mantieniVista: SOLO alternaValutatiSullaMappa lo passa true — mostrare
+    // o nascondere alcuni marcatori non deve spostare la vista da dove
+    // l'utente l'aveva lasciata (segnalato in chat: cliccare il pulsante
+    // faceva "saltare" lo zoom). Ogni altro chiamante (un vero cambio di
+    // filtro di ricerca, o la prima apertura della vista mappa) continua a
+    // inquadrare il nuovo risultato, comportamento invariato per loro.
+    if (mantieniVista) return;
 
     if (puntiValidi.length > 0) {
       mappaLotti.fitBounds(puntiValidi, {padding: [30, 30], maxZoom: 13});
