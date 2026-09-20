@@ -1188,6 +1188,49 @@
   .dettaglio-riga.avviso span:last-child { color: var(--danger); font-weight: 500; }
 
   /* ============================================================
+     COSTI DI TRASFERIMENTO E RISTRUTTURAZIONE — dentro la finestra
+     dettagli, sotto note/descrizione. tabella-scroll scorre in
+     orizzontale sul suo interno invece di far scorrere l'intera pagina
+     di lato: le quattro colonne (prima/seconda casa × prezzo-valore/
+     acquisizione) non ci stanno tutte in larghezza su un telefono.
+  ============================================================ */
+  .sezione-costi { margin-top: 22px; padding-top: 18px; border-top: 1px solid var(--border); }
+  .sezione-costi-titolo { font-size: .95rem; font-weight: 600; margin: 0 0 8px; color: var(--ink); }
+  .sezione-costi-nota { font-size: .8rem; color: var(--ink-faint); margin: 0 0 10px; line-height: 1.4; }
+  .sezione-costi-nota.avviso { color: var(--danger); }
+  .tabella-scroll { overflow-x: auto; -webkit-overflow-scrolling: touch; }
+  .tabella-costi { width: 100%; border-collapse: collapse; font-size: .82rem; }
+  .tabella-costi th, .tabella-costi td { padding: 7px 10px; text-align: right; white-space: nowrap; }
+  .tabella-costi th:first-child, .tabella-costi td:first-child { text-align: left; white-space: normal; color: var(--ink-muted); }
+  .tabella-costi thead th { color: var(--ink-faint); font-weight: 500; font-size: .74rem; border-bottom: 1px solid var(--border); }
+  .tabella-costi tbody tr:not(:last-child) td { border-bottom: 1px solid var(--surface-2); }
+  .tabella-costi-comuni { margin-top: 4px; }
+  .tabella-costi-comuni caption { caption-side: top; text-align: left; font-size: .74rem; color: var(--ink-faint); padding: 10px 0 4px; }
+  .tabella-costi-totale { margin-top: 4px; font-weight: 700; }
+  .tabella-costi-totale td { color: var(--primary); border-top: 2px solid var(--primary); padding-top: 10px; }
+  .tabella-costi-totale td:first-child { color: var(--ink); }
+  .livello-suggerito td { background: var(--secondary-soft); font-weight: 600; }
+  .pallino-suggerito { color: var(--secondary); font-size: .7rem; }
+  .costi-input-correzioni {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 10px 12px;
+    margin-top: 14px;
+    align-items: end;
+  }
+  .costi-input-correzioni label { font-size: .78rem; color: var(--ink-faint); display: flex; flex-direction: column; gap: 4px; }
+  .costi-input-correzioni input {
+    background: var(--bg); border: 1px solid var(--border); border-radius: 8px;
+    padding: 8px 10px; font-size: .9rem; color: var(--ink); font-family: var(--font-mono);
+  }
+  .costi-input-salva {
+    grid-column: 1 / -1;
+    background: var(--secondary); color: #fff; border: none; border-radius: 8px;
+    padding: 10px; font-size: .85rem; font-weight: 600; cursor: pointer;
+  }
+  .costi-input-salva:hover { opacity: .9; }
+
+  /* ============================================================
      FINESTRA DETTAGLI ASTA — sostituisce la vecchia espansione sul
      posto dentro la card. Aprendo i dettagli in un riquadro a parte
      invece che allargando la card, la griglia sottostante non cambia
@@ -3410,6 +3453,50 @@
     }
   }
 
+  // Stesso schema di eseguiSalvaNota sopra — aggiornamento ottimistico,
+  // ripristino se il server non conferma. campoInput è l'elemento su cui
+  // rimettere il fuoco in caso di errore (rendita o oneri, a seconda di
+  // quale l'utente ha appena modificato), per non fargli perdere il
+  // punto da cui riprendere la correzione.
+  function salvaDatiUtenteCosti(id, campoInput) {
+    const renditaInput = document.getElementById(`input-rendita-${id}`);
+    const oneriInput = document.getElementById(`input-oneri-${id}`);
+    const renditaValore = renditaInput.value.trim() === "" ? null : parseFloat(renditaInput.value);
+    const oneriValore = oneriInput.value.trim() === "" ? null : parseFloat(oneriInput.value);
+    if ((renditaInput.value.trim() !== "" && (isNaN(renditaValore) || renditaValore < 0))
+      || (oneriInput.value.trim() !== "" && (isNaN(oneriValore) || oneriValore < 0))) {
+      mostraToast("Inserisci un numero valido, non negativo.");
+      return;
+    }
+    richiediPasswordSeServe(() => eseguiSalvaDatiUtenteCosti(id, renditaValore, oneriValore, campoInput));
+  }
+
+  async function eseguiSalvaDatiUtenteCosti(id, renditaValore, oneriValore, campoInput) {
+    const asta = ASTE.find(a => a.id === id);
+    if (!asta) return;
+    const renditaPrecedente = asta.renditaCatastaleUtente;
+    const oneriPrecedenti = asta.oneriCondominialiUtente;
+
+    asta.renditaCatastaleUtente = renditaValore;
+    asta.oneriCondominialiUtente = oneriValore;
+    aggiornaFinestraSeApertaSu(id);
+
+    try {
+      const risultato = await accodaScritturaProtetta("aggiorna_dati_utente_asta", {
+        password_tentativo: passwordCorrente, id_annuncio_input: id,
+        rendita_catastale_input: renditaValore, oneri_condominiali_input: oneriValore
+      });
+      if (risultato.result !== "success") throw new Error(risultato.message || "");
+    } catch (e) {
+      console.error("aggiorna_dati_utente_asta fallita:", e);
+      gestisceErroreAzionePassword(e);
+      asta.renditaCatastaleUtente = renditaPrecedente;
+      asta.oneriCondominialiUtente = oneriPrecedenti;
+      aggiornaFinestraSeApertaSu(id);
+      mostraToast(`Non sono riuscita a salvare la correzione: ${dettaglioErrore(e)}`);
+    }
+  }
+
   function formattaData(iso) {
     if (!iso) return "N/D";
     const parti = String(iso).slice(0, 10).split("-");
@@ -3535,6 +3622,111 @@
     else if (sconto < 0.63) tentativo = 4;
     else tentativo = 5; // "5° o oltre" — oltre questo punto l'incertezza composta è troppa per fasce più fini
     return { tentativo, percentuale: Math.round(sconto * 100) };
+  }
+
+  // ==========================================================
+  // COSTI DI TRASFERIMENTO E RISTRUTTURAZIONE
+  // ==========================================================
+  // Un solo posto che fa i conti — richiamato sia al primo render della
+  // card sia a ogni ricalcolo dopo una correzione di rendita/oneri
+  // condominiali, mai duplicato in Python: verificato con 10 test
+  // indipendenti prima di essere incollato qui (vedi la chat), le cifre
+  // sotto NON sono state ricontrollate una seconda volta qui, solo
+  // trascritte identiche.
+  //
+  // Cifre e aliquote usate:
+  // - Registro 2% prima casa / 9% seconda casa, minimo € 1.000
+  // - Ipotecaria e catastale: € 50 fisse ciascuna
+  // - Prezzo-valore: rendita × 1,05 × 110 (prima casa) o × 120 (seconda casa)
+  // - Compenso delegato a carico dell'aggiudicatario: € 550 (aggiudicazione
+  //   ≤ €100.000) o € 660 (tra €100.001 e €500.000), + 4% cassa
+  //   professionale + 22% IVA — aggiunta prudente, non certa (vedi chat),
+  //   per questo resta su righe separate invece che sommata a un unico
+  //   numero.
+  // - Pratica edilizia (CILA/SCIA): € 1.500 se risultano abusi/sanatoria
+  //   da sanare, altrimenti zero.
+  const COEFFICIENTE_PRIMA_CASA = 110;
+  const COEFFICIENTE_SECONDA_CASA = 120;
+  const RIVALUTAZIONE_RENDITA = 1.05;
+  const ALIQUOTA_REGISTRO_PRIMA = 0.02;
+  const ALIQUOTA_REGISTRO_SECONDA = 0.09;
+  const REGISTRO_MINIMO = 1000;
+  const IMPOSTA_IPOTECARIA_FISSA = 50;
+  const IMPOSTA_CATASTALE_FISSA = 50;
+  const CASSA_PROFESSIONALE_DELEGATO = 0.04;
+  const IVA_DELEGATO = 0.22;
+  const PRATICA_EDILIZIA_STIMATA = 1500;
+  const COSTO_MQ_RISTRUTTURAZIONE = { economica: 300, media: 500, pesante: 800 };
+
+  // Precedenza: correzione utente > dichiarata in perizia > assunta dal
+  // prezzo base (ultima risorsa, ancorata al coefficiente seconda casa
+  // 120 — generico, indipendente dall'intento prima/seconda casa
+  // dell'acquirente — invertendo la stessa formula del prezzo-valore).
+  function renditaEffettiva(a) {
+    if (a.renditaCatastaleUtente !== null && a.renditaCatastaleUtente > 0) {
+      return { valore: a.renditaCatastaleUtente, fonte: "utente" };
+    }
+    if (a.renditaCatastale && a.renditaCatastale > 0) {
+      return { valore: a.renditaCatastale, fonte: "dichiarata" };
+    }
+    return { valore: a.prezzoBase / (RIVALUTAZIONE_RENDITA * COEFFICIENTE_SECONDA_CASA), fonte: "assunta" };
+  }
+
+  function oneriCondominialiEffettivi(a) {
+    if (a.oneriCondominialiUtente !== null && a.oneriCondominialiUtente !== undefined) {
+      return a.oneriCondominialiUtente;
+    }
+    return a.oneriCondominiali || 0;
+  }
+
+  function compensoDelegato(prezzoBase) {
+    let base;
+    if (prezzoBase <= 100000) base = 550;
+    else if (prezzoBase <= 500000) base = 660;
+    else return null; // fuori dalle fasce verificate, non si inventa un numero
+    const cassa = base * CASSA_PROFESSIONALE_DELEGATO;
+    const iva = (base + cassa) * IVA_DELEGATO;
+    return { base, cassa, iva, totale: base + cassa + iva };
+  }
+
+  function calcolaCostiTrasferimento(a) {
+    const rendita = renditaEffettiva(a);
+    const valoreCatastalePrima = rendita.valore * RIVALUTAZIONE_RENDITA * COEFFICIENTE_PRIMA_CASA;
+    const valoreCatastaleSeconda = rendita.valore * RIVALUTAZIONE_RENDITA * COEFFICIENTE_SECONDA_CASA;
+    function riga(base, aliquota) {
+      return { baseImponibile: base, registro: Math.max(base * aliquota, REGISTRO_MINIMO), ipotecaria: IMPOSTA_IPOTECARIA_FISSA, catastale: IMPOSTA_CATASTALE_FISSA };
+    }
+    const delegato = compensoDelegato(a.prezzoBase);
+    const oneriCondominiali = oneriCondominialiEffettivi(a);
+    const sanatoria = a.speseSanatoria || 0;
+    const praticaEdilizia = sanatoria > 0 ? PRATICA_EDILIZIA_STIMATA : 0;
+    function totale(rigaImposte) {
+      if (!delegato) return null;
+      return rigaImposte.registro + rigaImposte.ipotecaria + rigaImposte.catastale + delegato.totale + praticaEdilizia + sanatoria + oneriCondominiali;
+    }
+    const primaCasaPrezzoValore = riga(valoreCatastalePrima, ALIQUOTA_REGISTRO_PRIMA);
+    const primaCasaPrezzoAcquisizione = riga(a.prezzoBase, ALIQUOTA_REGISTRO_PRIMA);
+    const secondaCasaPrezzoValore = riga(valoreCatastaleSeconda, ALIQUOTA_REGISTRO_SECONDA);
+    const secondaCasaPrezzoAcquisizione = riga(a.prezzoBase, ALIQUOTA_REGISTRO_SECONDA);
+    return {
+      renditaUsata: rendita, delegato, praticaEdilizia, sanatoria, oneriCondominiali,
+      scenari: {
+        primaCasaPrezzoValore: { ...primaCasaPrezzoValore, totale: totale(primaCasaPrezzoValore) },
+        primaCasaPrezzoAcquisizione: { ...primaCasaPrezzoAcquisizione, totale: totale(primaCasaPrezzoAcquisizione) },
+        secondaCasaPrezzoValore: { ...secondaCasaPrezzoValore, totale: totale(secondaCasaPrezzoValore) },
+        secondaCasaPrezzoAcquisizione: { ...secondaCasaPrezzoAcquisizione, totale: totale(secondaCasaPrezzoAcquisizione) },
+      },
+    };
+  }
+
+  function calcolaCostiRistrutturazione(a) {
+    const mq = a.superficieMq || 0;
+    return {
+      livelloSuggerito: a.livelloRistrutturazioneSuggerito || null, mq,
+      economica: mq * COSTO_MQ_RISTRUTTURAZIONE.economica,
+      media: mq * COSTO_MQ_RISTRUTTURAZIONE.media,
+      pesante: mq * COSTO_MQ_RISTRUTTURAZIONE.pesante,
+    };
   }
 
   // ==========================================================
@@ -3679,6 +3871,12 @@
       lat: numeroSicuro(r.latitudine, null),
       lon: numeroSicuro(r.longitudine, null),
       dataInserimento: r.data_inserimento || "",
+      renditaCatastale: numeroSicuro(r.rendita_catastale, null),
+      renditaCatastaleDichiarata: !!r.rendita_catastale_dichiarata,
+      renditaCatastaleUtente: numeroSicuro(r.rendita_catastale_utente, null),
+      oneriCondominiali: numeroSicuro(r.oneri_condominiali),
+      oneriCondominialiUtente: numeroSicuro(r.oneri_condominiali_utente, null),
+      livelloRistrutturazioneSuggerito: r.livello_ristrutturazione_suggerito || null,
     };
   }
 
@@ -5004,6 +5202,109 @@ ${notaHtml}
   // nella card espandibile. Costruita da ASTE (non dall'elenco filtrato
   // corrente): la finestra mostra l'asta scelta a prescindere da
   // eventuali filtri applicati dopo averla aperta.
+  const NOTA_FONTE_RENDITA = {
+    utente: "rendita catastale inserita da te",
+    dichiarata: "rendita catastale letta dalla perizia",
+    assunta: "rendita catastale NON trovata — valore assunto a partire dal prezzo base, correggila appena la conosci",
+  };
+
+  function bloccoCostiTrasferimento(a) {
+    const c = calcolaCostiTrasferimento(a);
+    const s = c.scenari;
+    const euroSemplice = v => v === null ? "—" : formattaEuro(Math.round(v));
+
+    const righeVariabili = [
+      ["Base imponibile", s.primaCasaPrezzoValore.baseImponibile, s.primaCasaPrezzoAcquisizione.baseImponibile, s.secondaCasaPrezzoValore.baseImponibile, s.secondaCasaPrezzoAcquisizione.baseImponibile],
+      ["Registro", s.primaCasaPrezzoValore.registro, s.primaCasaPrezzoAcquisizione.registro, s.secondaCasaPrezzoValore.registro, s.secondaCasaPrezzoAcquisizione.registro],
+      ["Ipotecaria", s.primaCasaPrezzoValore.ipotecaria, s.primaCasaPrezzoAcquisizione.ipotecaria, s.secondaCasaPrezzoValore.ipotecaria, s.secondaCasaPrezzoAcquisizione.ipotecaria],
+      ["Catastale", s.primaCasaPrezzoValore.catastale, s.primaCasaPrezzoAcquisizione.catastale, s.secondaCasaPrezzoValore.catastale, s.secondaCasaPrezzoAcquisizione.catastale],
+    ];
+    const rigaTotali = [s.primaCasaPrezzoValore.totale, s.primaCasaPrezzoAcquisizione.totale, s.secondaCasaPrezzoValore.totale, s.secondaCasaPrezzoAcquisizione.totale];
+
+    const righeVariabiliHtml = righeVariabili.map(([etichetta, ...valori]) =>
+      `<tr><td>${etichetta}</td>${valori.map(v => `<td>${euroSemplice(v)}</td>`).join("")}</tr>`
+    ).join("");
+
+    const righeComuni = [
+      ["Compenso delegato", c.delegato?.base],
+      ["Cassa professionale (4%)", c.delegato?.cassa],
+      ["IVA (22%)", c.delegato?.iva],
+      ["Pratica edilizia (CILA/SCIA)", c.praticaEdilizia],
+      ["Sanatoria abusi", c.sanatoria],
+      ["Spese condominiali arretrate", c.oneriCondominiali],
+    ].filter(([, v]) => v !== undefined);
+
+    const righeComuniHtml = righeComuni.map(([etichetta, valore]) =>
+      `<tr><td>${etichetta}</td><td>${euroSemplice(valore)}</td></tr>`
+    ).join("");
+
+    const nessunDelegato = !c.delegato ? `<p class="sezione-costi-nota avviso">Prezzo base oltre € 500.000 — il compenso del delegato in questa fascia non è stato verificato, il totale non è mostrato.</p>` : "";
+
+    return `
+      <div class="sezione-costi">
+        <h3 class="sezione-costi-titolo">💶 Costi di trasferimento (stima)</h3>
+        <p class="sezione-costi-nota">${NOTA_FONTE_RENDITA[c.renditaUsata.fonte]} (${formattaEuro(Math.round(c.renditaUsata.valore))}).</p>
+        <div class="tabella-scroll">
+          <table class="tabella-costi">
+            <thead><tr>
+              <th></th>
+              <th>Prima casa<br><small>prezzo-valore</small></th>
+              <th>Prima casa<br><small>prezzo acquisizione</small></th>
+              <th>Seconda casa<br><small>prezzo-valore</small></th>
+              <th>Seconda casa<br><small>prezzo acquisizione</small></th>
+            </tr></thead>
+            <tbody>${righeVariabiliHtml}</tbody>
+          </table>
+        </div>
+        <table class="tabella-costi tabella-costi-comuni">
+          <caption>Costi aggiuntivi — uguali nei quattro scenari sopra</caption>
+          <tbody>${righeComuniHtml}</tbody>
+        </table>
+        ${nessunDelegato}
+        <div class="tabella-scroll">
+          <table class="tabella-costi tabella-costi-totale">
+            <tbody><tr>
+              <td>TOTALE STIMATO</td>
+              ${rigaTotali.map(v => `<td>${euroSemplice(v)}</td>`).join("")}
+            </tr></tbody>
+          </table>
+        </div>
+        <div class="costi-input-correzioni" onclick="event.stopPropagation()">
+          <label>Rendita catastale (€)
+            <input type="number" min="0" step="0.01" id="input-rendita-${a.id}" value="${a.renditaCatastaleUtente ?? ''}" placeholder="es. 450">
+          </label>
+          <label>Spese condominiali arretrate (€)
+            <input type="number" min="0" step="0.01" id="input-oneri-${a.id}" value="${a.oneriCondominialiUtente ?? ''}" placeholder="0">
+          </label>
+          <button type="button" class="costi-input-salva" onclick="salvaDatiUtenteCosti('${a.id}')">Salva e ricalcola</button>
+        </div>
+      </div>`;
+  }
+
+  const ETICHETTA_LIVELLO_RISTRUTTURAZIONE = { nessuna: "Nessuna", leggera: "Leggera", media: "Media", pesante: "Pesante" };
+
+  function bloccoCostiRistrutturazione(a) {
+    const r = calcolaCostiRistrutturazione(a);
+    if (!r.mq) return "";
+    const righe = [
+      ["economica", "Economica", "300 €/mq", r.economica],
+      ["media", "Media", "500 €/mq", r.media],
+      ["pesante", "Pesante", "800 €/mq", r.pesante],
+    ];
+    const righeHtml = righe.map(([chiave, etichetta, prezzoMq, valore]) =>
+      `<tr${chiave === r.livelloSuggerito ? ' class="livello-suggerito"' : ''}><td>${etichetta}${chiave === r.livelloSuggerito ? ' <span class="pallino-suggerito" title="Livello suggerito in base allo stato descritto in perizia">●</span>' : ''}</td><td>${prezzoMq}</td><td>${formattaEuro(Math.round(valore))}</td></tr>`
+    ).join("");
+
+    return `
+      <div class="sezione-costi">
+        <h3 class="sezione-costi-titolo">🔨 Costi di ristrutturazione (stima su ${r.mq.toFixed(0)} mq)</h3>
+        <table class="tabella-costi">
+          <thead><tr><th>Livello</th><th>€/mq</th><th>Totale</th></tr></thead>
+          <tbody>${righeHtml}</tbody>
+        </table>
+      </div>`;
+  }
+
   function contenutoFinestraDettagli(a) {
     const livello = livelloPunteggio(a.punteggio, a.valoreStima);
     const contenutoSigillo = livello === "non-valutato" ? "Non<br>valutato" : a.punteggio;
@@ -5102,6 +5403,8 @@ ${notaHtml}
         </div>
         ${a.note ? `<div class="lotto-note">${escapeHtml(a.note)}</div>` : ""}
         ${a.descrizione ? `<div class="lotto-note">${escapeHtml(a.descrizione)}</div>` : ""}
+        ${bloccoCostiTrasferimento(a)}
+        ${bloccoCostiRistrutturazione(a)}
         <div style="margin-top:12px">
           ${a.urlAsta ? `<a class="lotto-link" href="${escapeHtml(a.urlAsta)}" target="_blank" rel="noopener">Apri annuncio PVP</a>` : ""}
           ${a.urlPdf ? `<a class="lotto-link secondario" href="${escapeHtml(a.urlPdf)}" target="_blank" rel="noopener">Apri documento</a>` : ""}
