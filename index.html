@@ -1198,7 +1198,13 @@
   .sezione-costi-titolo { font-size: .95rem; font-weight: 600; margin: 0 0 8px; color: var(--ink); }
   .sezione-costi-nota { font-size: .8rem; color: var(--ink-faint); margin: 0 0 10px; line-height: 1.4; }
   .sezione-costi-nota.avviso { color: var(--danger); }
-  .tabella-scroll { overflow-x: auto; -webkit-overflow-scrolling: touch; }
+  /* Unico posto in cui si scorre di lato. -webkit-overflow-scrolling:touch
+     tolto: sulle versioni recenti di iOS lo scorrimento con inerzia è già
+     quello normale, e su iOS quella proprietà fa dell'elemento un livello
+     di stacking a sé — uno dei candidati per il testo delle tabelle che
+     finiva sopra l'intestazione fissa (vedi z-index su
+     .finestra-dettagli-header). */
+  .tabella-scroll { overflow-x: auto; max-width: 100%; overscroll-behavior-x: contain; }
   .tabella-costi { width: 100%; border-collapse: collapse; font-size: .82rem; }
   .tabella-costi th, .tabella-costi td { padding: 7px 10px; text-align: right; white-space: nowrap; }
   .tabella-costi th:first-child, .tabella-costi td:first-child { text-align: left; white-space: normal; color: var(--ink-muted); }
@@ -1213,13 +1219,18 @@
   .pallino-suggerito { color: var(--secondary); font-size: .7rem; }
   .costi-input-correzioni {
     display: grid;
-    grid-template-columns: 1fr 1fr;
+    /* minmax(0, 1fr), non 1fr: 1fr equivale a minmax(auto, 1fr) e la
+       colonna non scende sotto la larghezza "naturale" del campo — su
+       telefono le due colonne insieme superavano la finestra (era la
+       causa dello scorrimento laterale della scheda). */
+    grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
     gap: 10px 12px;
     margin-top: 14px;
     align-items: end;
   }
-  .costi-input-correzioni label { font-size: .78rem; color: var(--ink-faint); display: flex; flex-direction: column; gap: 4px; }
+  .costi-input-correzioni label { font-size: .78rem; color: var(--ink-faint); display: flex; flex-direction: column; gap: 4px; min-width: 0; }
   .costi-input-correzioni input {
+    width: 100%; min-width: 0;
     background: var(--bg); border: 1px solid var(--border); border-radius: 8px;
     padding: 8px 10px; font-size: .9rem; color: var(--ink); font-family: var(--font-mono);
   }
@@ -1273,6 +1284,16 @@
     width: 100%;
     max-height: 85vh;
     overflow-y: auto;
+    /* Solo scorrimento verticale. Con overflow-y:auto il browser porta
+       overflow-x ad "auto" a sua volta: bastava UN elemento più largo
+       della finestra (misurato: i due campi di correzione dei costi,
+       +68px a 390px di larghezza) e l'intera scheda si muoveva di lato
+       a ogni scorrimento. Lo scorrimento orizzontale resta solo dentro
+       le tabelle, ciascuna nel proprio .tabella-scroll.
+       overscroll-behavior:contain: a fine corsa lo scorrimento non
+       "passa" alla pagina sotto. */
+    overflow-x: hidden;
+    overscroll-behavior: contain;
     box-shadow: 0 16px 48px rgba(30, 35, 32, .3);
     opacity: 0;
     transform: translateY(18px) scale(.97);
@@ -1415,6 +1436,15 @@
   .finestra-dettagli-header {
     position: sticky;
     top: 0;
+    /* Senza z-index (era "auto") un elemento del corpo che crea un proprio
+       livello di stacking — tipicamente, su iOS, i contenitori con
+       -webkit-overflow-scrolling:touch come .tabella-scroll — può
+       essere dipinto SOPRA il blocco fisso: il testo delle tabelle si
+       mescolava con l'intestazione. Il valore alto la tiene sopra a
+       tutto il resto della finestra (che ha già un suo contesto di
+       stacking, per via del transform). Sfondo pieno, mai
+       trasparente. */
+    z-index: 20;
     background: var(--surface);
     display: flex;
     justify-content: space-between;
@@ -1424,6 +1454,12 @@
     border-bottom: 1px solid var(--border);
     border-radius: 16px 16px 0 0;
   }
+  /* "Tentativo probabile" non compare più nell'intestazione a schermo: è
+     già sulla card nella griglia ed era il badge più lungo, quello che
+     più allungava il blocco fisso. Resta solo in stampa/PDF (vedi
+     @media print) — lì la card non c'è, e la scheda esportata
+     perderebbe l'informazione. */
+  .finestra-dettagli-header .badge-tentativo { display: none; }
   .finestra-dettagli-testata {
     display: flex;
     gap: 14px;
@@ -1533,6 +1569,8 @@
     .lotto-azioni, .finestra-dettagli-azioni-header,
     .nota-preferito-editor, .checkbox-selezione,
     .finestra-dettagli-maniglia { display: none !important; }
+    /* nascosto a schermo nell'intestazione, ma nel PDF deve esserci */
+    .finestra-dettagli-header .badge-tentativo { display: inline-block !important; }
   }
 
 
@@ -1580,6 +1618,27 @@
       border-radius: 2px;
       background: var(--border);
     }
+
+    /* Intestazione fissa più compatta: occupava fino a metà finestra
+       (misurato in prova a 390px: 204px con un caso tipico, 360px con
+       indirizzo lungo e tre badge) sottraendo spazio al contenuto che scorre.
+       Sigillo e pulsanti più piccoli e padding ridotti: la colonna del
+       testo guadagna larghezza e va a capo meno volte. Il sigillo
+       "non valutato" resta un po' più grande (52px) perché contiene testo. */
+    .finestra-dettagli-header { padding: 8px 14px 10px; gap: 8px; }
+    .finestra-dettagli-testata { gap: 8px; min-width: 0; }
+    .finestra-dettagli-header .sigillo { width: 46px; height: 46px; }
+    .finestra-dettagli-header .sigillo:not(.non-valutato) { font-size: .95rem; }
+    .finestra-dettagli-header .sigillo.non-valutato { width: 52px; height: 52px; padding: 3px; }
+    .finestra-dettagli-header .lotto-id { margin-bottom: 1px; }
+    .finestra-dettagli-header .lotto-comune { font-size: 1rem; line-height: 1.25; margin-bottom: 2px; }
+    .finestra-dettagli-header .badge-nuova,
+    .finestra-dettagli-header .badge-conclusa,
+    .finestra-dettagli-header .badge-zona { margin: 2px 4px 2px 0; padding: 2px 7px; font-size: .68rem; }
+    .finestra-dettagli-header .lotto-meta { font-size: .78rem; }
+    .finestra-dettagli-azioni-header { gap: 6px; }
+    .finestra-dettagli-header .finestra-dettagli-chiudi,
+    .finestra-dettagli-header .finestra-dettagli-stampa { width: 34px; height: 34px; }
   }
 
   .lotto-note {
@@ -1674,7 +1733,8 @@
     html .controlli input,
     html .controlli select,
     html .nota-preferito-editor textarea,
-    html .riquadro-password-inline input {
+    html .riquadro-password-inline input,
+    html .costi-input-correzioni input {
       font-size: 16px;
     }
   }
@@ -1907,7 +1967,7 @@
       <p class="eyebrow">Scansione Aste Giudiziarie</p>
       <h1><a href="brochure.pdf" target="_blank" rel="noopener" style="color:inherit;text-decoration:none;">Registro Opportunità</a></h1>
       <p class="sottotitolo">Aste residenziali filtrate per prezzo, distanza e margine potenziale stimato.</p>
-      <p class="versione-pagina">v2.1 · <a href="config.html">Configurazione</a> · aggiornato <strong id="testo-aggiornato">—</strong></p>
+      <p class="versione-pagina">v2.2 · <a href="config.html">Configurazione</a> · aggiornato <strong id="testo-aggiornato">—</strong></p>
     </div>
     <div class="statistiche-compatte">
       <div class="stat-compatta">
@@ -5256,10 +5316,12 @@ ${notaHtml}
             <tbody>${righeVariabiliHtml}</tbody>
           </table>
         </div>
-        <table class="tabella-costi tabella-costi-comuni">
-          <caption>Costi aggiuntivi — uguali nei quattro scenari sopra</caption>
-          <tbody>${righeComuniHtml}</tbody>
-        </table>
+        <div class="tabella-scroll">
+          <table class="tabella-costi tabella-costi-comuni">
+            <caption>Costi aggiuntivi — uguali nei quattro scenari sopra</caption>
+            <tbody>${righeComuniHtml}</tbody>
+          </table>
+        </div>
         ${nessunDelegato}
         <div class="tabella-scroll">
           <table class="tabella-costi tabella-costi-totale">
@@ -5298,10 +5360,12 @@ ${notaHtml}
     return `
       <div class="sezione-costi">
         <h3 class="sezione-costi-titolo">🔨 Costi di ristrutturazione (stima su ${r.mq.toFixed(0)} mq)</h3>
-        <table class="tabella-costi">
-          <thead><tr><th>Livello</th><th>€/mq</th><th>Totale</th></tr></thead>
-          <tbody>${righeHtml}</tbody>
-        </table>
+        <div class="tabella-scroll">
+          <table class="tabella-costi">
+            <thead><tr><th>Livello</th><th>€/mq</th><th>Totale</th></tr></thead>
+            <tbody>${righeHtml}</tbody>
+          </table>
+        </div>
       </div>`;
   }
 
