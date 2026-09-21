@@ -1954,6 +1954,25 @@
   .bottone-password-annulla { background: var(--surface-2); color: var(--ink-muted); }
   .messaggio-errore-password { color: var(--danger); font-size: .82rem; margin: 10px 0 0; min-height: 1em; }
 
+  /* Conferma prima di un'azione in blocco su molte aste (vedi
+     eseguiAzioneInBlocco): stesso riquadro del modale password, con un
+     elenco di cosa cambierà. Il pulsante "Scarta N aste" è rosso, quello
+     "Preferisci N aste" resta scuro come gli altri. */
+  .riquadro-conferma-blocco { max-width: 380px; }
+  .riquadro-conferma-blocco ul {
+    margin: 0 0 18px;
+    padding-left: 18px;
+    text-align: left;
+    color: var(--ink-muted);
+    font-size: .85rem;
+    line-height: 1.5;
+  }
+  .riquadro-conferma-blocco li + li { margin-top: 4px; }
+  .bottone-conferma-scarta { background: var(--danger); color: var(--surface); }
+  .bottone-conferma-scarta:hover { background: #6f2f23; }
+  /* Il link "Annulla ultimo blocco" va a capo tutto intero, mai spezzato a metà. */
+  .link-annulla-blocco { white-space: nowrap; }
+
   /* Toast discreto per un errore di salvataggio (stella/scarto/nota) —
      compare in basso, si chiude da solo. Non blocca nulla sotto
      (pointer-events attivi solo mentre visibile). */
@@ -2012,7 +2031,7 @@
       <p class="eyebrow">Scansione Aste Giudiziarie</p>
       <h1><a href="brochure.pdf" target="_blank" rel="noopener" style="color:inherit;text-decoration:none;">Registro Opportunità</a></h1>
       <p class="sottotitolo">Aste residenziali filtrate per prezzo, distanza e margine potenziale stimato.</p>
-      <p class="versione-pagina">v2.6 · <a href="config.html">Configurazione</a> · aggiornato <strong id="testo-aggiornato">—</strong></p>
+      <p class="versione-pagina">v2.7 · <a href="config.html">Configurazione</a> · aggiornato <strong id="testo-aggiornato">—</strong></p>
     </div>
     <div class="statistiche-compatte">
       <div class="stat-compatta">
@@ -2156,6 +2175,7 @@
       <button type="button" class="link-seleziona-tutte" id="link-seleziona-tutte" onclick="selezionaTutteFiltrate()">Seleziona tutte</button>
       <span class="separatore-azioni-conteggio">·</span>
       <button type="button" class="link-seleziona-tutte" onclick="esportaCSV('filtrate')">Esporta CSV</button>
+      <button type="button" class="link-seleziona-tutte link-annulla-blocco nascosto" id="link-annulla-blocco" onclick="annullaUltimoBlocco()"></button>
     </div>
   </div>
 
@@ -2191,6 +2211,21 @@
         <button type="button" class="bottone-password-conferma" onclick="confermaPasswordInline()">Conferma</button>
       </div>
       <p id="errore-password-inline" class="messaggio-errore-password"></p>
+    </div>
+  </div>
+
+  <!-- Conferma prima di un'azione in blocco (Preferisci tutte / Scarta
+       tutte) su PIÙ di SOGLIA_CONFERMA_BLOCCO aste — vedi
+       eseguiAzioneInBlocco. Il fuoco parte su "Annulla": un Invio dato per
+       riflesso annulla, non conferma. -->
+  <div id="overlay-conferma-blocco" class="overlay-password nascosto" role="dialog" aria-modal="true" aria-labelledby="titolo-conferma-blocco" onclick="if (event.target === this) chiudiConfermaBlocco()">
+    <div class="riquadro-password-inline riquadro-conferma-blocco">
+      <h3 id="titolo-conferma-blocco"></h3>
+      <ul id="elenco-conferma-blocco"></ul>
+      <div class="riga-bottoni-password">
+        <button type="button" class="bottone-password-annulla" id="bottone-conferma-blocco-annulla" onclick="chiudiConfermaBlocco()">Annulla</button>
+        <button type="button" class="bottone-password-conferma" id="bottone-conferma-blocco-ok" onclick="confermaBloccoDefinitiva()"></button>
+      </div>
     </div>
   </div>
 
@@ -3193,7 +3228,7 @@
   // di procedere. Il toast resta comunque solo un avviso che scompare da
   // solo: se non lo si tocca in tempo, semplicemente sparisce senza
   // ulteriori conseguenze, l'azione principale (lo scarto) è già avvenuta.
-  function mostraToast(testo, azione) {
+  function mostraToast(testo, azione, durataMs) {
     let toast = document.getElementById("toast-preferiti");
     if (!toast) {
       toast = document.createElement("div");
@@ -3212,7 +3247,7 @@
     clearTimeout(toast._timeoutToast);
     // Più tempo quando c'è un'azione da poter cogliere (serve un attimo
     // per notare il pulsante e decidere), il solito avviso breve altrimenti.
-    toast._timeoutToast = setTimeout(() => toast.classList.remove("visibile"), azione ? 5000 : 3200);
+    toast._timeoutToast = setTimeout(() => toast.classList.remove("visibile"), durataMs || (azione ? 5000 : 3200));
   }
 
   // Clic sulla stella: se già preferita, la toglie (torna neutro); se no,
@@ -3425,8 +3460,114 @@
   // server) — nessuna eccezione speciale per il blocco, per non avere
   // due comportamenti diversi per la stessa azione a seconda di come
   // viene lanciata.
+  //
+  // PROTEZIONI (aggiunte dopo, per l'errore di chi clicca "Scarta tutte"
+  // con centinaia di aste selezionate): (1) sopra SOGLIA_CONFERMA_BLOCCO
+  // aste compare una conferma che dice cosa cambierà davvero — quante
+  // sono già preferite/scartate (e cambieranno stato), quante hanno una
+  // nota (che viene cancellata), quante non sono visibili con i filtri
+  // attuali (la selezione sopravvive ai filtri); (2) dopo ogni blocco
+  // riuscito si conserva un'istantanea di com'erano stato e note di
+  // OGNI asta toccata, e "Annulla" le rimette a posto (vedi sotto).
+  const SOGLIA_CONFERMA_BLOCCO = 10;              // la conferma compare con PIÙ di 10 aste
+  const CHIAVE_ULTIMO_BLOCCO = "aste_ultimo_blocco_v1";
+  const VALIDITA_ANNULLA_BLOCCO_MS = 48 * 60 * 60 * 1000;
+
+  let statoBloccoInAttesaDiConferma = null;
+  // Istantanea dell'ULTIMO blocco: {stato, quando, voci: [{id, prec, nota}]}
+  // con prec = stato prima del blocco (null = nessuno). Sta anche in
+  // localStorage, non solo in memoria: su telefono la pagina può
+  // ricaricarsi da sola (cambio app, telefonata) e l'annullamento non
+  // deve sparire proprio allora. Scade dopo 48 ore.
+  let ultimoBlocco = caricaUltimoBlocco();
+
+  function statoDiAsta(a) { return a.preferito ? "preferito" : (a.scartato ? "scartato" : null); }
+
+  function caricaUltimoBlocco() {
+    try {
+      const grezzo = localStorage.getItem(CHIAVE_ULTIMO_BLOCCO);
+      if (!grezzo) return null;
+      const b = JSON.parse(grezzo);
+      const valido = b && (b.stato === "preferito" || b.stato === "scartato") && Array.isArray(b.voci) && b.voci.length > 0
+        && typeof b.quando === "number" && Date.now() - b.quando < VALIDITA_ANNULLA_BLOCCO_MS;
+      if (!valido) { localStorage.removeItem(CHIAVE_ULTIMO_BLOCCO); return null; }
+      return b;
+    } catch (e) { return null; }
+  }
+
+  function impostaUltimoBlocco(blocco) {
+    ultimoBlocco = blocco;
+    try {
+      if (blocco) localStorage.setItem(CHIAVE_ULTIMO_BLOCCO, JSON.stringify(blocco));
+      else localStorage.removeItem(CHIAVE_ULTIMO_BLOCCO);
+    } catch (e) { /* localStorage non disponibile: resta l'annullamento in memoria */ }
+    aggiornaLinkAnnullaBlocco();
+  }
+
+  function aggiornaLinkAnnullaBlocco() {
+    const link = document.getElementById("link-annulla-blocco");
+    if (!link) return;
+    link.classList.toggle("nascosto", !ultimoBlocco);
+    if (!ultimoBlocco) return;
+    const n = ultimoBlocco.voci.length;
+    link.textContent = `↶ Annulla ultimo blocco (${n} ${n === 1 ? "asta" : "aste"})`;
+    const quando = new Date(ultimoBlocco.quando).toLocaleString("it-IT", {day: "2-digit", month: "2-digit", hour: "2-digit", minute: "2-digit"});
+    link.title = `Rimette com'erano (stato e note) le aste dell'ultima azione in blocco: ${ultimoBlocco.stato === "scartato" ? "scartate" : "preferite"} il ${quando}. Quelle che hai modificato dopo restano come sono.`;
+  }
+
+  // Cosa succederà alle aste selezionate: serve alla conferma, non a
+  // decidere nulla — l'azione vera resta eseguiAzioneInBloccoOra.
+  function analizzaBlocco(stato) {
+    const perId = new Map(ASTE.map(a => [a.id, a]));
+    const visibili = new Set(ultimoElencoFiltrato.map(a => a.id));
+    const r = {n: astaSelezionate.size, daPreferito: 0, daScartato: 0, conNota: 0, nascoste: 0};
+    astaSelezionate.forEach(id => {
+      const a = perId.get(id);
+      if (!a) return;
+      if (stato === "scartato" && a.preferito) r.daPreferito++;
+      if (stato === "preferito" && a.scartato) r.daScartato++;
+      if (a.notaPreferito) r.conNota++;
+      if (!visibili.has(id)) r.nascoste++;
+    });
+    return r;
+  }
+
+  function mostraConfermaBlocco(stato) {
+    const r = analizzaBlocco(stato);
+    const scarta = stato === "scartato";
+    document.getElementById("titolo-conferma-blocco").textContent =
+      scarta ? `Scartare ${r.n} aste?` : `Aggiungere ${r.n} aste ai preferiti?`;
+    const righe = [];
+    if (r.daPreferito) righe.push(r.daPreferito === 1 ? "1 è attualmente preferita e perderà la stella." : `${r.daPreferito} sono attualmente preferite e perderanno la stella.`);
+    if (r.daScartato) righe.push(r.daScartato === 1 ? "1 è attualmente scartata e tornerà tra le preferite." : `${r.daScartato} sono attualmente scartate e torneranno tra le preferite.`);
+    if (r.conNota) righe.push(r.conNota === 1 ? "1 ha una nota: verrà cancellata." : `${r.conNota} hanno una nota: verranno cancellate.`);
+    if (r.nascoste) righe.push(r.nascoste === 1 ? "1 non è visibile con i filtri attuali." : `${r.nascoste} non sono visibili con i filtri attuali.`);
+    righe.push("Subito dopo potrai annullare.");
+    document.getElementById("elenco-conferma-blocco").innerHTML = righe.map(t => `<li>${escapeHtml(t)}</li>`).join("");
+    const conferma = document.getElementById("bottone-conferma-blocco-ok");
+    conferma.textContent = scarta ? `Scarta ${r.n} aste` : `Preferisci ${r.n} aste`;
+    conferma.classList.toggle("bottone-conferma-scarta", scarta);
+    statoBloccoInAttesaDiConferma = stato;
+    document.getElementById("overlay-conferma-blocco").classList.remove("nascosto");
+    document.getElementById("bottone-conferma-blocco-annulla").focus();
+  }
+
+  function chiudiConfermaBlocco() {
+    statoBloccoInAttesaDiConferma = null;
+    document.getElementById("overlay-conferma-blocco").classList.add("nascosto");
+  }
+
+  function confermaBloccoDefinitiva() {
+    const stato = statoBloccoInAttesaDiConferma;
+    chiudiConfermaBlocco();
+    if (!stato || astaSelezionate.size === 0) return;
+    richiediPasswordSeServe(() => eseguiAzioneInBloccoOra(stato));
+  }
+
   function eseguiAzioneInBlocco(stato) {
-    if (astaSelezionate.size === 0) return;
+    const n = astaSelezionate.size;
+    if (n === 0) return;
+    if (n > SOGLIA_CONFERMA_BLOCCO) { mostraConfermaBlocco(stato); return; }
     richiediPasswordSeServe(() => eseguiAzioneInBloccoOra(stato));
   }
 
@@ -3461,6 +3602,18 @@
       else delete PREFERITI[id];
     });
 
+    // Istantanea per "Annulla": solo le aste il cui cambio è riuscito e che
+    // avevano qualcosa da perdere (stato diverso, o una nota da cancellare).
+    const voci = [];
+    ids.forEach((id, indice) => {
+      const p = precedenti.get(id);
+      if (!p || esiti[indice].status !== "fulfilled") return;
+      const prec = p.preferito ? "preferito" : (p.scartato ? "scartato" : null);
+      if (prec === stato && !p.notaPreferito) return;
+      voci.push({id, prec, nota: p.notaPreferito || ""});
+    });
+    if (voci.length) impostaUltimoBlocco({stato, quando: Date.now(), voci});
+
     applicaFiltri();
     deselezionaTutto();
 
@@ -3468,7 +3621,100 @@
     const agg = stato === "preferito" ? "preferita" : "scartata";
     const aggPlurale = stato === "preferito" ? "preferite" : "scartate";
     const etichettaRiuscite = riuscite === 1 ? `1 asta ${agg}` : `${riuscite} aste ${aggPlurale}`;
-    mostraToast(falliti === 0 ? `${etichettaRiuscite}.` : `${etichettaRiuscite}, ${falliti} non riuscite.`);
+    mostraToast(
+      falliti === 0 ? `${etichettaRiuscite}.` : `${etichettaRiuscite}, ${falliti} non riuscite.`,
+      voci.length ? {etichetta: "Annulla", callback: annullaUltimoBlocco} : undefined,
+      voci.length ? 12000 : undefined
+    );
+  }
+
+  // Annulla l'ULTIMO blocco: rimette lo stato e le note com'erano, usando
+  // le stesse tre funzioni del database di sempre (imposta_stato_preferito,
+  // rimuovi_flag_preferito, salva_nota_preferito). Tocca SOLO le aste che
+  // sono ancora come le ha lasciate il blocco (stessa stato, nessuna nota
+  // scritta dopo): se nel frattempo ne hai cambiata una, resta come l'hai
+  // messa tu. Quelle che falliscono restano annullabili con un secondo clic.
+  function annullaUltimoBlocco() {
+    if (!ultimoBlocco) return;
+    richiediPasswordSeServe(() => eseguiAnnullaBlocco());
+  }
+
+  async function eseguiAnnullaBlocco() {
+    const blocco = ultimoBlocco;
+    if (!blocco) return;
+    const perId = new Map(ASTE.map(a => [a.id, a]));
+
+    const daRipristinare = [];
+    let nonToccate = 0;
+    blocco.voci.forEach(v => {
+      const a = perId.get(v.id);
+      if (!a || statoDiAsta(a) !== blocco.stato || a.notaPreferito) { nonToccate++; return; }
+      daRipristinare.push(v);
+    });
+
+    const precedenti = new Map(); // stato locale prima del ripristino, per il rollback dei falliti
+    const noteNonRipristinate = new Set();
+
+    const promesse = daRipristinare.map(async v => {
+      const a = perId.get(v.id);
+      precedenti.set(v.id, {preferito: a.preferito, scartato: a.scartato, notaPreferito: a.notaPreferito});
+      a.preferito = v.prec === "preferito";
+      a.scartato = v.prec === "scartato";
+      a.notaPreferito = v.nota;
+      if (v.prec) PREFERITI[v.id] = {stato: v.prec, nota: v.nota};
+      else delete PREFERITI[v.id];
+
+      if (v.prec === null) {
+        const r = await accodaScritturaProtetta("rimuovi_flag_preferito", {password_tentativo: passwordCorrente, id_annuncio_input: v.id});
+        if (r.result !== "success") throw new Error(r.message || "");
+        return;
+      }
+      if (v.prec !== blocco.stato) {
+        const r = await accodaScritturaProtetta("imposta_stato_preferito", {password_tentativo: passwordCorrente, id_annuncio_input: v.id, stato_input: v.prec});
+        if (r.result !== "success") throw new Error(r.message || "");
+      }
+      if (v.nota) {
+        try {
+          const r = await accodaScritturaProtetta("salva_nota_preferito", {password_tentativo: passwordCorrente, id_annuncio_input: v.id, nota_input: v.nota});
+          if (r.result !== "success") throw new Error(r.message || "");
+        } catch (e) {
+          // lo stato è già tornato com'era: solo la nota non è stata salvata
+          noteNonRipristinate.add(v.id);
+          a.notaPreferito = "";
+          if (PREFERITI[v.id]) PREFERITI[v.id].nota = "";
+        }
+      }
+    });
+
+    applicaFiltri(); // subito: chi annulla vuole vedere le aste tornare al loro posto
+    const esiti = await Promise.allSettled(promesse);
+
+    const falliti = [];
+    esiti.forEach((esito, indice) => {
+      if (esito.status !== "rejected") return;
+      const v = daRipristinare[indice];
+      falliti.push(v);
+      gestisceErroreAzionePassword(esito.reason);
+      const a = perId.get(v.id);
+      const p = precedenti.get(v.id);
+      if (!a || !p) return;
+      Object.assign(a, p);
+      const s = statoDiAsta(a);
+      if (s) PREFERITI[v.id] = {stato: s, nota: a.notaPreferito};
+      else delete PREFERITI[v.id];
+    });
+
+    // restano annullabili solo quelle fallite; le "non toccate" non lo sono più
+    impostaUltimoBlocco(falliti.length ? {stato: blocco.stato, quando: blocco.quando, voci: falliti} : null);
+    applicaFiltri();
+    if (idAstaModaleDettagli) aggiornaFinestraSeApertaSu(idAstaModaleDettagli);
+
+    const ok = daRipristinare.length - falliti.length;
+    const parti = [ok === 1 ? "1 asta ripristinata" : `${ok} aste ripristinate`];
+    if (nonToccate) parti.push(`${nonToccate} lasciate come sono (le avevi cambiate dopo)`);
+    if (falliti.length) parti.push(`${falliti.length} non riuscite`);
+    if (noteNonRipristinate.size) parti.push(`${noteNonRipristinate.size} note non ripristinate`);
+    mostraToast(parti.join(", ") + ".", undefined, 6000);
   }
 
   // Chiamata SOLO su un vero cambio di stato (mai una riconferma dello
@@ -5370,6 +5616,7 @@ ${notaHtml}
   // un tasto modificatore premuto (Ctrl/Cmd/Alt), per non rubare
   // scorciatoie vere del browser (es. Cmd+S "salva pagina").
   function gestisciScorciatoieTastiera(evento) {
+    if (evento.key === "Escape" && !document.getElementById("overlay-conferma-blocco").classList.contains("nascosto")) { chiudiConfermaBlocco(); return; }
     if (evento.key === "Escape" && idAstaModaleDettagli !== null) { chiudiDettagliAsta(); return; }
 
     if (idAstaModaleDettagli === null) return;
@@ -5668,6 +5915,7 @@ ${notaHtml}
 
   document.getElementById("ricerca").addEventListener("input", applicaFiltri);
 
+  aggiornaLinkAnnullaBlocco();
   provaSbloccoLetturaAutomatico();
 </script>
 
