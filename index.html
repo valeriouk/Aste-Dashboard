@@ -1212,9 +1212,18 @@
   .tabella-costi tbody tr:not(:last-child) td { border-bottom: 1px solid var(--surface-2); }
   .tabella-costi-comuni { margin-top: 4px; }
   .tabella-costi-comuni caption { caption-side: top; text-align: left; font-size: .74rem; color: var(--ink-faint); padding: 10px 0 4px; }
-  .tabella-costi-totale { margin-top: 4px; font-weight: 700; }
-  .tabella-costi-totale td { color: var(--primary); border-top: 2px solid var(--primary); padding-top: 10px; }
-  .tabella-costi-totale td:first-child { color: var(--ink); }
+  /* TOTALE come ultima riga della STESSA tabella degli scenari (prima era
+     una tabella a parte, con colonne di larghezza propria e un proprio
+     scorrimento laterale: i quattro totali non stavano sotto le rispettive
+     colonne — misurato: fino a ~73px di sfasamento a 390px — e restavano
+     fermi mentre le colonne sopra scorrevano). Nella stessa tabella
+     l'allineamento è garantito per costruzione e scorre tutto insieme.
+     È un <tbody> e non un <tfoot>: in stampa un tfoot si ripete a ogni
+     cambio pagina. */
+  .tabella-costi .riga-totale td { font-weight: 700; color: var(--primary); border-top: 2px solid var(--primary); padding-top: 10px; }
+  .tabella-costi .riga-totale td:first-child { color: var(--ink); }
+  /* una nota o un avviso subito dopo una tabella: un po' d'aria sopra */
+  .tabella-scroll + .sezione-costi-nota { margin-top: 12px; }
   .livello-suggerito td { background: var(--secondary-soft); font-weight: 600; }
   .pallino-suggerito { color: var(--secondary); font-size: .7rem; }
   .costi-input-correzioni {
@@ -1967,7 +1976,7 @@
       <p class="eyebrow">Scansione Aste Giudiziarie</p>
       <h1><a href="brochure.pdf" target="_blank" rel="noopener" style="color:inherit;text-decoration:none;">Registro Opportunità</a></h1>
       <p class="sottotitolo">Aste residenziali filtrate per prezzo, distanza e margine potenziale stimato.</p>
-      <p class="versione-pagina">v2.2 · <a href="config.html">Configurazione</a> · aggiornato <strong id="testo-aggiornato">—</strong></p>
+      <p class="versione-pagina">v2.4 · <a href="config.html">Configurazione</a> · aggiornato <strong id="testo-aggiornato">—</strong></p>
     </div>
     <div class="statistiche-compatte">
       <div class="stat-compatta">
@@ -3718,16 +3727,49 @@
   const PRATICA_EDILIZIA_STIMATA = 1500;
   const COSTO_MQ_RISTRUTTURAZIONE = { economica: 300, media: 500, pesante: 800 };
 
-  // Precedenza: correzione utente > dichiarata in perizia > assunta dal
-  // prezzo base (ultima risorsa, ancorata al coefficiente seconda casa
-  // 120 — generico, indipendente dall'intento prima/seconda casa
-  // dell'acquirente — invertendo la stessa formula del prezzo-valore).
+  // Rapporto tra valore catastale (rendita × 1,05 × 120: la base del
+  // prezzo-valore per una seconda casa) e valore di stima del perito,
+  // usato SOLO quando la rendita non è nota. 0,32 è una stima di ordine
+  // di grandezza, NON un dato misurato sulle aste di Catania: parte dallo
+  // studio IFEL/IRPET (Federalismo in Toscana 3/2017), che trova un
+  // rapporto medio valore catastale / valore di mercato OMI di 0,42, molto
+  // disperso (fascia 0,28–0,56, più alto al Sud), su comuni delle regioni
+  // a statuto ordinario — Sicilia esclusa — e presumibilmente su base IMU
+  // (moltiplicatore 160); il prezzo-valore usa 120, quindi 0,42 × 120/160
+  // ≈ 0,32. Se confrontando rendite stimate e rendite vere (inserite dal
+  // campo "Rendita catastale") emerge una distorsione sistematica, è
+  // questo il numero da ritoccare.
+  const RAPPORTO_VALORE_CATASTALE_SU_STIMA = 0.32;
+
+  // Precedenza: correzione utente > dichiarata in perizia > stimata dal
+  // valore di stima del perito > assunta dal prezzo base (solo se manca
+  // anche il valore di stima).
+  //
+  // Perché dal valore di stima e non dal prezzo base (come prima): la
+  // rendita è una caratteristica fissa della casa, mentre il prezzo base
+  // scende di norma del 25% a ogni asta deserta — la stessa casa riceveva
+  // una rendita "assunta" diversa a seconda del tentativo. E perché con un
+  // rapporto ~0,32 e non 1: il valore catastale è di solito molto più
+  // basso del valore di mercato, mentre assumerlo uguale al prezzo
+  // annullava per costruzione ogni vantaggio del prezzo-valore sulla
+  // seconda casa. Conseguenza da tenere presente: è meno prudente di
+  // prima (costi stimati più bassi) — per questo le colonne prezzo-valore
+  // vengono segnalate con * finché la rendita non è nota (vedi
+  // NOTA_FONTE_RENDITA). Nessun tetto al prezzo base: con sconti molto
+  // profondi la stima può superare il prezzo, ed è giusto che il
+  // prezzo-valore risulti allora più caro.
   function renditaEffettiva(a) {
     if (a.renditaCatastaleUtente !== null && a.renditaCatastaleUtente > 0) {
       return { valore: a.renditaCatastaleUtente, fonte: "utente" };
     }
     if (a.renditaCatastale && a.renditaCatastale > 0) {
       return { valore: a.renditaCatastale, fonte: "dichiarata" };
+    }
+    if (a.valoreStima > 0) {
+      return {
+        valore: a.valoreStima * RAPPORTO_VALORE_CATASTALE_SU_STIMA / (RIVALUTAZIONE_RENDITA * COEFFICIENTE_SECONDA_CASA),
+        fonte: "stimata"
+      };
     }
     return { valore: a.prezzoBase / (RIVALUTAZIONE_RENDITA * COEFFICIENTE_SECONDA_CASA), fonte: "assunta" };
   }
@@ -5262,16 +5304,24 @@ ${notaHtml}
   // nella card espandibile. Costruita da ASTE (non dall'elenco filtrato
   // corrente): la finestra mostra l'asta scelta a prescindere da
   // eventuali filtri applicati dopo averla aperta.
+  // Ogni testo riceve l'importo già formattato (es. "€ 381"). Le fonti
+  // "stimata" e "assunta" iniziano con *: lo stesso asterisco compare
+  // sulle intestazioni delle due colonne prezzo-valore, le sole che
+  // dipendono dalla rendita — si vede a colpo d'occhio quali numeri sono
+  // una stima e non un dato.
   const NOTA_FONTE_RENDITA = {
-    utente: "rendita catastale inserita da te",
-    dichiarata: "rendita catastale letta dalla perizia",
-    assunta: "rendita catastale NON trovata — valore assunto a partire dal prezzo base, correggila appena la conosci",
+    utente: euro => `rendita catastale inserita da te (${euro}).`,
+    dichiarata: euro => `rendita catastale letta dalla perizia (${euro}).`,
+    stimata: euro => `* rendita catastale NON trovata: stimata in ${euro} dal valore di stima (valore catastale ≈ ${Math.round(RAPPORTO_VALORE_CATASTALE_SU_STIMA * 100)}% della stima). Le colonne prezzo-valore sono quindi una stima: correggila appena la conosci.`,
+    assunta: euro => `* rendita catastale NON trovata e valore di stima assente: assunta in ${euro} dal prezzo base. Le colonne prezzo-valore sono quindi una stima: correggila appena la conosci.`,
   };
 
   function bloccoCostiTrasferimento(a) {
     const c = calcolaCostiTrasferimento(a);
     const s = c.scenari;
     const euroSemplice = v => v === null ? "—" : formattaEuro(Math.round(v));
+    // le colonne prezzo-valore dipendono dalla rendita: se è una stima, lo si dice
+    const asterisco = (c.renditaUsata.fonte === "stimata" || c.renditaUsata.fonte === "assunta") ? "*" : "";
 
     const righeVariabili = [
       ["Base imponibile", s.primaCasaPrezzoValore.baseImponibile, s.primaCasaPrezzoAcquisizione.baseImponibile, s.secondaCasaPrezzoValore.baseImponibile, s.secondaCasaPrezzoAcquisizione.baseImponibile],
@@ -5303,34 +5353,32 @@ ${notaHtml}
     return `
       <div class="sezione-costi">
         <h3 class="sezione-costi-titolo">💶 Costi di trasferimento (stima)</h3>
-        <p class="sezione-costi-nota">${NOTA_FONTE_RENDITA[c.renditaUsata.fonte]} (${formattaEuro(Math.round(c.renditaUsata.valore))}).</p>
+        ${righeComuniHtml ? `<div class="tabella-scroll">
+          <table class="tabella-costi tabella-costi-comuni">
+            <caption>Costi aggiuntivi — uguali nei quattro scenari, inclusi nel totale</caption>
+            <tbody>${righeComuniHtml}</tbody>
+          </table>
+        </div>` : ""}
+        <p class="sezione-costi-nota">${NOTA_FONTE_RENDITA[c.renditaUsata.fonte](formattaEuro(Math.round(c.renditaUsata.valore)))}</p>
         <div class="tabella-scroll">
-          <table class="tabella-costi">
+          <table class="tabella-costi tabella-costi-scenari">
             <thead><tr>
               <th></th>
-              <th>Prima casa<br><small>prezzo-valore</small></th>
+              <th>Prima casa<br><small>prezzo-valore${asterisco}</small></th>
               <th>Prima casa<br><small>prezzo acquisizione</small></th>
-              <th>Seconda casa<br><small>prezzo-valore</small></th>
+              <th>Seconda casa<br><small>prezzo-valore${asterisco}</small></th>
               <th>Seconda casa<br><small>prezzo acquisizione</small></th>
             </tr></thead>
             <tbody>${righeVariabiliHtml}</tbody>
-          </table>
-        </div>
-        <div class="tabella-scroll">
-          <table class="tabella-costi tabella-costi-comuni">
-            <caption>Costi aggiuntivi — uguali nei quattro scenari sopra</caption>
-            <tbody>${righeComuniHtml}</tbody>
+            <tbody class="riga-totale">
+              <tr>
+                <td>TOTALE STIMATO</td>
+                ${rigaTotali.map(v => `<td>${euroSemplice(v)}</td>`).join("")}
+              </tr>
+            </tbody>
           </table>
         </div>
         ${nessunDelegato}
-        <div class="tabella-scroll">
-          <table class="tabella-costi tabella-costi-totale">
-            <tbody><tr>
-              <td>TOTALE STIMATO</td>
-              ${rigaTotali.map(v => `<td>${euroSemplice(v)}</td>`).join("")}
-            </tr></tbody>
-          </table>
-        </div>
         <div class="costi-input-correzioni" onclick="event.stopPropagation()">
           <label>Rendita catastale (€)
             <input type="number" min="0" step="0.01" id="input-rendita-${a.id}" value="${a.renditaCatastaleUtente ?? ''}" placeholder="es. 450">
