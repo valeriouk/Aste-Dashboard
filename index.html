@@ -535,7 +535,14 @@
   ============================================================ */
   .griglia {
     display: grid;
-    grid-template-columns: repeat(auto-fill, minmax(320px, 1fr));
+    /* min(320px, 100%): con minmax(320px, 1fr) secco ogni colonna aveva
+       320px come minimo assoluto, e su un telefono più stretto di ~350px
+       (contenitore = schermo meno i margini) la colonna usciva dallo
+       schermo e la pagina scorreva di lato. Così, dove lo spazio c'è
+       (>= 320px) il risultato è identico a prima; dove non c'è, la
+       colonna si adatta alla larghezza disponibile. Il JS non cambia:
+       colonneCorrenti() già restituisce almeno 1 colonna. */
+    grid-template-columns: repeat(auto-fill, minmax(min(320px, 100%), 1fr));
     gap: 16px;
     /* La griglia è virtualizzata: gli spaziatori sopra/sotto cambiano
        dimensione da JS in risposta allo scroll stesso. Senza questo, lo
@@ -1021,6 +1028,20 @@
     align-items: flex-start;
     margin-bottom: 16px;
   }
+  /* La colonna di testo (l'unico <div> senza classe tra il sigillo e le
+     azioni) non poteva restringersi sotto la sua parola più lunga —
+     min-width:auto è il valore di base di un elemento flessibile — e i
+     codici di tipologia (es. ABITAZIONE_TIPO_ECO, GARAGE_AUTORIMESSA) non
+     hanno spazi dove andare a capo: la riga sigillo + testo + azioni
+     diventava più larga della card e trascinava la pagina di lato
+     (misurato: la stella e lo scarto restavano oltre il bordo destro su
+     schermi di 375px e meno). Con min-width:0 il testo si restringe; con
+     overflow-wrap:anywhere una parola più lunga della colonna va a capo
+     da sola invece di sforare. Vale anche per la testata della finestra
+     dettagli. */
+  .lotto-testata > div:not(.sigillo):not(.lotto-azioni),
+  .finestra-dettagli-testata > div:not(.sigillo) { min-width: 0; }
+  .lotto-id, .lotto-comune, .lotto-meta { overflow-wrap: anywhere; word-break: break-word; }
 
   /* Il sigillo: elemento distintivo della pagina — un timbro leggermente
      irregolare, come un vero sigillo ceralacca su un documento ufficiale. */
@@ -1711,6 +1732,21 @@
   }
 
   @media (max-width: 640px) {
+    /* Rete di sicurezza: su telefono la pagina non scorre MAI di lato,
+       qualunque cosa (un dato con una parola lunghissima, un elemento
+       aggiunto in futuro) provi ad allargarla. Le cause note sono
+       corrette alla radice (vedi .griglia e .lotto-testata): questa è
+       l'ultima difesa, non la cura. Serve overflow-x:clip, NON hidden, su
+       html e body insieme: hidden su entrambi trasforma body in un
+       contenitore di scorrimento e rompe position:sticky (la barra dei
+       filtri smetterebbe di restare in cima); clip non crea contenitori.
+       Dove clip non esiste (Safari < 16) resta hidden solo su html, che
+       basta e non tocca lo sticky. Le tabelle dei costi e il confronto
+       hanno un loro scorrimento interno e non sono toccati. */
+    html { overflow-x: hidden; }
+    @supports (overflow: clip) {
+      html, body { overflow-x: clip; }
+    }
     .contenitore { padding: 32px 16px 64px; }
     .lotto-cifre { grid-template-columns: 1fr; }
     /* Sotto i 16px, Safari su iOS ingrandisce automaticamente la pagina
@@ -1976,7 +2012,7 @@
       <p class="eyebrow">Scansione Aste Giudiziarie</p>
       <h1><a href="brochure.pdf" target="_blank" rel="noopener" style="color:inherit;text-decoration:none;">Registro Opportunità</a></h1>
       <p class="sottotitolo">Aste residenziali filtrate per prezzo, distanza e margine potenziale stimato.</p>
-      <p class="versione-pagina">v2.5 · <a href="config.html">Configurazione</a> · aggiornato <strong id="testo-aggiornato">—</strong></p>
+      <p class="versione-pagina">v2.6 · <a href="config.html">Configurazione</a> · aggiornato <strong id="testo-aggiornato">—</strong></p>
     </div>
     <div class="statistiche-compatte">
       <div class="stat-compatta">
@@ -2576,7 +2612,7 @@
   // con centinaia di card pesanti nel DOM, e la lentezza tornava) — la
   // virtualizzazione lo elimina alla radice, il numero di card VERE nel
   // DOM in un dato momento non cresce mai oltre il cuscinetto.
-  const LARGHEZZA_MIN_CARD = 320; // deve combaciare con minmax(320px, ...) del CSS .griglia
+  const LARGHEZZA_MIN_CARD = 320; // deve combaciare con minmax(min(320px, 100%), ...) del CSS .griglia (sotto i 320px c'è comunque 1 colonna, che colonneCorrenti() già garantisce)
   const GAP_GRIGLIA = 16;         // deve combaciare con "gap" del CSS .griglia
   // Alzato da 3 a 8: un cuscinetto più ampio significa che un normale
   // gesto di scroll continuo attraversa il confine di finestra molto
@@ -2924,6 +2960,15 @@
     const d = document.createElement("div");
     d.textContent = testo === null || testo === undefined ? "" : String(testo);
     return d.innerHTML;
+  }
+
+  // Come escapeHtml, ma offre un punto in cui andare a capo dopo ogni "_".
+  // I codici di tipologia (ABITAZIONE_TIPO_ECO, GARAGE_AUTORIMESSA...) non
+  // hanno spazi: sullo schermo stretto di un telefono la colonna del testo
+  // è di ~150px e senza questo la riga si spezzava a metà parola
+  // (ABITAZIONE_TIPO_EC / O) — o, peggio, sforava e allargava la pagina.
+  function conPuntiDiRottura(testo) {
+    return escapeHtml(testo).replace(/_/g, "_<wbr>");
   }
 
   // ==========================================================
@@ -4998,7 +5043,7 @@
           <input type="checkbox" class="checkbox-selezione" aria-label="Seleziona per confronto o azioni multiple" ${astaSelezionate.has(a.id) ? "checked" : ""} onclick="event.stopPropagation()" onkeydown="event.stopPropagation()" onchange="onCambiaSelezione('${a.id}', this.checked)">
           <div class="sigillo ${livello}">${contenutoSigillo}</div>
           <div>
-            <p class="lotto-id">${a.lotto ? "Lotto " + escapeHtml(a.lotto) + " · " : ""}${escapeHtml(a.tipologia)}</p>
+            <p class="lotto-id">${a.lotto ? "Lotto " + escapeHtml(a.lotto) + " · " : ""}${conPuntiDiRottura(a.tipologia)}</p>
             <p class="lotto-comune">${escapeHtml(a.comune)}</p>
             ${eNuova(a.dataInserimento) ? `<span class="badge-nuova" title="Trovata nelle ultime 24 ore">✨ Nuova</span>` : ""}
             ${conclusa ? `<span class="badge-conclusa">🏁 Conclusa</span>` : ""}
@@ -5542,7 +5587,7 @@ ${notaHtml}
         <div class="finestra-dettagli-testata">
           <div class="sigillo ${livello}">${contenutoSigillo}</div>
           <div>
-            <p class="lotto-id">${a.lotto ? "Lotto " + escapeHtml(a.lotto) + " · " : ""}${escapeHtml(a.tipologia)}</p>
+            <p class="lotto-id">${a.lotto ? "Lotto " + escapeHtml(a.lotto) + " · " : ""}${conPuntiDiRottura(a.tipologia)}</p>
             <p class="lotto-comune">${escapeHtml(a.comune)}</p>
             ${eNuova(a.dataInserimento) ? `<span class="badge-nuova" title="Trovata nelle ultime 24 ore">✨ Nuova</span>` : ""}
             ${conclusa ? `<span class="badge-conclusa">🏁 Conclusa</span>` : ""}
