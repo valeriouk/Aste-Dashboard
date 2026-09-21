@@ -1976,7 +1976,7 @@
       <p class="eyebrow">Scansione Aste Giudiziarie</p>
       <h1><a href="brochure.pdf" target="_blank" rel="noopener" style="color:inherit;text-decoration:none;">Registro Opportunità</a></h1>
       <p class="sottotitolo">Aste residenziali filtrate per prezzo, distanza e margine potenziale stimato.</p>
-      <p class="versione-pagina">v2.4 · <a href="config.html">Configurazione</a> · aggiornato <strong id="testo-aggiornato">—</strong></p>
+      <p class="versione-pagina">v2.5 · <a href="config.html">Configurazione</a> · aggiornato <strong id="testo-aggiornato">—</strong></p>
     </div>
     <div class="statistiche-compatte">
       <div class="stat-compatta">
@@ -3056,10 +3056,61 @@
   // aggiornaCardSingola) perché serve anche a chi ricostruisce l'intera
   // griglia con applicaFiltri() invece di patchare la singola card — vedi
   // eseguiImpostaStato/eseguiRimuoviFlag più sotto.
+  // Ogni salvataggio (nota, costi, stella, scarto) ridisegna l'intera
+  // finestra dettagli. Senza questo passaggio, salvare una cosa cancellava
+  // ciò che si stava scrivendo nell'altra: una nota non ancora salvata
+  // quando si salvavano rendita/spese, e viceversa i due campi dei costi
+  // quando si salvava una nota o si toccava la stella. Prima del
+  // ridisegno si prende nota di ciò che è stato scritto e NON è ancora
+  // salvato, poi lo si rimette al suo posto.
+  //  - nota: l'editor si riapre solo se il testo è diverso da quello già
+  //    salvato (dopo il salvataggio della nota stessa i due coincidono e
+  //    l'editor si chiude, come sempre). Il fuoco torna nella nota solo se
+  //    ci stava già: salvando i costi non deve saltarci dentro.
+  //  - costi: i due campi si rimettono se sono stati modificati rispetto
+  //    al valore salvato (se il ridisegno segue il loro stesso
+  //    salvataggio i due valori coincidono: nessun effetto visibile).
+  function catturaModificheInSospeso(contenitore, asta) {
+    const stato = {};
+    const areaNota = contenitore.querySelector(".nota-preferito-editor.aperto textarea");
+    if (areaNota && areaNota.value.trim() !== (asta.notaPreferito || "")) {
+      stato.nota = { testo: areaNota.value, inFocus: document.activeElement === areaNota };
+    }
+    ["input-rendita-", "input-oneri-"].forEach(prefisso => {
+      const campo = contenitore.querySelector(`input[id^="${prefisso}"]`);
+      if (campo && campo.value !== campo.defaultValue) stato[prefisso] = campo.value;
+    });
+    return stato;
+  }
+
+  function ripristinaModificheInSospeso(contenitore, stato) {
+    if (stato.nota) {
+      const bolla = contenitore.querySelector(".nota-preferito-bolla");
+      const editor = contenitore.querySelector(".nota-preferito-editor");
+      const area = editor && editor.querySelector("textarea");
+      if (bolla && area) { // la nota esiste solo se l'asta è ancora preferita o scartata
+        bolla.classList.add("nascosto");
+        editor.classList.add("aperto");
+        area.value = stato.nota.testo;
+        if (stato.nota.inFocus) area.focus();
+      }
+    }
+    ["input-rendita-", "input-oneri-"].forEach(prefisso => {
+      if (stato[prefisso] === undefined) return;
+      const campo = contenitore.querySelector(`input[id^="${prefisso}"]`);
+      if (campo) campo.value = stato[prefisso];
+    });
+  }
+
   function aggiornaFinestraSeApertaSu(id) {
     if (idAstaModaleDettagli === id) {
       const asta = ASTE.find(a => a.id === id);
-      if (asta) document.getElementById("finestra-dettagli-contenuto").innerHTML = contenutoFinestraDettagli(asta);
+      if (asta) {
+        const contenitore = document.getElementById("finestra-dettagli-contenuto");
+        const inSospeso = catturaModificheInSospeso(contenitore, asta);
+        contenitore.innerHTML = contenutoFinestraDettagli(asta);
+        ripristinaModificheInSospeso(contenitore, inSospeso);
+      }
     }
     // Stesso principio, per il confronto: id può comparire in una
     // qualunque delle 2-3 colonne aperte, non solo la prima — un
@@ -3538,6 +3589,32 @@
       return;
     }
     richiediPasswordSeServe(() => eseguiSalvaDatiUtenteCosti(id, renditaValore, oneriValore, campoInput));
+  }
+
+  // Invio dentro uno dei due campi (rendita, spese condominiali) = "Salva e
+  // ricalcola": stessa azione del pulsante, salva entrambi i valori.
+  //
+  // Nessun conflitto con l'Invio delle note, per costruzione: (1) l'Invio
+  // della nota vive sulla textarea (vedi il suo onkeydown) e scatta solo
+  // lì dentro; (2) la scorciatoia "Invio apre la nota" di
+  // gestisciScorciatoieTastiera esce subito se il fuoco è in un INPUT o
+  // TEXTAREA, quindi non vede mai l'Invio premuto in questi due campi.
+  // Dopo il salvataggio la finestra si ridisegna e il fuoco torna libero:
+  // da lì le scorciatoie (frecce, S, X, Invio per la nota) funzionano di
+  // nuovo. Sul telefono il tasto Invio della tastiera numerica (etichettato
+  // "Fine" da enterkeyhint) produce lo stesso evento.
+  //
+  // Un ultimo caso: subito dopo il salvataggio il fuoco è libero, quindi un
+  // SECONDO Invio ravvicinato (doppio tocco, tasto tenuto premuto) sarebbe
+  // letto come "apri la nota" su un'asta preferita o scartata. Per questo i
+  // tasti ripetuti vengono ignorati e la scorciatoia globale resta ferma
+  // per un attimo dopo il salvataggio.
+  let invioGlobaleFermoFinoA = 0;
+  function salvaCostiConInvio(evento, id) {
+    if (evento.key !== "Enter" || evento.isComposing || evento.repeat) return;
+    evento.preventDefault();
+    invioGlobaleFermoFinoA = Date.now() + 700;
+    salvaDatiUtenteCosti(id);
   }
 
   async function eseguiSalvaDatiUtenteCosti(id, renditaValore, oneriValore, campoInput) {
@@ -5283,6 +5360,15 @@ ${notaHtml}
       return;
     }
     if (evento.key === "Enter") {
+      // Fuoco su un pulsante o un link: Invio fa l'azione DI QUEL pulsante
+      // (es. "Salva e ricalcola", la stella, "Annulla" della nota). Prima
+      // questa scorciatoia lo intercettava: su un'asta preferita o scartata
+      // apriva la nota e, con preventDefault, annullava anche il clic del
+      // pulsante — es. non si poteva togliere la stella con Tab+Invio.
+      if (bersaglio.tagName === "BUTTON" || bersaglio.tagName === "A") return;
+      // Né un tasto tenuto premuto né un Invio subito dopo il salvataggio
+      // dei costi (vedi salvaCostiConInvio): non devono aprire la nota.
+      if (evento.repeat || Date.now() < invioGlobaleFermoFinoA) return;
       // Apre e mette a fuoco la nota — solo se l'asta è preferita o
       // scartata (altrimenti la bolla della nota non esiste proprio nel
       // DOM, vedi notaHtml in cartellaLotto/contenutoFinestraDettagli).
@@ -5381,10 +5467,10 @@ ${notaHtml}
         ${nessunDelegato}
         <div class="costi-input-correzioni" onclick="event.stopPropagation()">
           <label>Rendita catastale (€)
-            <input type="number" min="0" step="0.01" id="input-rendita-${a.id}" value="${a.renditaCatastaleUtente ?? ''}" placeholder="es. 450">
+            <input type="number" min="0" step="0.01" id="input-rendita-${a.id}" value="${a.renditaCatastaleUtente ?? ''}" placeholder="es. 450" enterkeyhint="done" onkeydown="salvaCostiConInvio(event, '${a.id}')">
           </label>
           <label>Spese condominiali arretrate (€)
-            <input type="number" min="0" step="0.01" id="input-oneri-${a.id}" value="${a.oneriCondominialiUtente ?? ''}" placeholder="0">
+            <input type="number" min="0" step="0.01" id="input-oneri-${a.id}" value="${a.oneriCondominialiUtente ?? ''}" placeholder="0" enterkeyhint="done" onkeydown="salvaCostiConInvio(event, '${a.id}')">
           </label>
           <button type="button" class="costi-input-salva" onclick="salvaDatiUtenteCosti('${a.id}')">Salva e ricalcola</button>
         </div>
