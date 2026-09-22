@@ -1014,6 +1014,11 @@
      colore del testo a riposo comprometterebbe la leggibilità. */
   .barra-selezione-preferisci:hover { background: rgba(52,110,150,.35); border-color: rgba(52,110,150,.6); }
   .barra-selezione-scarta:hover { background: rgba(180,90,70,.32); border-color: rgba(180,90,70,.55); }
+  /* .barra-selezione-rimuovi non ha un proprio tint colorato: a
+     differenza delle due sopra non è né un'azione "positiva" né
+     "negativa", riporta solo a uno stato neutro — resta con il
+     semplice hover bianco già definito su ".barra-selezione button"
+     qui sopra. */
 
   /* La classe "conclusa" viene comunque assegnata (vedi cartellaLotto in
      JS) ma qui non applichiamo più un'attenuazione: da quando la vista è
@@ -2031,7 +2036,7 @@
       <p class="eyebrow">Scansione Aste Giudiziarie</p>
       <h1><a href="brochure.pdf" target="_blank" rel="noopener" style="color:inherit;text-decoration:none;">Registro Opportunità</a></h1>
       <p class="sottotitolo">Aste residenziali filtrate per prezzo, distanza e margine potenziale stimato.</p>
-      <p class="versione-pagina">v2.7 · <a href="config.html">Configurazione</a> · aggiornato <strong id="testo-aggiornato">—</strong></p>
+      <p class="versione-pagina">v2.8 · <a href="config.html">Configurazione</a> · aggiornato <strong id="testo-aggiornato">—</strong></p>
     </div>
     <div class="statistiche-compatte">
       <div class="stat-compatta">
@@ -2215,7 +2220,7 @@
   </div>
 
   <!-- Conferma prima di un'azione in blocco (Preferisci tutte / Scarta
-       tutte) su PIÙ di SOGLIA_CONFERMA_BLOCCO aste — vedi
+       tutte / Rimuovi flag) su PIÙ di SOGLIA_CONFERMA_BLOCCO aste — vedi
        eseguiAzioneInBlocco. Il fuoco parte su "Annulla": un Invio dato per
        riflesso annulla, non conferma. -->
   <div id="overlay-conferma-blocco" class="overlay-password nascosto" role="dialog" aria-modal="true" aria-labelledby="titolo-conferma-blocco" onclick="if (event.target === this) chiudiConfermaBlocco()">
@@ -2277,6 +2282,7 @@
     <div class="barra-selezione-azioni">
       <button type="button" class="barra-selezione-preferisci" onclick="eseguiAzioneInBlocco('preferito')">★ Preferisci tutte</button>
       <button type="button" class="barra-selezione-scarta" onclick="eseguiAzioneInBlocco('scartato')">✕ Scarta tutte</button>
+      <button type="button" class="barra-selezione-rimuovi" onclick="eseguiAzioneInBlocco(null)">⊖ Rimuovi flag</button>
       <button type="button" id="bottone-confronta" onclick="apriConfronto()">⇄ Confronta</button>
     </div>
     <div class="barra-selezione-azioni">
@@ -3461,6 +3467,14 @@
   // due comportamenti diversi per la stessa azione a seconda di come
   // viene lanciata.
   //
+  // Tre bersagli possibili per "stato": "preferito", "scartato", o null
+  // (il terzo pulsante, "Rimuovi flag" — nessuna etichetta, come un'asta
+  // mai toccata). Stessa pipeline per tutti e tre, nessuna eccezione:
+  // soglia di conferma, istantanea per l'annullamento, stesso rollback.
+  // Le note vengono azzerate allo stesso modo per tutti e tre (stessa
+  // regola già in vigore sulla singola asta: imposta_stato_preferito per
+  // preferito/scartato, rimuovi_flag_preferito per "rimuovi").
+  //
   // PROTEZIONI (aggiunte dopo, per l'errore di chi clicca "Scarta tutte"
   // con centinaia di aste selezionate): (1) sopra SOGLIA_CONFERMA_BLOCCO
   // aste compare una conferma che dice cosa cambierà davvero — quante
@@ -3473,7 +3487,10 @@
   const CHIAVE_ULTIMO_BLOCCO = "aste_ultimo_blocco_v1";
   const VALIDITA_ANNULLA_BLOCCO_MS = 48 * 60 * 60 * 1000;
 
-  let statoBloccoInAttesaDiConferma = null;
+  // undefined = nessuna conferma in sospeso. null è ora un bersaglio
+  // LEGITTIMO (il pulsante "Rimuovi flag"), quindi non può più fare da
+  // sentinella per "niente in sospeso" — da qui undefined, qui e sotto.
+  let statoBloccoInAttesaDiConferma = undefined;
   // Istantanea dell'ULTIMO blocco: {stato, quando, voci: [{id, prec, nota}]}
   // con prec = stato prima del blocco (null = nessuno). Sta anche in
   // localStorage, non solo in memoria: su telefono la pagina può
@@ -3488,7 +3505,7 @@
       const grezzo = localStorage.getItem(CHIAVE_ULTIMO_BLOCCO);
       if (!grezzo) return null;
       const b = JSON.parse(grezzo);
-      const valido = b && (b.stato === "preferito" || b.stato === "scartato") && Array.isArray(b.voci) && b.voci.length > 0
+      const valido = b && (b.stato === "preferito" || b.stato === "scartato" || b.stato === null) && Array.isArray(b.voci) && b.voci.length > 0
         && typeof b.quando === "number" && Date.now() - b.quando < VALIDITA_ANNULLA_BLOCCO_MS;
       if (!valido) { localStorage.removeItem(CHIAVE_ULTIMO_BLOCCO); return null; }
       return b;
@@ -3512,7 +3529,8 @@
     const n = ultimoBlocco.voci.length;
     link.textContent = `↶ Annulla ultimo blocco (${n} ${n === 1 ? "asta" : "aste"})`;
     const quando = new Date(ultimoBlocco.quando).toLocaleString("it-IT", {day: "2-digit", month: "2-digit", hour: "2-digit", minute: "2-digit"});
-    link.title = `Rimette com'erano (stato e note) le aste dell'ultima azione in blocco: ${ultimoBlocco.stato === "scartato" ? "scartate" : "preferite"} il ${quando}. Quelle che hai modificato dopo restano come sono.`;
+    const azioneTesto = ultimoBlocco.stato === "scartato" ? "scartate" : ultimoBlocco.stato === "preferito" ? "preferite" : "rimosse da preferiti/scarti";
+    link.title = `Rimette com'erano (stato e note) le aste dell'ultima azione in blocco: ${azioneTesto} il ${quando}. Quelle che hai modificato dopo restano come sono.`;
   }
 
   // Cosa succederà alle aste selezionate: serve alla conferma, non a
@@ -3524,8 +3542,8 @@
     astaSelezionate.forEach(id => {
       const a = perId.get(id);
       if (!a) return;
-      if (stato === "scartato" && a.preferito) r.daPreferito++;
-      if (stato === "preferito" && a.scartato) r.daScartato++;
+      if ((stato === "scartato" || stato === null) && a.preferito) r.daPreferito++;
+      if ((stato === "preferito" || stato === null) && a.scartato) r.daScartato++;
       if (a.notaPreferito) r.conNota++;
       if (!visibili.has(id)) r.nascoste++;
     });
@@ -3534,33 +3552,49 @@
 
   function mostraConfermaBlocco(stato) {
     const r = analizzaBlocco(stato);
-    const scarta = stato === "scartato";
-    document.getElementById("titolo-conferma-blocco").textContent =
-      scarta ? `Scartare ${r.n} aste?` : `Aggiungere ${r.n} aste ai preferiti?`;
+    // "scarta" | "preferisci" | "rimuovi" — governa titolo, testo del
+    // pulsante e colore. Solo "scarta" resta rosso: le altre due non
+    // tolgono l'asta dalla vista attiva allo stesso modo (la spostano
+    // tra i preferiti, o la riportano neutra) — non è un'azione
+    // "distruttiva" come scartare.
+    const azione = stato === "scartato" ? "scarta" : stato === "preferito" ? "preferisci" : "rimuovi";
+    const titoli = {
+      scarta: `Scartare ${r.n} aste?`,
+      preferisci: `Aggiungere ${r.n} aste ai preferiti?`,
+      rimuovi: `Rimuovere il flag da ${r.n} aste?`,
+    };
+    document.getElementById("titolo-conferma-blocco").textContent = titoli[azione];
     const righe = [];
     if (r.daPreferito) righe.push(r.daPreferito === 1 ? "1 è attualmente preferita e perderà la stella." : `${r.daPreferito} sono attualmente preferite e perderanno la stella.`);
-    if (r.daScartato) righe.push(r.daScartato === 1 ? "1 è attualmente scartata e tornerà tra le preferite." : `${r.daScartato} sono attualmente scartate e torneranno tra le preferite.`);
+    if (r.daScartato) {
+      // per "preferisci" tornano preferite; per "rimuovi" tornano NEUTRE,
+      // non preferite — testo diverso, non lo stesso con una parola cambiata
+      righe.push(azione === "preferisci"
+        ? (r.daScartato === 1 ? "1 è attualmente scartata e tornerà tra le preferite." : `${r.daScartato} sono attualmente scartate e torneranno tra le preferite.`)
+        : (r.daScartato === 1 ? "1 è attualmente scartata e tornerà senza etichetta." : `${r.daScartato} sono attualmente scartate e torneranno senza etichetta.`));
+    }
     if (r.conNota) righe.push(r.conNota === 1 ? "1 ha una nota: verrà cancellata." : `${r.conNota} hanno una nota: verranno cancellate.`);
     if (r.nascoste) righe.push(r.nascoste === 1 ? "1 non è visibile con i filtri attuali." : `${r.nascoste} non sono visibili con i filtri attuali.`);
     righe.push("Subito dopo potrai annullare.");
     document.getElementById("elenco-conferma-blocco").innerHTML = righe.map(t => `<li>${escapeHtml(t)}</li>`).join("");
     const conferma = document.getElementById("bottone-conferma-blocco-ok");
-    conferma.textContent = scarta ? `Scarta ${r.n} aste` : `Preferisci ${r.n} aste`;
-    conferma.classList.toggle("bottone-conferma-scarta", scarta);
+    const testiBottone = {scarta: `Scarta ${r.n} aste`, preferisci: `Preferisci ${r.n} aste`, rimuovi: `Rimuovi il flag da ${r.n} aste`};
+    conferma.textContent = testiBottone[azione];
+    conferma.classList.toggle("bottone-conferma-scarta", azione === "scarta");
     statoBloccoInAttesaDiConferma = stato;
     document.getElementById("overlay-conferma-blocco").classList.remove("nascosto");
     document.getElementById("bottone-conferma-blocco-annulla").focus();
   }
 
   function chiudiConfermaBlocco() {
-    statoBloccoInAttesaDiConferma = null;
+    statoBloccoInAttesaDiConferma = undefined;
     document.getElementById("overlay-conferma-blocco").classList.add("nascosto");
   }
 
   function confermaBloccoDefinitiva() {
     const stato = statoBloccoInAttesaDiConferma;
     chiudiConfermaBlocco();
-    if (!stato || astaSelezionate.size === 0) return;
+    if (stato === undefined || astaSelezionate.size === 0) return;
     richiediPasswordSeServe(() => eseguiAzioneInBloccoOra(stato));
   }
 
@@ -3582,9 +3616,13 @@
       asta.preferito = (stato === "preferito");
       asta.scartato = (stato === "scartato");
       asta.notaPreferito = "";
-      PREFERITI[id] = {stato, nota: ""};
+      // null (rimuovi flag): stessa scelta di eseguiRimuoviFlag per la
+      // singola asta — nessuna voce in PREFERITI, non {stato: null, ...}.
+      if (stato === null) delete PREFERITI[id]; else PREFERITI[id] = {stato, nota: ""};
 
-      const risultato = await accodaScritturaProtetta("imposta_stato_preferito", {password_tentativo: passwordCorrente, id_annuncio_input: id, stato_input: stato});
+      const risultato = stato === null
+        ? await accodaScritturaProtetta("rimuovi_flag_preferito", {password_tentativo: passwordCorrente, id_annuncio_input: id})
+        : await accodaScritturaProtetta("imposta_stato_preferito", {password_tentativo: passwordCorrente, id_annuncio_input: id, stato_input: stato});
       if (risultato.result !== "success") throw new Error(risultato.message || "");
     }));
 
@@ -3618,8 +3656,8 @@
     deselezionaTutto();
 
     const riuscite = ids.length - falliti;
-    const agg = stato === "preferito" ? "preferita" : "scartata";
-    const aggPlurale = stato === "preferito" ? "preferite" : "scartate";
+    const agg = stato === "preferito" ? "preferita" : stato === "scartato" ? "scartata" : "tolta da preferiti/scarti";
+    const aggPlurale = stato === "preferito" ? "preferite" : stato === "scartato" ? "scartate" : "tolte da preferiti/scarti";
     const etichettaRiuscite = riuscite === 1 ? `1 asta ${agg}` : `${riuscite} aste ${aggPlurale}`;
     mostraToast(
       falliti === 0 ? `${etichettaRiuscite}.` : `${etichettaRiuscite}, ${falliti} non riuscite.`,
