@@ -979,6 +979,34 @@
   }
   @keyframes girare-indicatore-refresh { to { transform: rotate(360deg); } }
 
+  /* Overlay bloccante durante un'azione in blocco (Preferisci/Scarta
+     tutte, Rimuovi flag, Annulla) — vedi iniziaAttesaBlocco in JS.
+     .overlay-password gli dà già sfondo/posizione/centratura/z-index
+     corretti (mai visibile insieme a quello, sono in sequenza — nessun
+     conflitto di z-index). Qui solo il contenuto interno, diverso dal
+     riquadro password (nessun campo, nessun pulsante: non si può
+     annullare a metà, vedi il commento su iniziaAttesaBlocco sul
+     perché). */
+  .riquadro-attesa-blocco {
+    background: var(--surface);
+    border-radius: 12px;
+    padding: 32px 28px;
+    max-width: 280px;
+    width: 100%;
+    text-align: center;
+    box-shadow: 0 12px 32px rgba(30,35,32,.25);
+  }
+  .spinner-attesa-blocco {
+    width: 32px;
+    height: 32px;
+    margin: 0 auto 16px;
+    border: 3px solid var(--border);
+    border-top-color: var(--primary);
+    border-radius: 50%;
+    animation: girare-indicatore-refresh .8s linear infinite;
+  }
+  #testo-attesa-blocco { font-size: .88rem; color: var(--ink-muted); margin: 0; }
+
   @media (max-width: 640px) {
     .indicatore-refresh { display: flex; }
   }
@@ -2036,7 +2064,7 @@
       <p class="eyebrow">Scansione Aste Giudiziarie</p>
       <h1><a href="brochure.pdf" target="_blank" rel="noopener" style="color:inherit;text-decoration:none;">Registro Opportunità</a></h1>
       <p class="sottotitolo">Aste residenziali filtrate per prezzo, distanza e margine potenziale stimato.</p>
-      <p class="versione-pagina">v2.8 · <a href="config.html">Configurazione</a> · aggiornato <strong id="testo-aggiornato">—</strong></p>
+      <p class="versione-pagina">v2.9 · <a href="config.html">Configurazione</a> · aggiornato <strong id="testo-aggiornato">—</strong></p>
     </div>
     <div class="statistiche-compatte">
       <div class="stat-compatta">
@@ -2231,6 +2259,18 @@
         <button type="button" class="bottone-password-annulla" id="bottone-conferma-blocco-annulla" onclick="chiudiConfermaBlocco()">Annulla</button>
         <button type="button" class="bottone-password-conferma" id="bottone-conferma-blocco-ok" onclick="confermaBloccoDefinitiva()"></button>
       </div>
+    </div>
+  </div>
+
+  <!-- Overlay di attesa per un'azione in blocco già confermata (o sotto
+       soglia, o un Annulla) — vedi iniziaAttesaBlocco. Nessun onclick sullo
+       sfondo e nessun pulsante dentro: a differenza degli altri overlay di
+       questa pagina non si chiude da chi guarda, solo da iniziaAttesaBlocco
+       stesso quando la scrittura è finita. -->
+  <div id="overlay-attesa-blocco" class="overlay-password nascosto" role="status" aria-live="polite" aria-busy="true">
+    <div class="riquadro-attesa-blocco">
+      <div class="spinner-attesa-blocco" aria-hidden="true"></div>
+      <p id="testo-attesa-blocco"></p>
     </div>
   </div>
 
@@ -3467,6 +3507,97 @@
   // due comportamenti diversi per la stessa azione a seconda di come
   // viene lanciata.
   //
+  // Le scritture del blocco (Preferisci/Scarta/Rimuovi flag/Annulla) NON
+  // passano da accodaScritturaProtetta (la coda seriale usata dai clic
+  // singoli, sempre uno alla volta — vedi il suo commento più sopra):
+  // farle passare da lì significava, per centinaia di aste selezionate,
+  // altrettante richieste di rete in fila una via l'altra, con un'attesa
+  // che cresceva linearmente con quante ne selezionavi (segnalato in
+  // chat). Qui invece corrono in parallelo, ma non tutte insieme (la
+  // stessa preoccupazione di "non bombardare Supabase" del commento su
+  // accodaScritturaProtetta resta valida) — al massimo
+  // LIMITE_CONCORRENZA_BLOCCO alla volta, con eseguiConConcorrenzaLimitata
+  // sotto. È un numero scelto per buon senso, non misurato contro il tuo
+  // Supabase vero: se vedi errori durante un blocco molto grande,
+  // abbassalo; se resta lento anche su selezioni piccole, puoi alzarlo.
+  //
+  // Prima di iniziare, si aspetta comunque che la coda seriale sia vuota
+  // (un clic singolo appena dato su un'altra card, ancora in volo) — per
+  // non sovrapporre le due scritture sulla STESSA riga per errore. Da lì
+  // in poi il blocco non tocca più codaScrittureProtette: usa chiamaRpc
+  // direttamente, e con l'overlay sotto che blocca ogni altro clic, non
+  // può comunque nascere un nuovo clic singolo mentre gira.
+  const LIMITE_CONCORRENZA_BLOCCO = 6;
+
+  // Esegue azione(elemento, indice) per ogni elemento, al massimo `limite`
+  // alla volta invece che uno alla volta (accodaScritturaProtetta) o tutti
+  // insieme (il vecchio Promise.allSettled(...map(...)) di questo blocco).
+  // Ritorna i risultati nello STESSO ordine di `elementi`, ciascuno
+  // {status: "fulfilled"|"rejected", value|reason} — stessa forma di
+  // Promise.allSettled, così il resto della funzione chiamante (che legge
+  // gli esiti per id/indice) non cambia. alProgresso(fatti, totale), se
+  // presente, viene chiamato dopo OGNI elemento completato (in successo o
+  // in errore) — mai più di una volta alla volta, anche con più
+  // lavoratori: ciascuno incrementa il proprio contatore e chiama
+  // alProgresso subito dopo, un lavoratore alla volta esegue quella riga.
+  async function eseguiConConcorrenzaLimitata(elementi, limite, azione, alProgresso) {
+    const risultati = new Array(elementi.length);
+    let completati = 0;
+    let prossimo = 0;
+    async function lavoratore() {
+      while (prossimo < elementi.length) {
+        const indice = prossimo++;
+        try {
+          risultati[indice] = {status: "fulfilled", value: await azione(elementi[indice], indice)};
+        } catch (errore) {
+          risultati[indice] = {status: "rejected", reason: errore};
+        }
+        completati++;
+        if (alProgresso) alProgresso(completati, elementi.length);
+      }
+    }
+    const lavoratori = Array.from({length: Math.min(limite, elementi.length)}, () => lavoratore());
+    await Promise.all(lavoratori);
+    return risultati;
+  }
+
+  // La "clessidra": overlay a schermo intero, niente scorrimento sotto,
+  // niente altri clic possibili (copre tutto, sopra la barra di selezione
+  // e qualunque card) — richiesta esplicitamente in chat per le azioni in
+  // blocco, che con tante aste possono richiedere qualche secondo.
+  // Compare solo se l'attesa supera RITARDO_MOSTRA_ATTESA_MS: un'azione su
+  // poche aste che finisce prima non deve far lampeggiare un overlay per
+  // una frazione di secondo — fastidioso quanto non avere un feedback
+  // affatto per un'attesa vera. Nessun modo di annullarla a metà: una
+  // scrittura già partita non si può "ritirare" a metà strada, e un
+  // pulsante che non fa quello che promette (annullare per davvero) è
+  // peggio di nessun pulsante — se l'attesa risultasse davvero troppo
+  // lunga in pratica, la soluzione è LIMITE_CONCORRENZA_BLOCCO più alto,
+  // non un finto annulla qui.
+  const RITARDO_MOSTRA_ATTESA_MS = 300;
+  let mostraAttesaBloccoTimeout = null;
+
+  function iniziaAttesaBlocco(testoIniziale) {
+    clearTimeout(mostraAttesaBloccoTimeout);
+    aggiornaTestoAttesaBlocco(testoIniziale);
+    mostraAttesaBloccoTimeout = setTimeout(() => {
+      document.getElementById("overlay-attesa-blocco").classList.remove("nascosto");
+      document.body.style.overflow = "hidden"; // la pagina sotto non scorre mentre si aspetta
+    }, RITARDO_MOSTRA_ATTESA_MS);
+  }
+
+  function aggiornaTestoAttesaBlocco(testo) {
+    document.getElementById("testo-attesa-blocco").textContent = testo;
+  }
+
+  function terminaAttesaBlocco() {
+    clearTimeout(mostraAttesaBloccoTimeout);
+    const overlay = document.getElementById("overlay-attesa-blocco");
+    if (overlay.classList.contains("nascosto")) return; // mai mostrato (sotto RITARDO_MOSTRA_ATTESA_MS): niente da rimettere a posto
+    overlay.classList.add("nascosto");
+    document.body.style.overflow = "";
+  }
+
   // Tre bersagli possibili per "stato": "preferito", "scartato", o null
   // (il terzo pulsante, "Rimuovi flag" — nessuna etichetta, come un'asta
   // mai toccata). Stessa pipeline per tutti e tre, nessuna eccezione:
@@ -3609,7 +3740,11 @@
     const ids = Array.from(astaSelezionate);
     const precedenti = new Map(); // id -> stato prima del tentativo, per rollback mirato SOLO sui falliti
 
-    const esiti = await Promise.allSettled(ids.map(async id => {
+    const etichettaAzione = stato === "scartato" ? "Scarto" : stato === "preferito" ? "Aggiunta ai preferiti" : "Rimozione del flag";
+    iniziaAttesaBlocco(`${etichettaAzione}: 0 di ${ids.length}…`);
+    await codaScrittureProtette.catch(() => {}); // non sovrapporsi a un clic singolo appena partito su un'altra card
+
+    const esiti = await eseguiConConcorrenzaLimitata(ids, LIMITE_CONCORRENZA_BLOCCO, async id => {
       const asta = ASTE.find(a => a.id === id);
       if (!asta) return;
       precedenti.set(id, {preferito: asta.preferito, scartato: asta.scartato, notaPreferito: asta.notaPreferito});
@@ -3621,10 +3756,12 @@
       if (stato === null) delete PREFERITI[id]; else PREFERITI[id] = {stato, nota: ""};
 
       const risultato = stato === null
-        ? await accodaScritturaProtetta("rimuovi_flag_preferito", {password_tentativo: passwordCorrente, id_annuncio_input: id})
-        : await accodaScritturaProtetta("imposta_stato_preferito", {password_tentativo: passwordCorrente, id_annuncio_input: id, stato_input: stato});
+        ? await chiamaRpc("rimuovi_flag_preferito", {password_tentativo: passwordCorrente, id_annuncio_input: id})
+        : await chiamaRpc("imposta_stato_preferito", {password_tentativo: passwordCorrente, id_annuncio_input: id, stato_input: stato});
       if (risultato.result !== "success") throw new Error(risultato.message || "");
-    }));
+    }, (fatti, totale) => aggiornaTestoAttesaBlocco(`${etichettaAzione}: ${fatti} di ${totale}…`));
+
+    terminaAttesaBlocco();
 
     let falliti = 0;
     esiti.forEach((esito, indice) => {
@@ -3693,7 +3830,10 @@
     const precedenti = new Map(); // stato locale prima del ripristino, per il rollback dei falliti
     const noteNonRipristinate = new Set();
 
-    const promesse = daRipristinare.map(async v => {
+    iniziaAttesaBlocco(`Ripristino: 0 di ${daRipristinare.length}…`);
+    await codaScrittureProtette.catch(() => {}); // non sovrapporsi a un clic singolo appena partito su un'altra card
+
+    const esiti = await eseguiConConcorrenzaLimitata(daRipristinare, LIMITE_CONCORRENZA_BLOCCO, async v => {
       const a = perId.get(v.id);
       precedenti.set(v.id, {preferito: a.preferito, scartato: a.scartato, notaPreferito: a.notaPreferito});
       a.preferito = v.prec === "preferito";
@@ -3703,17 +3843,17 @@
       else delete PREFERITI[v.id];
 
       if (v.prec === null) {
-        const r = await accodaScritturaProtetta("rimuovi_flag_preferito", {password_tentativo: passwordCorrente, id_annuncio_input: v.id});
+        const r = await chiamaRpc("rimuovi_flag_preferito", {password_tentativo: passwordCorrente, id_annuncio_input: v.id});
         if (r.result !== "success") throw new Error(r.message || "");
         return;
       }
       if (v.prec !== blocco.stato) {
-        const r = await accodaScritturaProtetta("imposta_stato_preferito", {password_tentativo: passwordCorrente, id_annuncio_input: v.id, stato_input: v.prec});
+        const r = await chiamaRpc("imposta_stato_preferito", {password_tentativo: passwordCorrente, id_annuncio_input: v.id, stato_input: v.prec});
         if (r.result !== "success") throw new Error(r.message || "");
       }
       if (v.nota) {
         try {
-          const r = await accodaScritturaProtetta("salva_nota_preferito", {password_tentativo: passwordCorrente, id_annuncio_input: v.id, nota_input: v.nota});
+          const r = await chiamaRpc("salva_nota_preferito", {password_tentativo: passwordCorrente, id_annuncio_input: v.id, nota_input: v.nota});
           if (r.result !== "success") throw new Error(r.message || "");
         } catch (e) {
           // lo stato è già tornato com'era: solo la nota non è stata salvata
@@ -3722,10 +3862,10 @@
           if (PREFERITI[v.id]) PREFERITI[v.id].nota = "";
         }
       }
-    });
+    }, (fatti, totale) => aggiornaTestoAttesaBlocco(`Ripristino: ${fatti} di ${totale}…`));
 
-    applicaFiltri(); // subito: chi annulla vuole vedere le aste tornare al loro posto
-    const esiti = await Promise.allSettled(promesse);
+    terminaAttesaBlocco();
+    applicaFiltri(); // prima si vedeva già qui sotto SUBITO dopo l'avvio (ottimistico, prima che le scritture finissero); con l'overlay sopra a coprire tutto fino alla fine, non c'è più motivo di farlo vedere prima che sia davvero finito
 
     const falliti = [];
     esiti.forEach((esito, indice) => {
@@ -5654,6 +5794,10 @@ ${notaHtml}
   // un tasto modificatore premuto (Ctrl/Cmd/Alt), per non rubare
   // scorciatoie vere del browser (es. Cmd+S "salva pagina").
   function gestisciScorciatoieTastiera(evento) {
+    // Stessa idea del blocco dei clic: mentre si aspetta una scrittura in
+    // blocco, nessuna scorciatoia deve fare nulla — Esc compreso, non c'è
+    // nulla da chiudere qui (vedi il commento su iniziaAttesaBlocco).
+    if (!document.getElementById("overlay-attesa-blocco").classList.contains("nascosto")) return;
     if (evento.key === "Escape" && !document.getElementById("overlay-conferma-blocco").classList.contains("nascosto")) { chiudiConfermaBlocco(); return; }
     if (evento.key === "Escape" && idAstaModaleDettagli !== null) { chiudiDettagliAsta(); return; }
 
