@@ -524,7 +524,7 @@
       <p class="eyebrow">Pannello di controllo</p>
       <h1>Configurazione Scanner</h1>
       <p class="sottotitolo">Ogni sezione mostra lo stato attuale — tocca "Modifica" per cambiarlo, si salva da sola.</p>
-      <p class="versione-pagina">v3.1</p>
+      <p class="versione-pagina">v3.2</p>
     </div>
     <a href="statistiche.html" class="link-torna">Statistiche →</a>
     <a href="index.html" class="link-torna">← Torna al registro</a>
@@ -816,6 +816,13 @@
         <label for="campo-modelli">Cascata modelli, in ordine di priorità (separati da virgola)</label>
         <input type="text" id="campo-modelli" placeholder="gemini-3.7-flash, gemini-3.6-flash">
         <button type="button" class="bottone-secondario" onclick="ripristinaCascataConsigliata()">↺ Ripristina cascata consigliata</button>
+      </div>
+      <div class="campo-form" style="margin-top:18px; padding-top:16px; border-top:1px solid var(--border);">
+        <label class="etichetta-checkbox" style="margin-top:0">
+          <input type="checkbox" id="campo-batch-locale">
+          Usa il batch anche in ricerca locale
+        </label>
+        <p class="nota-campo">Con questa attiva, anche le ricerche locali (non tutta Italia) vengono analizzate in batch invece che una alla volta — stesso sconto sui costi Gemini, ma il risultato non è immediato: arriva con "Controlla batch ora" o al prossimo giro automatico, di norma entro 20-30 minuti, comunque entro le 24 ore che Google garantisce come limite. La ricerca su tutta Italia usa sempre il batch, a prescindere da questa casella.</p>
       </div>
       <div class="finestra-modale-azioni">
         <button type="button" class="bottone-salva-card" id="bottone-salva-modelli" onclick="confermaSalvaCard('modelli')">Salva</button>
@@ -1162,6 +1169,7 @@
       configAttuale.lon_riferimento = Number(config.lon_riferimento ?? 15.0830032);
       configAttuale.raggio_km = Number(config.raggio_km ?? 22);
       configAttuale.cerca_tutta_italia = String(config.cerca_tutta_italia ?? false).toLowerCase() === "true";
+      configAttuale.usa_batch_gemini = String(config.usa_batch_gemini ?? true).toLowerCase() === "true";
 
       const minGrezzo = config.prezzo_base_min;
       configAttuale.prezzo_base_min = (minGrezzo === undefined || Number(minGrezzo) === 0) ? 0 : Number(minGrezzo);
@@ -1255,7 +1263,8 @@
   }
 
   function renderizzaRiepilogoModelli() {
-    document.getElementById("riepilogo-modelli").textContent = configAttuale.cascata_modelli_gemini.join(" → ");
+    const testoBatch = configAttuale.usa_batch_gemini ? "batch anche in locale" : "batch solo su tutta Italia";
+    document.getElementById("riepilogo-modelli").textContent = configAttuale.cascata_modelli_gemini.join(" → ") + " · " + testoBatch;
   }
 
   function renderizzaRiepilogoPianificazioneScanner() {
@@ -1338,6 +1347,7 @@
       aggiornaStatoConteggiaNonAnalizzate();
     } else if (nome === "modelli") {
       document.getElementById("campo-modelli").value = configAttuale.cascata_modelli_gemini.join(", ");
+      document.getElementById("campo-batch-locale").checked = configAttuale.usa_batch_gemini;
     } else if (nome === "pianificazioneScanner") {
       document.getElementById("campo-scanner-attivo").checked = pianificazioneAttuale.scanner_attivo;
       document.querySelectorAll(".checkbox-giorno-scanner").forEach(cb => {
@@ -1423,7 +1433,8 @@
         pausa_tra_aste_secondi: configAttuale.pausa_tra_aste_secondi,
         solo_conteggio: String(configAttuale.solo_conteggio),
         conteggia_non_analizzate: String(configAttuale.conteggia_non_analizzate),
-        cascata_modelli_gemini: JSON.stringify(configAttuale.cascata_modelli_gemini)
+        cascata_modelli_gemini: JSON.stringify(configAttuale.cascata_modelli_gemini),
+        usa_batch_gemini: String(configAttuale.usa_batch_gemini)
       }
     });
   }
@@ -1446,6 +1457,7 @@
     soloConteggio: false,
     conteggiaNonAnalizzate: false,
     cascataModelli: ["gemini-3.7-flash", "gemini-3.6-flash", "gemini-3.5-flash", "gemini-3.5-flash-lite"],
+    usaBatchGemini: true,
     // Pianificazione: lun-ven perché i tribunali (fonte di PVP) non
     // pubblicano nel weekend — un giro sabato/domenica non troverebbe
     // comunque nulla di nuovo. 15 minuti per la verifica batch è lo
@@ -1480,6 +1492,7 @@
     configAttuale.solo_conteggio = VALORI_PREDEFINITI.soloConteggio;
     configAttuale.conteggia_non_analizzate = VALORI_PREDEFINITI.conteggiaNonAnalizzate;
     configAttuale.cascata_modelli_gemini = [...VALORI_PREDEFINITI.cascataModelli];
+    configAttuale.usa_batch_gemini = VALORI_PREDEFINITI.usaBatchGemini;
 
     pianificazioneAttuale.scanner_attivo = VALORI_PREDEFINITI.scannerAttivo;
     pianificazioneAttuale.scanner_giorni = [...VALORI_PREDEFINITI.scannerGiorni];
@@ -1582,6 +1595,7 @@
         return;
       }
       configAttuale.cascata_modelli_gemini = modelli;
+      configAttuale.usa_batch_gemini = document.getElementById("campo-batch-locale").checked;
     } else if (nomeCard === "pianificazioneScanner") {
       const giorni = [...document.querySelectorAll(".checkbox-giorno-scanner:checked")].map(cb => cb.value);
       const orari = [...document.querySelectorAll(".campo-orario-scanner")].map(el => el.value).filter(Boolean);
