@@ -2064,7 +2064,7 @@
       <p class="eyebrow">Scansione Aste Giudiziarie</p>
       <h1><a href="brochure.pdf" target="_blank" rel="noopener" style="color:inherit;text-decoration:none;">Registro Opportunità</a></h1>
       <p class="sottotitolo">Aste residenziali filtrate per prezzo, distanza e margine potenziale stimato.</p>
-      <p class="versione-pagina">v2.9 · <a href="config.html">Configurazione</a> · aggiornato <strong id="testo-aggiornato">—</strong></p>
+      <p class="versione-pagina">v2.10 · <a href="config.html">Configurazione</a> · aggiornato <strong id="testo-aggiornato">—</strong></p>
     </div>
     <div class="statistiche-compatte">
       <div class="stat-compatta">
@@ -6097,8 +6097,25 @@ ${notaHtml}
 
   document.getElementById("ricerca").addEventListener("input", applicaFiltri);
 
+  // Registra la visita a questa pagina — vedi statistiche.html. Sempre in
+  // "fire and forget": non aspetta la risposta e ignora qualunque errore,
+  // una visita non registrata non deve mai rallentare o interrompere
+  // l'uso normale della pagina.
+  function registraVisita(pagina) {
+    fetch(`${SUPABASE_URL}/rest/v1/rpc/registra_visita`, {
+      method: "POST",
+      headers: {
+        "apikey": SUPABASE_ANON_KEY,
+        "Authorization": `Bearer ${SUPABASE_ANON_KEY}`,
+        "Content-Type": "application/json"
+      },
+      body: JSON.stringify({pagina_input: pagina})
+    }).catch(() => {});
+  }
+
   aggiornaLinkAnnullaBlocco();
   provaSbloccoLetturaAutomatico();
+  registraVisita("index");
 </script>
 
 <script>
