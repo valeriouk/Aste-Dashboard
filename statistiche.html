@@ -1,0 +1,673 @@
+<!DOCTYPE html>
+<html lang="it">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Statistiche · Registro Opportunità</title>
+
+<link rel="manifest" href="manifest.json">
+<link rel="icon" href="favicon-32.png" sizes="32x32">
+<link rel="apple-touch-icon" href="apple-touch-icon.png">
+<meta name="theme-color" content="#1e2320">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="default">
+<meta name="apple-mobile-web-app-title" content="Statistiche">
+
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,400;9..144,500;9..144,600&family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500;600&display=swap" rel="stylesheet">
+
+<style>
+  :root {
+    --bg: #eef1ec;
+    --surface: #ffffff;
+    --surface-2: #e3e7e0;
+    --border: #d5dad1;
+    --primary: #234c6a;
+    --primary-soft: rgba(35, 76, 106, .10);
+    --secondary: #a15c3e;
+    --secondary-soft: rgba(161, 92, 62, .10);
+    --danger: #8b3d2e;
+    --danger-soft: rgba(139, 61, 46, .10);
+    --ink: #1e2320;
+    --ink-muted: #5b615a;
+    --ink-faint: #8c9289;
+    --font-display: 'Fraunces', Georgia, serif;
+    --font-body: 'Inter', system-ui, -apple-system, sans-serif;
+    --font-mono: 'JetBrains Mono', ui-monospace, monospace;
+  }
+
+  * { box-sizing: border-box; }
+  html, body { margin: 0; padding: 0; }
+  body {
+    background-color: var(--bg);
+    color: var(--ink);
+    font-family: var(--font-body);
+    line-height: 1.5;
+    -webkit-font-smoothing: antialiased;
+  }
+  a { color: var(--secondary); }
+  ::selection { background: var(--primary-soft); color: var(--ink); }
+  :focus-visible { outline: 2px solid var(--primary); outline-offset: 3px; border-radius: 4px; }
+
+  .nascosto { display: none !important; }
+
+  .contenitore { max-width: 760px; margin: 0 auto; padding: 48px 24px 96px; }
+
+  .intestazione {
+    display: flex;
+    justify-content: space-between;
+    align-items: flex-end;
+    flex-wrap: wrap;
+    gap: 16px;
+    padding-bottom: 32px;
+    margin-bottom: 40px;
+    border-bottom: 1px solid var(--border);
+  }
+  .eyebrow {
+    font-family: var(--font-mono);
+    font-size: .72rem;
+    letter-spacing: .12em;
+    text-transform: uppercase;
+    color: var(--primary);
+    margin: 0 0 10px;
+  }
+  h1 { font-family: var(--font-display); font-size: 2rem; margin: 0 0 8px; }
+  .sottotitolo { color: var(--ink-muted); font-size: .95rem; margin: 0; max-width: 46ch; }
+  .versione-pagina { font-family: var(--font-mono); font-size: .78rem; color: var(--ink-faint); margin: 10px 0 0; }
+  .link-torna {
+    font-family: var(--font-body);
+    font-size: .85rem;
+    font-weight: 500;
+    color: var(--ink-muted);
+    text-decoration: none;
+    white-space: nowrap;
+  }
+  .link-torna:hover { color: var(--primary); }
+
+  .riquadro-gate {
+    max-width: 380px;
+    margin: 40px auto;
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 12px;
+    padding: 32px;
+    text-align: center;
+    box-shadow: 0 1px 2px rgba(30,35,32,.05);
+  }
+  .riquadro-gate h2 { font-family: var(--font-display); font-size: 1.3rem; margin: 0 0 8px; }
+  .riquadro-gate p { color: var(--ink-muted); font-size: .9rem; margin: 0 0 20px; }
+  .riquadro-gate form { display: flex; flex-direction: column; gap: 10px; }
+  .riquadro-gate input[type="password"] {
+    background: var(--bg);
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    padding: 12px 14px;
+    font-family: var(--font-body);
+    font-size: .95rem;
+    color: var(--ink);
+  }
+  .bottone-primario {
+    width: 100%;
+    background: var(--ink);
+    color: var(--surface);
+    border: none;
+    border-radius: 8px;
+    padding: 12px 14px;
+    font-family: var(--font-body);
+    font-size: .9rem;
+    font-weight: 600;
+    cursor: pointer;
+  }
+  .bottone-primario:hover { opacity: .9; }
+  .bottone-secondario {
+    background: var(--secondary-soft);
+    color: var(--secondary);
+    border: none;
+    border-radius: 8px;
+    padding: 8px 14px;
+    font-family: var(--font-body);
+    font-size: .8rem;
+    font-weight: 600;
+    cursor: pointer;
+  }
+  .bottone-secondario:hover { background: rgba(161,92,62,.18); }
+  .messaggio-errore { color: var(--danger); font-size: .85rem; margin-top: 12px; }
+  .messaggio-ok { color: var(--secondary); font-size: .85rem; margin-top: 12px; font-weight: 600; }
+  .messaggio-attesa { color: var(--ink-faint); font-size: .85rem; margin: 0; }
+
+  .stato-caricamento {
+    text-align: center;
+    color: var(--ink-muted);
+    padding: 60px 24px;
+    font-size: .92rem;
+  }
+
+  /* --- sezioni e schede statistiche --- */
+  .sezione {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 12px;
+    padding: 20px 22px;
+    margin-bottom: 20px;
+  }
+  .sezione-titolo { font-family: var(--font-display); font-size: 1.15rem; margin: 0 0 14px; }
+  .sezione-nota { font-size: .78rem; color: var(--ink-faint); margin: 12px 0 0; line-height: 1.45; }
+  .sezione-nota.avviso { color: var(--secondary); }
+
+  .griglia-statistiche { display: grid; grid-template-columns: repeat(auto-fit, minmax(140px, 1fr)); gap: 12px; margin-bottom: 20px; }
+  .scheda-statistica { background: var(--surface); border: 1px solid var(--border); border-radius: 12px; padding: 16px 18px; }
+  .scheda-statistica-numero { font-family: var(--font-display); font-size: 1.7rem; color: var(--primary); margin: 0; line-height: 1.1; }
+  .scheda-statistica-numero.attenzione { color: var(--danger); }
+  .scheda-statistica-etichetta { font-size: .76rem; color: var(--ink-muted); margin: 5px 0 0; }
+
+  /* --- liste a barre --- */
+  .riga-barra { display: flex; align-items: center; gap: 10px; margin-bottom: 8px; font-size: .84rem; }
+  .riga-barra-etichetta { flex: 0 0 42%; color: var(--ink-muted); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+  .riga-barra-traccia { flex: 1; background: var(--surface-2); border-radius: 6px; height: 15px; overflow: hidden; }
+  .riga-barra-riempimento { background: var(--primary); height: 100%; border-radius: 6px; min-width: 3px; }
+  .riga-barra-valore { flex: 0 0 30px; text-align: right; font-family: var(--font-mono); color: var(--ink); font-weight: 600; font-size: .8rem; }
+
+  /* --- ricariche --- */
+  .saldo-stimato { text-align: center; padding: 10px 0 22px; }
+  .saldo-stimato-numero { font-family: var(--font-display); font-size: 2.1rem; color: var(--primary); margin: 0; }
+  .saldo-stimato-numero.negativo { color: var(--danger); }
+  .saldo-stimato-dettaglio { font-size: .78rem; color: var(--ink-faint); margin: 6px 0 0; }
+
+  .campo-form { margin-bottom: 14px; }
+  .campo-form label { display: block; font-size: .82rem; font-weight: 500; color: var(--ink-muted); margin-bottom: 6px; }
+  .campo-form input[type="text"],
+  .campo-form input[type="number"],
+  .campo-form select {
+    width: 100%;
+    min-width: 0;
+    background: var(--bg);
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    padding: 10px 12px;
+    font-family: var(--font-body);
+    font-size: .9rem;
+    color: var(--ink);
+  }
+  .campo-form input[type="number"] { font-family: var(--font-mono); }
+  .riga-form-due { display: flex; gap: 12px; }
+  .riga-form-due .campo-form { flex: 1; }
+
+  .tabella-ricariche { width: 100%; border-collapse: collapse; font-size: .84rem; margin-top: 16px; }
+  .tabella-ricariche th { text-align: left; color: var(--ink-muted); font-weight: 500; padding: 6px 8px; border-bottom: 1px solid var(--border); font-size: .74rem; text-transform: uppercase; letter-spacing: .04em; }
+  .tabella-ricariche td { padding: 9px 8px; border-bottom: 1px solid var(--border); vertical-align: top; }
+  .tabella-ricariche tr:last-child td { border-bottom: none; }
+  .etichetta-tipo { font-weight: 600; }
+  .etichetta-tipo.correzione { color: var(--secondary); }
+  .etichetta-tipo.ricarica { color: var(--primary); }
+
+  .costo-assunto-riga { display: flex; align-items: center; gap: 10px; margin-bottom: 4px; flex-wrap: wrap; }
+  .costo-assunto-riga label { font-size: .82rem; color: var(--ink-muted); }
+  .costo-assunto-riga input { width: 100px; background: var(--bg); border: 1px solid var(--border); border-radius: 8px; padding: 6px 10px; font-family: var(--font-mono); font-size: .85rem; color: var(--ink); }
+</style>
+</head>
+<body>
+
+<div class="contenitore">
+
+  <div class="intestazione">
+    <div>
+      <p class="eyebrow">Pannello di controllo</p>
+      <h1>Statistiche</h1>
+      <p class="sottotitolo">Aste, perizie Gemini, costi stimati e visite — solo lettura, tranne il registro ricariche qui sotto.</p>
+      <p class="versione-pagina">v1.0</p>
+    </div>
+    <a href="config.html" class="link-torna">← Torna alla configurazione</a>
+  </div>
+
+  <div id="stato-verifica-automatica" class="riquadro-gate">
+    <h2>Verifica in corso…</h2>
+    <p>Un attimo.</p>
+  </div>
+
+  <div id="schermata-password" class="riquadro-gate nascosto">
+    <h2>Accesso protetto</h2>
+    <p>Stessa password della configurazione.</p>
+    <form onsubmit="return false;">
+      <input type="password" id="campo-password" placeholder="Password" autocomplete="current-password" onkeydown="if(event.key==='Enter') sblocca()">
+      <button class="bottone-primario" onclick="sblocca()">Sblocca</button>
+    </form>
+    <p id="errore-gate" class="messaggio-errore nascosto"></p>
+  </div>
+
+  <div id="schermata-statistiche" class="nascosto">
+
+    <div id="stato-caricamento-statistiche" class="stato-caricamento">Carico le statistiche…</div>
+
+    <div id="contenuto-statistiche" class="nascosto">
+
+      <div class="griglia-statistiche">
+        <div class="scheda-statistica"><p class="scheda-statistica-numero" id="num-totale-aste">—</p><p class="scheda-statistica-etichetta">Aste nel registro</p></div>
+        <div class="scheda-statistica"><p class="scheda-statistica-numero" id="num-da-riprovare">—</p><p class="scheda-statistica-etichetta">Da riprovare</p></div>
+        <div class="scheda-statistica"><p class="scheda-statistica-numero" id="num-punteggio-medio">—</p><p class="scheda-statistica-etichetta">Punteggio medio</p></div>
+        <div class="scheda-statistica"><p class="scheda-statistica-numero" id="num-margine-medio">—</p><p class="scheda-statistica-etichetta">Margine medio stimato</p></div>
+      </div>
+
+      <div class="sezione">
+        <h2 class="sezione-titolo">Per tipologia</h2>
+        <div id="barre-tipologia"></div>
+      </div>
+
+      <div class="sezione">
+        <h2 class="sezione-titolo">Per tribunale</h2>
+        <div id="barre-tribunale"></div>
+      </div>
+
+      <div class="sezione" id="sezione-zona-segnalata">
+        <h2 class="sezione-titolo">Zone segnalate</h2>
+        <div id="barre-zona"></div>
+      </div>
+
+      <div class="sezione">
+        <h2 class="sezione-titolo">Distribuzione punteggio flipping</h2>
+        <div id="barre-punteggio"></div>
+      </div>
+
+      <div class="sezione">
+        <h2 class="sezione-titolo">Livello di ristrutturazione suggerito</h2>
+        <div id="barre-ristrutturazione"></div>
+        <p class="sezione-nota">Non compare qui il conteggio degli abusi edilizi: è un giudizio testuale di Gemini, non una categoria — contarlo in modo affidabile richiederebbe un'analisi del testo che questa pagina non fa. La colonna resta comunque visibile nel registro asta per asta.</p>
+      </div>
+
+      <div class="sezione">
+        <h2 class="sezione-titolo">Perizie analizzate da Gemini</h2>
+        <div class="griglia-statistiche" style="margin-bottom:14px;">
+          <div class="scheda-statistica"><p class="scheda-statistica-numero" id="num-perizie-distinte">—</p><p class="scheda-statistica-etichetta">Perizie distinte</p></div>
+          <div class="scheda-statistica"><p class="scheda-statistica-numero" id="num-rapporto-perizie" style="font-size:1.3rem;">—</p><p class="scheda-statistica-etichetta">Perizie ogni 10 aste</p></div>
+        </div>
+        <p id="avviso-rapporto-perizie" class="sezione-nota avviso nascosto"></p>
+        <h3 style="font-family:var(--font-body);font-size:.85rem;font-weight:600;color:var(--ink-muted);margin:16px 0 8px;">Nel tempo (prima volta che ogni perizia è stata vista)</h3>
+        <div id="barre-perizie-tempo"></div>
+        <h3 style="font-family:var(--font-body);font-size:.85rem;font-weight:600;color:var(--ink-muted);margin:16px 0 8px;">Per modello usato</h3>
+        <div id="barre-perizie-modello"></div>
+        <p class="sezione-nota">Conteggio esatto sui documenti distinti (stesso hash = stessa perizia, riusata senza richiamare Gemini) — non una stima. Fa eccezione un caso preciso: due lotti nuovi della stessa procedura scoperti nello STESSO giro in modalità batch non si riconoscono ancora a vicenda, quindi vengono contati come due perizie anche se il documento è identico. Se il rapporto qui sopra è vicino a 1 perizia per asta mentre usi la modalità tutta Italia, è probabilmente questo.</p>
+      </div>
+
+      <div class="sezione">
+        <h2 class="sezione-titolo">Costi Gemini — registro ricariche</h2>
+
+        <div class="saldo-stimato">
+          <p class="saldo-stimato-numero" id="numero-saldo-stimato">—</p>
+          <p class="saldo-stimato-dettaglio" id="dettaglio-saldo-stimato">—</p>
+        </div>
+
+        <div class="costo-assunto-riga">
+          <label for="costo-medio-perizia">Costo medio assunto a perizia (€)</label>
+          <input type="number" id="costo-medio-perizia" step="0.001" min="0" value="0.01" onchange="alCambioCostoAssunto()">
+        </div>
+        <p class="sezione-nota">Stima, non un dato reale: Gemini fattura a token e questa pagina non registra i token di ogni chiamata (per scelta, per non toccare app.py). Regola questo numero se controlli il consumo reale su Google AI Studio e trovi una media diversa — resta solo su questo browser, non viene salvato su Supabase.</p>
+
+        <div style="margin-top:22px; padding-top:18px; border-top:1px solid var(--border);">
+          <div class="riga-form-due">
+            <div class="campo-form">
+              <label for="tipo-ricarica">Tipo</label>
+              <select id="tipo-ricarica">
+                <option value="ricarica">Ricarica (aggiungo credito)</option>
+                <option value="correzione">Correzione (imposto il saldo esatto)</option>
+              </select>
+            </div>
+            <div class="campo-form">
+              <label for="importo-ricarica">Importo (€)</label>
+              <input type="number" id="importo-ricarica" step="0.01" min="0" placeholder="10.00">
+            </div>
+          </div>
+          <div class="campo-form">
+            <label for="nota-ricarica">Nota (facoltativa)</label>
+            <input type="text" id="nota-ricarica" placeholder="Es. ricarica di settembre">
+          </div>
+          <button class="bottone-secondario" onclick="aggiungiRicarica()">+ Aggiungi al registro</button>
+          <p id="messaggio-ricarica" class="nascosto"></p>
+        </div>
+
+        <table class="tabella-ricariche" id="tabella-ricariche">
+          <thead><tr><th>Quando</th><th>Tipo</th><th>Importo</th><th>Nota</th></tr></thead>
+          <tbody id="corpo-tabella-ricariche"></tbody>
+        </table>
+        <p id="messaggio-nessuna-ricarica" class="messaggio-attesa nascosto" style="margin-top:14px;">Nessuna ricarica registrata ancora.</p>
+      </div>
+
+      <div class="sezione">
+        <h2 class="sezione-titolo">Visite</h2>
+        <h3 style="font-family:var(--font-body);font-size:.85rem;font-weight:600;color:var(--ink-muted);margin:0 0 8px;">Registro (index.html)</h3>
+        <div id="barre-visite-index"></div>
+        <h3 style="font-family:var(--font-body);font-size:.85rem;font-weight:600;color:var(--ink-muted);margin:16px 0 8px;">Configurazione (config.html)</h3>
+        <div id="barre-visite-config"></div>
+        <p class="sezione-nota">Un ricaricamento della pagina conta come una nuova visita — nessuna deduplica per persona/sessione. Nessun dato sul paese di provenienza, per scelta.</p>
+      </div>
+
+      <div class="griglia-statistiche">
+        <div class="scheda-statistica"><p class="scheda-statistica-numero" id="num-batch-pendenti">—</p><p class="scheda-statistica-etichetta">Batch Gemini in sospeso</p></div>
+      </div>
+
+    </div>
+
+    <p id="errore-statistiche" class="messaggio-errore nascosto"></p>
+  </div>
+
+</div>
+
+<script>
+  const SUPABASE_URL = "https://igemwrrcmsgaotoqvdzt.supabase.co";
+  const SUPABASE_ANON_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImlnZW13cnJjbXNnYW90b3F2ZHp0Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODkzMDc2MjksImV4cCI6MjEwNDg4MzYyOX0.YkUOBTOb40C-N0TkuDN0o5N7fVvI_qX2F1grUp-SVe8";
+
+  let passwordCorrente = null;
+  let ULTIME_STATISTICHE = null;   // risultato di statistiche_aste, riusato dal calcolo del saldo
+  let ULTIME_RICARICHE = [];       // risultato di leggi_ricariche_gemini
+
+  // Stessa chiave di config.html: chi ha già sbloccato lì non deve
+  // reinserire la password anche qui.
+  const CHIAVE_LOCALSTORAGE_PASSWORD = "aste_password_v2";
+  const CHIAVE_LOCALSTORAGE_COSTO = "aste_costo_medio_perizia";
+
+  function leggiPasswordRicordata() { try { return localStorage.getItem(CHIAVE_LOCALSTORAGE_PASSWORD); } catch (e) { return null; } }
+  function salvaPasswordRicordata(password) { try { localStorage.setItem(CHIAVE_LOCALSTORAGE_PASSWORD, password); } catch (e) {} }
+  function cancellaPasswordRicordata() { try { localStorage.removeItem(CHIAVE_LOCALSTORAGE_PASSWORD); } catch (e) {} }
+
+  function escapeHtml(testo) {
+    const d = document.createElement("div");
+    d.textContent = testo === null || testo === undefined ? "" : String(testo);
+    return d.innerHTML;
+  }
+
+  async function chiamaRpc(nomeFunzione, payload) {
+    const risposta = await fetch(`${SUPABASE_URL}/rest/v1/rpc/${nomeFunzione}`, {
+      method: "POST",
+      headers: {
+        "apikey": SUPABASE_ANON_KEY,
+        "Authorization": `Bearer ${SUPABASE_ANON_KEY}`,
+        "Content-Type": "application/json"
+      },
+      body: JSON.stringify(payload)
+    });
+    return risposta.json();
+  }
+
+  // ============================================================
+  // Cancello password — stesso schema di config.html
+  // ============================================================
+  async function sblocca() {
+    const password = document.getElementById("campo-password").value;
+    const erroreEl = document.getElementById("errore-gate");
+    erroreEl.classList.add("nascosto");
+    if (!password) return;
+    let risultato;
+    try {
+      risultato = await chiamaRpc("verifica_password", {password_tentativo: password});
+    } catch (e) {
+      erroreEl.textContent = "Impossibile contattare Supabase.";
+      erroreEl.classList.remove("nascosto");
+      return;
+    }
+    if (risultato) {
+      passwordCorrente = password;
+      salvaPasswordRicordata(password);
+      mostraContenuto();
+    } else {
+      erroreEl.textContent = "Password errata.";
+      erroreEl.classList.remove("nascosto");
+    }
+  }
+
+  async function provaSbloccoAutomatico() {
+    const passwordRicordata = leggiPasswordRicordata();
+    if (!passwordRicordata) { mostraGateManuale(); return; }
+    try {
+      const risultato = await chiamaRpc("verifica_password", {password_tentativo: passwordRicordata});
+      if (risultato) {
+        passwordCorrente = passwordRicordata;
+        mostraContenuto();
+        return;
+      }
+      cancellaPasswordRicordata();
+    } catch (e) { }
+    mostraGateManuale();
+  }
+
+  function mostraGateManuale() {
+    document.getElementById("stato-verifica-automatica").classList.add("nascosto");
+    document.getElementById("schermata-password").classList.remove("nascosto");
+    document.getElementById("campo-password").focus();
+  }
+
+  function mostraContenuto() {
+    document.getElementById("stato-verifica-automatica").classList.add("nascosto");
+    document.getElementById("schermata-password").classList.add("nascosto");
+    document.getElementById("schermata-statistiche").classList.remove("nascosto");
+    caricaTutto();
+  }
+
+  // ============================================================
+  // Caricamento e rendering
+  // ============================================================
+  async function caricaTutto() {
+    const erroreEl = document.getElementById("errore-statistiche");
+    erroreEl.classList.add("nascosto");
+    try {
+      const [statistiche, ricariche, visite] = await Promise.all([
+        chiamaRpc("statistiche_aste", {password_tentativo: passwordCorrente}),
+        chiamaRpc("leggi_ricariche_gemini", {password_tentativo: passwordCorrente}),
+        chiamaRpc("leggi_visite", {password_tentativo: passwordCorrente}),
+      ]);
+      if (statistiche && statistiche.code) throw new Error(statistiche.message || "Errore dal database");
+
+      ULTIME_STATISTICHE = statistiche;
+      ULTIME_RICARICHE = Array.isArray(ricariche) ? ricariche : [];
+
+      renderizzaStatisticheAste(statistiche);
+      renderizzaVisite(Array.isArray(visite) ? visite : []);
+      renderizzaRicariche();
+
+      document.getElementById("stato-caricamento-statistiche").classList.add("nascosto");
+      document.getElementById("contenuto-statistiche").classList.remove("nascosto");
+    } catch (e) {
+      document.getElementById("stato-caricamento-statistiche").classList.add("nascosto");
+      erroreEl.textContent = "Impossibile caricare le statistiche: " + (e.message || e);
+      erroreEl.classList.remove("nascosto");
+    }
+  }
+
+  function rigaBarra(etichetta, valore, massimo) {
+    const percento = massimo > 0 ? Math.max(2, Math.round((valore / massimo) * 100)) : 0;
+    return `<div class="riga-barra">
+      <span class="riga-barra-etichetta" title="${escapeHtml(etichetta)}">${escapeHtml(etichetta)}</span>
+      <div class="riga-barra-traccia"><div class="riga-barra-riempimento" style="width:${percento}%"></div></div>
+      <span class="riga-barra-valore">${valore}</span>
+    </div>`;
+  }
+
+  function listaBarre(contenitoreId, dati, chiaveEtichetta, chiaveValore, limite) {
+    limite = limite || 8;
+    const el = document.getElementById(contenitoreId);
+    if (!el) return;
+    if (!dati || dati.length === 0) { el.innerHTML = '<p class="messaggio-attesa">Nessun dato.</p>'; return; }
+    const massimo = Math.max(...dati.map(d => Number(d[chiaveValore]) || 0));
+    const mostrati = dati.slice(0, limite);
+    const altri = dati.slice(limite);
+    let html = mostrati.map(d => rigaBarra(d[chiaveEtichetta], d[chiaveValore], massimo)).join("");
+    if (altri.length) {
+      const sommaAltri = altri.reduce((s, d) => s + (Number(d[chiaveValore]) || 0), 0);
+      html += rigaBarra(`+ altri ${altri.length}`, sommaAltri, massimo);
+    }
+    el.innerHTML = html;
+  }
+
+  function renderizzaStatisticheAste(s) {
+    document.getElementById("num-totale-aste").textContent = s.totale ?? "—";
+    const daRiprovareEl = document.getElementById("num-da-riprovare");
+    daRiprovareEl.textContent = s.da_riprovare ?? "—";
+    daRiprovareEl.classList.toggle("attenzione", (s.da_riprovare || 0) > 0);
+    document.getElementById("num-punteggio-medio").textContent = s.punteggio_medio != null ? s.punteggio_medio : "—";
+    document.getElementById("num-margine-medio").textContent = s.margine_medio != null ? `€ ${Number(s.margine_medio).toLocaleString("it-IT")}` : "—";
+
+    listaBarre("barre-tipologia", s.per_tipologia, "tipologia", "n");
+    listaBarre("barre-tribunale", s.per_tribunale, "tribunale", "n");
+
+    const sezioneZona = document.getElementById("sezione-zona-segnalata");
+    if (!s.per_zona_segnalata || s.per_zona_segnalata.length === 0) {
+      sezioneZona.classList.add("nascosto");
+    } else {
+      sezioneZona.classList.remove("nascosto");
+      listaBarre("barre-zona", s.per_zona_segnalata, "zona_segnalata", "n");
+    }
+
+    const ORDINE_FASCE = ["non valutata", "1-20", "21-40", "41-60", "61-80", "81-100"];
+    const distribuzioneOrdinata = [...(s.punteggio_distribuzione || [])].sort(
+      (a, b) => ORDINE_FASCE.indexOf(a.fascia) - ORDINE_FASCE.indexOf(b.fascia)
+    );
+    listaBarre("barre-punteggio", distribuzioneOrdinata, "fascia", "n", 10);
+
+    listaBarre("barre-ristrutturazione", s.per_livello_ristrutturazione, "livello", "n");
+
+    document.getElementById("num-perizie-distinte").textContent = s.perizie_totale_distinte ?? "—";
+    const rapporto = s.totale > 0 ? (s.perizie_totale_distinte / s.totale) * 10 : 0;
+    document.getElementById("num-rapporto-perizie").textContent = s.totale > 0 ? rapporto.toFixed(1) : "—";
+    const avvisoEl = document.getElementById("avviso-rapporto-perizie");
+    if (s.totale > 0 && rapporto >= 9.5) {
+      avvisoEl.textContent = "Vicino a 1 perizia per asta: se usi spesso la modalità tutta Italia, è compatibile col limite del riuso in batch descritto qui sotto.";
+      avvisoEl.classList.remove("nascosto");
+    } else {
+      avvisoEl.classList.add("nascosto");
+    }
+
+    listaBarre("barre-perizie-tempo", s.perizie_nel_tempo, "giorno", "n", 14);
+    listaBarre("barre-perizie-modello", s.perizie_per_modello, "modello", "n");
+
+    document.getElementById("num-batch-pendenti").textContent = s.batch_pendenti ?? "—";
+  }
+
+  function renderizzaVisite(righe) {
+    const perIndex = righe.filter(r => r.pagina === "index").map(r => ({giorno: r.giorno, n: r.visite}));
+    const perConfig = righe.filter(r => r.pagina === "config").map(r => ({giorno: r.giorno, n: r.visite}));
+    listaBarre("barre-visite-index", perIndex, "giorno", "n", 14);
+    listaBarre("barre-visite-config", perConfig, "giorno", "n", 14);
+  }
+
+  // ============================================================
+  // Ricariche e saldo stimato
+  // ============================================================
+  function leggiCostoAssunto() {
+    const campo = document.getElementById("costo-medio-perizia");
+    const valore = parseFloat(campo.value);
+    return isNaN(valore) || valore < 0 ? 0 : valore;
+  }
+
+  function alCambioCostoAssunto() {
+    try { localStorage.setItem(CHIAVE_LOCALSTORAGE_COSTO, document.getElementById("costo-medio-perizia").value); } catch (e) {}
+    renderizzaRicariche();
+  }
+
+  function calcolaSaldoStimato(ricariche, perizieNelTempo, costoMedioPerizia) {
+    // ricariche: già ordinate dal più recente al più vecchio (leggi_ricariche_gemini).
+    // Trovo l'ultima "correzione" (se c'è): è il punto da cui riparte il conteggio.
+    const ultimaCorrezione = ricariche.find(r => r.tipo === "correzione") || null;
+    const dataBase = ultimaCorrezione ? new Date(ultimaCorrezione.creato_il) : null;
+
+    const ricaricheDopo = ricariche.filter(r =>
+      r.tipo === "ricarica" && (!dataBase || new Date(r.creato_il) > dataBase)
+    );
+    const sommaRicariche = ricaricheDopo.reduce((s, r) => s + Number(r.importo_euro), 0);
+    const baseCorrezione = ultimaCorrezione ? Number(ultimaCorrezione.importo_euro) : 0;
+
+    const perizieDaSottrarre = (perizieNelTempo || []).reduce((s, d) => {
+      const giornoData = new Date(d.giorno);
+      if (!dataBase || giornoData > dataBase) return s + Number(d.n);
+      return s;
+    }, 0);
+
+    return {
+      saldo: baseCorrezione + sommaRicariche - perizieDaSottrarre * costoMedioPerizia,
+      perizie_contate: perizieDaSottrarre,
+      dal: ultimaCorrezione ? ultimaCorrezione.creato_il : (ricariche.length ? ricariche[ricariche.length - 1].creato_il : null),
+    };
+  }
+
+  function renderizzaRicariche() {
+    const costo = leggiCostoAssunto();
+    const perizieNelTempo = ULTIME_STATISTICHE ? ULTIME_STATISTICHE.perizie_nel_tempo : [];
+    const { saldo, perizie_contate, dal } = calcolaSaldoStimato(ULTIME_RICARICHE, perizieNelTempo, costo);
+
+    const numeroEl = document.getElementById("numero-saldo-stimato");
+    numeroEl.textContent = `€ ${saldo.toFixed(2)}`;
+    numeroEl.classList.toggle("negativo", saldo < 0);
+    document.getElementById("dettaglio-saldo-stimato").textContent = dal
+      ? `Stima: ${perizie_contate} perizie da allora, a € ${costo.toFixed(3)} l'una`
+      : "Nessuna ricarica registrata ancora — aggiungine una qui sotto";
+
+    const corpo = document.getElementById("corpo-tabella-ricariche");
+    const nessuna = document.getElementById("messaggio-nessuna-ricarica");
+    if (ULTIME_RICARICHE.length === 0) {
+      corpo.innerHTML = "";
+      document.getElementById("tabella-ricariche").classList.add("nascosto");
+      nessuna.classList.remove("nascosto");
+      return;
+    }
+    document.getElementById("tabella-ricariche").classList.remove("nascosto");
+    nessuna.classList.add("nascosto");
+    corpo.innerHTML = ULTIME_RICARICHE.map(r => {
+      const quando = new Date(r.creato_il).toLocaleDateString("it-IT", {day: "2-digit", month: "2-digit", year: "numeric"});
+      const segno = r.tipo === "ricarica" ? "+" : "=";
+      return `<tr>
+        <td>${quando}</td>
+        <td><span class="etichetta-tipo ${r.tipo}">${r.tipo === "ricarica" ? "Ricarica" : "Correzione"}</span></td>
+        <td>${segno} € ${Number(r.importo_euro).toFixed(2)}</td>
+        <td>${escapeHtml(r.nota || "")}</td>
+      </tr>`;
+    }).join("");
+  }
+
+  async function aggiungiRicarica() {
+    const tipo = document.getElementById("tipo-ricarica").value;
+    const importo = parseFloat(document.getElementById("importo-ricarica").value);
+    const nota = document.getElementById("nota-ricarica").value.trim();
+    const msgEl = document.getElementById("messaggio-ricarica");
+    msgEl.classList.remove("nascosto", "messaggio-errore", "messaggio-ok");
+
+    if (isNaN(importo) || importo < 0) {
+      msgEl.textContent = "Inserisci un importo valido.";
+      msgEl.classList.add("messaggio-errore");
+      return;
+    }
+
+    try {
+      const risultato = await chiamaRpc("aggiungi_ricarica_gemini", {
+        password_tentativo: passwordCorrente,
+        tipo_input: tipo,
+        importo_input: importo,
+        nota_input: nota || null,
+      });
+      if (risultato.result !== "success") {
+        msgEl.textContent = risultato.message || "Errore durante il salvataggio.";
+        msgEl.classList.add("messaggio-errore");
+        return;
+      }
+      document.getElementById("importo-ricarica").value = "";
+      document.getElementById("nota-ricarica").value = "";
+      msgEl.textContent = "Aggiunta.";
+      msgEl.classList.add("messaggio-ok");
+
+      const ricaricheAggiornate = await chiamaRpc("leggi_ricariche_gemini", {password_tentativo: passwordCorrente});
+      ULTIME_RICARICHE = Array.isArray(ricaricheAggiornate) ? ricaricheAggiornate : [];
+      renderizzaRicariche();
+    } catch (e) {
+      msgEl.textContent = "Impossibile contattare Supabase.";
+      msgEl.classList.add("messaggio-errore");
+    }
+  }
+
+  // ============================================================
+  // Avvio
+  // ============================================================
+  try {
+    const costoRicordato = localStorage.getItem(CHIAVE_LOCALSTORAGE_COSTO);
+    if (costoRicordato !== null) document.getElementById("costo-medio-perizia").value = costoRicordato;
+  } catch (e) {}
+
+  provaSbloccoAutomatico();
+</script>
+</body>
+</html>
