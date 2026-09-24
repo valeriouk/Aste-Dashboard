@@ -1913,12 +1913,40 @@
     font-weight: 600;
     cursor: pointer;
   }
-  .nota-preferito-salva { background: var(--primary-soft); color: var(--primary); }
-  .nota-preferito-salva:hover { background: rgba(35,76,106,.20); }
+  .nota-preferito-salva, .link-utile-salva { background: var(--primary-soft); color: var(--primary); }
+  .nota-preferito-salva:hover, .link-utile-salva:hover { background: rgba(35,76,106,.20); }
   .nota-preferito-elimina { background: var(--danger-soft); color: var(--danger); }
   .nota-preferito-elimina:hover { background: rgba(139,61,46,.20); }
-  .nota-preferito-annulla { background: none; color: var(--ink-faint); }
-  .nota-preferito-annulla:hover { color: var(--ink-muted); }
+  .nota-preferito-annulla, .link-utile-annulla { background: none; color: var(--ink-faint); }
+  .nota-preferito-annulla:hover, .link-utile-annulla:hover { color: var(--ink-muted); }
+
+  /* Link utili nella finestra dettagli — indipendenti da preferiti/nota
+     (vedi commento su LINK_UTILI in JS per il perché). Riusa .lotto-link
+     per i link stessi e lo stesso schema bolla/editor di .nota-preferito
+     per il modulo di aggiunta, per coerenza visiva senza duplicare CSS. */
+  .sezione-link-utili { margin: 16px 0; }
+  .link-utili-elenco { display: flex; flex-wrap: wrap; gap: 8px 0; margin-bottom: 6px; }
+  .link-utile-riga { display: inline-flex; align-items: center; gap: 2px; }
+  .link-utile-rimuovi {
+    background: none; border: none; color: var(--ink-faint); cursor: pointer;
+    font-size: 1rem; line-height: 1; padding: 4px 6px; margin-right: 4px;
+  }
+  .link-utile-rimuovi:hover { color: var(--danger); }
+  .link-utile-bolla {
+    display: inline-block; background: none; border: 1px dashed var(--border);
+    border-radius: 7px; padding: 7px 14px; font-family: var(--font-body);
+    font-size: .82rem; color: var(--ink-faint); cursor: pointer; margin-top: 2px;
+  }
+  .link-utile-bolla:hover { border-color: var(--ink-faint); color: var(--ink-muted); }
+  .link-utile-editor { display: none; margin-top: 8px; }
+  .link-utile-editor.aperto { display: block; }
+  .link-utile-editor input {
+    display: block; width: 100%; background: var(--surface); border: 1px solid var(--border);
+    border-radius: 8px; padding: 9px 12px; font-family: var(--font-body); font-size: .85rem;
+    color: var(--ink); margin-bottom: 8px;
+  }
+  .link-utile-errore { color: var(--danger); font-size: .78rem; margin: 6px 0 0; }
+  .link-utile-limite { color: var(--ink-faint); font-size: .8rem; font-style: italic; margin: 4px 0 0; }
 
   /* ============================================================
      MODALE PASSWORD — overlay leggero, non un gate a pagina intera come
@@ -2064,7 +2092,7 @@
       <p class="eyebrow">Scansione Aste Giudiziarie</p>
       <h1><a href="brochure.pdf" target="_blank" rel="noopener" style="color:inherit;text-decoration:none;">Registro Opportunità</a></h1>
       <p class="sottotitolo">Aste residenziali filtrate per prezzo, distanza e margine potenziale stimato.</p>
-      <p class="versione-pagina">v2.10 · <a href="config.html">Configurazione</a> · aggiornato <strong id="testo-aggiornato">—</strong></p>
+      <p class="versione-pagina">v2.11 · <a href="config.html">Configurazione</a> · aggiornato <strong id="testo-aggiornato">—</strong></p>
     </div>
     <div class="statistiche-compatte">
       <div class="stat-compatta">
@@ -2553,6 +2581,14 @@
 
   let ASTE = [];
   let PREFERITI = {}; // id_annuncio -> {stato: "preferito"|"scartato", nota: string}
+  // id_annuncio -> [{url, etichetta}, ...] (max 6) — tabella SEPARATA da
+  // preferiti, apposta: i link utili (es. annunci di case simili trovati
+  // durante la valutazione) devono restare disponibili per QUALSIASI
+  // asta, non solo quelle preferite/scartate come la nota, e non devono
+  // rischiare di sparire per un cambio di stella/scarto o un "Rimuovi
+  // flag" — funzioni server che riguardano un'altra tabella e che qui
+  // non vengono toccate in alcun modo.
+  let LINK_UTILI = {};
   // Selezione multipla (confronto, azioni in blocco) — un Set di ID, non
   // un array: aggiunta/rimozione/controllo "è selezionato?" tutti O(1),
   // e duplicati impossibili per costruzione. Sopravvive a filtri e
@@ -4432,6 +4468,12 @@
       .then(r => { if (!r.ok) throw new Error(`HTTP ${r.status}`); return r.json(); })
       .catch(() => []);
 
+    // Stessa cortesia di promessaPreferiti sopra: non deve mai bloccare
+    // né far fallire il caricamento del registro principale.
+    const promessaLinkUtili = fetch(`${SUPABASE_URL}/rest/v1/link_utili_asta?select=*`, {headers: intestazioniLettura})
+      .then(r => { if (!r.ok) throw new Error(`HTTP ${r.status}`); return r.json(); })
+      .catch(() => []);
+
     // return qui: chi chiama avvia() può ora concatenare .then/.catch per
     // sapere DAVVERO quando il caricamento finisce (successo o fallito),
     // invece di indovinare con un timeout fisso — usato dal
@@ -4441,12 +4483,18 @@
     // lo usa.
     return Promise.all([
       conTimeoutRigetta(promessaAste, 20000),
-      conTimeoutRipiego(promessaPreferiti, 8000, [])
-    ]).then(([righeAste, righePreferiti]) => {
+      conTimeoutRipiego(promessaPreferiti, 8000, []),
+      conTimeoutRipiego(promessaLinkUtili, 8000, [])
+    ]).then(([righeAste, righePreferiti, righeLinkUtili]) => {
       PREFERITI = {};
       righePreferiti.forEach(r => {
         const id = r.id_annuncio;
         if (id !== null && id !== undefined) PREFERITI[String(id)] = {stato: r.stato || "", nota: r.nota || ""};
+      });
+      LINK_UTILI = {};
+      righeLinkUtili.forEach(r => {
+        const id = r.id_annuncio;
+        if (id !== null && id !== undefined && Array.isArray(r.links)) LINK_UTILI[String(id)] = r.links;
       });
       ASTE = righeAste.map(normalizzaRiga).map(applicaStatoPreferito);
       document.getElementById("testo-aggiornato").textContent =
@@ -4539,6 +4587,10 @@
     asta.preferito = voce?.stato === "preferito";
     asta.scartato = voce?.stato === "scartato";
     asta.notaPreferito = voce?.nota || "";
+    // Da LINK_UTILI, non da PREFERITI: tabella indipendente, vedi il
+    // commento sulla dichiarazione di LINK_UTILI più sopra — disponibile
+    // per qualunque asta, non solo preferita/scartata.
+    asta.linkUtili = LINK_UTILI[asta.id] || [];
     return asta;
   }
 
@@ -5977,6 +6029,116 @@ ${notaHtml}
       </div>`;
   }
 
+  // Ricava un'etichetta leggibile dal solo dominio quando l'utente non ne
+  // ha scritta una — meglio "immobiliare.it" di un URL lunghissimo troncato
+  // a caso. new URL() lancia se l'input non è un URL valido: non dovrebbe
+  // succedere qui (salvaLinkUtileDaEditor valida prima di salvare), ma per
+  // sicurezza ripiega sull'URL grezzo invece di rompere il rendering.
+  function dominioDaUrl(url) {
+    try { return new URL(url).hostname.replace(/^www\./, ""); } catch (e) { return url; }
+  }
+
+  function bloccoLinkUtili(a) {
+    const link = a.linkUtili || [];
+    const righeLink = link.map((l, i) => `
+      <span class="link-utile-riga">
+        <button type="button" class="link-utile-rimuovi" onclick="rimuoviLinkUtile('${a.id}', ${i})" aria-label="Rimuovi link" title="Rimuovi link">×</button>
+        <a class="lotto-link" href="${escapeHtml(l.url)}" target="_blank" rel="noopener">${escapeHtml(l.etichetta || dominioDaUrl(l.url))}</a>
+      </span>`).join("");
+    const puoAggiungerne = link.length < 6;
+    return `
+      <div class="sezione-link-utili">
+        <h3 class="sezione-costi-titolo">🔗 Link utili</h3>
+        <div class="link-utili-elenco">${righeLink}</div>
+        ${puoAggiungerne ? `
+          <button type="button" class="link-utile-bolla" onclick="apriEditorLinkUtile(this, '${a.id}')">+ Aggiungi link</button>
+          <div class="link-utile-editor">
+            <input type="url" class="link-utile-campo-url" placeholder="https://...">
+            <input type="text" class="link-utile-campo-etichetta" placeholder="Etichetta (facoltativa, es. &quot;Appartamento simile Via Roma&quot;)">
+            <div class="nota-preferito-azioni">
+              <button type="button" class="link-utile-salva" onclick="salvaLinkUtileDaEditor(this, '${a.id}')">Aggiungi</button>
+              <button type="button" class="link-utile-annulla" onclick="chiudiEditorLinkUtile(this)">Annulla</button>
+            </div>
+            <p class="link-utile-errore nascosto"></p>
+          </div>` : `<p class="link-utile-limite">Hai raggiunto il massimo di 6 link per questa asta.</p>`}
+      </div>`;
+  }
+
+  function apriEditorLinkUtile(bottone, id) {
+    const contenitore = bottone.closest(".sezione-link-utili");
+    bottone.classList.add("nascosto");
+    const editor = contenitore.querySelector(".link-utile-editor");
+    editor.classList.add("aperto");
+    editor.querySelector(".link-utile-campo-url")?.focus();
+  }
+
+  function chiudiEditorLinkUtile(bottone) {
+    const contenitore = bottone.closest(".sezione-link-utili");
+    contenitore.querySelector(".link-utile-bolla")?.classList.remove("nascosto");
+    const editor = contenitore.querySelector(".link-utile-editor");
+    editor.classList.remove("aperto");
+    editor.querySelector(".link-utile-campo-url").value = "";
+    editor.querySelector(".link-utile-campo-etichetta").value = "";
+    editor.querySelector(".link-utile-errore").classList.add("nascosto");
+  }
+
+  function salvaLinkUtileDaEditor(bottone, id) {
+    const contenitore = bottone.closest(".sezione-link-utili");
+    const campoUrl = contenitore.querySelector(".link-utile-campo-url");
+    const campoEtichetta = contenitore.querySelector(".link-utile-campo-etichetta");
+    const erroreEl = contenitore.querySelector(".link-utile-errore");
+    const url = campoUrl.value.trim();
+    const etichetta = campoEtichetta.value.trim();
+
+    // Solo http/https: questi diventano un href cliccabile vero — niente
+    // altri schemi (javascript:, data:, ecc.), per quanto improbabile che
+    // capitino qui (pagina protetta da password, non un modulo pubblico).
+    if (!/^https?:\/\/.+/i.test(url)) {
+      erroreEl.textContent = "Inserisci un indirizzo che inizi con http:// o https://";
+      erroreEl.classList.remove("nascosto");
+      return;
+    }
+    const asta = ASTE.find(a => a.id === id);
+    if (!asta) return;
+    if ((asta.linkUtili || []).length >= 6) {
+      erroreEl.textContent = "Massimo 6 link per asta.";
+      erroreEl.classList.remove("nascosto");
+      return;
+    }
+    erroreEl.classList.add("nascosto");
+    richiediPasswordSeServe(() => eseguiSalvaLinkUtili(id, [...(asta.linkUtili || []), {url, etichetta}]));
+  }
+
+  function rimuoviLinkUtile(id, indice) {
+    const asta = ASTE.find(a => a.id === id);
+    if (!asta) return;
+    const nuovi = (asta.linkUtili || []).filter((_, i) => i !== indice);
+    richiediPasswordSeServe(() => eseguiSalvaLinkUtili(id, nuovi));
+  }
+
+  // Stesso schema di eseguiSalvaNota: aggiornamento ottimistico, rollback
+  // al valore precedente se la scrittura fallisce, toast sull'errore.
+  async function eseguiSalvaLinkUtili(id, nuoviLink) {
+    const asta = ASTE.find(a => a.id === id);
+    if (!asta) return;
+    const precedente = asta.linkUtili || [];
+    asta.linkUtili = nuoviLink;
+    LINK_UTILI[id] = nuoviLink;
+    aggiornaFinestraSeApertaSu(id);
+
+    try {
+      const risultato = await accodaScritturaProtetta("imposta_link_utili", {password_tentativo: passwordCorrente, id_annuncio_input: id, links_input: nuoviLink});
+      if (risultato.result !== "success") throw new Error(risultato.message || "");
+    } catch (e) {
+      console.error("imposta_link_utili fallita:", e);
+      gestisceErroreAzionePassword(e);
+      asta.linkUtili = precedente;
+      LINK_UTILI[id] = precedente;
+      aggiornaFinestraSeApertaSu(id);
+      mostraToast(`${indirizzoTroncato(asta.comune)} — non sono riuscita a salvare i link: ${dettaglioErrore(e)}`);
+    }
+  }
+
   function contenutoFinestraDettagli(a) {
     const livello = livelloPunteggio(a.punteggio, a.valoreStima);
     const contenutoSigillo = livello === "non-valutato" ? "Non<br>valutato" : a.punteggio;
@@ -6081,6 +6243,7 @@ ${notaHtml}
           ${a.urlAsta ? `<a class="lotto-link" href="${escapeHtml(a.urlAsta)}" target="_blank" rel="noopener">Apri annuncio PVP</a>` : ""}
           ${a.urlPdf ? `<a class="lotto-link secondario" href="${escapeHtml(a.urlPdf)}" target="_blank" rel="noopener">Apri documento</a>` : ""}
         </div>
+        ${bloccoLinkUtili(a)}
       </div>
     `;
   }
