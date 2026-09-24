@@ -215,8 +215,9 @@
       <p class="eyebrow">Pannello di controllo</p>
       <h1>Statistiche</h1>
       <p class="sottotitolo">Aste, perizie Gemini, costi stimati e visite — solo lettura, tranne il registro ricariche qui sotto.</p>
-      <p class="versione-pagina">v1.0</p>
+      <p class="versione-pagina">v1.1</p>
     </div>
+    <a href="index.html" class="link-torna">← Torna al registro</a>
     <a href="config.html" class="link-torna">← Torna alla configurazione</a>
   </div>
 
@@ -243,6 +244,7 @@
 
       <div class="griglia-statistiche">
         <div class="scheda-statistica"><p class="scheda-statistica-numero" id="num-totale-aste">—</p><p class="scheda-statistica-etichetta">Aste nel registro</p></div>
+        <div class="scheda-statistica"><p class="scheda-statistica-numero" id="num-totale-storico">—</p><p class="scheda-statistica-etichetta">Aste storiche (incluse le eliminate)</p></div>
         <div class="scheda-statistica"><p class="scheda-statistica-numero" id="num-da-riprovare">—</p><p class="scheda-statistica-etichetta">Da riprovare</p></div>
         <div class="scheda-statistica"><p class="scheda-statistica-numero" id="num-punteggio-medio">—</p><p class="scheda-statistica-etichetta">Punteggio medio</p></div>
         <div class="scheda-statistica"><p class="scheda-statistica-numero" id="num-margine-medio">—</p><p class="scheda-statistica-etichetta">Margine medio stimato</p></div>
@@ -498,6 +500,7 @@
 
   function renderizzaStatisticheAste(s) {
     document.getElementById("num-totale-aste").textContent = s.totale ?? "—";
+    document.getElementById("num-totale-storico").textContent = s.totale_storico ?? "—";
     const daRiprovareEl = document.getElementById("num-da-riprovare");
     daRiprovareEl.textContent = s.da_riprovare ?? "—";
     daRiprovareEl.classList.toggle("attenzione", (s.da_riprovare || 0) > 0);
