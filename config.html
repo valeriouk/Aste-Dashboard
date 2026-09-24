@@ -322,8 +322,7 @@
   .campo-form input[type="time"],
   .campo-form select {
     width: 100%;
-    /* Difesa in profondità per input[type="time"] dentro una riga
-       flessibile (vedi .riga-due-orari più sotto): il rendering nativo
+    /* Difesa in profondità per input[type="time"]: il rendering nativo
        di un campo orario su alcuni browser mobile ha una larghezza
        minima legata al proprio contenuto che può superare lo spazio
        assegnato dal flex, invadendo l'elemento accanto (segnalato in
@@ -489,19 +488,6 @@
      esattamente 38px, qualunque cosa il browser decida di fare dentro
      l'input — non serve indovinare come si restringe, la larghezza
      non dipende dal contenuto in primo luogo. */
-  .riga-due-orari { display: grid; grid-template-columns: 1fr 38px; gap: 10px; align-items: center; }
-  .riga-due-orari .campo-form { margin-bottom: 0; min-width: 0; }
-  .bottone-rimuovi-orario {
-    background: var(--danger-soft);
-    color: var(--danger);
-    border: none;
-    border-radius: 8px;
-    width: 100%;
-    cursor: pointer;
-    font-size: 1rem;
-    height: 40px;
-  }
-  .bottone-rimuovi-orario:hover { background: var(--danger); color: var(--surface); }
 
   .nascosto { display: none !important; }
 
@@ -524,7 +510,7 @@
       <p class="eyebrow">Pannello di controllo</p>
       <h1>Configurazione Scanner</h1>
       <p class="sottotitolo">Ogni sezione mostra lo stato attuale — tocca "Modifica" per cambiarlo, si salva da sola.</p>
-      <p class="versione-pagina">v3.2</p>
+      <p class="versione-pagina">v3.3</p>
     </div>
     <a href="statistiche.html" class="link-torna">Statistiche →</a>
     <a href="index.html" class="link-torna">← Torna al registro</a>
@@ -560,7 +546,7 @@
 
       <div class="barra-ripristino">
         <button type="button" class="bottone-secondario" id="bottone-ripristina-predefiniti" onclick="confermaRipristinaPredefiniti()">↺ Ripristina tutti i valori predefiniti</button>
-        <p class="nota-campo">Riporta tutte le sette card qui sotto — area, prezzo, tipologia, altri filtri, modelli, e le due di pianificazione (lun-ven alle 16:00, verifica batch ogni 15 minuti) — ai valori di partenza del progetto. Salva subito, come ogni altra modifica in questa pagina.</p>
+        <p class="nota-campo">Riporta tutte le sei card qui sotto — area, prezzo, tipologia, altri filtri, modelli, e pianificazione (lun-ven alle 16:00) — ai valori di partenza del progetto. Salva subito, come ogni altra modifica in questa pagina.</p>
         <p id="messaggio-ripristina-predefiniti" class="messaggio-salvataggio-card"></p>
       </div>
 
@@ -614,14 +600,6 @@
           <button type="button" class="card-riepilogo-modifica" onclick="apriModale('pianificazioneScanner')">Modifica</button>
         </div>
 
-        <div class="card-riepilogo">
-          <div class="card-riepilogo-testo">
-            <p class="card-riepilogo-titolo">Pianificazione verifica batch</p>
-            <p class="card-riepilogo-valore" id="riepilogo-pianificazione-batch">—</p>
-            <p class="card-riepilogo-extra" id="riepilogo-ultimo-controllo-batch"></p>
-          </div>
-          <button type="button" class="card-riepilogo-modifica" onclick="apriModale('pianificazioneBatch')">Modifica</button>
-        </div>
       </div>
 
       <section class="blocco-semplice">
@@ -822,7 +800,7 @@
           <input type="checkbox" id="campo-batch-locale">
           Usa il batch anche in ricerca locale
         </label>
-        <p class="nota-campo">Con questa attiva, anche le ricerche locali (non tutta Italia) vengono analizzate in batch invece che una alla volta — stesso sconto sui costi Gemini, ma il risultato non è immediato: arriva con "Controlla batch ora" o al prossimo giro automatico, di norma entro 20-30 minuti, comunque entro le 24 ore che Google garantisce come limite. La ricerca su tutta Italia usa sempre il batch, a prescindere da questa casella.</p>
+        <p class="nota-campo">Con questa attiva, anche le ricerche locali (non tutta Italia) vengono analizzate in batch invece che una alla volta — stesso sconto sui costi Gemini, ma il risultato non è immediato: arriva con "Controlla batch ora" o al prossimo controllo automatico, di norma entro un'ora, comunque entro le 24 ore che Google garantisce come limite. La ricerca su tutta Italia usa sempre il batch, a prescindere da questa casella.</p>
       </div>
       <div class="finestra-modale-azioni">
         <button type="button" class="bottone-salva-card" id="bottone-salva-modelli" onclick="confermaSalvaCard('modelli')">Salva</button>
@@ -852,10 +830,16 @@
         <p class="nota-campo">Nessun giorno selezionato = tutti i giorni.</p>
       </div>
       <div class="campo-form">
-        <label>Orari (ora italiana, fino a 2 al giorno)</label>
-        <div id="elenco-orari-scanner"></div>
-        <button type="button" class="bottone-secondario" id="bottone-aggiungi-orario" onclick="aggiungiCampoOrario()">+ Aggiungi un secondo orario</button>
-        <p class="nota-campo">Il controllo vero passa ogni 15 minuti circa — GitHub non garantisce il minuto esatto, quindi l'avvio può avvenire con qualche minuto di scarto rispetto all'orario scelto.</p>
+        <label>Orari (ora italiana)</label>
+        <label class="etichetta-checkbox">
+          <input type="checkbox" id="campo-orario-10" value="10:00">
+          10:00
+        </label>
+        <label class="etichetta-checkbox">
+          <input type="checkbox" id="campo-orario-16" value="16:00">
+          16:00
+        </label>
+        <p class="nota-campo">Due soli orari possibili, uno o entrambi: sono gli unici che il cron esterno è configurato per chiamare. L'avvio arriva puntuale, con al più una ventina di minuti di scarto.</p>
       </div>
       <div class="finestra-modale-azioni">
         <button type="button" class="bottone-salva-card" id="bottone-salva-pianificazioneScanner" onclick="confermaSalvaCard('pianificazioneScanner')">Salva</button>
@@ -865,34 +849,6 @@
   </div>
 </div>
 
-<div id="modale-pianificazioneBatch" class="overlay-modale" onclick="if(event.target===this) chiudiModale('pianificazioneBatch')">
-  <div class="finestra-modale">
-    <div class="finestra-modale-intestazione">
-      <h2>Pianificazione verifica batch</h2>
-      <button type="button" class="finestra-modale-chiudi" onclick="chiudiModale('pianificazioneBatch')" aria-label="Chiudi">×</button>
-    </div>
-    <div class="finestra-modale-corpo">
-      <div class="campo-form">
-        <label for="campo-frequenza-batch">Ogni quanto controllare</label>
-        <select id="campo-frequenza-batch">
-          <option value="15">15 minuti</option>
-          <option value="30">30 minuti</option>
-          <option value="60">1 ora</option>
-          <option value="120">2 ore</option>
-          <option value="240">4 ore</option>
-          <option value="360">6 ore</option>
-          <option value="720">12 ore</option>
-          <option value="1440">24 ore</option>
-        </select>
-        <p class="nota-campo">Rilevante solo in modalità "tutta Italia" (vedi la card "Area di ricerca") — è quella che invia le perizie a Gemini in un unico batch invece che una alla volta, e questo controllo è ciò che ne recupera il risultato quando è pronto. Un controllo più frequente non lo fa finire prima, solo te ne accorgi prima.</p>
-      </div>
-      <div class="finestra-modale-azioni">
-        <button type="button" class="bottone-salva-card" id="bottone-salva-pianificazioneBatch" onclick="confermaSalvaCard('pianificazioneBatch')">Salva</button>
-        <span id="messaggio-salva-pianificazioneBatch" class="messaggio-salvataggio-card"></span>
-      </div>
-    </div>
-  </div>
-</div>
 
 <script>
   const SUPABASE_URL = "https://igemwrrcmsgaotoqvdzt.supabase.co";
@@ -1111,45 +1067,6 @@
     `).join("");
   }
 
-  function rigaOrario(valore) {
-    const div = document.createElement("div");
-    div.className = "riga-due-orari campo-form";
-    div.innerHTML = `
-      <div class="campo-form" style="margin-bottom:0">
-        <input type="time" class="campo-orario-scanner" value="${escapeHtml(valore || '16:00')}">
-      </div>
-      <button type="button" class="bottone-rimuovi-orario" onclick="rimuoviCampoOrario(this)" aria-label="Rimuovi orario">×</button>
-    `;
-    return div;
-  }
-
-  function popolaOrariScanner(orari) {
-    const contenitore = document.getElementById("elenco-orari-scanner");
-    contenitore.innerHTML = "";
-    const valori = (orari && orari.length) ? orari : ["16:00"];
-    valori.forEach(v => contenitore.appendChild(rigaOrario(v)));
-    aggiornaVisibilitaBottoneAggiungiOrario();
-  }
-
-  function aggiungiCampoOrario() {
-    const contenitore = document.getElementById("elenco-orari-scanner");
-    if (contenitore.children.length >= 2) return;
-    contenitore.appendChild(rigaOrario("08:00"));
-    aggiornaVisibilitaBottoneAggiungiOrario();
-  }
-
-  function rimuoviCampoOrario(bottone) {
-    const contenitore = document.getElementById("elenco-orari-scanner");
-    if (contenitore.children.length <= 1) return;
-    bottone.closest(".riga-due-orari").remove();
-    aggiornaVisibilitaBottoneAggiungiOrario();
-  }
-
-  function aggiornaVisibilitaBottoneAggiungiOrario() {
-    const contenitore = document.getElementById("elenco-orari-scanner");
-    document.getElementById("bottone-aggiungi-orario").classList.toggle("nascosto", contenitore.children.length >= 2);
-  }
-
   let configAttuale = {};
   let pianificazioneAttuale = {};
 
@@ -1214,7 +1131,8 @@
           if (Array.isArray(parsed) && parsed.length > 0) pianificazioneAttuale.scanner_orari = parsed;
         } catch (e) {}
       }
-      pianificazioneAttuale.verifica_batch_minuti = Number(config.pianificazione_verifica_batch_minuti ?? 15);
+      // Non più letta da config: costante fissa, vedi VALORI_PREDEFINITI.verificaBatchMinuti.
+      pianificazioneAttuale.verifica_batch_minuti = VALORI_PREDEFINITI.verificaBatchMinuti;
 
       statoEl.classList.add("nascosto");
       document.getElementById("contenuto-config").classList.remove("nascosto");
@@ -1282,18 +1200,6 @@
     el.textContent = `${giorniTesto} alle ${pianificazioneAttuale.scanner_orari.join(" e ")}`;
   }
 
-  function formattaMinutiComeFrequenza(minuti) {
-    if (minuti % 60 === 0) {
-      const ore = minuti / 60;
-      return ore === 1 ? "Ogni ora" : `Ogni ${ore} ore`;
-    }
-    return `Ogni ${minuti} minuti`;
-  }
-
-  function renderizzaRiepilogoPianificazioneBatch() {
-    document.getElementById("riepilogo-pianificazione-batch").textContent = formattaMinutiComeFrequenza(pianificazioneAttuale.verifica_batch_minuti);
-  }
-
   function renderizzaTuttiIRiepiloghi() {
     renderizzaRiepilogoArea();
     renderizzaRiepilogoPrezzo();
@@ -1301,7 +1207,6 @@
     renderizzaRiepilogoAltri();
     renderizzaRiepilogoModelli();
     renderizzaRiepilogoPianificazioneScanner();
-    renderizzaRiepilogoPianificazioneBatch();
   }
 
   async function caricaStatoEsecuzioniPianificazione() {
@@ -1313,9 +1218,7 @@
         return d.toLocaleString("it-IT", {day:"2-digit", month:"2-digit", hour:"2-digit", minute:"2-digit"});
       };
       const scanner = formatta(stato?.scanner?.ultima_esecuzione);
-      const batch = formatta(stato?.verifica_batch?.ultima_esecuzione);
       document.getElementById("riepilogo-ultima-scansione").textContent = scanner ? `Ultima esecuzione: ${scanner}` : "Non ancora eseguita automaticamente";
-      document.getElementById("riepilogo-ultimo-controllo-batch").textContent = batch ? `Ultimo controllo: ${batch}` : "Non ancora eseguito";
     } catch (e) { }
   }
 
@@ -1353,9 +1256,8 @@
       document.querySelectorAll(".checkbox-giorno-scanner").forEach(cb => {
         cb.checked = pianificazioneAttuale.scanner_giorni.includes(cb.value);
       });
-      popolaOrariScanner(pianificazioneAttuale.scanner_orari);
-    } else if (nome === "pianificazioneBatch") {
-      document.getElementById("campo-frequenza-batch").value = String(pianificazioneAttuale.verifica_batch_minuti);
+      document.getElementById("campo-orario-10").checked = pianificazioneAttuale.scanner_orari.includes("10:00");
+      document.getElementById("campo-orario-16").checked = pianificazioneAttuale.scanner_orari.includes("16:00");
     }
     _apriModaleOriginale(nome);
     if (nome === "area") aggiornaStatoTuttaItalia();
@@ -1460,9 +1362,10 @@
     usaBatchGemini: true,
     // Pianificazione: lun-ven perché i tribunali (fonte di PVP) non
     // pubblicano nel weekend — un giro sabato/domenica non troverebbe
-    // comunque nulla di nuovo. 15 minuti per la verifica batch è lo
-    // stesso ritmo che aveva sempre avuto prima che questa impostazione
-    // fosse configurabile.
+    // comunque nulla di nuovo. verificaBatchMinuti non è più una scelta
+    // dell'utente (vedi la chat): resta qui solo come costante fissa,
+    // usata per compilare imposta_pianificazione — verifica_batch.py non
+    // la legge più da Supabase in alcun modo.
     scannerAttivo: true,
     scannerGiorni: ["lun", "mar", "mer", "gio", "ven"],
     scannerOrari: ["16:00"],
@@ -1539,7 +1442,6 @@
       renderizzaRiepilogoAltri();
       renderizzaRiepilogoModelli();
       renderizzaRiepilogoPianificazioneScanner();
-      renderizzaRiepilogoPianificazioneBatch();
     } catch (e) {
       msgEl.textContent = "Richiesta non riuscita. Controlla la connessione e riprova.";
       msgEl.className = "messaggio-salvataggio-card messaggio-errore";
@@ -1598,22 +1500,22 @@
       configAttuale.usa_batch_gemini = document.getElementById("campo-batch-locale").checked;
     } else if (nomeCard === "pianificazioneScanner") {
       const giorni = [...document.querySelectorAll(".checkbox-giorno-scanner:checked")].map(cb => cb.value);
-      const orari = [...document.querySelectorAll(".campo-orario-scanner")].map(el => el.value).filter(Boolean);
+      const orari = [];
+      if (document.getElementById("campo-orario-10").checked) orari.push("10:00");
+      if (document.getElementById("campo-orario-16").checked) orari.push("16:00");
       if (orari.length === 0) {
-        msgEl.textContent = "Serve almeno un orario.";
+        msgEl.textContent = "Scegli almeno un orario.";
         msgEl.className = "messaggio-salvataggio-card messaggio-errore";
         return;
       }
       pianificazioneAttuale.scanner_attivo = document.getElementById("campo-scanner-attivo").checked;
       pianificazioneAttuale.scanner_giorni = giorni;
       pianificazioneAttuale.scanner_orari = orari;
-    } else if (nomeCard === "pianificazioneBatch") {
-      pianificazioneAttuale.verifica_batch_minuti = Number(document.getElementById("campo-frequenza-batch").value);
     }
 
     try {
       let risultato;
-      if (nomeCard === "pianificazioneScanner" || nomeCard === "pianificazioneBatch") {
+      if (nomeCard === "pianificazioneScanner") {
         risultato = await chiamaRpc("imposta_pianificazione", {
           password_tentativo: passwordCorrente,
           scanner_attivo: pianificazioneAttuale.scanner_attivo,
@@ -1631,8 +1533,7 @@
         const funzioniRiepilogo = {
           area: renderizzaRiepilogoArea, prezzo: renderizzaRiepilogoPrezzo,
           tipologia: renderizzaRiepilogoTipologia, altri: renderizzaRiepilogoAltri,
-          modelli: renderizzaRiepilogoModelli, pianificazioneScanner: renderizzaRiepilogoPianificazioneScanner,
-          pianificazioneBatch: renderizzaRiepilogoPianificazioneBatch
+          modelli: renderizzaRiepilogoModelli, pianificazioneScanner: renderizzaRiepilogoPianificazioneScanner
         };
         funzioniRiepilogo[nomeCard]();
         setTimeout(() => chiudiModale(nomeCard), 700);
