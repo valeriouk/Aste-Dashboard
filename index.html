@@ -2102,7 +2102,7 @@
       <p class="eyebrow">Scansione Aste Giudiziarie</p>
       <h1><a href="brochure.pdf" target="_blank" rel="noopener" style="color:inherit;text-decoration:none;">Registro Opportunità</a></h1>
       <p class="sottotitolo">Aste residenziali filtrate per prezzo, distanza e margine potenziale stimato.</p>
-      <p class="versione-pagina">v2.12 · <a href="config.html">Configurazione</a> · aggiornato <strong id="testo-aggiornato">—</strong></p>
+      <p class="versione-pagina">v2.13 · <a href="config.html">Configurazione</a> · aggiornato <strong id="testo-aggiornato">—</strong></p>
     </div>
     <div class="statistiche-compatte">
       <div class="stat-compatta">
@@ -4107,9 +4107,9 @@
   //
   // Un ultimo caso: subito dopo il salvataggio il fuoco è libero, quindi un
   // SECONDO Invio ravvicinato (doppio tocco, tasto tenuto premuto) sarebbe
-  // letto come "apri la nota" su un'asta preferita o scartata. Per questo i
-  // tasti ripetuti vengono ignorati e la scorciatoia globale resta ferma
-  // per un attimo dopo il salvataggio.
+  // letto come "apri la nota". Per questo i tasti ripetuti vengono
+  // ignorati e la scorciatoia globale resta ferma per un attimo dopo il
+  // salvataggio.
   let invioGlobaleFermoFinoA = 0;
   function salvaCostiConInvio(evento, id) {
     if (evento.key !== "Enter" || evento.isComposing || evento.repeat) return;
@@ -5505,7 +5505,7 @@
     // in LINK_UTILI, disponibile per qualunque asta (vedi il commento
     // sulla dichiarazione di LINK_UTILI).
     const notaHtml = `
-        <div class="nota-preferito" onclick="event.stopPropagation()">
+        <div class="nota-preferito" onclick="event.stopPropagation()" onkeydown="event.stopPropagation()">
           <button type="button" class="nota-preferito-bolla${a.notaPreferito ? ' compilata' : ''}" onclick="apriEditorNota(this)">${a.notaPreferito ? escapeHtml(a.notaPreferito) : '+ Aggiungi una nota'}</button>
           <div class="nota-preferito-editor">
             <textarea placeholder="Es. interessante, valuta meglio i costi di ristrutturazione..." onkeydown="if(event.key==='Enter' && !event.shiftKey){ event.preventDefault(); salvaNotaDaEditor(this, '${a.id}'); }">${escapeHtml(a.notaPreferito)}</textarea>
@@ -5568,6 +5568,11 @@ ${notaHtml}
   // mappa, dalla nota di un toast) è un'apertura fresca, e la sequenza
   // va ricatturata da capo sull'elenco filtrato attuale.
   function apriDettagliAsta(id, mantieniSequenzaNavigazione) {
+    // Già aperta proprio su questa asta: non ridisegnare da zero. Un
+    // Invio o un clic ridondanti (es. il fuoco rimasto sulla card sotto
+    // il modale) non devono cancellare una nota o dei costi non ancora
+    // salvati che si stanno scrivendo in questo momento.
+    if (id === idAstaModaleDettagli) return;
     const asta = ASTE.find(a => a.id === id);
     if (!asta) return;
     if (!mantieniSequenzaNavigazione) {
@@ -5899,9 +5904,10 @@ ${notaHtml}
       // Né un tasto tenuto premuto né un Invio subito dopo il salvataggio
       // dei costi (vedi salvaCostiConInvio): non devono aprire la nota.
       if (evento.repeat || Date.now() < invioGlobaleFermoFinoA) return;
-      // Apre e mette a fuoco la nota — solo se l'asta è preferita o
-      // scartata (altrimenti la bolla della nota non esiste proprio nel
-      // DOM, vedi notaHtml in cartellaLotto/contenutoFinestraDettagli).
+      // Apre e mette a fuoco la nota — su QUALUNQUE asta, non più solo se
+      // preferita o scartata: la bolla della nota è sempre nel DOM ora
+      // (vedi notaHtml in cartellaLotto/contenutoFinestraDettagli, non più
+      // condizionato da preferito/scartato).
       // Flusso pensato: S (o X) per segnare l'asta, poi Invio per
       // scrivere subito una nota senza staccare le mani dalla tastiera
       // per cercare il pulsante, poi Invio di nuovo DENTRO la textarea
@@ -5909,7 +5915,7 @@ ${notaHtml}
       // separatamente da questa funzione — qui non arriva perché il
       // controllo su INPUT/TEXTAREA più sopra fa uscire prima).
       const asta = ASTE.find(a => a.id === idAstaModaleDettagli);
-      if (!asta || (!asta.preferito && !asta.scartato)) return;
+      if (!asta) return;
       const bolla = document.querySelector("#finestra-dettagli-contenuto .nota-preferito-bolla");
       if (bolla) { evento.preventDefault(); apriEditorNota(bolla); }
     }
@@ -6168,7 +6174,7 @@ ${notaHtml}
     // in LINK_UTILI, disponibile per qualunque asta (vedi il commento
     // sulla dichiarazione di LINK_UTILI).
     const notaHtml = `
-        <div class="nota-preferito" onclick="event.stopPropagation()">
+        <div class="nota-preferito" onclick="event.stopPropagation()" onkeydown="event.stopPropagation()">
           <button type="button" class="nota-preferito-bolla${a.notaPreferito ? ' compilata' : ''}" onclick="apriEditorNota(this)">${a.notaPreferito ? escapeHtml(a.notaPreferito) : '+ Aggiungi una nota'}</button>
           <div class="nota-preferito-editor">
             <textarea placeholder="Es. interessante, valuta meglio i costi di ristrutturazione..." onkeydown="if(event.key==='Enter' && !event.shiftKey){ event.preventDefault(); salvaNotaDaEditor(this, '${a.id}'); }">${escapeHtml(a.notaPreferito)}</textarea>
