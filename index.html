@@ -1863,28 +1863,38 @@
   .nota-preferito {
     margin: -4px 0 16px;
   }
+  /* Stato "nessuna nota": un pulsante "+ Aggiungi", non un campo di testo
+     vuoto — stesso trattamento di .link-utile-bolla (bordo tratteggiato,
+     sagomato sul contenuto, sfondo trasparente), così non sembra già una
+     casella editabile prima ancora di cliccarci sopra. */
   .nota-preferito-bolla {
-    display: block;
-    width: 100%;
-    text-align: left;
-    background: var(--surface-2);
+    display: inline-block;
+    max-width: 100%;
+    background: none;
     border: 1px dashed var(--border);
-    border-radius: 8px;
-    padding: 8px 12px;
+    border-radius: 7px;
+    padding: 7px 14px;
     font-size: .82rem;
-    color: var(--ink-muted);
-    font-style: italic;
+    color: var(--ink-faint);
+    font-style: normal;
     cursor: pointer;
     overflow: hidden;
     text-overflow: ellipsis;
     white-space: nowrap;
   }
+  /* Stato "nota già scritta": qui invece deve sembrare contenuto, non un
+     pulsante — riquadro pieno a tutta larghezza, come prima. */
   .nota-preferito-bolla.compilata {
+    display: block;
+    width: 100%;
+    text-align: left;
+    background: var(--surface-2);
     border-style: solid;
     border-color: var(--border);
-    font-style: normal;
+    padding: 8px 12px;
+    color: var(--ink-muted);
   }
-  .nota-preferito-bolla:hover { border-color: var(--ink-faint); }
+  .nota-preferito-bolla:hover { border-color: var(--ink-faint); color: var(--ink-muted); }
   .nota-preferito-editor { display: none; }
   .nota-preferito-editor.aperto { display: block; }
   .nota-preferito-editor textarea {
@@ -2092,7 +2102,7 @@
       <p class="eyebrow">Scansione Aste Giudiziarie</p>
       <h1><a href="brochure.pdf" target="_blank" rel="noopener" style="color:inherit;text-decoration:none;">Registro Opportunità</a></h1>
       <p class="sottotitolo">Aste residenziali filtrate per prezzo, distanza e margine potenziale stimato.</p>
-      <p class="versione-pagina">v2.11 · <a href="config.html">Configurazione</a> · aggiornato <strong id="testo-aggiornato">—</strong></p>
+      <p class="versione-pagina">v2.12 · <a href="config.html">Configurazione</a> · aggiornato <strong id="testo-aggiornato">—</strong></p>
     </div>
     <div class="statistiche-compatte">
       <div class="stat-compatta">
@@ -3705,13 +3715,12 @@
   function analizzaBlocco(stato) {
     const perId = new Map(ASTE.map(a => [a.id, a]));
     const visibili = new Set(ultimoElencoFiltrato.map(a => a.id));
-    const r = {n: astaSelezionate.size, daPreferito: 0, daScartato: 0, conNota: 0, nascoste: 0};
+    const r = {n: astaSelezionate.size, daPreferito: 0, daScartato: 0, nascoste: 0};
     astaSelezionate.forEach(id => {
       const a = perId.get(id);
       if (!a) return;
       if ((stato === "scartato" || stato === null) && a.preferito) r.daPreferito++;
       if ((stato === "preferito" || stato === null) && a.scartato) r.daScartato++;
-      if (a.notaPreferito) r.conNota++;
       if (!visibili.has(id)) r.nascoste++;
     });
     return r;
@@ -3740,7 +3749,6 @@
         ? (r.daScartato === 1 ? "1 è attualmente scartata e tornerà tra le preferite." : `${r.daScartato} sono attualmente scartate e torneranno tra le preferite.`)
         : (r.daScartato === 1 ? "1 è attualmente scartata e tornerà senza etichetta." : `${r.daScartato} sono attualmente scartate e torneranno senza etichetta.`));
     }
-    if (r.conNota) righe.push(r.conNota === 1 ? "1 ha una nota: verrà cancellata." : `${r.conNota} hanno una nota: verranno cancellate.`);
     if (r.nascoste) righe.push(r.nascoste === 1 ? "1 non è visibile con i filtri attuali." : `${r.nascoste} non sono visibili con i filtri attuali.`);
     righe.push("Subito dopo potrai annullare.");
     document.getElementById("elenco-conferma-blocco").innerHTML = righe.map(t => `<li>${escapeHtml(t)}</li>`).join("");
@@ -3783,13 +3791,14 @@
     const esiti = await eseguiConConcorrenzaLimitata(ids, LIMITE_CONCORRENZA_BLOCCO, async id => {
       const asta = ASTE.find(a => a.id === id);
       if (!asta) return;
-      precedenti.set(id, {preferito: asta.preferito, scartato: asta.scartato, notaPreferito: asta.notaPreferito});
+      precedenti.set(id, {preferito: asta.preferito, scartato: asta.scartato});
       asta.preferito = (stato === "preferito");
       asta.scartato = (stato === "scartato");
-      asta.notaPreferito = "";
       // null (rimuovi flag): stessa scelta di eseguiRimuoviFlag per la
-      // singola asta — nessuna voce in PREFERITI, non {stato: null, ...}.
-      if (stato === null) delete PREFERITI[id]; else PREFERITI[id] = {stato, nota: ""};
+      // singola asta — nessuna voce in PREFERITI. La nota non è più
+      // qui: vive in LINK_UTILI, indipendente da stato/PREFERITI, e
+      // nessuna azione in blocco la tocca più in alcun modo.
+      if (stato === null) delete PREFERITI[id]; else PREFERITI[id] = {stato};
 
       const risultato = stato === null
         ? await chiamaRpc("rimuovi_flag_preferito", {password_tentativo: passwordCorrente, id_annuncio_input: id})
@@ -3808,20 +3817,21 @@
       const precedente = precedenti.get(id);
       if (!asta || !precedente) return;
       Object.assign(asta, precedente);
-      if (precedente.preferito) PREFERITI[id] = {stato: "preferito", nota: precedente.notaPreferito};
-      else if (precedente.scartato) PREFERITI[id] = {stato: "scartato", nota: precedente.notaPreferito};
+      if (precedente.preferito) PREFERITI[id] = {stato: "preferito"};
+      else if (precedente.scartato) PREFERITI[id] = {stato: "scartato"};
       else delete PREFERITI[id];
     });
 
-    // Istantanea per "Annulla": solo le aste il cui cambio è riuscito e che
-    // avevano qualcosa da perdere (stato diverso, o una nota da cancellare).
+    // Istantanea per "Annulla": solo le aste il cui STATO è cambiato
+    // davvero — la nota non c'entra più, vive altrove e nessuna azione
+    // in blocco la tocca (vedi il commento più sopra).
     const voci = [];
     ids.forEach((id, indice) => {
       const p = precedenti.get(id);
       if (!p || esiti[indice].status !== "fulfilled") return;
       const prec = p.preferito ? "preferito" : (p.scartato ? "scartato" : null);
-      if (prec === stato && !p.notaPreferito) return;
-      voci.push({id, prec, nota: p.notaPreferito || ""});
+      if (prec === stato) return;
+      voci.push({id, prec});
     });
     if (voci.length) impostaUltimoBlocco({stato, quando: Date.now(), voci});
 
@@ -3859,23 +3869,25 @@
     let nonToccate = 0;
     blocco.voci.forEach(v => {
       const a = perId.get(v.id);
-      if (!a || statoDiAsta(a) !== blocco.stato || a.notaPreferito) { nonToccate++; return; }
+      if (!a || statoDiAsta(a) !== blocco.stato) { nonToccate++; return; }
       daRipristinare.push(v);
     });
 
     const precedenti = new Map(); // stato locale prima del ripristino, per il rollback dei falliti
-    const noteNonRipristinate = new Set();
 
     iniziaAttesaBlocco(`Ripristino: 0 di ${daRipristinare.length}…`);
     await codaScrittureProtette.catch(() => {}); // non sovrapporsi a un clic singolo appena partito su un'altra card
 
+    // Nota assente ovunque qui sotto, di proposito: un'azione in blocco
+    // (e quindi anche il suo annullamento) non la tocca mai più — vive in
+    // LINK_UTILI, indipendente da stato/PREFERITI, vedi il commento più
+    // sopra su eseguiAzioneInBloccoOra.
     const esiti = await eseguiConConcorrenzaLimitata(daRipristinare, LIMITE_CONCORRENZA_BLOCCO, async v => {
       const a = perId.get(v.id);
-      precedenti.set(v.id, {preferito: a.preferito, scartato: a.scartato, notaPreferito: a.notaPreferito});
+      precedenti.set(v.id, {preferito: a.preferito, scartato: a.scartato});
       a.preferito = v.prec === "preferito";
       a.scartato = v.prec === "scartato";
-      a.notaPreferito = v.nota;
-      if (v.prec) PREFERITI[v.id] = {stato: v.prec, nota: v.nota};
+      if (v.prec) PREFERITI[v.id] = {stato: v.prec};
       else delete PREFERITI[v.id];
 
       if (v.prec === null) {
@@ -3883,21 +3895,8 @@
         if (r.result !== "success") throw new Error(r.message || "");
         return;
       }
-      if (v.prec !== blocco.stato) {
-        const r = await chiamaRpc("imposta_stato_preferito", {password_tentativo: passwordCorrente, id_annuncio_input: v.id, stato_input: v.prec});
-        if (r.result !== "success") throw new Error(r.message || "");
-      }
-      if (v.nota) {
-        try {
-          const r = await chiamaRpc("salva_nota_preferito", {password_tentativo: passwordCorrente, id_annuncio_input: v.id, nota_input: v.nota});
-          if (r.result !== "success") throw new Error(r.message || "");
-        } catch (e) {
-          // lo stato è già tornato com'era: solo la nota non è stata salvata
-          noteNonRipristinate.add(v.id);
-          a.notaPreferito = "";
-          if (PREFERITI[v.id]) PREFERITI[v.id].nota = "";
-        }
-      }
+      const r = await chiamaRpc("imposta_stato_preferito", {password_tentativo: passwordCorrente, id_annuncio_input: v.id, stato_input: v.prec});
+      if (r.result !== "success") throw new Error(r.message || "");
     }, (fatti, totale) => aggiornaTestoAttesaBlocco(`Ripristino: ${fatti} di ${totale}…`));
 
     terminaAttesaBlocco();
@@ -3914,7 +3913,7 @@
       if (!a || !p) return;
       Object.assign(a, p);
       const s = statoDiAsta(a);
-      if (s) PREFERITI[v.id] = {stato: s, nota: a.notaPreferito};
+      if (s) PREFERITI[v.id] = {stato: s};
       else delete PREFERITI[v.id];
     });
 
@@ -3927,7 +3926,6 @@
     const parti = [ok === 1 ? "1 asta ripristinata" : `${ok} aste ripristinate`];
     if (nonToccate) parti.push(`${nonToccate} lasciate come sono (le avevi cambiate dopo)`);
     if (falliti.length) parti.push(`${falliti.length} non riuscite`);
-    if (noteNonRipristinate.size) parti.push(`${noteNonRipristinate.size} note non ripristinate`);
     mostraToast(parti.join(", ") + ".", undefined, 6000);
   }
 
@@ -3938,12 +3936,11 @@
   async function eseguiImpostaStato(id, stato) {
     const asta = ASTE.find(a => a.id === id);
     if (!asta) return;
-    const precedente = {preferito: asta.preferito, scartato: asta.scartato, notaPreferito: asta.notaPreferito};
+    const precedente = {preferito: asta.preferito, scartato: asta.scartato};
 
     asta.preferito = (stato === "preferito");
     asta.scartato = (stato === "scartato");
-    asta.notaPreferito = "";
-    PREFERITI[id] = {stato, nota: ""};
+    PREFERITI[id] = {stato};
     // Ricalcola subito filtro/ordinamento (non solo la card sul posto):
     // scartare un'asta la fa scivolare in fondo immediatamente, togliere
     // la stella mentre si guardano i Preferiti la fa sparire subito dalla
@@ -3979,8 +3976,8 @@
       console.error("imposta_stato_preferito fallita:", e);
       gestisceErroreAzionePassword(e);
       Object.assign(asta, precedente);
-      if (precedente.preferito) PREFERITI[id] = {stato: "preferito", nota: precedente.notaPreferito};
-      else if (precedente.scartato) PREFERITI[id] = {stato: "scartato", nota: precedente.notaPreferito};
+      if (precedente.preferito) PREFERITI[id] = {stato: "preferito"};
+      else if (precedente.scartato) PREFERITI[id] = {stato: "scartato"};
       else delete PREFERITI[id];
       applicaFiltri();
       aggiornaFinestraSeApertaSu(id);
@@ -3991,11 +3988,10 @@
   async function eseguiRimuoviFlag(id) {
     const asta = ASTE.find(a => a.id === id);
     if (!asta) return;
-    const precedente = {preferito: asta.preferito, scartato: asta.scartato, notaPreferito: asta.notaPreferito};
+    const precedente = {preferito: asta.preferito, scartato: asta.scartato};
 
     asta.preferito = false;
     asta.scartato = false;
-    asta.notaPreferito = "";
     delete PREFERITI[id];
     applicaFiltri(); // vedi il commento in eseguiImpostaStato sopra
     aggiornaFinestraSeApertaSu(id);
@@ -4007,8 +4003,8 @@
       console.error("rimuovi_flag_preferito fallita:", e);
       gestisceErroreAzionePassword(e);
       Object.assign(asta, precedente);
-      if (precedente.preferito) PREFERITI[id] = {stato: "preferito", nota: precedente.notaPreferito};
-      else if (precedente.scartato) PREFERITI[id] = {stato: "scartato", nota: precedente.notaPreferito};
+      if (precedente.preferito) PREFERITI[id] = {stato: "preferito"};
+      else if (precedente.scartato) PREFERITI[id] = {stato: "scartato"};
       applicaFiltri();
       aggiornaFinestraSeApertaSu(id);
       mostraToast(`${indirizzoTroncato(asta.comune)} — non sono riuscita a salvare: ${dettaglioErrore(e)}`);
@@ -4052,27 +4048,27 @@
     richiediPasswordSeServe(() => eseguiSalvaNota(id, ""));
   }
 
-  // Salvare una nota vuota non è un'azione diversa: sul server è lo
-  // stesso salva_nota_preferito con nota="" — svuota il testo ma lascia
-  // intatto lo stato preferito/scartato (che si toglie solo dalla
-  // stella/scarto, non da qui).
+  // La nota vive in LINK_UTILI, indipendente da preferito/scartato — non
+  // più in PREFERITI/salva_nota_preferito. Stesso identico schema di
+  // eseguiSalvaLinkUtili: aggiornamento ottimistico, {...spread} per non
+  // toccare l'altro campo (links) della stessa riga, rollback su errore.
   async function eseguiSalvaNota(id, testo) {
     const asta = ASTE.find(a => a.id === id);
     if (!asta) return;
     const precedente = asta.notaPreferito;
 
     asta.notaPreferito = testo;
-    if (PREFERITI[id]) PREFERITI[id].nota = testo;
+    LINK_UTILI[id] = {...(LINK_UTILI[id] || {}), nota: testo};
     aggiornaCardSingola(id);
 
     try {
-      const risultato = await accodaScritturaProtetta("salva_nota_preferito", {password_tentativo: passwordCorrente, id_annuncio_input: id, nota_input: testo});
+      const risultato = await accodaScritturaProtetta("salva_nota_asta", {password_tentativo: passwordCorrente, id_annuncio_input: id, nota_input: testo});
       if (risultato.result !== "success") throw new Error(risultato.message || "");
     } catch (e) {
-      console.error("salva_nota_preferito fallita:", e);
+      console.error("salva_nota_asta fallita:", e);
       gestisceErroreAzionePassword(e);
       asta.notaPreferito = precedente;
-      if (PREFERITI[id]) PREFERITI[id].nota = precedente;
+      LINK_UTILI[id] = {...(LINK_UTILI[id] || {}), nota: precedente};
       aggiornaCardSingola(id);
       mostraToast(`${indirizzoTroncato(asta.comune)} — non sono riuscita a salvare la nota: ${dettaglioErrore(e)}`);
     }
@@ -4486,15 +4482,19 @@
       conTimeoutRipiego(promessaPreferiti, 8000, []),
       conTimeoutRipiego(promessaLinkUtili, 8000, [])
     ]).then(([righeAste, righePreferiti, righeLinkUtili]) => {
+      // stato soltanto: la nota non vive più qui, vedi il commento sulla
+      // dichiarazione di LINK_UTILI più sopra.
       PREFERITI = {};
       righePreferiti.forEach(r => {
         const id = r.id_annuncio;
-        if (id !== null && id !== undefined) PREFERITI[String(id)] = {stato: r.stato || "", nota: r.nota || ""};
+        if (id !== null && id !== undefined) PREFERITI[String(id)] = {stato: r.stato || ""};
       });
+      // nota E link insieme, stessa riga della tabella — indipendenti da
+      // PREFERITI, disponibili per QUALSIASI asta.
       LINK_UTILI = {};
       righeLinkUtili.forEach(r => {
         const id = r.id_annuncio;
-        if (id !== null && id !== undefined && Array.isArray(r.links)) LINK_UTILI[String(id)] = r.links;
+        if (id !== null && id !== undefined) LINK_UTILI[String(id)] = {links: Array.isArray(r.links) ? r.links : [], nota: r.nota || ""};
       });
       ASTE = righeAste.map(normalizzaRiga).map(applicaStatoPreferito);
       document.getElementById("testo-aggiornato").textContent =
@@ -4586,11 +4586,12 @@
     const voce = PREFERITI[asta.id];
     asta.preferito = voce?.stato === "preferito";
     asta.scartato = voce?.stato === "scartato";
-    asta.notaPreferito = voce?.nota || "";
-    // Da LINK_UTILI, non da PREFERITI: tabella indipendente, vedi il
-    // commento sulla dichiarazione di LINK_UTILI più sopra — disponibile
-    // per qualunque asta, non solo preferita/scartata.
-    asta.linkUtili = LINK_UTILI[asta.id] || [];
+    // Nota E link da LINK_UTILI, non da PREFERITI — tabella indipendente
+    // dallo stato preferito/scartato, disponibile per QUALSIASI asta.
+    // Vedi il commento sulla dichiarazione di LINK_UTILI più sopra.
+    const annotazioni = LINK_UTILI[asta.id];
+    asta.notaPreferito = annotazioni?.nota || "";
+    asta.linkUtili = annotazioni?.links || [];
     return asta;
   }
 
@@ -5500,7 +5501,10 @@
     // La nuvoletta compare solo se l'asta è preferita o scartata — una
     // nota senza uno dei due stati non esiste, stessa invarianza già
     // imposta lato server nella funzione salva_nota_preferito sul database.
-    const notaHtml = (a.preferito || a.scartato) ? `
+    // Sempre visibile, indipendente da preferito/scartato — la nota vive
+    // in LINK_UTILI, disponibile per qualunque asta (vedi il commento
+    // sulla dichiarazione di LINK_UTILI).
+    const notaHtml = `
         <div class="nota-preferito" onclick="event.stopPropagation()">
           <button type="button" class="nota-preferito-bolla${a.notaPreferito ? ' compilata' : ''}" onclick="apriEditorNota(this)">${a.notaPreferito ? escapeHtml(a.notaPreferito) : '+ Aggiungi una nota'}</button>
           <div class="nota-preferito-editor">
@@ -5511,7 +5515,7 @@
               <button type="button" class="nota-preferito-annulla" onclick="chiudiEditorNota(this)">Annulla</button>
             </div>
           </div>
-        </div>` : "";
+        </div>`;
 
     return `
       <article class="lotto${conclusa ? ' conclusa' : ''}${a.scartato ? ' scartato' : ''}" id="lotto-${a.id}" onclick="apriDettagliAsta('${a.id}')" tabindex="0" aria-label="Vedi dettagli di ${escapeHtml(a.comune)}" onkeydown="if(event.key==='Enter'){apriDettagliAsta('${a.id}')}">
@@ -6123,7 +6127,7 @@ ${notaHtml}
     if (!asta) return;
     const precedente = asta.linkUtili || [];
     asta.linkUtili = nuoviLink;
-    LINK_UTILI[id] = nuoviLink;
+    LINK_UTILI[id] = {...(LINK_UTILI[id] || {}), links: nuoviLink};
     aggiornaFinestraSeApertaSu(id);
 
     try {
@@ -6133,7 +6137,7 @@ ${notaHtml}
       console.error("imposta_link_utili fallita:", e);
       gestisceErroreAzionePassword(e);
       asta.linkUtili = precedente;
-      LINK_UTILI[id] = precedente;
+      LINK_UTILI[id] = {...(LINK_UTILI[id] || {}), links: precedente};
       aggiornaFinestraSeApertaSu(id);
       mostraToast(`${indirizzoTroncato(asta.comune)} — non sono riuscita a salvare i link: ${dettaglioErrore(e)}`);
     }
@@ -6160,7 +6164,10 @@ ${notaHtml}
       ? `<svg viewBox="0 0 24 24" fill="currentColor"><circle cx="12" cy="12" r="10"/><path d="M8.7 8.7l6.6 6.6m0-6.6l-6.6 6.6" stroke="var(--surface)" stroke-width="1.8" stroke-linecap="round" fill="none"/></svg>`
       : `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"><circle cx="12" cy="12" r="9.2" stroke-linecap="butt"/><path d="M9 9l6 6m0-6l-6 6"/></svg>`;
 
-    const notaHtml = (a.preferito || a.scartato) ? `
+    // Sempre visibile, indipendente da preferito/scartato — la nota vive
+    // in LINK_UTILI, disponibile per qualunque asta (vedi il commento
+    // sulla dichiarazione di LINK_UTILI).
+    const notaHtml = `
         <div class="nota-preferito" onclick="event.stopPropagation()">
           <button type="button" class="nota-preferito-bolla${a.notaPreferito ? ' compilata' : ''}" onclick="apriEditorNota(this)">${a.notaPreferito ? escapeHtml(a.notaPreferito) : '+ Aggiungi una nota'}</button>
           <div class="nota-preferito-editor">
@@ -6171,7 +6178,7 @@ ${notaHtml}
               <button type="button" class="nota-preferito-annulla" onclick="chiudiEditorNota(this)">Annulla</button>
             </div>
           </div>
-        </div>` : "";
+        </div>`;
 
     return `
       <div class="finestra-dettagli-header">
