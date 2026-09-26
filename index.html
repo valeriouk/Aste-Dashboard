@@ -1323,6 +1323,17 @@
     align-items: center;
     justify-content: center;
     padding: 24px;
+    /* tabindex="-1" nell'HTML: prende il fuoco via script quando si apre
+       (vedi apriDettagliAsta), MAI raggiungibile con Tab. Serve perché
+       altrimenti il fuoco resta sulla card di sfondo che ha aperto la
+       finestra — e quella card ha il proprio "Invio apre i dettagli":
+       con le frecce sinistra/destra che cambiano SOLO il contenuto
+       visibile, non il fuoco, un Invio premuto dopo aver navigato
+       riapriva la card ORIGINALE invece di agire su quella che si stava
+       guardando (segnalato in chat). Nessun anello di fuoco visibile
+       qui: non serve un indicatore, serve solo che il fuoco sia nel
+       posto giusto per intercettare la tastiera correttamente. */
+    outline: none;
     /* Invisibile di base (non display:none — quella proprietà non è
        animabile, saltava direttamente da "assente" a "presente" senza
        nessun fotogramma intermedio da cui transizionare). Il ritardo
@@ -2102,7 +2113,7 @@
       <p class="eyebrow">Scansione Aste Giudiziarie</p>
       <h1><a href="brochure.pdf" target="_blank" rel="noopener" style="color:inherit;text-decoration:none;">Registro Opportunità</a></h1>
       <p class="sottotitolo">Aste residenziali filtrate per prezzo, distanza e margine potenziale stimato.</p>
-      <p class="versione-pagina">v2.13 · <a href="config.html">Configurazione</a> · aggiornato <strong id="testo-aggiornato">—</strong></p>
+      <p class="versione-pagina">v2.14 · <a href="config.html">Configurazione</a> · aggiornato <strong id="testo-aggiornato">—</strong></p>
     </div>
     <div class="statistiche-compatte">
       <div class="stat-compatta">
@@ -2344,7 +2355,7 @@
        posto dentro la card, vedi apriDettagliAsta(). Il contenuto viene
        costruito e inserito al volo quando si apre, non tenuto qui in
        partenza: una sola asta alla volta, mai serve prima di allora. -->
-  <div id="overlay-dettagli-asta" class="overlay-dettagli-asta" onclick="if (event.target === this) chiudiDettagliAsta()">
+  <div id="overlay-dettagli-asta" class="overlay-dettagli-asta" tabindex="-1" onclick="if (event.target === this) chiudiDettagliAsta()">
     <div class="finestra-dettagli-asta">
       <div class="finestra-dettagli-maniglia" id="finestra-dettagli-maniglia" aria-hidden="true"></div>
       <div id="finestra-dettagli-contenuto"></div>
@@ -5588,6 +5599,18 @@ ${notaHtml}
     // colpo come prima.
     document.getElementById("overlay-dettagli-asta").classList.add("aperto");
     document.body.style.overflow = "hidden"; // la pagina sotto non scorre mentre la finestra è aperta
+    // Sposta qui il fuoco — sia alla prima apertura sia ad ogni
+    // navigazione con le frecce — così un Invio successivo lo trova
+    // dentro la finestra, non sulla card di sfondo che potrebbe averla
+    // aperta. Vedi il commento su tabindex="-1" nel CSS per il perché.
+    // setTimeout, non una chiamata diretta: quando ad aprire è stato un
+    // clic su una card (tabindex="0"), il browser sposta il fuoco lì
+    // DOPO l'esecuzione di onclick, come sua azione predefinita —
+    // annullerebbe una .focus() chiamata qui dentro sincrona. Rimandarla
+    // di un istante la fa vincere sempre per ultima, verificato: senza
+    // questo accorgimento il fuoco tornava silenziosamente sulla card,
+    // proprio la causa del problema originale.
+    setTimeout(() => document.getElementById("overlay-dettagli-asta").focus(), 0);
   }
 
   // Usata dal pulsante "Aggiungi una nota" nel toast che compare dopo uno
@@ -5598,8 +5621,19 @@ ${notaHtml}
   // dover prima trovare e poi cliccare la bolla "+ Aggiungi una nota".
   function apriDettagliConNotaAperta(id) {
     apriDettagliAsta(id);
-    const bolla = document.querySelector("#finestra-dettagli-contenuto .nota-preferito-bolla");
-    if (bolla) apriEditorNota(bolla);
+    // setTimeout, non una chiamata diretta: apriDettagliAsta sposta il
+    // fuoco sull'overlay con il suo stesso setTimeout(…, 0) — chiamando
+    // apriEditorNota qui in modo sincrono, il fuoco sulla textarea
+    // arriverebbe PRIMA di quello sull'overlay, che lo ruberebbe via
+    // subito dopo (stesso ordine di esecuzione, verificato). Un secondo
+    // setTimeout(…, 0), registrato dopo quello di apriDettagliAsta, gira
+    // dopo di lui — stessa ritardo nominale, ma i timer con lo stesso
+    // ritardo eseguono nell'ordine in cui sono stati registrati: così la
+    // textarea prende il fuoco per ultima, e lo tiene.
+    setTimeout(() => {
+      const bolla = document.querySelector("#finestra-dettagli-contenuto .nota-preferito-bolla");
+      if (bolla) apriEditorNota(bolla);
+    }, 0);
   }
 
   function chiudiDettagliAsta() {
