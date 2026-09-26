@@ -2177,7 +2177,7 @@
       <p class="eyebrow">Scansione Aste Giudiziarie</p>
       <h1><a href="brochure.pdf" target="_blank" rel="noopener" style="color:inherit;text-decoration:none;">Registro Opportunità</a></h1>
       <p class="sottotitolo">Aste residenziali filtrate per prezzo, distanza e margine potenziale stimato.</p>
-      <p class="versione-pagina">v2.19 · <a href="config.html">Configurazione</a> · aggiornato <strong id="testo-aggiornato">—</strong></p>
+      <p class="versione-pagina">v2.20 · <a href="config.html">Configurazione</a> · aggiornato <strong id="testo-aggiornato">—</strong></p>
     </div>
     <div class="statistiche-compatte">
       <div class="stat-compatta">
@@ -2803,6 +2803,31 @@
 
   let mappaLotti = null;
   let gruppoMarcatori = null;
+  // Vera SOLO dopo un trascinamento o uno zoom fatti dall'utente con le
+  // proprie mani (rotellina, pizzico, pulsanti +/-, doppio clic) — mai
+  // per un fitBounds/setView fatto dal codice (vedi
+  // segnalaSpostamentoManualeMappa e ignoraProssimoSpostamentoMappa,
+  // agganciate dentro inizializzaMappaLotti). Una volta vera resta così
+  // per il resto della sessione, anche passando dalla griglia e
+  // tornando alla mappa: da lì in poi renderizzaMappa() aggiorna solo i
+  // marcatori, senza più spostare la vista, finché non si ricarica la
+  // pagina — lo stesso principio già usato per mantieniVista qui sotto,
+  // ma innescato da sé invece che da un singolo pulsante.
+  //
+  // Il modo per distinguere "l'ha spostata il codice" da "l'ha spostata
+  // l'utente" NON è guardare l'evento di Leaflet in cerca di un
+  // originalEvent: verificato con Leaflet vera che in questa versione
+  // (1.9.4) zoomstart e dragstart non lo portano MAI, nemmeno per un
+  // vero zoom con rotellina o un vero trascinamento — quella strada non
+  // regge. Il modo che regge davvero: siamo NOI a sapere sempre quando
+  // stiamo per chiamare fitBounds/setView (un solo punto, dentro
+  // renderizzaMappa), quindi segnaliamo quel momento specifico con
+  // questo interruttore e trattiamo ogni ALTRO spostamento (rilevato
+  // con movestart, che scatta in modo uniforme sia per un trascinamento
+  // sia per qualunque tipo di zoom, verificato) come dell'utente, per
+  // esclusione — non serve indovinare la fonte di un singolo evento.
+  let ignoraProssimoSpostamentoMappa = false;
+  let mappaSpostataManualmente = false;
   let ultimoElencoFiltrato = [];
   // Di default nascosti dalla mappa (non dalla griglia, dove hanno già
   // icone chiare su ogni card): il problema segnalato in chat era
@@ -5447,6 +5472,11 @@
     }
   }
 
+  function segnalaSpostamentoManualeMappa() {
+    if (ignoraProssimoSpostamentoMappa) return;
+    mappaSpostataManualmente = true;
+  }
+
   function inizializzaMappaLotti() {
     mappaLotti = L.map("mappa-lotti").setView([37.5078836, 15.0830032], 10);
     L.tileLayer("https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png", {
@@ -5454,6 +5484,10 @@
       maxZoom: 18
     }).addTo(mappaLotti);
     gruppoMarcatori = L.layerGroup().addTo(mappaLotti);
+    // Un solo evento invece di dragstart+zoomstart separati: movestart
+    // scatta comunque per ENTRAMBI (verificato), un solo punto da
+    // agganciare invece di due.
+    mappaLotti.on("movestart", segnalaSpostamentoManualeMappa);
   }
 
   function popupLotto(a, precisa) {
@@ -5634,8 +5668,21 @@
     // faceva "saltare" lo zoom). Ogni altro chiamante (un vero cambio di
     // filtro di ricerca, o la prima apertura della vista mappa) continua a
     // inquadrare il nuovo risultato, comportamento invariato per loro.
-    if (mantieniVista) return;
+    if (mantieniVista || mappaSpostataManualmente) return;
 
+    // Il fitBounds/setView qui sotto scatena SEMPRE un movestart — ma
+    // solo DOPO che questa chiamata è già tornata (verificato con
+    // Leaflet vera: l'evento arriva in modo differito, non durante la
+    // chiamata sincrona stessa, presumibilmente per via dell'animazione
+    // del passaggio). Un semplice "true prima, false subito dopo" arriva
+    // quindi TROPPO TARDI: il flag sarebbe già tornato false nel momento
+    // in cui movestart scatta davvero. Invece resta true per tutta la
+    // durata reale del movimento, e si azzera dentro moveend — verificato
+    // che moveend scatti in modo affidabile anche quando la vista
+    // richiesta coincide già con quella attuale (nessun movimento vero),
+    // quindi non rischia di restare bloccato a true per sempre.
+    ignoraProssimoSpostamentoMappa = true;
+    mappaLotti.once("moveend", () => { ignoraProssimoSpostamentoMappa = false; });
     if (puntiValidi.length > 0) {
       mappaLotti.fitBounds(puntiValidi, {padding: [30, 30], maxZoom: 13});
     } else {
