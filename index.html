@@ -1576,6 +1576,34 @@
      quando manca (la maggior parte dei browser desktop oggi) — tre
      scelte esplicite invece di indovinare quale app usare. */
   .contenitore-condividi { position: relative; display: inline-flex; }
+  /* Finestrella per la nota troncata — sostituisce il title nativo del
+     browser (grigio/giallo, fuori posto rispetto al resto), stesso
+     trattamento chiaro con bordo e ombra già usato per .menu-condividi.
+     position:fixed e coordinate calcolate in JS (mostraTooltipNota):
+     un semplice position:absolute non basterebbe, il bottone della nota
+     può stare ovunque nella griglia, vicino a qualunque bordo dello
+     schermo. */
+  .tooltip-nota {
+    position: fixed;
+    max-width: 280px;
+    background: var(--surface);
+    color: var(--ink);
+    border: 1px solid var(--border);
+    border-radius: 10px;
+    box-shadow: 0 8px 24px rgba(0,0,0,.15);
+    padding: 10px 14px;
+    font-family: var(--font-body);
+    font-size: .82rem;
+    line-height: 1.45;
+    white-space: pre-wrap;
+    word-break: break-word;
+    z-index: 3000;
+    pointer-events: none;
+    opacity: 0;
+    transition: opacity .12s ease;
+  }
+  .tooltip-nota.visibile { opacity: 1; }
+
   .menu-condividi {
     position: absolute;
     top: calc(100% + 8px);
@@ -2149,7 +2177,7 @@
       <p class="eyebrow">Scansione Aste Giudiziarie</p>
       <h1><a href="brochure.pdf" target="_blank" rel="noopener" style="color:inherit;text-decoration:none;">Registro Opportunità</a></h1>
       <p class="sottotitolo">Aste residenziali filtrate per prezzo, distanza e margine potenziale stimato.</p>
-      <p class="versione-pagina">v2.18 · <a href="config.html">Configurazione</a> · aggiornato <strong id="testo-aggiornato">—</strong></p>
+      <p class="versione-pagina">v2.19 · <a href="config.html">Configurazione</a> · aggiornato <strong id="testo-aggiornato">—</strong></p>
     </div>
     <div class="statistiche-compatte">
       <div class="stat-compatta">
@@ -3170,6 +3198,54 @@
   function escapeAttributo(testo) {
     return escapeHtml(testo).replace(/"/g, "&quot;");
   }
+
+  // Finestrella su misura per la nota troncata — un solo elemento
+  // condiviso in tutta la pagina, spostato e riscritto ad ogni
+  // passaggio del mouse invece di crearne uno per card: più leggero,
+  // e non c'è mai bisogno di più di una finestrella visibile insieme.
+  let elementoTooltipNota = null;
+
+  function mostraTooltipNota(bottone) {
+    // Niente finestrella su chi naviga a tocco: lì non esiste un vero
+    // passaggio del mouse, e il tocco stesso apre già l'editor con la
+    // nota per intero — questa finestrella non le serve.
+    if (!window.matchMedia("(hover: hover)").matches) return;
+    const testo = bottone.dataset.tooltip;
+    if (!testo) return;
+
+    if (!elementoTooltipNota) {
+      elementoTooltipNota = document.createElement("div");
+      elementoTooltipNota.className = "tooltip-nota";
+      document.body.appendChild(elementoTooltipNota);
+    }
+    elementoTooltipNota.textContent = testo;
+    elementoTooltipNota.style.left = "-9999px"; // fuori vista mentre misuro le sue dimensioni vere
+    elementoTooltipNota.style.top = "0px";
+    elementoTooltipNota.classList.add("visibile");
+
+    const rettangoloBottone = bottone.getBoundingClientRect();
+    const rettangoloTooltip = elementoTooltipNota.getBoundingClientRect();
+    const margine = 8;
+
+    let alto = rettangoloBottone.top - rettangoloTooltip.height - margine;
+    if (alto < margine) alto = rettangoloBottone.bottom + margine; // niente spazio sopra: passa sotto
+
+    let sinistra = rettangoloBottone.left + (rettangoloBottone.width / 2) - (rettangoloTooltip.width / 2);
+    sinistra = Math.max(margine, Math.min(sinistra, window.innerWidth - rettangoloTooltip.width - margine));
+
+    elementoTooltipNota.style.left = `${sinistra}px`;
+    elementoTooltipNota.style.top = `${alto}px`;
+  }
+
+  function nascondiTooltipNota() {
+    if (elementoTooltipNota) elementoTooltipNota.classList.remove("visibile");
+  }
+
+  // Una finestrella rimasta visibile mentre la pagina scorre sotto di
+  // lei (position:fixed, non si sposta da sola) sembrerebbe staccata
+  // dal bottone che l'aveva aperta — stesso principio già applicato ai
+  // menu a comparsa più sopra.
+  window.addEventListener("scroll", nascondiTooltipNota, true);
 
   // Come escapeHtml, ma offre un punto in cui andare a capo dopo ogni "_".
   // I codici di tipologia (ABITAZIONE_TIPO_ECO, GARAGE_AUTORIMESSA...) non
@@ -5606,7 +5682,7 @@
     // sulla dichiarazione di LINK_UTILI).
     const notaHtml = `
         <div class="nota-preferito" onclick="event.stopPropagation()" onkeydown="event.stopPropagation()">
-          <button type="button" class="nota-preferito-bolla${a.notaPreferito ? ' compilata' : ''}" onclick="apriEditorNota(this)"${a.notaPreferito ? ` title="${escapeAttributo(a.notaPreferito)}"` : ""}>${a.notaPreferito ? escapeHtml(a.notaPreferito) : '+ Aggiungi una nota'}</button>
+          <button type="button" class="nota-preferito-bolla${a.notaPreferito ? ' compilata' : ''}" onclick="apriEditorNota(this)"${a.notaPreferito ? ` data-tooltip="${escapeAttributo(a.notaPreferito)}" onmouseenter="mostraTooltipNota(this)" onmouseleave="nascondiTooltipNota()"` : ""}>${a.notaPreferito ? escapeHtml(a.notaPreferito) : '+ Aggiungi una nota'}</button>
           <div class="nota-preferito-editor">
             <textarea placeholder="Es. interessante, valuta meglio i costi di ristrutturazione..." onkeydown="if(event.key==='Enter' && !event.shiftKey){ event.preventDefault(); salvaNotaDaEditor(this, '${a.id}'); }">${escapeHtml(a.notaPreferito)}</textarea>
             <div class="nota-preferito-azioni">
@@ -6393,7 +6469,7 @@ ${notaHtml}
     // sulla dichiarazione di LINK_UTILI).
     const notaHtml = `
         <div class="nota-preferito" onclick="event.stopPropagation()" onkeydown="event.stopPropagation()">
-          <button type="button" class="nota-preferito-bolla${a.notaPreferito ? ' compilata' : ''}" onclick="apriEditorNota(this)"${a.notaPreferito ? ` title="${escapeAttributo(a.notaPreferito)}"` : ""}>${a.notaPreferito ? escapeHtml(a.notaPreferito) : '+ Aggiungi una nota'}</button>
+          <button type="button" class="nota-preferito-bolla${a.notaPreferito ? ' compilata' : ''}" onclick="apriEditorNota(this)"${a.notaPreferito ? ` data-tooltip="${escapeAttributo(a.notaPreferito)}" onmouseenter="mostraTooltipNota(this)" onmouseleave="nascondiTooltipNota()"` : ""}>${a.notaPreferito ? escapeHtml(a.notaPreferito) : '+ Aggiungi una nota'}</button>
           <div class="nota-preferito-editor">
             <textarea placeholder="Es. interessante, valuta meglio i costi di ristrutturazione..." onkeydown="if(event.key==='Enter' && !event.shiftKey){ event.preventDefault(); salvaNotaDaEditor(this, '${a.id}'); }">${escapeHtml(a.notaPreferito)}</textarea>
             <div class="nota-preferito-azioni">
