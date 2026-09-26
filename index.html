@@ -2113,7 +2113,7 @@
       <p class="eyebrow">Scansione Aste Giudiziarie</p>
       <h1><a href="brochure.pdf" target="_blank" rel="noopener" style="color:inherit;text-decoration:none;">Registro Opportunità</a></h1>
       <p class="sottotitolo">Aste residenziali filtrate per prezzo, distanza e margine potenziale stimato.</p>
-      <p class="versione-pagina">v2.14 · <a href="config.html">Configurazione</a> · aggiornato <strong id="testo-aggiornato">—</strong></p>
+      <p class="versione-pagina">v2.15 · <a href="config.html">Configurazione</a> · aggiornato <strong id="testo-aggiornato">—</strong></p>
     </div>
     <div class="statistiche-compatte">
       <div class="stat-compatta">
@@ -4457,12 +4457,12 @@
 
     const intestazioniLettura = {"apikey": SUPABASE_ANON_KEY, "Authorization": `Bearer ${SUPABASE_ANON_KEY}`};
 
-    // sheet1 per intero — stesso principio di sempre (tutte le aste, il
+    // aste per intero — stesso principio di sempre (tutte le aste, il
     // filtro avviene lato client in applicaFiltri): un vero database
     // permetterebbe di filtrare lato server, ma la virtualizzazione della
     // griglia è già pensata per gestire comodamente migliaia di righe
     // tutte scaricate insieme, nessun motivo di complicare qui.
-    const promessaAste = fetch(`${SUPABASE_URL}/rest/v1/sheet1?select=*`, {headers: intestazioniLettura})
+    const promessaAste = fetch(`${SUPABASE_URL}/rest/v1/aste?select=*`, {headers: intestazioniLettura})
       .then(r => { if (!r.ok) throw new Error(`HTTP ${r.status}`); return r.json(); });
 
     // Preferiti non deve MAI bloccare il caricamento del registro
@@ -4590,7 +4590,7 @@
   // Applica lo stato preferito/scartato/nota a un'asta già normalizzata,
   // leggendo dalla mappa PREFERITI (caricata separatamente, vedi avvia()).
   // Funzione a parte invece che dentro normalizzaRiga: quest'ultima
-  // costruisce l'asta dalla SOLA tabella sheet1, che non sa nulla di
+  // costruisce l'asta dalla SOLA tabella aste, che non sa nulla di
   // preferiti — tenerle separate rispecchia che sono due fonti dati
   // indipendenti, unite solo dopo che entrambe sono arrivate.
   function applicaStatoPreferito(asta) {
