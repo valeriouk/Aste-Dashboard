@@ -2149,7 +2149,7 @@
       <p class="eyebrow">Scansione Aste Giudiziarie</p>
       <h1><a href="brochure.pdf" target="_blank" rel="noopener" style="color:inherit;text-decoration:none;">Registro Opportunità</a></h1>
       <p class="sottotitolo">Aste residenziali filtrate per prezzo, distanza e margine potenziale stimato.</p>
-      <p class="versione-pagina">v2.16 · <a href="config.html">Configurazione</a> · aggiornato <strong id="testo-aggiornato">—</strong></p>
+      <p class="versione-pagina">v2.17 · <a href="config.html">Configurazione</a> · aggiornato <strong id="testo-aggiornato">—</strong></p>
     </div>
     <div class="statistiche-compatte">
       <div class="stat-compatta">
@@ -2638,6 +2638,30 @@
 
   let ASTE = [];
   let PREFERITI = {}; // id_annuncio -> {stato: "preferito"|"scartato", nota: string}
+  // Stato per la doppia conferma sui pulsanti "Elimina" della nota —
+  // stesso schema di richiedeDoppioTocco in config.html (bottone Salva,
+  // Ripristina predefiniti), riprodotto qui perché le due pagine non
+  // condividono script. Chiave per asta (`elimina-nota-${id}`), non un
+  // unico valore globale: la griglia e la finestra dettagli possono
+  // avere note aperte su aste diverse insieme, ognuna con la propria
+  // conferma indipendente.
+  let statoConfermaDoppioTocco = {};
+
+  function richiedeDoppioTocco(chiave, bottone, testoNormale, testoConferma, azioneVera) {
+    if (!statoConfermaDoppioTocco[chiave]) {
+      statoConfermaDoppioTocco[chiave] = setTimeout(() => {
+        statoConfermaDoppioTocco[chiave] = null;
+        bottone.textContent = testoNormale;
+      }, 4000);
+      bottone.textContent = testoConferma;
+      return;
+    }
+    clearTimeout(statoConfermaDoppioTocco[chiave]);
+    statoConfermaDoppioTocco[chiave] = null;
+    bottone.textContent = testoNormale;
+    azioneVera();
+  }
+
   // id_annuncio -> [{url, etichetta}, ...] (max 6) — tabella SEPARATA da
   // preferiti, apposta: i link utili (es. annunci di case simili trovati
   // durante la valutazione) devono restare disponibili per QUALSIASI
@@ -3322,6 +3346,11 @@
   }
 
   function aggiornaFinestraSeApertaSu(id) {
+    const chiaveConfermaElimina = `elimina-nota-${id}`;
+    if (statoConfermaDoppioTocco[chiaveConfermaElimina]) {
+      clearTimeout(statoConfermaDoppioTocco[chiaveConfermaElimina]);
+      statoConfermaDoppioTocco[chiaveConfermaElimina] = null;
+    }
     if (idAstaModaleDettagli === id) {
       const asta = ASTE.find(a => a.id === id);
       if (asta) {
@@ -4092,7 +4121,18 @@
   }
 
   function eliminaNotaDaEditor(bottone, id) {
-    richiediPasswordSeServe(() => eseguiSalvaNota(id, ""));
+    richiedeDoppioTocco(`elimina-nota-${id}`, bottone, "Elimina", "Conferma?", () => {
+      // Svuotata SUBITO, prima di richiediPasswordSeServe/eseguiSalvaNota:
+      // senza questo, il ridisegno della finestra dettagli che segue il
+      // salvataggio trova ancora il vecchio testo nella casella (questa
+      // funzione non l'aveva mai toccata), lo interpreta come "stavi
+      // scrivendo qualcosa qui, non ancora salvato" e te lo rimette —
+      // la nota sembrava tornare da sola dopo Elimina, segnalato in chat.
+      const contenitore = bottone.closest(".nota-preferito");
+      const area = contenitore?.querySelector("textarea");
+      if (area) area.value = "";
+      richiediPasswordSeServe(() => eseguiSalvaNota(id, ""));
+    });
   }
 
   // La nota vive in LINK_UTILI, indipendente da preferito/scartato — non
