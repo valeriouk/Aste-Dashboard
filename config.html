@@ -1182,7 +1182,15 @@
 
   function renderizzaRiepilogoModelli() {
     const testoBatch = configAttuale.usa_batch_gemini ? "batch anche in locale" : "batch solo su tutta Italia";
-    document.getElementById("riepilogo-modelli").textContent = configAttuale.cascata_modelli_gemini.join(" → ") + " · " + testoBatch;
+    const modelli = configAttuale.cascata_modelli_gemini;
+    // L'elenco per intero (con la freccia tra ogni modello) è quello che
+    // occupava tutto lo spazio della riga e troncava via lo stato del
+    // batch, sempre in fondo — qui basta sapere "è a cascata o no",
+    // l'ordine esatto resta comunque a portata di clic in "Modifica".
+    const testoModelli = modelli.length === 0 ? "Nessun modello configurato"
+      : modelli.length === 1 ? modelli[0]
+      : `Cascata di ${modelli.length} modelli`;
+    document.getElementById("riepilogo-modelli").textContent = testoModelli + " · " + testoBatch;
   }
 
   function renderizzaRiepilogoPianificazioneScanner() {
@@ -1368,7 +1376,7 @@
     // la legge più da Supabase in alcun modo.
     scannerAttivo: true,
     scannerGiorni: ["lun", "mar", "mer", "gio", "ven"],
-    scannerOrari: ["16:00"],
+    scannerOrari: ["10:00"],
     verificaBatchMinuti: 15
   };
 
