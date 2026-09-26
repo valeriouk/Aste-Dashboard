@@ -1546,7 +1546,8 @@
   }
   .finestra-dettagli-chiudi,
   .finestra-dettagli-stampa,
-  .finestra-dettagli-espandi {
+  .finestra-dettagli-espandi,
+  .finestra-dettagli-condividi {
     background: var(--surface-2);
     border: none;
     color: var(--ink-muted);
@@ -1561,11 +1562,46 @@
   }
   .finestra-dettagli-chiudi { font-size: 1.4rem; line-height: 1; }
   .finestra-dettagli-espandi svg,
-  .finestra-dettagli-stampa svg { width: 16px; height: 16px; }
+  .finestra-dettagli-stampa svg,
+  .finestra-dettagli-condividi svg { width: 16px; height: 16px; }
   .finestra-dettagli-espandi:hover,
   .finestra-dettagli-stampa:hover,
+  .finestra-dettagli-condividi:hover,
   .finestra-dettagli-chiudi:hover { color: var(--ink); }
   .finestra-dettagli-corpo { padding: 20px 24px 28px; }
+
+  /* Pulsante Condividi: Web Share nativa quando c'è (soprattutto
+     mobile — un solo pulsante, il sistema mostra tutte le app
+     installate, "Copia" incluso). Il menu qui sotto è il ripiego per
+     quando manca (la maggior parte dei browser desktop oggi) — tre
+     scelte esplicite invece di indovinare quale app usare. */
+  .contenitore-condividi { position: relative; display: inline-flex; }
+  .menu-condividi {
+    position: absolute;
+    top: calc(100% + 8px);
+    right: 0;
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 10px;
+    box-shadow: 0 8px 24px rgba(0,0,0,.15);
+    padding: 6px;
+    min-width: 190px;
+    z-index: 10;
+  }
+  .menu-condividi button {
+    display: block;
+    width: 100%;
+    text-align: left;
+    background: none;
+    border: none;
+    padding: 9px 10px;
+    border-radius: 7px;
+    font-family: var(--font-body);
+    font-size: .85rem;
+    color: var(--ink);
+    cursor: pointer;
+  }
+  .menu-condividi button:hover { background: var(--surface-2); }
 
   /* Testo visibile SOLO nel PDF/stampa (vedi @media print più sotto) —
      a schermo non serve, la finestra stessa è già il contesto. */
@@ -2113,7 +2149,7 @@
       <p class="eyebrow">Scansione Aste Giudiziarie</p>
       <h1><a href="brochure.pdf" target="_blank" rel="noopener" style="color:inherit;text-decoration:none;">Registro Opportunità</a></h1>
       <p class="sottotitolo">Aste residenziali filtrate per prezzo, distanza e margine potenziale stimato.</p>
-      <p class="versione-pagina">v2.15 · <a href="config.html">Configurazione</a> · aggiornato <strong id="testo-aggiornato">—</strong></p>
+      <p class="versione-pagina">v2.16 · <a href="config.html">Configurazione</a> · aggiornato <strong id="testo-aggiornato">—</strong></p>
     </div>
     <div class="statistiche-compatte">
       <div class="stat-compatta">
@@ -4512,6 +4548,7 @@
         new Date().toLocaleTimeString("it-IT", { hour: "2-digit", minute: "2-digit" });
       popolaFiltroTipologia();
       applicaFiltri();
+      apriDaLinkDiretto();
     }).catch(e => {
       // Questo stesso .catch prende SIA un fallimento vero della lettura
       // (rete, timeout) SIA un'eccezione lanciata più avanti dentro il
@@ -4774,6 +4811,7 @@
   const MENU_A_COMPARSA = [
     {menuId: "menu-tipologia", bottoneId: "bottone-filtro-tipologia"},
     {menuId: "menu-ordinamento", bottoneId: "bottone-ordinamento"},
+    {menuId: "menu-condividi-dettagli", bottoneId: "bottone-condividi-dettagli"},
   ];
 
   function chiudiMenuAComparsaAperti() {
@@ -6183,6 +6221,101 @@ ${notaHtml}
     }
   }
 
+  // Indirizzo assoluto (origin + percorso della pagina stessa, mai
+  // relativo: chi lo riceve lo apre da un altro dispositivo, un link
+  // relativo non vorrebbe dire nulla lì) con l'id nel frammento — letto
+  // da apriDaLinkDiretto() all'avvio, più sotto.
+  function urlCondivisioneAsta(id) {
+    return `${location.origin}${location.pathname}#${id}`;
+  }
+
+  function testoCondivisioneAsta(a) {
+    const punteggioTesto = a.punteggio > 0 ? ` · Punteggio ${a.punteggio}/100` : "";
+    const titolo = `${a.comune} — ${a.tipologia || "Asta"}`;
+    return {
+      titolo,
+      corpo: `${titolo}\nOfferta minima: ${formattaEuro(a.offertaMinima)}${punteggioTesto}`,
+      url: urlCondivisioneAsta(a.id),
+    };
+  }
+
+  // Web Share nativa quando c'è (soprattutto mobile) — un solo pulsante,
+  // il sistema mostra tutte le app installate, non solo le due o tre
+  // che avremmo potuto indovinare noi. Sul resto (la maggior parte dei
+  // desktop oggi) apre il piccolo menu di riserva qui sotto.
+  //
+  // NOTA sul PDF: il pulsante "Esporta PDF" accanto a questo usa
+  // window.print() — il browser apre la propria finestra di stampa, e
+  // da lì l'utente sceglie "Salva come PDF" per conto proprio. Il
+  // codice della pagina non riceve mai il file risultante: è una
+  // finestra nativa del sistema operativo, non qualcosa che si possa
+  // leggere via JavaScript, quindi qui non c'è modo di allegare
+  // automaticamente quello stesso PDF alla condivisione — servirebbe
+  // generarne uno indipendente con tutt'altro meccanismo. Chi vuole
+  // allegare il PDF a un'email lo esporta prima con quel pulsante, poi
+  // lo allega a mano nel proprio client — un paio di passaggi in più,
+  // ma con uno strumento che conosce già, invece di rifare da zero
+  // qualcosa che oggi funziona bene così com'è.
+  async function condividiAsta(bottone, id) {
+    const asta = ASTE.find(a => a.id === id);
+    if (!asta) return;
+    const { titolo, corpo, url } = testoCondivisioneAsta(asta);
+
+    if (navigator.share) {
+      try {
+        await navigator.share({ title: titolo, text: corpo, url });
+      } catch (e) {
+        // AbortError: l'utente ha chiuso il pannello di condivisione
+        // senza scegliere nulla — una scelta legittima, non un errore
+        // da segnalare.
+        if (e.name !== "AbortError") mostraToast("Condivisione non riuscita.");
+      }
+      return;
+    }
+
+    chiudiMenuAComparsaAperti();
+    const menu = bottone.nextElementSibling;
+    menu.classList.remove("nascosto");
+    bottone.setAttribute("aria-expanded", "true");
+  }
+
+  async function condividiCopiaLink(id) {
+    try {
+      await navigator.clipboard.writeText(urlCondivisioneAsta(id));
+      mostraToast("Link copiato.");
+    } catch (e) {
+      mostraToast("Impossibile copiare il link.");
+    }
+    chiudiMenuAComparsaAperti();
+  }
+
+  function condividiViaEmail(id) {
+    const asta = ASTE.find(a => a.id === id);
+    if (!asta) return;
+    const { titolo, corpo, url } = testoCondivisioneAsta(asta);
+    window.location.href = `mailto:?subject=${encodeURIComponent(titolo)}&body=${encodeURIComponent(corpo + "\n\n" + url)}`;
+    chiudiMenuAComparsaAperti();
+  }
+
+  function condividiViaWhatsApp(id) {
+    const asta = ASTE.find(a => a.id === id);
+    if (!asta) return;
+    const { corpo, url } = testoCondivisioneAsta(asta);
+    window.open(`https://wa.me/?text=${encodeURIComponent(corpo + "\n\n" + url)}`, "_blank", "noopener");
+    chiudiMenuAComparsaAperti();
+  }
+
+  // Letto una sola volta, subito dopo il primo caricamento riuscito
+  // (vedi la chiamata in avvia()) — un id nel frammento che non
+  // corrisponde a nessuna asta (link vecchio, asta rimossa) non fa
+  // nulla: resta semplicemente il registro normale, nessun errore da
+  // mostrare per questo.
+  function apriDaLinkDiretto() {
+    const id = decodeURIComponent(location.hash.slice(1));
+    if (!id) return;
+    if (ASTE.some(a => a.id === id)) apriDettagliAsta(id);
+  }
+
   function contenutoFinestraDettagli(a) {
     const livello = livelloPunteggio(a.punteggio, a.valoreStima);
     const contenutoSigillo = livello === "non-valutato" ? "Non<br>valutato" : a.punteggio;
@@ -6235,6 +6368,16 @@ ${notaHtml}
           </div>
         </div>
         <div class="finestra-dettagli-azioni-header">
+          <div class="contenitore-condividi">
+            <button type="button" class="finestra-dettagli-condividi" id="bottone-condividi-dettagli" onclick="condividiAsta(this, '${a.id}')" aria-label="Condividi" aria-expanded="false" title="Condividi">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="18" cy="5" r="3"/><circle cx="6" cy="12" r="3"/><circle cx="18" cy="19" r="3"/><line x1="8.6" y1="10.5" x2="15.4" y2="6.5"/><line x1="8.6" y1="13.5" x2="15.4" y2="17.5"/></svg>
+            </button>
+            <div class="menu-condividi nascosto" id="menu-condividi-dettagli">
+              <button type="button" onclick="condividiCopiaLink('${a.id}')">🔗 Copia link</button>
+              <button type="button" onclick="condividiViaEmail('${a.id}')">✉️ Invia email</button>
+              <button type="button" onclick="condividiViaWhatsApp('${a.id}')">💬 Invia su WhatsApp</button>
+            </div>
+          </div>
           <button type="button" class="finestra-dettagli-stampa" onclick="window.print()" aria-label="Esporta PDF" title="Esporta PDF (stampa)">
             <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M6 9V2h12v7M6 18H4a2 2 0 01-2-2v-5a2 2 0 012-2h16a2 2 0 012 2v5a2 2 0 01-2 2h-2M6 14h12v8H6z"/></svg>
           </button>
