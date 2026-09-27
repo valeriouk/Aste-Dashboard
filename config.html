@@ -850,8 +850,9 @@
       </div>
       <div class="campo-form">
         <label for="campo-ricontrollo-max">Aste ricontrollate al massimo per giro</label>
-        <input type="number" id="campo-ricontrollo-max" min="1" max="100" step="1">
-        <p class="nota-campo">Circa 15–30 secondi per asta, più l'analisi Gemini quando compare una perizia (a prezzo pieno, non in batch). Più alto = arretrato smaltito prima, ma più minuti GitHub Actions.</p>
+        <input type="number" id="campo-ricontrollo-max" min="1" max="100" step="1" oninput="aggiornaAvvisoBatchRicontrollo()">
+        <p class="nota-campo">Circa 15–30 secondi per asta, più l'analisi Gemini quando compare una perizia (fino a 15 aste per giro a prezzo pieno, non in batch). Più alto = arretrato smaltito prima, ma più minuti GitHub Actions.</p>
+        <p class="nota-campo" id="avviso-batch-ricontrollo" hidden><strong>Oltre 15 aste per giro il ricontrollo usa sempre la modalità batch di Gemini</strong>, anche se il batch è spento: costo ridotto, ma le analisi arrivano fino a 24 ore dopo.</p>
       </div>
       <div class="finestra-modale-azioni">
         <button type="button" class="bottone-salva-card" id="bottone-salva-ricercaPerizia" onclick="confermaSalvaCard('ricercaPerizia')">Salva</button>
@@ -1221,6 +1222,9 @@
     el.textContent = `${giorniTesto} alle ${pianificazioneAttuale.scanner_orari.join(" e ")}`;
   }
 
+  // Stessa soglia di SOGLIA_BATCH in ricontrollo_perizia.py (repo aste-immobiliari).
+  const SOGLIA_BATCH_RICONTROLLO = 15;
+
   function renderizzaRiepilogoRicercaPerizia() {
     const r = ricercaPeriziaAttuale;
     const el = document.getElementById("riepilogo-ricerca-perizia");
@@ -1230,7 +1234,13 @@
     }
     el.textContent = "Ricerca estesa · " + (r.ricontrollo_attivo
       ? `ricontrollo ogni ${r.ricontrollo_giorni} ${r.ricontrollo_giorni === 1 ? "giorno" : "giorni"}, max ${r.ricontrollo_max} aste per giro`
+        + (r.ricontrollo_max > SOGLIA_BATCH_RICONTROLLO ? " (in batch)" : "")
       : "ricontrollo spento");
+  }
+
+  function aggiornaAvvisoBatchRicontrollo() {
+    const massimo = Number(document.getElementById("campo-ricontrollo-max").value);
+    document.getElementById("avviso-batch-ricontrollo").hidden = !(massimo > SOGLIA_BATCH_RICONTROLLO);
   }
 
   async function salvaRicercaPeriziaSulServer() {
@@ -1300,6 +1310,7 @@
       document.getElementById("campo-ricontrollo-attivo").checked = ricercaPeriziaAttuale.ricontrollo_attivo;
       document.getElementById("campo-ricontrollo-giorni").value = ricercaPeriziaAttuale.ricontrollo_giorni;
       document.getElementById("campo-ricontrollo-max").value = ricercaPeriziaAttuale.ricontrollo_max;
+      aggiornaAvvisoBatchRicontrollo();
     } else if (nome === "pianificazioneScanner") {
       document.getElementById("campo-scanner-attivo").checked = pianificazioneAttuale.scanner_attivo;
       document.querySelectorAll(".checkbox-giorno-scanner").forEach(cb => {
