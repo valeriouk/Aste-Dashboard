@@ -1269,6 +1269,17 @@
   ============================================================ */
   .sezione-costi { margin-top: 22px; padding-top: 18px; border-top: 1px solid var(--border); }
   .sezione-costi-titolo { font-size: .95rem; font-weight: 600; margin: 0 0 8px; color: var(--ink); }
+  /* Mappa nella finestra dettagli (vedi inizializzaMappaDettagli).
+     position:relative + z-index:0 creano un contesto di sovrapposizione
+     proprio: senza, i controlli di Leaflet (z-index 1000) scorrerebbero
+     sopra l'intestazione fissa della finestra. */
+  .mappa-dettagli {
+    height: 240px;
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    position: relative;
+    z-index: 0;
+  }
   .sezione-costi-nota { font-size: .8rem; color: var(--ink-faint); margin: 0 0 10px; line-height: 1.4; }
   .sezione-costi-nota.avviso { color: var(--danger); }
   /* Unico posto in cui si scorre di lato. -webkit-overflow-scrolling:touch
@@ -1726,6 +1737,8 @@
     .lotto-azioni, .finestra-dettagli-azioni-header,
     .nota-preferito-editor, .checkbox-selezione,
     .finestra-dettagli-maniglia { display: none !important; }
+    /* Le tile di Leaflet in stampa escono spesso incomplete. */
+    .sezione-mappa-dettagli { display: none !important; }
     /* nascosto a schermo nell'intestazione, ma nel PDF deve esserci */
     .finestra-dettagli-header .badge-tentativo { display: inline-block !important; }
   }
@@ -2197,7 +2210,7 @@
       <p class="eyebrow">Scansione Aste Giudiziarie</p>
       <h1><a href="brochure.pdf" target="_blank" rel="noopener" style="color:inherit;text-decoration:none;">Registro Opportunità</a></h1>
       <p class="sottotitolo">Aste residenziali filtrate per prezzo, distanza e margine potenziale stimato.</p>
-      <p class="versione-pagina">v2.21 · <a href="config.html">Configurazione</a> · aggiornato <strong id="testo-aggiornato">—</strong></p>
+      <p class="versione-pagina">v2.22 ·<a href="config.html">Configurazione</a> · aggiornato <strong id="testo-aggiornato">—</strong></p>
     </div>
     <div class="statistiche-compatte">
       <div class="stat-compatta">
@@ -3491,8 +3504,10 @@
       if (asta) {
         const contenitore = document.getElementById("finestra-dettagli-contenuto");
         const inSospeso = catturaModificheInSospeso(contenitore, asta);
+        const vistaMappa = mappaDettagli ? {centro: mappaDettagli.getCenter(), zoom: mappaDettagli.getZoom()} : null;
         contenitore.innerHTML = contenutoFinestraDettagli(asta);
         ripristinaModificheInSospeso(contenitore, inSospeso);
+        inizializzaMappaDettagli(asta, vistaMappa);
       }
     }
     // Stesso principio, per il confronto: id può comparire in una
@@ -5537,6 +5552,59 @@
     mappaLotti.on("movestart", segnalaSpostamentoManualeMappa);
   }
 
+  // Mappa nella finestra dettagli: immobile al centro e cerchio di
+  // RAGGIO_MAPPA_DETTAGLI_M metri, inquadrato per intero all'apertura.
+  // Zoom libero (pulsanti +/-, rotellina, pizzico, doppio clic);
+  // keyboard:false così le frecce restano alla navigazione tra le aste
+  // (vedi gestisciScorciatoieTastiera). Una sola mappa alla volta:
+  // quella precedente viene sempre distrutta prima di crearne un'altra.
+  // "vista" (centro/zoom) serve a non perdere lo zoom scelto quando la
+  // finestra si ridisegna sulla stessa asta (aggiornaFinestraSeApertaSu).
+  let mappaDettagli = null;
+  const RAGGIO_MAPPA_DETTAGLI_M = 500;
+
+  function rimuoviMappaDettagli() {
+    if (mappaDettagli) {
+      mappaDettagli.remove();
+      mappaDettagli = null;
+    }
+  }
+
+  function inizializzaMappaDettagli(a, vista) {
+    rimuoviMappaDettagli();
+    const contenitore = document.getElementById("mappa-dettagli");
+    if (!contenitore || typeof L === "undefined") return;
+    const centro = [a.lat, a.lon];
+    // zoomSnap 0.25: a zoom interi il cerchio da 500 m resterebbe piccolo
+    // in un riquadro alto 240px (circa 1,8 km visibili invece di 1).
+    mappaDettagli = L.map(contenitore, {keyboard: false, zoomSnap: 0.25});
+    L.tileLayer("https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png", {
+      attribution: '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a>',
+      maxZoom: 19
+    }).addTo(mappaDettagli);
+    L.circle(centro, {
+      radius: RAGGIO_MAPPA_DETTAGLI_M, color: "#234c6a", weight: 1.5, dashArray: "6 5", fillOpacity: 0.06, interactive: false
+    }).addTo(mappaDettagli);
+    // Riquadro del cerchio calcolato dal punto, non con cerchio.getBounds():
+    // quello richiede una mappa che abbia già una vista, qui non ancora.
+    const riquadroCerchio = L.latLng(centro).toBounds(RAGGIO_MAPPA_DETTAGLI_M * 2);
+    const colore = COLORI_LIVELLO[livelloPunteggio(a.punteggio, a.valoreStima)] || COLORI_LIVELLO["non-valutato"];
+    L.circleMarker(centro, {
+      radius: 8, color: colore.bordo, fillColor: colore.riempimento, fillOpacity: 0.9, weight: 2, interactive: false
+    }).addTo(mappaDettagli);
+    const inquadra = () => mappaDettagli.fitBounds(riquadroCerchio, {padding: [8, 8]});
+    if (vista) mappaDettagli.setView(vista.centro, vista.zoom); else inquadra();
+    // La finestra entra con una transizione: a fine animazione Leaflet
+    // rilegge le dimensioni reali del riquadro e, se non c'era una vista
+    // da mantenere, reinquadra il cerchio.
+    const questaMappa = mappaDettagli;
+    setTimeout(() => {
+      if (mappaDettagli !== questaMappa) return;
+      mappaDettagli.invalidateSize();
+      if (!vista) inquadra();
+    }, 350);
+  }
+
   function popupLotto(a, precisa) {
     const margine = a.margine !== null ? formattaEuro(a.margine) : "—";
     const notaPosizione = precisa
@@ -5851,6 +5919,7 @@ ${notaHtml}
     }
     idAstaModaleDettagli = id;
     document.getElementById("finestra-dettagli-contenuto").innerHTML = contenutoFinestraDettagli(asta);
+    inizializzaMappaDettagli(asta);
     // "aperto", non più "nascosto" da togliere — vedi il CSS di
     // .overlay-dettagli-asta: parte invisibile di suo (visibility:hidden),
     // e la classe "aperto" fa scattare la transizione verso lo stato
@@ -5898,6 +5967,7 @@ ${notaHtml}
 
   function chiudiDettagliAsta() {
     idAstaModaleDettagli = null;
+    rimuoviMappaDettagli();
     document.getElementById("overlay-dettagli-asta").classList.remove("aperto");
     document.body.style.overflow = "";
   }
@@ -5982,6 +6052,7 @@ ${notaHtml}
   // quella che gliel'ha fatta scoprire.
   function alternaEspansioneDettagli() {
     document.querySelector(".finestra-dettagli-asta").classList.toggle("espansa");
+    if (mappaDettagli) setTimeout(() => mappaDettagli && mappaDettagli.invalidateSize(), 350);
   }
 
   document.addEventListener("keydown", gestisciScorciatoieTastiera);
@@ -6648,6 +6719,10 @@ ${notaHtml}
           <div class="dettaglio-riga"><span>Modello AI</span><span>${escapeHtml(a.modelloUsato || "N/D")}</span></div>
           <div class="dettaglio-riga"><span>ID Annuncio</span><span>${escapeHtml(a.id)}</span></div>
         </div>
+        ${a.lat !== null && a.lon !== null ? `<div class="sezione-costi sezione-mappa-dettagli">
+          <h3 class="sezione-costi-titolo">📍 Posizione</h3>
+          <div id="mappa-dettagli" class="mappa-dettagli"></div>
+        </div>` : ""}
         ${a.note ? `<div class="lotto-note">${escapeHtml(a.note)}</div>` : ""}
         ${a.descrizione ? `<div class="lotto-note">${escapeHtml(a.descrizione)}</div>` : ""}
         ${bloccoCostiTrasferimento(a)}
