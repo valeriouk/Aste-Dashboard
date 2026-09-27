@@ -510,7 +510,7 @@
       <p class="eyebrow">Pannello di controllo</p>
       <h1>Configurazione Scanner</h1>
       <p class="sottotitolo">Ogni sezione mostra lo stato attuale — tocca "Modifica" per cambiarlo, si salva da sola.</p>
-      <p class="versione-pagina">v3.3</p>
+      <p class="versione-pagina">v3.4</p>
     </div>
     <a href="statistiche.html" class="link-torna">Statistiche →</a>
     <a href="index.html" class="link-torna">← Torna al registro</a>
@@ -546,7 +546,7 @@
 
       <div class="barra-ripristino">
         <button type="button" class="bottone-secondario" id="bottone-ripristina-predefiniti" onclick="confermaRipristinaPredefiniti()">↺ Ripristina tutti i valori predefiniti</button>
-        <p class="nota-campo">Riporta tutte le sei card qui sotto — area, prezzo, tipologia, altri filtri, modelli, e pianificazione (lun-ven alle 16:00) — ai valori di partenza del progetto. Salva subito, come ogni altra modifica in questa pagina.</p>
+        <p class="nota-campo">Riporta tutte le sei card qui sotto — area, prezzo, tipologia, altri filtri, modelli, e pianificazione (lun-ven alle 16:00) — ai valori di partenza del progetto. Salva subito, come ogni altra modifica in questa pagina. La ricerca della perizia resta com'è.</p>
         <p id="messaggio-ripristina-predefiniti" class="messaggio-salvataggio-card"></p>
       </div>
 
@@ -598,6 +598,14 @@
             <p class="card-riepilogo-extra" id="riepilogo-ultima-scansione"></p>
           </div>
           <button type="button" class="card-riepilogo-modifica" onclick="apriModale('pianificazioneScanner')">Modifica</button>
+        </div>
+
+        <div class="card-riepilogo">
+          <div class="card-riepilogo-testo">
+            <p class="card-riepilogo-titolo">Ricerca della perizia</p>
+            <p class="card-riepilogo-valore" id="riepilogo-ricerca-perizia">—</p>
+          </div>
+          <button type="button" class="card-riepilogo-modifica" onclick="apriModale('ricercaPerizia')">Modifica</button>
         </div>
 
       </div>
@@ -850,6 +858,45 @@
 </div>
 
 
+<div id="modale-ricercaPerizia" class="overlay-modale" onclick="if(event.target===this) chiudiModale('ricercaPerizia')">
+  <div class="finestra-modale">
+    <div class="finestra-modale-intestazione">
+      <h2>Ricerca della perizia</h2>
+      <button type="button" class="finestra-modale-chiudi" onclick="chiudiModale('ricercaPerizia')" aria-label="Chiudi">×</button>
+    </div>
+    <div class="finestra-modale-corpo">
+      <div class="campo-form">
+        <label for="campo-ricerca-estesa">Dove cercare la perizia</label>
+        <select id="campo-ricerca-estesa">
+          <option value="true">Ricerca estesa: allegati PVP, astegiudiziarie, altri siti collegati, poi avviso</option>
+          <option value="false">Come prima: astegiudiziarie, poi avviso</option>
+        </select>
+        <p class="nota-campo">La ricerca estesa prova anche gli allegati PVP e le pagine dell'asta sui siti collegati all'annuncio (quelli con la bandierina), prima di ripiegare sull'avviso di vendita. Rispetta la scelta su astegiudiziarie fatta in "Altri filtri".</p>
+      </div>
+      <div class="campo-form">
+        <label class="etichetta-checkbox" style="margin-top:0">
+          <input type="checkbox" id="campo-ricontrollo-attivo">
+          Ricontrolla le aste future ancora lette dall'avviso
+        </label>
+        <p class="nota-campo">Alla fine di ogni giro dello scanner rifà la ricerca per le aste future rimaste sull'avviso: spesso la perizia viene pubblicata dopo. Se la trova, rifà l'analisi e aggiorna l'asta. Escluse le aste scartate e quelle fuori da area e prezzo attuali. Funziona solo con la ricerca estesa.</p>
+      </div>
+      <div class="campo-form">
+        <label for="campo-ricontrollo-giorni">Ricontrolla ogni (giorni)</label>
+        <input type="number" id="campo-ricontrollo-giorni" min="1" max="30" step="1">
+      </div>
+      <div class="campo-form">
+        <label for="campo-ricontrollo-max">Aste ricontrollate al massimo per giro</label>
+        <input type="number" id="campo-ricontrollo-max" min="1" max="100" step="1">
+        <p class="nota-campo">Circa 15–30 secondi per asta, più l'analisi Gemini quando compare una perizia (a prezzo pieno, non in batch). Più alto = arretrato smaltito prima, ma più minuti GitHub Actions.</p>
+      </div>
+      <div class="finestra-modale-azioni">
+        <button type="button" class="bottone-salva-card" id="bottone-salva-ricercaPerizia" onclick="confermaSalvaCard('ricercaPerizia')">Salva</button>
+        <span id="messaggio-salva-ricercaPerizia" class="messaggio-salvataggio-card"></span>
+      </div>
+    </div>
+  </div>
+</div>
+
 <script>
   const SUPABASE_URL = "https://igemwrrcmsgaotoqvdzt.supabase.co";
   const SUPABASE_ANON_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImlnZW13cnJjbXNnYW90b3F2ZHp0Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODkzMDc2MjksImV4cCI6MjEwNDg4MzYyOX0.YkUOBTOb40C-N0TkuDN0o5N7fVvI_qX2F1grUp-SVe8";
@@ -1069,6 +1116,7 @@
 
   let configAttuale = {};
   let pianificazioneAttuale = {};
+  let ricercaPeriziaAttuale = {estesa: false, ricontrollo_attivo: true, ricontrollo_giorni: 2, ricontrollo_max: 15};
 
   async function caricaConfigurazioneAttuale() {
     const statoEl = document.getElementById("stato-caricamento-config");
@@ -1133,6 +1181,11 @@
       }
       // Non più letta da config: costante fissa, vedi VALORI_PREDEFINITI.verificaBatchMinuti.
       pianificazioneAttuale.verifica_batch_minuti = VALORI_PREDEFINITI.verificaBatchMinuti;
+
+      ricercaPeriziaAttuale.estesa = String(config.ricerca_perizia_estesa ?? false).toLowerCase() === "true";
+      ricercaPeriziaAttuale.ricontrollo_attivo = String(config.ricontrollo_perizie_attivo ?? true).toLowerCase() !== "false";
+      ricercaPeriziaAttuale.ricontrollo_giorni = Number(config.ricontrollo_perizie_giorni ?? 2) || 2;
+      ricercaPeriziaAttuale.ricontrollo_max = Number(config.ricontrollo_perizie_max ?? 15) || 15;
 
       statoEl.classList.add("nascosto");
       document.getElementById("contenuto-config").classList.remove("nascosto");
@@ -1208,7 +1261,35 @@
     el.textContent = `${giorniTesto} alle ${pianificazioneAttuale.scanner_orari.join(" e ")}`;
   }
 
+  function renderizzaRiepilogoRicercaPerizia() {
+    const r = ricercaPeriziaAttuale;
+    const el = document.getElementById("riepilogo-ricerca-perizia");
+    if (!r.estesa) {
+      el.textContent = "Come prima: astegiudiziarie, poi avviso";
+      return;
+    }
+    el.textContent = "Ricerca estesa · " + (r.ricontrollo_attivo
+      ? `ricontrollo ogni ${r.ricontrollo_giorni} ${r.ricontrollo_giorni === 1 ? "giorno" : "giorni"}, max ${r.ricontrollo_max} aste per giro`
+      : "ricontrollo spento");
+  }
+
+  // Salva le quattro impostazioni della ricerca perizia con una funzione
+  // dedicata (imposta_ricerca_perizia), separata da imposta_configurazione.
+  // Viene richiamata anche dopo ogni salvataggio delle altre card: se
+  // imposta_configurazione riscrivesse l'intera tabella config, queste
+  // impostazioni verrebbero rimesse subito al loro posto.
+  async function salvaRicercaPeriziaSulServer() {
+    return chiamaRpc("imposta_ricerca_perizia", {
+      password_tentativo: passwordCorrente,
+      estesa: ricercaPeriziaAttuale.estesa,
+      ricontrollo_attivo: ricercaPeriziaAttuale.ricontrollo_attivo,
+      ricontrollo_giorni: ricercaPeriziaAttuale.ricontrollo_giorni,
+      ricontrollo_max: ricercaPeriziaAttuale.ricontrollo_max
+    });
+  }
+
   function renderizzaTuttiIRiepiloghi() {
+    renderizzaRiepilogoRicercaPerizia();
     renderizzaRiepilogoArea();
     renderizzaRiepilogoPrezzo();
     renderizzaRiepilogoTipologia();
@@ -1259,6 +1340,11 @@
     } else if (nome === "modelli") {
       document.getElementById("campo-modelli").value = configAttuale.cascata_modelli_gemini.join(", ");
       document.getElementById("campo-batch-locale").checked = configAttuale.usa_batch_gemini;
+    } else if (nome === "ricercaPerizia") {
+      document.getElementById("campo-ricerca-estesa").value = String(ricercaPeriziaAttuale.estesa);
+      document.getElementById("campo-ricontrollo-attivo").checked = ricercaPeriziaAttuale.ricontrollo_attivo;
+      document.getElementById("campo-ricontrollo-giorni").value = ricercaPeriziaAttuale.ricontrollo_giorni;
+      document.getElementById("campo-ricontrollo-max").value = ricercaPeriziaAttuale.ricontrollo_max;
     } else if (nome === "pianificazioneScanner") {
       document.getElementById("campo-scanner-attivo").checked = pianificazioneAttuale.scanner_attivo;
       document.querySelectorAll(".checkbox-giorno-scanner").forEach(cb => {
@@ -1418,6 +1504,7 @@
     // riprovare.
     try {
       const risultatoConfig = await salvaConfigCompletaSulServer();
+      if (risultatoConfig.result === "success") await salvaRicercaPeriziaSulServer();
       if (risultatoConfig.result !== "success") {
         msgEl.textContent = "Ricerca/filtri: " + (risultatoConfig.message || "errore sconosciuto") + " — pianificazione non toccata.";
         msgEl.className = "messaggio-salvataggio-card messaggio-errore";
@@ -1506,6 +1593,23 @@
       }
       configAttuale.cascata_modelli_gemini = modelli;
       configAttuale.usa_batch_gemini = document.getElementById("campo-batch-locale").checked;
+    } else if (nomeCard === "ricercaPerizia") {
+      const giorni = Number(document.getElementById("campo-ricontrollo-giorni").value);
+      const massimo = Number(document.getElementById("campo-ricontrollo-max").value);
+      if (!Number.isInteger(giorni) || giorni < 1 || giorni > 30) {
+        msgEl.textContent = "Ogni quanti giorni: un numero intero tra 1 e 30.";
+        msgEl.className = "messaggio-salvataggio-card messaggio-errore";
+        return;
+      }
+      if (!Number.isInteger(massimo) || massimo < 1 || massimo > 100) {
+        msgEl.textContent = "Aste per giro: un numero intero tra 1 e 100.";
+        msgEl.className = "messaggio-salvataggio-card messaggio-errore";
+        return;
+      }
+      ricercaPeriziaAttuale.estesa = document.getElementById("campo-ricerca-estesa").value === "true";
+      ricercaPeriziaAttuale.ricontrollo_attivo = document.getElementById("campo-ricontrollo-attivo").checked;
+      ricercaPeriziaAttuale.ricontrollo_giorni = giorni;
+      ricercaPeriziaAttuale.ricontrollo_max = massimo;
     } else if (nomeCard === "pianificazioneScanner") {
       const giorni = [...document.querySelectorAll(".checkbox-giorno-scanner:checked")].map(cb => cb.value);
       const orari = [];
@@ -1523,7 +1627,9 @@
 
     try {
       let risultato;
-      if (nomeCard === "pianificazioneScanner") {
+      if (nomeCard === "ricercaPerizia") {
+        risultato = await salvaRicercaPeriziaSulServer();
+      } else if (nomeCard === "pianificazioneScanner") {
         risultato = await chiamaRpc("imposta_pianificazione", {
           password_tentativo: passwordCorrente,
           scanner_attivo: pianificazioneAttuale.scanner_attivo,
@@ -1533,6 +1639,7 @@
         });
       } else {
         risultato = await salvaConfigCompletaSulServer();
+        if (risultato.result === "success") await salvaRicercaPeriziaSulServer();
       }
 
       if (risultato.result === "success") {
@@ -1541,7 +1648,8 @@
         const funzioniRiepilogo = {
           area: renderizzaRiepilogoArea, prezzo: renderizzaRiepilogoPrezzo,
           tipologia: renderizzaRiepilogoTipologia, altri: renderizzaRiepilogoAltri,
-          modelli: renderizzaRiepilogoModelli, pianificazioneScanner: renderizzaRiepilogoPianificazioneScanner
+          modelli: renderizzaRiepilogoModelli, pianificazioneScanner: renderizzaRiepilogoPianificazioneScanner,
+          ricercaPerizia: renderizzaRiepilogoRicercaPerizia
         };
         funzioniRiepilogo[nomeCard]();
         setTimeout(() => chiudiModale(nomeCard), 700);
