@@ -38,12 +38,12 @@
     tecnicoPratiche: 2500,           // (STIMA) tecnico, CILA/SCIA, APE, aggiornamenti catastali
 
     // Lavori
-    costoLavoriMq: {                 // (STIMA) €/mq di superficie lorda → sostituire con la tabella di index.html
-      A_pronto: 0,
-      B_rinfrescare: 80,
-      C_rimodernare: 250,
-      D_ristrutturare: 480,
-      E_degrado: 700,
+    costoLavoriMq: {                 // €/mq, stessi valori di COSTO_MQ_RISTRUTTURAZIONE in index.html
+      A_pronto: 0,                   // nessuna
+      B_rinfrescare: 150,            // leggera
+      C_rimodernare: 350,            // media
+      D_ristrutturare: 600,          // pesante
+      E_degrado: 600,                // pesante (come in analisi_v2._LIVELLO_V1)
     },
     ricaricoLavoriCtu: 0.30,         // (STIMA) la stima lavori CTU serve a "rendere fruibile", non a produrre un immobile da flip
     imprevistiPct: 0.10,             // (STIMA) su lavori + regolarizzazione

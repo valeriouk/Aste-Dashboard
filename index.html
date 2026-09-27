@@ -1310,6 +1310,7 @@
   .tabella-scroll + .sezione-costi-nota { margin-top: 12px; }
   .livello-suggerito td { background: var(--secondary-soft); font-weight: 600; }
   .pallino-suggerito { color: var(--secondary); font-size: .7rem; }
+  .livello-suggerito-testo { margin: 0 0 8px; font-size: .85rem; color: var(--secondary); }
   .costi-input-correzioni {
     display: grid;
     /* minmax(0, 1fr), non 1fr: 1fr equivale a minmax(auto, 1fr) e la
@@ -4550,7 +4551,9 @@
   const CASSA_PROFESSIONALE_DELEGATO = 0.04;
   const IVA_DELEGATO = 0.22;
   const PRATICA_EDILIZIA_STIMATA = 1500;
-  const COSTO_MQ_RISTRUTTURAZIONE = { economica: 300, media: 500, pesante: 800 };
+  // Stessi livelli di livello_ristrutturazione_suggerito (Gemini) e stessi
+  // €/mq di costoLavoriMq in underwriting.js: se ne cambi uno, cambia anche l'altro.
+  const COSTO_MQ_RISTRUTTURAZIONE = { nessuna: 0, leggera: 150, media: 350, pesante: 600 };
 
   // Rapporto tra valore catastale (rendita × 1,05 × 120: la base del
   // prezzo-valore per una seconda casa) e valore di stima del perito,
@@ -4650,7 +4653,8 @@
     const mq = a.superficieMq || 0;
     return {
       livelloSuggerito: a.livelloRistrutturazioneSuggerito || null, mq,
-      economica: mq * COSTO_MQ_RISTRUTTURAZIONE.economica,
+      nessuna: mq * COSTO_MQ_RISTRUTTURAZIONE.nessuna,
+      leggera: mq * COSTO_MQ_RISTRUTTURAZIONE.leggera,
       media: mq * COSTO_MQ_RISTRUTTURAZIONE.media,
       pesante: mq * COSTO_MQ_RISTRUTTURAZIONE.pesante,
     };
@@ -6383,18 +6387,20 @@ ${notaHtml}
   function bloccoCostiRistrutturazione(a) {
     const r = calcolaCostiRistrutturazione(a);
     if (!r.mq) return "";
-    const righe = [
-      ["economica", "Economica", "300 €/mq", r.economica],
-      ["media", "Media", "500 €/mq", r.media],
-      ["pesante", "Pesante", "800 €/mq", r.pesante],
-    ];
+    const righe = Object.keys(COSTO_MQ_RISTRUTTURAZIONE).map(chiave =>
+      [chiave, ETICHETTA_LIVELLO_RISTRUTTURAZIONE[chiave], `${COSTO_MQ_RISTRUTTURAZIONE[chiave]} €/mq`, r[chiave]]);
     const righeHtml = righe.map(([chiave, etichetta, prezzoMq, valore]) =>
       `<tr${chiave === r.livelloSuggerito ? ' class="livello-suggerito"' : ''}><td>${etichetta}${chiave === r.livelloSuggerito ? ' <span class="pallino-suggerito" title="Livello suggerito in base allo stato descritto in perizia">●</span>' : ''}</td><td>${prezzoMq}</td><td>${formattaEuro(Math.round(valore))}</td></tr>`
     ).join("");
+    const etichettaSuggerita = ETICHETTA_LIVELLO_RISTRUTTURAZIONE[r.livelloSuggerito];
+    const rigaSuggerimento = etichettaSuggerita
+      ? `<p class="livello-suggerito-testo">● Livello suggerito dalla perizia: <strong>${etichettaSuggerita}</strong></p>`
+      : "";
 
     return `
       <div class="sezione-costi">
         <h3 class="sezione-costi-titolo">🔨 Costi di ristrutturazione (stima su ${r.mq.toFixed(0)} mq)</h3>
+        ${rigaSuggerimento}
         <div class="tabella-scroll">
           <table class="tabella-costi">
             <thead><tr><th>Livello</th><th>€/mq</th><th>Totale</th></tr></thead>
