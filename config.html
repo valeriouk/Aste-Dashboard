@@ -322,15 +322,6 @@
   .campo-form input[type="time"],
   .campo-form select {
     width: 100%;
-    /* Difesa in profondità per input[type="time"]: il rendering nativo
-       di un campo orario su alcuni browser mobile ha una larghezza
-       minima legata al proprio contenuto che può superare lo spazio
-       assegnato dal flex, invadendo l'elemento accanto (segnalato in
-       chat: il pulsante × rosso). Qui non ha alcun effetto sugli altri
-       usi block-level di questa stessa regola (prezzo, pausa, ecc) —
-       min-width conta solo per il restringimento dentro un contenitore
-       flessibile.
-    */
     min-width: 0;
     background: var(--bg);
     border: 1px solid var(--border);
@@ -344,19 +335,6 @@
   .campo-form select:disabled { color: var(--ink-faint); cursor: not-allowed; }
   .campo-form input[type="number"],
   .campo-form input[type="time"] { font-family: var(--font-mono); }
-  /* Bug Safari/iOS documentato, DIVERSO da quello risolto sopra con la
-     griglia (quello era sulla larghezza della COLONNA; questo è
-     sull'input stesso): WebKit disegna input[type="time"] con un
-     dimensionamento interno proprio (display:inline-flex nativo,
-     calcolato sul proprio contenuto formattato) che ignora width:100%
-     del CSS di pagina — succede solo con la resa nativa vera di Safari,
-     l'emulazione mobile di Chrome/Chromium non la riproduce, per questo
-     il tentativo precedente (verificato solo lì) non l'aveva presa.
-     -webkit-appearance:none toglie a Safari quel dimensionamento
-     interno proprio (l'input resta comunque un campo orario funzionante,
-     tocca solo come SI CALCOLA la propria larghezza in stato chiuso);
-     display:block è necessario perché — sempre su Safari — width:100%
-     viene ignorato sugli input finché restano inline. */
   .campo-form input[type="time"] {
     -webkit-appearance: none;
     appearance: none;
@@ -475,20 +453,6 @@
   .giorno-toggle input:checked + span { background: var(--primary); border-color: var(--primary); color: var(--surface); }
   .giorno-toggle input:focus-visible + span { outline: 2px solid var(--primary); outline-offset: 2px; }
 
-  /* Griglia, non più flexbox, apposta: su iPhone (Safari) il fix
-     precedente (min-width:0 sul contenitore flessibile) non è bastato —
-     segnalato in chat con screenshot, la X restava comunque
-     sovrapposta al campo. La resa nativa di input[type="time"] varia
-     parecchio da motore a motore (Safari la disegna diversamente da
-     Chromium, che è quanto potevo verificare qui), e il restringimento
-     flessibile dipende in parte dal contenuto — con un controllo
-     nativo come questo, quel contenuto non è mai del tutto prevedibile.
-     Una griglia con colonne dichiarate esplicitamente (1fr + 38px fissi)
-     non lascia spazio a questa ambiguità: il pulsante ha SEMPRE
-     esattamente 38px, qualunque cosa il browser decida di fare dentro
-     l'input — non serve indovinare come si restringe, la larghezza
-     non dipende dal contenuto in primo luogo. */
-
   .nascosto { display: none !important; }
 
   @media (max-width: 640px) {
@@ -510,7 +474,7 @@
       <p class="eyebrow">Pannello di controllo</p>
       <h1>Configurazione Scanner</h1>
       <p class="sottotitolo">Ogni sezione mostra lo stato attuale — tocca "Modifica" per cambiarlo, si salva da sola.</p>
-      <p class="versione-pagina">v3.4</p>
+      <p class="versione-pagina">v3.5</p>
     </div>
     <a href="statistiche.html" class="link-torna">Statistiche →</a>
     <a href="index.html" class="link-torna">← Torna al registro</a>
@@ -546,7 +510,7 @@
 
       <div class="barra-ripristino">
         <button type="button" class="bottone-secondario" id="bottone-ripristina-predefiniti" onclick="confermaRipristinaPredefiniti()">↺ Ripristina tutti i valori predefiniti</button>
-        <p class="nota-campo">Riporta tutte le sei card qui sotto — area, prezzo, tipologia, altri filtri, modelli, e pianificazione (lun-ven alle 16:00) — ai valori di partenza del progetto. Salva subito, come ogni altra modifica in questa pagina. La ricerca della perizia resta com'è.</p>
+        <p class="nota-campo">Riporta tutte le sette card qui sotto — area, prezzo, tipologia, altri filtri, modelli, pianificazione (lun-ven alle 10:00) e ricerca della perizia (estesa, con ricontrollo ogni 2 giorni, massimo 15 aste per giro) — ai valori predefiniti. Salva subito, come ogni altra modifica in questa pagina.</p>
         <p id="messaggio-ripristina-predefiniti" class="messaggio-salvataggio-card"></p>
       </div>
 
@@ -1116,7 +1080,7 @@
 
   let configAttuale = {};
   let pianificazioneAttuale = {};
-  let ricercaPeriziaAttuale = {estesa: false, ricontrollo_attivo: true, ricontrollo_giorni: 2, ricontrollo_max: 15};
+  let ricercaPeriziaAttuale = {estesa: true, ricontrollo_attivo: true, ricontrollo_giorni: 2, ricontrollo_max: 15};
 
   async function caricaConfigurazioneAttuale() {
     const statoEl = document.getElementById("stato-caricamento-config");
@@ -1182,7 +1146,7 @@
       // Non più letta da config: costante fissa, vedi VALORI_PREDEFINITI.verificaBatchMinuti.
       pianificazioneAttuale.verifica_batch_minuti = VALORI_PREDEFINITI.verificaBatchMinuti;
 
-      ricercaPeriziaAttuale.estesa = String(config.ricerca_perizia_estesa ?? false).toLowerCase() === "true";
+      ricercaPeriziaAttuale.estesa = String(config.ricerca_perizia_estesa ?? true).toLowerCase() === "true";
       ricercaPeriziaAttuale.ricontrollo_attivo = String(config.ricontrollo_perizie_attivo ?? true).toLowerCase() !== "false";
       ricercaPeriziaAttuale.ricontrollo_giorni = Number(config.ricontrollo_perizie_giorni ?? 2) || 2;
       ricercaPeriziaAttuale.ricontrollo_max = Number(config.ricontrollo_perizie_max ?? 15) || 15;
@@ -1236,10 +1200,6 @@
   function renderizzaRiepilogoModelli() {
     const testoBatch = configAttuale.usa_batch_gemini ? "batch anche in locale" : "batch solo su tutta Italia";
     const modelli = configAttuale.cascata_modelli_gemini;
-    // L'elenco per intero (con la freccia tra ogni modello) è quello che
-    // occupava tutto lo spazio della riga e troncava via lo stato del
-    // batch, sempre in fondo — qui basta sapere "è a cascata o no",
-    // l'ordine esatto resta comunque a portata di clic in "Modifica".
     const testoModelli = modelli.length === 0 ? "Nessun modello configurato"
       : modelli.length === 1 ? modelli[0]
       : `Cascata di ${modelli.length} modelli`;
@@ -1273,11 +1233,6 @@
       : "ricontrollo spento");
   }
 
-  // Salva le quattro impostazioni della ricerca perizia con una funzione
-  // dedicata (imposta_ricerca_perizia), separata da imposta_configurazione.
-  // Viene richiamata anche dopo ogni salvataggio delle altre card: se
-  // imposta_configurazione riscrivesse l'intera tabella config, queste
-  // impostazioni verrebbero rimesse subito al loro posto.
   async function salvaRicercaPeriziaSulServer() {
     return chiamaRpc("imposta_ricerca_perizia", {
       password_tentativo: passwordCorrente,
@@ -1407,12 +1362,6 @@
     return {errori, prezzoMin, prezzoMax};
   }
 
-  // Costruisce il payload nella forma che imposta_configurazione si
-  // aspetta e lo invia, a partire da configAttuale — estratta a parte
-  // perché serve in due punti: il salvataggio di ognuna delle cinque
-  // card di ricerca (sotto) e il ripristino ai valori predefiniti (più
-  // sotto), che è esattamente lo stesso invio con configAttuale
-  // popolato diversamente prima di chiamarla.
   async function salvaConfigCompletaSulServer() {
     return chiamaRpc("imposta_configurazione", {
       password_tentativo: passwordCorrente,
@@ -1435,10 +1384,6 @@
     });
   }
 
-  // Stessi valori con cui il progetto è partito — invariati rispetto alla
-  // versione precedente della pagina, solo spostati qui. Copre le sole
-  // cinque card di ricerca: le due di pianificazione sono nuove e non
-  // ne facevano parte.
   const VALORI_PREDEFINITI = {
     prezzoMin: 0,
     prezzoMax: 110000,
@@ -1454,16 +1399,17 @@
     conteggiaNonAnalizzate: false,
     cascataModelli: ["gemini-3.7-flash", "gemini-3.6-flash", "gemini-3.5-flash", "gemini-3.5-flash-lite"],
     usaBatchGemini: true,
-    // Pianificazione: lun-ven perché i tribunali (fonte di PVP) non
-    // pubblicano nel weekend — un giro sabato/domenica non troverebbe
-    // comunque nulla di nuovo. verificaBatchMinuti non è più una scelta
-    // dell'utente (vedi la chat): resta qui solo come costante fissa,
-    // usata per compilare imposta_pianificazione — verifica_batch.py non
-    // la legge più da Supabase in alcun modo.
     scannerAttivo: true,
     scannerGiorni: ["lun", "mar", "mer", "gio", "ven"],
     scannerOrari: ["10:00"],
-    verificaBatchMinuti: 15
+    verificaBatchMinuti: 15,
+    // Ricerca della perizia: sempre utile (la perizia a volte è solo tra gli
+    // allegati PVP o su siti diversi da astegiudiziarie, e spesso viene
+    // pubblicata dopo l'avviso), quindi attiva anche nei predefiniti.
+    ricercaPeriziaEstesa: true,
+    ricontrolloAttivo: true,
+    ricontrolloGiorni: 2,
+    ricontrolloMax: 15
   };
 
   function confermaRipristinaPredefiniti() {
@@ -1496,15 +1442,22 @@
     pianificazioneAttuale.scanner_orari = [...VALORI_PREDEFINITI.scannerOrari];
     pianificazioneAttuale.verifica_batch_minuti = VALORI_PREDEFINITI.verificaBatchMinuti;
 
-    // Due funzioni separate (imposta_configurazione, imposta_pianificazione),
-    // quindi due chiamate — in sequenza, non in parallelo, così un
-    // fallimento della seconda non si confonde con quello della prima:
-    // se una delle due fallisce, il messaggio dice ESATTAMENTE quale,
-    // invece di un errore generico che lascerebbe capire poco su cosa
-    // riprovare.
+    ricercaPeriziaAttuale.estesa = VALORI_PREDEFINITI.ricercaPeriziaEstesa;
+    ricercaPeriziaAttuale.ricontrollo_attivo = VALORI_PREDEFINITI.ricontrolloAttivo;
+    ricercaPeriziaAttuale.ricontrollo_giorni = VALORI_PREDEFINITI.ricontrolloGiorni;
+    ricercaPeriziaAttuale.ricontrollo_max = VALORI_PREDEFINITI.ricontrolloMax;
+
     try {
       const risultatoConfig = await salvaConfigCompletaSulServer();
-      if (risultatoConfig.result === "success") await salvaRicercaPeriziaSulServer();
+      if (risultatoConfig.result === "success") {
+        const risultatoPerizia = await salvaRicercaPeriziaSulServer();
+        if (risultatoPerizia.result !== "success") {
+          msgEl.textContent = "Ricerca/filtri ripristinati, ma la ricerca della perizia no: " + (risultatoPerizia.message || "errore sconosciuto") + " — pianificazione non toccata.";
+          msgEl.className = "messaggio-salvataggio-card messaggio-errore";
+          renderizzaTuttiIRiepiloghi();
+          return;
+        }
+      }
       if (risultatoConfig.result !== "success") {
         msgEl.textContent = "Ricerca/filtri: " + (risultatoConfig.message || "errore sconosciuto") + " — pianificazione non toccata.";
         msgEl.className = "messaggio-salvataggio-card messaggio-errore";
@@ -1529,7 +1482,7 @@
         return;
       }
 
-      msgEl.textContent = "Valori predefiniti ripristinati e salvati (ricerca, filtri e pianificazione).";
+      msgEl.textContent = "Valori predefiniti ripristinati e salvati (ricerca, filtri, pianificazione e ricerca della perizia).";
       msgEl.className = "messaggio-salvataggio-card messaggio-ok";
       renderizzaRiepilogoArea();
       renderizzaRiepilogoPrezzo();
@@ -1537,6 +1490,7 @@
       renderizzaRiepilogoAltri();
       renderizzaRiepilogoModelli();
       renderizzaRiepilogoPianificazioneScanner();
+      renderizzaRiepilogoRicercaPerizia();
     } catch (e) {
       msgEl.textContent = "Richiesta non riuscita. Controlla la connessione e riprova.";
       msgEl.className = "messaggio-salvataggio-card messaggio-errore";
@@ -1665,11 +1619,6 @@
 
   let confermaAvvioInCorso = false, timeoutConfermaAvvio = null;
 
-  // Sostituisce Code.gs/Apps Script — stessa funzione parametrizzata per
-  // tutti e tre i pulsanti sotto, invece di tre ponti quasi identici.
-  // Nessun hash da calcolare qui: la password viaggia in chiaro come per
-  // ogni altra chiamata RPC di questa pagina (stesso principio già in
-  // uso — il confronto vero avviene lato server).
   const URL_FUNZIONE_AVVIA_WORKFLOW = `${SUPABASE_URL}/functions/v1/avvia-workflow`;
 
   async function avviaWorkflowGitHub(nomeWorkflow, inputsExtra) {
@@ -1742,12 +1691,6 @@
     }
   }
 
-  // Stesso identico schema dei due sopra — modalita_immediata:"true"
-  // passata come inputsExtra al workflow_dispatch di
-  // notifiche-preferiti.yml, che notifica subito su Telegram le preferite
-  // entro 15 giorni ignorando le soglie già inviate dal giro automatico
-  // di stamattina — un controllo su richiesta apposta diverso da quello
-  // giornaliero (vedi la chat).
   let confermaControllaPreferitiInCorso = false, timeoutConfermaControllaPreferiti = null;
   async function avviaControllaPreferiti() {
     const bottone = document.getElementById("bottone-controlla-preferiti");
@@ -1905,10 +1848,6 @@
     }
   }
 
-  // Registra la visita a questa pagina — vedi statistiche.html. Sempre in
-  // "fire and forget": non aspetta la risposta e ignora qualunque errore,
-  // una visita non registrata non deve mai rallentare o interrompere
-  // l'uso normale della pagina.
   function registraVisita(pagina) {
     fetch(`${SUPABASE_URL}/rest/v1/rpc/registra_visita`, {
       method: "POST",
