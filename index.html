@@ -356,6 +356,10 @@
     overflow: hidden;
     flex: 0 0 auto;
   }
+  /* Testo di una pillola mostrato solo nel foglio Filtri su mobile
+     (vedi @media più sotto): nella barra su PC resta solo l'icona, così
+     la barra sta su una riga. */
+  .testo-pillola-mobile { display: none; }
   .pillola {
     background: var(--surface);
     border: none;
@@ -799,6 +803,7 @@
     .controlli-estesi .gruppo-pillole .pillola { flex: 1; text-align: center; }
     .controlli-estesi #bottone-filtro-tipologia,
     .controlli-estesi #bottone-ordinamento { width: 100%; justify-content: center; }
+    .testo-pillola-mobile { display: inline; }
 
     .sfondo-foglio-filtri {
       display: block;
@@ -1184,6 +1189,20 @@
     display: inline-block;
     background: var(--secondary-soft);
     color: var(--secondary);
+    font-size: .72rem;
+    font-weight: 600;
+    padding: 3px 9px;
+    border-radius: 5px;
+    margin: 4px 6px 6px 0;
+  }
+
+  /* Stesso stile di .badge-nuova, colori --primary: segnala un'asta la
+     cui perizia è stata ritrovata e rianalizzata da un ricontrollo
+     automatico nelle ultime 24 ore. */
+  .badge-aggiornata {
+    display: inline-block;
+    background: var(--primary-soft);
+    color: var(--primary);
     font-size: .72rem;
     font-weight: 600;
     padding: 3px 9px;
@@ -1771,6 +1790,7 @@
     .finestra-dettagli-header .lotto-id { margin-bottom: 1px; }
     .finestra-dettagli-header .lotto-comune { font-size: 1rem; line-height: 1.25; margin-bottom: 2px; }
     .finestra-dettagli-header .badge-nuova,
+    .finestra-dettagli-header .badge-aggiornata,
     .finestra-dettagli-header .badge-conclusa,
     .finestra-dettagli-header .badge-zona { margin: 2px 4px 2px 0; padding: 2px 7px; font-size: .68rem; }
     .finestra-dettagli-header .lotto-meta { font-size: .78rem; }
@@ -2177,7 +2197,7 @@
       <p class="eyebrow">Scansione Aste Giudiziarie</p>
       <h1><a href="brochure.pdf" target="_blank" rel="noopener" style="color:inherit;text-decoration:none;">Registro Opportunità</a></h1>
       <p class="sottotitolo">Aste residenziali filtrate per prezzo, distanza e margine potenziale stimato.</p>
-      <p class="versione-pagina">v2.20 · <a href="config.html">Configurazione</a> · aggiornato <strong id="testo-aggiornato">—</strong></p>
+      <p class="versione-pagina">v2.21 · <a href="config.html">Configurazione</a> · aggiornato <strong id="testo-aggiornato">—</strong></p>
     </div>
     <div class="statistiche-compatte">
       <div class="stat-compatta">
@@ -2250,6 +2270,9 @@
       </div>
       <div class="gruppo-pillole" id="gruppo-concluse">
         <button type="button" class="pillola" id="pillola-concluse" onclick="alternaMostraConcluse()">Concluse</button>
+      </div>
+      <div class="gruppo-pillole" id="gruppo-aggiornate">
+        <button type="button" class="pillola" id="pillola-aggiornate" onclick="alternaSoloAggiornate()" title="Mostra solo le aste con perizia ricontrollata nelle ultime 24 ore" aria-label="Aggiornate">🔄<span class="testo-pillola-mobile"> Aggiornate</span></button>
       </div>
       <div class="filtro-punteggio">
         <label>Punteggio <span id="valore-punteggio-minimo">0</span>–<span id="valore-punteggio-massimo">100</span></label>
@@ -4395,6 +4418,16 @@
     return trascorseMs >= 0 && trascorseMs < SOGLIA_NUOVA_ORE * 3600 * 1000;
   }
 
+  // Stesso schema di eNuova, ma su ultimo_ricontrollo_perizia: true se un
+  // ricontrollo automatico ha ritrovato e rianalizzato la perizia
+  // nelle ultime SOGLIA_AGGIORNATA_ORE ore.
+  const SOGLIA_AGGIORNATA_ORE = 24;
+  function eAggiornata(ultimoRicontrolloPerizia) {
+    if (!ultimoRicontrolloPerizia) return false;
+    const trascorseMs = Date.now() - new Date(ultimoRicontrolloPerizia).getTime();
+    return trascorseMs >= 0 && trascorseMs < SOGLIA_AGGIORNATA_ORE * 3600 * 1000;
+  }
+
   // Distanza assoluta in giorni tra una data ISO e oggi, indipendentemente
   // dal verso (prima o dopo). Serve al comparatore "vicina → lontana": con
   // le due viste ora separate (Attive / Concluse), "vicina" deve poter
@@ -4767,6 +4800,7 @@
       lat: numeroSicuro(r.latitudine, null),
       lon: numeroSicuro(r.longitudine, null),
       dataInserimento: r.data_inserimento || "",
+      ultimoRicontrolloPerizia: r.ultimo_ricontrollo_perizia || "",
       renditaCatastale: numeroSicuro(r.rendita_catastale, null),
       renditaCatastaleDichiarata: !!r.rendita_catastale_dichiarata,
       renditaCatastaleUtente: numeroSicuro(r.rendita_catastale_utente, null),
@@ -5139,6 +5173,17 @@
     applicaFiltri();
   }
 
+  // Stesso schema di alternaMostraConcluse: attiva/disattiva il filtro
+  // "solo aste aggiornate" (perizia ricontrollata nelle ultime 24 ore,
+  // vedi eAggiornata). Si somma agli altri filtri in applicaFiltri.
+  let filtroSoloAggiornateAttivo = false;
+
+  function alternaSoloAggiornate() {
+    filtroSoloAggiornateAttivo = !filtroSoloAggiornateAttivo;
+    document.getElementById("pillola-aggiornate").classList.toggle("attiva", filtroSoloAggiornateAttivo);
+    applicaFiltri();
+  }
+
   // Solo per la mappa — non tocca applicaFiltri()/ultimoElencoFiltrato,
   // quindi non ha alcun effetto sulla griglia (che non ne ha bisogno,
   // vedi commento sulla dichiarazione di mostraValutatiSullaMappa più
@@ -5236,6 +5281,7 @@
     if (filtroOccupazioneAttivo) conteggio++;
     if (filtroPreferitiScartatiAttivo) conteggio++;
     if (mostraConcluse) conteggio++;
+    if (filtroSoloAggiornateAttivo) conteggio++;
     if (Number(document.getElementById("punteggio-minimo").value) > 0
       || Number(document.getElementById("punteggio-massimo").value) < 100) conteggio++;
     const badge = document.getElementById("badge-filtri-attivi");
@@ -5323,7 +5369,8 @@
       const passaPreferiti = !filtroPreferitiScartatiAttivo
         || (filtroPreferitiScartatiAttivo === "preferito" ? a.preferito : a.scartato);
       const passaPunteggio = a.punteggio >= punteggioMinimo && a.punteggio <= punteggioMassimo;
-      return passaRicerca && passaTipologia && passaOccupazione && passaConcluse && passaPreferiti && passaPunteggio;
+      const passaAggiornate = !filtroSoloAggiornateAttivo || eAggiornata(a.ultimoRicontrolloPerizia);
+      return passaRicerca && passaTipologia && passaOccupazione && passaConcluse && passaPreferiti && passaPunteggio && passaAggiornate;
     });
 
     // Comparatore SEMPRE in ordine crescente per il criterio scelto — la
@@ -5749,6 +5796,7 @@
             <p class="lotto-id">${a.lotto ? "Lotto " + escapeHtml(a.lotto) + " · " : ""}${conPuntiDiRottura(a.tipologia)}</p>
             <p class="lotto-comune">${escapeHtml(a.comune)}</p>
             ${eNuova(a.dataInserimento) ? `<span class="badge-nuova" title="Trovata nelle ultime 24 ore">✨ Nuova</span>` : ""}
+            ${eAggiornata(a.ultimoRicontrolloPerizia) ? `<span class="badge-aggiornata" title="Perizia ricontrollata e rianalizzata nelle ultime 24 ore">📄 Aggiornata</span>` : ""}
             ${conclusa ? `<span class="badge-conclusa">🏁 Conclusa</span>` : ""}
             ${a.zonaSegnalata ? `<span class="badge-zona">🚩 ${escapeHtml(a.zonaSegnalata)}</span>` : ""}
             ${a.tentativoStimato ? `<span class="badge-tentativo">↓ ${a.tentativoStimato.tentativo}° tentativo probabile · -${a.tentativoStimato.percentuale}%</span>` : ""}
@@ -6535,6 +6583,7 @@ ${notaHtml}
             <p class="lotto-id">${a.lotto ? "Lotto " + escapeHtml(a.lotto) + " · " : ""}${conPuntiDiRottura(a.tipologia)}</p>
             <p class="lotto-comune">${escapeHtml(a.comune)}</p>
             ${eNuova(a.dataInserimento) ? `<span class="badge-nuova" title="Trovata nelle ultime 24 ore">✨ Nuova</span>` : ""}
+            ${eAggiornata(a.ultimoRicontrolloPerizia) ? `<span class="badge-aggiornata" title="Perizia ricontrollata e rianalizzata nelle ultime 24 ore">📄 Aggiornata</span>` : ""}
             ${conclusa ? `<span class="badge-conclusa">🏁 Conclusa</span>` : ""}
             ${a.zonaSegnalata ? `<span class="badge-zona">🚩 ${escapeHtml(a.zonaSegnalata)}</span>` : ""}
             ${a.tentativoStimato ? `<span class="badge-tentativo" title="Stima dedotta dallo sconto sulla perizia, non un dato dichiarato da PVP">↓ ${a.tentativoStimato.tentativo}° tentativo probabile · sconto ${a.tentativoStimato.percentuale}% sulla stima</span>` : ""}
