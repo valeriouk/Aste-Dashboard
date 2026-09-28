@@ -1109,8 +1109,13 @@
     popolaListaTipologia();
     popolaGrigliaGiorni();
     try {
-      const risposta = await fetch(`${SUPABASE_URL}/rest/v1/config?select=parametro,valore`, {
-        headers: {"apikey": SUPABASE_ANON_KEY, "Authorization": `Bearer ${SUPABASE_ANON_KEY}`}
+      // Lettura protetta dalla password di scrittura (leggi_config,
+      // sql/lettura_protetta.sql nel repo privato): la tabella config non è
+      // più leggibile direttamente con la chiave pubblica.
+      const risposta = await fetch(`${SUPABASE_URL}/rest/v1/rpc/leggi_config?select=parametro,valore`, {
+        method: "POST",
+        headers: {"apikey": SUPABASE_ANON_KEY, "Authorization": `Bearer ${SUPABASE_ANON_KEY}`, "Content-Type": "application/json"},
+        body: JSON.stringify({password_tentativo: passwordCorrente})
       });
       const righe = await risposta.json();
       const config = {};

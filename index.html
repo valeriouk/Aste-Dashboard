@@ -2593,6 +2593,10 @@
   // database per la verifica vera.
   // ==========================================================
   const CHIAVE_LOCALSTORAGE_PASSWORD_LETTURA = "aste_password_lettura_v1";
+  // Password di lettura verificata dal gate: serve anche per LEGGERE i dati
+  // (funzioni leggi_aste / leggi_dati_personali, vedi sql/lettura_protetta.sql
+  // nel repo privato). Vuota se la password di lettura non è attiva.
+  let passwordLetturaCorrente = "";
 
   function salvaPasswordLetturaRicordata(password) {
     try { localStorage.setItem(CHIAVE_LOCALSTORAGE_PASSWORD_LETTURA, password); } catch (e) {}
@@ -2626,6 +2630,7 @@
     try {
       const serve = await chiamaRpc("serve_password_lettura", {});
       if (!serve) {
+        passwordLetturaCorrente = "";
         avvia();
         return;
       }
@@ -2638,6 +2643,7 @@
       try {
         const valida = await chiamaRpc("verifica_password_lettura", {password_tentativo: ricordata});
         if (valida) {
+          passwordLetturaCorrente = ricordata;
           avvia();
           return;
         }
@@ -2668,6 +2674,7 @@
     }
 
     if (valida) {
+      passwordLetturaCorrente = password;
       salvaPasswordLetturaRicordata(password);
       document.getElementById("overlay-gate-lettura").classList.add("nascosto");
       avvia();
@@ -4749,8 +4756,19 @@
     // permetterebbe di filtrare lato server, ma la virtualizzazione della
     // griglia è già pensata per gestire comodamente migliaia di righe
     // tutte scaricate insieme, nessun motivo di complicare qui.
-    const promessaAste = fetch(`${SUPABASE_URL}/rest/v1/aste?select=*`, {headers: intestazioniLettura})
-      .then(r => { if (!r.ok) throw new Error(`HTTP ${r.status}`); return r.json(); });
+    // Le tabelle non sono leggibili direttamente con la chiave pubblica:
+    // si passa dalle funzioni che verificano la password di lettura.
+    const leggiProtetto = (funzione, corpo, filtri = "") =>
+      fetch(`${SUPABASE_URL}/rest/v1/rpc/${funzione}${filtri}`, {
+        method: "POST",
+        headers: {...intestazioniLettura, "Content-Type": "application/json"},
+        body: JSON.stringify(corpo),
+      }).then(r => { if (!r.ok) throw new Error(`HTTP ${r.status}`); return r.json(); });
+    const passwordLettura = passwordLetturaCorrente || leggiPasswordLetturaRicordata() || "";
+
+    const promessaAste = leggiProtetto("leggi_aste", {password_tentativo: passwordLettura, tipo: "lettura"}, "?select=*");
+    const promessaPersonali = leggiProtetto("leggi_dati_personali", {password_tentativo: passwordLettura})
+      .then(d => (d && d.ok ? d : {preferiti: [], link_utili: []}));
 
     // Preferiti non deve MAI bloccare il caricamento del registro
     // principale: se la richiesta fallisce per qualunque motivo, si
@@ -4758,14 +4776,14 @@
     // non è un errore che giustifichi lo stato "stato-errore" di tutta
     // la pagina (stesso principio di quando questa lettura passava dal
     // CSV pubblicato dei preferiti, prima della migrazione a Supabase).
-    const promessaPreferiti = fetch(`${SUPABASE_URL}/rest/v1/preferiti?select=*`, {headers: intestazioniLettura})
-      .then(r => { if (!r.ok) throw new Error(`HTTP ${r.status}`); return r.json(); })
+    const promessaPreferiti = promessaPersonali
+      .then(d => (Array.isArray(d.preferiti) ? d.preferiti : []))
       .catch(() => []);
 
     // Stessa cortesia di promessaPreferiti sopra: non deve mai bloccare
     // né far fallire il caricamento del registro principale.
-    const promessaLinkUtili = fetch(`${SUPABASE_URL}/rest/v1/link_utili_asta?select=*`, {headers: intestazioniLettura})
-      .then(r => { if (!r.ok) throw new Error(`HTTP ${r.status}`); return r.json(); })
+    const promessaLinkUtili = promessaPersonali
+      .then(d => (Array.isArray(d.link_utili) ? d.link_utili : []))
       .catch(() => []);
 
     // return qui: chi chiama avvia() può ora concatenare .then/.catch per

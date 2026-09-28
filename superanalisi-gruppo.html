@@ -230,8 +230,10 @@
     if (IDS.length < 2) { msg.textContent = "Servono almeno 2 aste: selezionale nel registro e usa \"Superanalisi di gruppo\"."; return; }
     const ids = IDS.slice(0, MAX_ASTE);
     try {
-      const r = await fetch(`${SUPABASE_URL}/rest/v1/aste?select=*&id_annuncio=in.(${ids.join(",")})`,
-        { headers: { apikey: SUPABASE_ANON_KEY, Authorization: `Bearer ${SUPABASE_ANON_KEY}` } });
+      // Lettura protetta dalla password (leggi_aste, come in superanalisi.html).
+      const r = await fetch(`${SUPABASE_URL}/rest/v1/rpc/leggi_aste?select=*&id_annuncio=in.(${ids.join(",")})`,
+        { method: "POST", headers: { apikey: SUPABASE_ANON_KEY, Authorization: `Bearer ${SUPABASE_ANON_KEY}`, "Content-Type": "application/json" },
+          body: JSON.stringify({ password_tentativo: passwordCorrente, tipo: "scrittura" }) });
       const righe = await r.json();
       if (!Array.isArray(righe) || !righe.length) { msg.textContent = "Nessuna delle aste selezionate è nel registro."; return; }
       RISULTATI = righe.map(calcola).sort(confronta);

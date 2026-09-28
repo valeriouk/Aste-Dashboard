@@ -250,8 +250,10 @@
     const msg = document.getElementById("messaggio-caricamento");
     if (!/^\d+$/.test(ID_ASTA)) { msg.textContent = "Manca l'asta: apri questa pagina dal pulsante \"Superanalisi\" del registro."; return; }
     try {
-      const r = await fetch(`${SUPABASE_URL}/rest/v1/aste?select=*&id_annuncio=eq.${ID_ASTA}`,
-        { headers: { apikey: SUPABASE_ANON_KEY, Authorization: `Bearer ${SUPABASE_ANON_KEY}` } });
+      // Lettura protetta dalla password (leggi_aste, sql/lettura_protetta.sql nel repo privato).
+      const r = await fetch(`${SUPABASE_URL}/rest/v1/rpc/leggi_aste?select=*&id_annuncio=eq.${ID_ASTA}`,
+        { method: "POST", headers: { apikey: SUPABASE_ANON_KEY, Authorization: `Bearer ${SUPABASE_ANON_KEY}`, "Content-Type": "application/json" },
+          body: JSON.stringify({ password_tentativo: passwordCorrente, tipo: "scrittura" }) });
       const righe = await r.json();
       if (!Array.isArray(righe) || !righe.length) { msg.textContent = `Asta ${ID_ASTA} non trovata nel registro.`; return; }
       RIGA = righe[0];

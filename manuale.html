@@ -236,9 +236,13 @@
         sbagliato ha 1 secondo di attesa. I contatori di lettura e scrittura sono separati. Il blocco vale per tutti: chi prova password a caso
         blocca anche te per 15 minuti.</li>
       <li>I processi automatici (scanner, controlli) non usano queste password: hanno un accesso di servizio proprio.</li>
+      <li><strong>Protezione dei dati</strong>: aste e analisi, stelle e scarti, note, link utili e configurazione si leggono dal database
+        <strong>solo con la password</strong>: quella di lettura per il registro, quella di scrittura per Superanalisi, Superanalisi di gruppo e
+        Configurazione. Senza password il database risponde con un elenco vuoto. Se <strong>disattivi</strong> la password di lettura, i dati del
+        registro tornano leggibili da chiunque abbia il link.</li>
     </ul>
-    <p class="nota">Nota su questo manuale: la password nasconde la pagina a chi la apre dal browser, ma il testo è comunque nel file pubblicato.
-      Per questo qui non ci sono password, chiavi o indirizzi dei servizi.</p>
+    <p class="nota">Nota su questo manuale: qui la password nasconde solo la pagina, perché il testo è scritto nel file pubblicato (non viene dal
+      database). Per questo nel manuale non ci sono password, chiavi, indirizzi dei servizi né dati delle aste.</p>
   </section>
 
   <section class="voce" id="sistema-costi">
@@ -921,6 +925,8 @@
     <p>Facoltativa e separata dalla password di scrittura. Con "Richiedi una password per aprire index.html" spuntata e una password scritta, il registro
       (e questo manuale) si apre solo con quella. Casella non spuntata + Salva = disattivata: il registro si apre con il solo link. Campo vuoto con casella
       spuntata = la password resta quella di prima.</p>
+    <p class="nota">La password di lettura protegge anche i <strong>dati</strong> del registro (aste, analisi, stelle, note, link), non solo la pagina:
+      disattivandola diventano leggibili da chiunque abbia il link. Consigliato tenerla attiva.</p>
   </section>
 </section>
 
