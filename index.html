@@ -1693,6 +1693,17 @@
     cursor: pointer;
   }
   .menu-condividi button:hover { background: var(--surface-2); }
+  /* Indirizzo nei dettagli: apre un menu con Google Maps e Street View
+     (link ufficiali di Google Maps, nessuna chiave, nessun costo). */
+  .contenitore-indirizzo { position: relative; }
+  .indirizzo-cliccabile { display: inline; background: none; border: none; padding: 0; margin: 0; font: inherit; color: inherit;
+    text-align: left; cursor: pointer; text-decoration: underline dotted; text-underline-offset: 3px; }
+  .indirizzo-cliccabile:hover { color: var(--primary); }
+  .menu-indirizzo { left: 0; right: auto; }
+  .menu-condividi a { display: block; padding: 9px 10px; border-radius: 7px; font-family: var(--font-body); font-size: .85rem;
+    color: var(--ink); text-decoration: none; }
+  .menu-condividi a:hover { background: var(--surface-2); }
+  .menu-indirizzo .nota-menu { font-size: .75rem; color: var(--ink-muted); padding: 4px 10px 6px; margin: 0; max-width: 240px; }
 
   /* Testo visibile SOLO nel PDF/stampa (vedi @media print più sotto) —
      a schermo non serve, la finestra stessa è già il contesto. */
@@ -5134,6 +5145,7 @@
     {menuId: "menu-tipologia", bottoneId: "bottone-filtro-tipologia"},
     {menuId: "menu-ordinamento", bottoneId: "bottone-ordinamento"},
     {menuId: "menu-condividi-dettagli", bottoneId: "bottone-condividi-dettagli"},
+    {menuId: "menu-indirizzo-dettagli", bottoneId: "bottone-indirizzo-dettagli"},
   ];
 
   function chiudiMenuAComparsaAperti() {
@@ -6853,6 +6865,24 @@ ${notaHtml}
   // lo allega a mano nel proprio client — un paio di passaggi in più,
   // ma con uno strumento che conosce già, invece di rifare da zero
   // qualcosa che oggi funziona bene così com'è.
+  // Link ufficiali di Google Maps (https://developers.google.com/maps/documentation/urls):
+  // su telefono aprono l'app, su PC una nuova scheda. Mappa per indirizzo;
+  // Street View dalle coordinate dell'annuncio (il panorama più vicino).
+  function urlGoogleMaps(a) {
+    return `https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(a.comune || `${a.lat},${a.lon}`)}`;
+  }
+  function urlStreetView(a) {
+    return `https://www.google.com/maps/@?api=1&map_action=pano&viewpoint=${a.lat},${a.lon}`;
+  }
+  function apriMenuIndirizzo(bottone) {
+    const menu = document.getElementById("menu-indirizzo-dettagli");
+    const eraAperto = !menu.classList.contains("nascosto");
+    chiudiMenuAComparsaAperti();
+    if (eraAperto) return;
+    menu.classList.remove("nascosto");
+    bottone.setAttribute("aria-expanded", "true");
+  }
+
   async function condividiAsta(bottone, id) {
     const asta = ASTE.find(a => a.id === id);
     if (!asta) return;
@@ -6956,7 +6986,16 @@ ${notaHtml}
           <div class="sigillo ${livello}">${contenutoSigillo}</div>
           <div>
             <p class="lotto-id">${a.lotto ? "Lotto " + escapeHtml(a.lotto) + " · " : ""}${conPuntiDiRottura(a.tipologia)}</p>
-            <p class="lotto-comune">${escapeHtml(a.comune)}</p>
+            <div class="contenitore-indirizzo">
+              <p class="lotto-comune"><button type="button" class="indirizzo-cliccabile" id="bottone-indirizzo-dettagli" onclick="apriMenuIndirizzo(this)" aria-expanded="false" title="Apri in Google Maps o Street View">📍 ${escapeHtml(a.comune)}</button></p>
+              <div class="menu-condividi menu-indirizzo nascosto" id="menu-indirizzo-dettagli">
+                <a href="${escapeHtml(urlGoogleMaps(a))}" target="_blank" rel="noopener" onclick="chiudiMenuAComparsaAperti()">🗺️ Apri su Google Maps</a>
+                ${a.lat !== null && a.lon !== null
+                  ? `<a href="${escapeHtml(urlStreetView(a))}" target="_blank" rel="noopener" onclick="chiudiMenuAComparsaAperti()">🚶 Street View</a>
+                     <p class="nota-menu">Street View parte dalle coordinate dell'annuncio, a volte approssimative.</p>`
+                  : `<p class="nota-menu">Street View non disponibile: l'annuncio non ha le coordinate.</p>`}
+              </div>
+            </div>
             ${eNuova(a.dataInserimento) ? `<span class="badge-nuova" title="Trovata nelle ultime 24 ore">✨ Nuova</span>` : ""}
             ${eAggiornata(a) ? `<span class="badge-aggiornata" title="Perizia ricontrollata e rianalizzata nelle ultime 24 ore">📄 Aggiornata</span>` : ""}
             ${badgeVisita(a)}
