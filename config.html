@@ -576,7 +576,7 @@
 
       <section class="blocco-semplice">
         <h2>Manutenzione</h2>
-        <p class="nota-campo">Elimina dal foglio tutte le righe con data vendita già passata. Operazione irreversibile — lo storico di quelle aste va perso, chiede conferma prima di procedere.</p>
+        <p class="nota-campo">Elimina dal registro tutte le aste con data vendita già passata. Operazione irreversibile — lo storico di quelle aste va perso, chiede conferma prima di procedere.</p>
         <button type="button" class="bottone-secondario" id="bottone-elimina-scadute" onclick="eliminaAsteScadute()" style="background:var(--danger-soft);color:var(--danger)">🗑 Elimina aste scadute</button>
         <p id="messaggio-elimina-scadute"></p>
       </section>
@@ -744,7 +744,7 @@
         </select>
         <label class="etichetta-checkbox">
           <input type="checkbox" id="campo-conteggia-non-analizzate" disabled>
-          Conteggia anche le aste non analizzate (tutto il foglio)
+          Conteggia anche le aste non analizzate (tutto il registro)
         </label>
       </div>
       <div class="finestra-modale-azioni">
