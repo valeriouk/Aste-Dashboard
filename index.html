@@ -7036,7 +7036,7 @@ ${notaHtml}
         <div style="margin-top:12px">
           ${a.urlAsta ? `<a class="lotto-link" href="${escapeHtml(a.urlAsta)}" target="_blank" rel="noopener">Apri annuncio PVP</a>` : ""}
           ${a.urlPdf ? `<a class="lotto-link secondario" href="${escapeHtml(a.urlPdf)}" target="_blank" rel="noopener">Apri documento</a>` : ""}
-          ${a.preferito && a.id ? `<a class="lotto-link" href="superanalisi.html?id=${encodeURIComponent(a.id)}" target="_blank" rel="noopener">Superanalisi</a>` : ""}
+          ${a.id ? `<a class="lotto-link" href="superanalisi.html?id=${encodeURIComponent(a.id)}" target="_blank" rel="noopener">Superanalisi</a>` : ""}
         </div>
         ${bloccoLinkUtili(a)}
       </div>
