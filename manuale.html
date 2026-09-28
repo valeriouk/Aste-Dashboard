@@ -75,7 +75,9 @@
   .barra input[type="search"] { flex: 1; min-width: 0; font-size: 1rem; padding: 10px 14px; background: var(--surface); }
   .conteggio-ricerca { font-size: .8rem; color: var(--ink-muted); white-space: nowrap; }
   .pulsante-indice { display: none; background: var(--surface); border: 1px solid var(--border); border-radius: 8px; padding: 9px 12px; font-weight: 600; cursor: pointer; font-family: var(--font-body); color: var(--ink); }
-  .link-registro { font-size: .85rem; color: var(--ink-muted); text-decoration: none; white-space: nowrap; }
+  .link-registro { font-size: .85rem; font-weight: 600; color: var(--ink); text-decoration: none; white-space: nowrap;
+    background: var(--surface); border: 1px solid var(--border); border-radius: 8px; padding: 9px 12px; }
+  .link-registro:hover { border-color: var(--primary); color: var(--primary); }
 
   /* Impaginazione: indice a sinistra, contenuto a destra */
   .impaginazione { max-width: 1240px; margin: 0 auto; display: grid; grid-template-columns: var(--larghezza-indice) minmax(0, 1fr); gap: 28px; padding: 0 16px; }
@@ -119,7 +121,9 @@
   @media (max-width: 900px) {
     .impaginazione { grid-template-columns: minmax(0, 1fr); padding: 0 16px; }
     .pulsante-indice { display: inline-block; }
-    .link-registro { display: none; }
+    /* Su telefono il pulsante per tornare al registro è solo "←". */
+    .link-registro { padding: 9px 11px; }
+    .link-registro .testo-lungo { display: none; }
     /* align-self: stretch e altezza esplicita: con "start" (quello del
        computer) un pannello fisso prende l'altezza del contenuto invece che
        dello schermo, non scorre, e il dito fa scorrere la pagina dietro. */
@@ -160,7 +164,7 @@
       <button type="button" class="pulsante-indice" onclick="alternaIndice()" aria-label="Apri l'indice">☰ Indice</button>
       <input type="search" id="campo-ricerca" placeholder="Cerca nel manuale: un campo, un valore, un'abbreviazione… (tasto /)" autocomplete="off" aria-label="Cerca nel manuale">
       <span class="conteggio-ricerca" id="conteggio-ricerca"></span>
-      <a class="link-registro" href="index.html">← Registro</a>
+      <a class="link-registro" href="index.html" title="Torna al registro" aria-label="Torna al registro">←<span class="testo-lungo"> Registro</span></a>
     </div>
   </div>
 
