@@ -3721,6 +3721,12 @@
     "Disponibilita PVP", "Formalita pregiudizievoli", "Abusi edilizi",
     "Spese sanatoria", "Probabile tentativo", "Data vendita", "Stato",
     "Nota", "Link PVP",
+    // In coda, per non spostare le colonne di sempre: dati dell'analisi v2 e OMI.
+    "Link perizia", "Fonte documento", "Data perizia", "Versione prompt", "Stato analisi",
+    "Quota in vendita", "Valore mercato CTU", "Valore finale CTU", "Valore finale riferito a",
+    "OMI zona (Agenzia Entrate - OMI)", "OMI tipologia", "OMI min euro/mq", "OMI max euro/mq", "OMI semestre",
+    "Classe manutenzione", "Livello ristrutturazione", "Arretrati condominiali", "Rendita catastale",
+    "Discordanze",
   ];
 
   function rigaCSV(a) {
@@ -3743,6 +3749,20 @@
       a.notaPreferito || "",
       a.urlAsta || "",
     ];
+    const v2 = a.analisiV2 || {};
+    const sez = (nome) => (v2[nome] && typeof v2[nome] === "object" ? v2[nome] : {});
+    const V = sez("valutazione_ctu"), I = sez("identificazione"), P = sez("perizia"), M = sez("stato_manutentivo");
+    const vuotoSeNull = (x) => (x === null || x === undefined ? "" : x);
+    valori.push(
+      a.urlPdf, a.fonteDocumento, vuotoSeNull(P.data_perizia), a.versionePrompt, a.statoAnalisi,
+      vuotoSeNull(I.quota_in_vendita), vuotoSeNull(V.valore_mercato_euro), vuotoSeNull(V.valore_finale_euro),
+      vuotoSeNull(V.valore_finale_riferito_a),
+      a.omi.zona, a.omi.tipologia, vuotoSeNull(a.omi.min), vuotoSeNull(a.omi.max), a.omi.periodo,
+      vuotoSeNull(M.classe), a.livelloRistrutturazioneSuggerito || "",
+      a.oneriCondominialiUtente !== null ? a.oneriCondominialiUtente : (a.oneriCondominiali || ""),
+      a.renditaCatastaleUtente !== null ? a.renditaCatastaleUtente : vuotoSeNull(a.renditaCatastale),
+      Array.isArray(v2.discordanze) ? v2.discordanze.length : "",
+    );
     return valori.map(campoCSV).join(";");
   }
 
@@ -4838,6 +4858,12 @@
       oneriCondominiali: numeroSicuro(r.oneri_condominiali),
       oneriCondominialiUtente: numeroSicuro(r.oneri_condominiali_utente, null),
       livelloRistrutturazioneSuggerito: r.livello_ristrutturazione_suggerito || null,
+      // Solo per il CSV (colonne in coda): analisi v2 completa e OMI.
+      analisiV2: r.analisi_v2 && typeof r.analisi_v2 === "object" ? r.analisi_v2 : null,
+      versionePrompt: r.versione_prompt || "",
+      statoAnalisi: r.stato_analisi || "",
+      omi: { zona: r.omi_zona || "", tipologia: r.omi_tipologia || "", min: numeroSicuro(r.omi_min_euro_mq, null),
+             max: numeroSicuro(r.omi_max_euro_mq, null), periodo: r.omi_periodo || "" },
     };
   }
 
