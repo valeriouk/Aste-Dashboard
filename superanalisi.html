@@ -412,7 +412,9 @@
     }
     const omiMin = Number(r.omi_min_euro_mq), omiMax = Number(r.omi_max_euro_mq);
     if (omiMin > 0 && omiMax >= omiMin) {
-      return { tipo: "omi", etichetta: `OMI ${r.omi_zona ? `zona ${r.omi_zona} ` : ""}${r.omi_periodo || ""}`.trim(), omi: { min: omiMin, max: omiMax } };
+      return { tipo: "omi", omi: { min: omiMin, max: omiMax },
+        etichetta: `OMI ${r.omi_periodo || ""}, zona ${r.omi_zona || "?"}${r.omi_zona_descrizione ? ` (${r.omi_zona_descrizione})` : ""}, ` +
+          `${String(r.omi_tipologia || "").toLowerCase()} in stato ${String(r.omi_stato || "").toLowerCase()}: ${omiMin}–${omiMax} €/mq` };
     }
     const quot = (((a || {}).valutazione_ctu || {}).quotazioni_citate || [])
       .filter((q) => q && Number(q.min_euro_mq) > 0 && Number(q.max_euro_mq) >= Number(q.min_euro_mq));
@@ -429,6 +431,10 @@
     const utente = Number(r.valore_rivendita_utente);
     return `<div class="sezione"><h2>Valore di rivendita</h2>
       <p>Fonte usata: <strong>${escapeHtml(f.etichetta)}</strong></p>
+      ${f.tipo === "omi" ? `<p class="nota">Fonte dei valori: Agenzia Entrate - OMI. La zona è trovata dalle coordinate dell'annuncio PVP,
+        che a volte sono approssimative: se la descrizione non corrisponde all'indirizzo, controlla la zona su
+        <a href="https://www1.agenziaentrate.gov.it/servizi/geopoi_omi/index.php" target="_blank" rel="noopener">GEOPOI</a>
+        e, se serve, inserisci il tuo valore.</p>` : ""}
       <p class="nota">Ordine delle fonti: il tuo valore, poi OMI (Agenzia delle Entrate – OMI), poi le quotazioni citate dal CTU,
         infine il valore del CTU. Con il tuo valore, lo scenario prudenziale usa il ${Math.round(FORCHETTA_VALORE_UTENTE.prudenziale * 100)}%
         e l'ottimistico il ${Math.round(FORCHETTA_VALORE_UTENTE.ottimistico * 100)}%.</p>
@@ -499,6 +505,7 @@
       targetNetto: true, primaCasa: !!p.primaCasa,
     });
     if (esito.arv && f.tipo === "citata") esito.arv.fonte = `${f.etichetta}: ${annuncio.omi.min}–${annuncio.omi.max} €/mq × ${esito.superficie.mq} mq`;
+    if (esito.arv && f.tipo === "omi") esito.arv.fonte = `${f.etichetta} × ${esito.superficie.mq} mq (Agenzia Entrate - OMI)`;
 
     const scenari = ["prudenziale", "centrale", "ottimistico"];
     const alMinimo = esito.scenariAlMinimo;
