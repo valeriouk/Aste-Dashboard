@@ -621,12 +621,80 @@
     msg.textContent = `${ai.nome} aperto${url === conQ ? " con il prompt già scritto" : ""}${copiato ? "; prompt copiato negli appunti (incollalo se serve)" : ""}. Allega la perizia: scaricala con il pulsante qui sopra e trascinala nella chat.`;
   }
 
+  // Condivisione del PDF dal telefono: la pagina non può scaricare da sé la
+  // perizia (CORS dei siti PVP/astegiudiziarie), la scarica la Edge Function
+  // perizia-pdf (copia in aste-immobiliari/supabase/functions/perizia-pdf).
+  // Due tocchi: il menu di condivisione si apre solo subito dopo un tocco, e
+  // scaricare il PDF nel frattempo ne farebbe scadere il permesso (iPhone).
+  const URL_FUNZIONE_PERIZIA_PDF = `${SUPABASE_URL}/functions/v1/perizia-pdf`;
+  let filePerizia = null;
+
+  function condivisioneFileSupportata() {
+    try { return !!(navigator.canShare && navigator.canShare({ files: [new File([""], "prova.pdf", { type: "application/pdf" })] })); }
+    catch (e) { return false; }
+  }
+
+  async function condividiPerizia() {
+    const pulsante = document.getElementById("pulsante-condividi");
+    const avanzamento = document.getElementById("avanzamento-pdf");
+    const msg = document.getElementById("messaggio-ai");
+    const mostra = (classe, t) => { msg.className = "messaggio " + classe; msg.textContent = t; };
+    const mb = (b) => (b / 1048576).toFixed(1).replace(".", ",");
+    if (filePerizia) {
+      const prompt = document.getElementById("testo-prompt").value;
+      await copiaNegliAppunti(prompt);   // alcune app ricevono il file ma ignorano il testo
+      try {
+        await navigator.share({ files: [filePerizia], title: `Perizia asta ${ID_ASTA}`, text: prompt });
+        mostra("ok", "Perizia condivisa. Il prompt è anche negli appunti, se l'app non l'ha ricevuto.");
+      } catch (e) {
+        if (e.name !== "AbortError") mostra("errore", `Condivisione non riuscita (${e.message}).`);
+      }
+      return;
+    }
+    pulsante.disabled = true;
+    try {
+      const r = await fetch(URL_FUNZIONE_PERIZIA_PDF, {
+        method: "POST",
+        headers: { apikey: SUPABASE_ANON_KEY, Authorization: `Bearer ${SUPABASE_ANON_KEY}`, "Content-Type": "application/json" },
+        body: JSON.stringify({ password_tentativo: passwordCorrente, id_annuncio: ID_ASTA }),
+      });
+      if (!r.ok) {
+        let e = {};
+        try { e = await r.json(); } catch (x) {}
+        mostra("errore", e.errore === "password" ? await messaggioPasswordRifiutata() : (e.messaggio || `Errore ${r.status}.`));
+        return;
+      }
+      const totale = Number(r.headers.get("X-Dimensione") || 0);
+      const lettore = r.body.getReader();
+      const pezzi = [];
+      let letti = 0;
+      for (;;) {
+        const { done, value } = await lettore.read();
+        if (done) break;
+        pezzi.push(value);
+        letti += value.length;
+        avanzamento.textContent = `${mb(letti)}${totale ? " / " + mb(totale) : ""} MB`;
+      }
+      filePerizia = new File(pezzi, `perizia_${ID_ASTA}.pdf`, { type: "application/pdf" });
+      pulsante.textContent = "📤 Condividi la perizia…";
+      avanzamento.textContent = `${mb(letti)} MB pronti`;
+      mostra("ok", "Perizia pronta: tocca «Condividi» e scegli l'app dell'AI.");
+    } catch (e) {
+      mostra("errore", `Download della perizia non riuscito (${e.message}).`);
+    } finally {
+      pulsante.disabled = false;
+    }
+  }
+
   function sezioneSecondaOpinione(r, a) {
     const prompt = costruisciPrompt(r, a);
     return `<div class="sezione"><h2>Seconda opinione</h2>
       <p class="nota">Apri un'AI alla volta: il prompt viene scritto o copiato per te; allega la perizia trascinando il PDF nella chat.
         I risultati restano nella tua conversazione, non vengono salvati qui. I piani gratuiti hanno limiti sul numero e la dimensione dei file.</p>
       <p>${r.link_pdf ? `<a class="bottone secondario" style="text-decoration:none;display:inline-block" href="${escapeHtml(r.link_pdf)}" target="_blank" rel="noopener" download>⬇ Scarica la perizia (PDF)</a>` : "Nessun PDF della perizia nel registro."}</p>
+      ${r.link_pdf && condivisioneFileSupportata() ? `<p><button class="bottone" id="pulsante-condividi" onclick="condividiPerizia()">📱 Prepara la perizia da condividere</button>
+        <span id="avanzamento-pdf" class="nota"></span></p>
+      <p class="nota">Dal telefono: prepara la perizia, poi «Condividi» apre il menu del telefono con il PDF e il prompt; scegli l'app dell'AI.</p>` : ""}
       <div class="pulsanti-ai">${AI.map((ai, i) => `<button class="pulsante-ai" onclick="apriAI(${i})">${escapeHtml(ai.nome)}
         <small>${ai.q ? "prompt già scritto" : "prompt negli appunti"}</small></button>`).join("")}</div>
       <p id="messaggio-ai" class="messaggio nascosto"></p>
