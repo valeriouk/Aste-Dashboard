@@ -28,6 +28,11 @@
     utileTarget: 20000,              // utile richiesto nello scenario CENTRALE
     utileMinimoPrudenziale: 10000,   // utile minimo accettabile anche nello scenario PRUDENZIALE
     targetNetto: false,              // true = l'utile target è al netto della stima d'imposta sulla plusvalenza
+    // In alternativa agli importi sopra: utile come percentuale del capitale
+    // investito (cassa necessaria prima della vendita), es. 0.15 = 15%.
+    // null = si usano gli importi in euro. Usati dalla pagina superanalisi.
+    utileTargetPct: null,
+    utileMinimoPrudenzialePct: null,
     aliquotaPlusvalenza: 0.26,       // (STIMA) imposta sostitutiva plusvalenze: verificare regime personale col commercialista
 
     // Acquisto
@@ -529,10 +534,13 @@
 
   // Prezzo massimo di aggiudicazione che lascia almeno `target` di utile. Ricerca binaria:
   // l'utile è decrescente nel prezzo, e così gestiamo imposta minima e prezzo-valore senza formule a tratti.
-  function maxBid(ctx, scenario, target, netto) {
+  // pct (facoltativo): target come percentuale del capitale investito a quel
+  // prezzo, invece dell'importo fisso `target`.
+  function maxBid(ctx, scenario, target, netto, pct) {
     const f = (prezzo) => {
       const c = contoEconomico(prezzo, ctx, scenario);
-      return (netto ? c.utileNettoStimato : c.utile) - target;
+      const soglia = pct != null ? pct * c.capitale : target;
+      return (netto ? c.utileNettoStimato : c.utile) - soglia;
     };
     let lo = 0;
     let hi = ctx.arv[scenario];
@@ -573,6 +581,7 @@
     if (reg.baseCtu > params.maxCostoRegolarizzazionePulita) gestibile.push(`regolarizzazione CTU €${reg.baseCtu}`);
     if (eta != null && eta > params.maxEtaPeriziaAnni && eta <= 7) gestibile.push(`perizia di ${eta.toFixed(1)} anni`);
     if (d.statoManutentivo === 'D_ristrutturare') gestibile.push('ristrutturazione completa');
+    if (!quotaIntera(d.quotaInVendita)) complessa.push(`si vende solo una quota (${d.quotaInVendita}): resta la comproprietà con altri`);
     if (d.condominio.straordinarie === 'si') gestibile.push('lavori straordinari condominiali deliberati');
     if (occupazione === 'non_indicato') gestibile.push('occupazione non indicata');
     if (qualita.livello === 'C') gestibile.push(`qualità documentale C (${qualita.motivi.join('; ')})`);
@@ -675,7 +684,7 @@
     esito.maxBid = {};
     for (const s of SCENARI) {
       esito.scenariAlMinimo[s] = offerta != null ? contoEconomico(offerta, ctx, s) : null;
-      esito.maxBid[s] = maxBid(ctx, s, params.utileTarget, params.targetNetto);
+      esito.maxBid[s] = maxBid(ctx, s, params.utileTarget, params.targetNetto, params.utileTargetPct);
     }
     esito.grigliaMaxBid = {};
     for (const t of params.griglieTarget) {
@@ -686,7 +695,8 @@
     //  - prezzo che garantisce l'utile target nello scenario centrale
     //  - prezzo che garantisce l'utile minimo nello scenario prudenziale
     const mbCentrale = esito.maxBid.centrale;
-    const mbPrudMinimo = maxBid(ctx, 'prudenziale', params.utileMinimoPrudenziale, params.targetNetto);
+    const mbPrudMinimo = maxBid(ctx, 'prudenziale', params.utileMinimoPrudenziale, params.targetNetto,
+      params.utileMinimoPrudenzialePct);
     esito.offertaMassima = mbCentrale == null || mbPrudMinimo == null ? null : Math.min(mbCentrale, mbPrudMinimo);
     esito.vincoloOffertaMassima = esito.offertaMassima == null ? 'target irraggiungibile'
       : mbPrudMinimo < mbCentrale ? 'scenario prudenziale' : 'scenario centrale';
@@ -698,13 +708,17 @@
     esito.punteggio = punteggioCompatibile(esito.classe, h, qualita.livello);
 
     const eur = (x) => `€${Math.round(x).toLocaleString('it-IT')}`;
-    const tgt = `${eur(params.utileTarget)} ${params.targetNetto ? 'netti' : 'lordi'}`;
+    const tgt = params.utileTargetPct != null
+      ? `${Math.round(params.utileTargetPct * 100)}% ${params.targetNetto ? 'netto' : 'lordo'} sul capitale`
+      : `${eur(params.utileTarget)} ${params.targetNetto ? 'netti' : 'lordi'}`;
+    const minimo = params.utileMinimoPrudenzialePct != null
+      ? `${Math.round(params.utileMinimoPrudenzialePct * 100)}% del capitale` : eur(params.utileMinimoPrudenziale);
     if (esito.classe === 'DA_SCARTARE') {
       esito.verdetto = `SCARTARE — ${classificazione.motivi[0]}`;
     } else if (h != null && h >= 0) {
       esito.verdetto = `${esito.classe} — offerta massima ${eur(esito.offertaMassima)} (rilancio possibile ${eur(h)} sul minimo)`;
     } else if (mbCentrale != null && offerta != null && mbCentrale >= offerta) {
-      esito.verdetto = `${esito.classe} — ${tgt} solo nello scenario centrale; nel prudenziale l'utile scende sotto ${eur(params.utileMinimoPrudenziale)}`;
+      esito.verdetto = `${esito.classe} — ${tgt} solo nello scenario centrale; nel prudenziale l'utile scende sotto ${minimo}`;
     } else {
       esito.verdetto = `${esito.classe} — al prezzo minimo non raggiunge ${tgt} nello scenario centrale`;
     }

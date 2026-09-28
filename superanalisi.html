@@ -1,0 +1,634 @@
+<!DOCTYPE html>
+<html lang="it">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Superanalisi · Registro Opportunità</title>
+
+<link rel="manifest" href="manifest.json">
+<link rel="icon" href="favicon-32.png" sizes="32x32">
+<link rel="apple-touch-icon" href="apple-touch-icon.png">
+<meta name="theme-color" content="#1e2320">
+
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,400;9..144,500;9..144,600&family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500;600&display=swap" rel="stylesheet">
+
+<!--
+  superanalisi.html — dettaglio di un'asta preferita: dati della perizia
+  (analisi v2, con pagina e citazione), valore di rivendita, conto
+  dell'operazione (underwriting.js) e seconda opinione con altre AI.
+  Si apre dal dettaglio dell'asta in index.html (pulsante "Superanalisi",
+  solo sulle preferite): superanalisi.html?id=<id annuncio>.
+  Serve la password di scrittura (stesso sblocco di config.html e
+  statistiche.html), usata anche per salvare il tuo valore di rivendita
+  (sql/valore_rivendita.sql in aste-immobiliari).
+-->
+
+<style>
+  :root {
+    --bg: #eef1ec;
+    --surface: #ffffff;
+    --surface-2: #e3e7e0;
+    --border: #d5dad1;
+    --primary: #234c6a;
+    --primary-soft: rgba(35, 76, 106, .10);
+    --secondary: #a15c3e;
+    --secondary-soft: rgba(161, 92, 62, .10);
+    --ok: #3f6b4a;
+    --ok-soft: rgba(63, 107, 74, .12);
+    --danger: #8b3d2e;
+    --danger-soft: rgba(139, 61, 46, .10);
+    --ink: #1e2320;
+    --ink-muted: #5b615a;
+    --ink-faint: #8c9289;
+    --font-display: 'Fraunces', Georgia, serif;
+    --font-body: 'Inter', system-ui, -apple-system, sans-serif;
+    --font-mono: 'JetBrains Mono', ui-monospace, monospace;
+  }
+  * { box-sizing: border-box; }
+  html, body { margin: 0; padding: 0; }
+  body { background: var(--bg); color: var(--ink); font-family: var(--font-body); line-height: 1.5; -webkit-font-smoothing: antialiased; }
+  a { color: var(--secondary); }
+  :focus-visible { outline: 2px solid var(--primary); outline-offset: 3px; border-radius: 4px; }
+  .nascosto { display: none !important; }
+
+  .contenitore { max-width: 920px; margin: 0 auto; padding: 40px 20px 96px; }
+  .intestazione { display: flex; justify-content: space-between; align-items: flex-end; flex-wrap: wrap; gap: 16px;
+    padding-bottom: 24px; margin-bottom: 28px; border-bottom: 1px solid var(--border); }
+  .eyebrow { font-family: var(--font-mono); font-size: .72rem; letter-spacing: .12em; text-transform: uppercase; color: var(--primary); margin: 0 0 10px; }
+  h1 { font-family: var(--font-display); font-size: 1.8rem; margin: 0 0 6px; }
+  .sottotitolo { color: var(--ink-muted); font-size: .95rem; margin: 0; }
+  .link-torna { font-size: .85rem; font-weight: 500; color: var(--ink-muted); text-decoration: none; white-space: nowrap; }
+  .link-torna:hover { color: var(--primary); }
+
+  .riquadro-gate { max-width: 380px; margin: 40px auto; background: var(--surface); border: 1px solid var(--border);
+    border-radius: 12px; padding: 32px; text-align: center; }
+  .riquadro-gate h2 { font-family: var(--font-display); font-size: 1.3rem; margin: 0 0 8px; }
+  .riquadro-gate p { color: var(--ink-muted); font-size: .9rem; margin: 0 0 20px; }
+  .riquadro-gate form { display: flex; flex-direction: column; gap: 10px; }
+  input[type="password"], input[type="number"], input[type="text"] {
+    background: var(--bg); border: 1px solid var(--border); border-radius: 8px; padding: 9px 12px;
+    font-family: var(--font-body); font-size: .95rem; color: var(--ink); }
+  .bottone { background: var(--ink); color: var(--surface); border: none; border-radius: 8px; padding: 10px 14px;
+    font-family: var(--font-body); font-size: .88rem; font-weight: 600; cursor: pointer; }
+  .bottone.secondario { background: var(--surface-2); color: var(--ink); }
+  .bottone:hover { opacity: .9; }
+  .messaggio { font-size: .85rem; margin: 8px 0 0; }
+  .messaggio.errore { color: var(--danger); }
+  .messaggio.ok { color: var(--ok); }
+
+  .sezione { background: var(--surface); border: 1px solid var(--border); border-radius: 12px; padding: 22px 22px 18px; margin-bottom: 18px; }
+  .sezione h2 { font-family: var(--font-display); font-size: 1.25rem; margin: 0 0 12px; }
+  .sezione h3 { font-size: .78rem; font-weight: 700; letter-spacing: .06em; text-transform: uppercase; color: var(--primary); margin: 18px 0 8px; }
+  .nota { color: var(--ink-muted); font-size: .82rem; margin: 6px 0 0; }
+  .griglia { display: grid; grid-template-columns: repeat(auto-fill, minmax(190px, 1fr)); gap: 10px 18px; }
+  .voce .etichetta { font-size: .74rem; color: var(--ink-faint); text-transform: uppercase; letter-spacing: .04em; }
+  .voce .valore { font-size: .95rem; font-weight: 500; }
+  .mono { font-family: var(--font-mono); }
+  .citazione { font-size: .82rem; color: var(--ink-muted); border-left: 3px solid var(--border); padding: 2px 0 2px 10px; margin: 4px 0 8px; }
+  .pagina { font-family: var(--font-mono); font-size: .75rem; color: var(--primary); background: var(--primary-soft); border-radius: 4px; padding: 0 5px; margin-left: 4px; }
+  .elenco { margin: 4px 0; padding-left: 18px; }
+  .elenco li { margin: 3px 0; font-size: .9rem; }
+
+  .etichetta-stato { display: inline-block; font-size: .78rem; font-weight: 600; border-radius: 999px; padding: 2px 10px; }
+  .stato-PULITA, .stato-ok { background: var(--ok-soft); color: var(--ok); }
+  .stato-GESTIBILE { background: var(--primary-soft); color: var(--primary); }
+  .stato-COMPLESSA { background: var(--secondary-soft); color: var(--secondary); }
+  .stato-DA_SCARTARE, .stato-errore { background: var(--danger-soft); color: var(--danger); }
+  .verdetto { font-size: 1.02rem; font-weight: 600; margin: 8px 0 4px; }
+  .numero-grande { font-family: var(--font-mono); font-size: 1.5rem; font-weight: 600; }
+
+  .tabella-scroll { overflow-x: auto; }
+  table { border-collapse: collapse; width: 100%; font-size: .86rem; }
+  th, td { text-align: right; padding: 6px 8px; border-bottom: 1px solid var(--border); white-space: nowrap; }
+  th:first-child, td:first-child { text-align: left; }
+  th { font-size: .74rem; color: var(--ink-faint); text-transform: uppercase; letter-spacing: .04em; font-weight: 600; }
+  tr.totale td { font-weight: 700; }
+
+  .riga-form { display: flex; flex-wrap: wrap; gap: 10px; align-items: flex-end; margin-top: 8px; }
+  .campo { display: flex; flex-direction: column; gap: 4px; font-size: .82rem; color: var(--ink-muted); }
+  .campo input[type="number"] { width: 150px; }
+  .etichetta-checkbox { display: flex; gap: 6px; align-items: center; font-size: .85rem; color: var(--ink); }
+
+  .pulsanti-ai { display: grid; grid-template-columns: repeat(auto-fill, minmax(165px, 1fr)); gap: 8px; margin-top: 10px; }
+  .pulsante-ai { background: var(--surface-2); border: 1px solid var(--border); border-radius: 8px; padding: 10px 12px;
+    text-align: left; cursor: pointer; font-family: var(--font-body); font-size: .88rem; font-weight: 600; color: var(--ink); }
+  .pulsante-ai small { display: block; font-weight: 400; color: var(--ink-muted); font-size: .74rem; }
+  .pulsante-ai:hover { border-color: var(--primary); }
+  textarea { width: 100%; min-height: 160px; font-family: var(--font-mono); font-size: .78rem; border: 1px solid var(--border);
+    border-radius: 8px; padding: 10px; background: var(--bg); color: var(--ink); }
+  @media (max-width: 560px) { .contenitore { padding: 24px 14px 72px; } h1 { font-size: 1.45rem; } }
+</style>
+</head>
+<body>
+<div class="contenitore">
+  <div class="intestazione">
+    <div>
+      <p class="eyebrow">Superanalisi</p>
+      <h1 id="titolo">Asta</h1>
+      <p class="sottotitolo" id="sottotitolo"></p>
+    </div>
+    <a class="link-torna" href="index.html">← Registro</a>
+  </div>
+
+  <p id="stato-verifica-automatica" class="nota">Verifica dell'accesso…</p>
+
+  <div id="schermata-password" class="riquadro-gate nascosto">
+    <h2>Accesso</h2>
+    <p>Inserisci la password di scrittura (la stessa di Configurazione).</p>
+    <form onsubmit="event.preventDefault(); sblocca();">
+      <input type="password" id="campo-password" autocomplete="current-password" placeholder="Password">
+      <button class="bottone" type="submit">Sblocca</button>
+      <p id="errore-gate" class="messaggio errore nascosto"></p>
+    </form>
+  </div>
+
+  <div id="schermata-contenuto" class="nascosto">
+    <p id="messaggio-caricamento" class="nota">Caricamento…</p>
+    <div id="contenuto"></div>
+  </div>
+</div>
+
+<script src="underwriting.js"></script>
+<script>
+  const SUPABASE_URL = "https://igemwrrcmsgaotoqvdzt.supabase.co";
+  const SUPABASE_ANON_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImlnZW13cnJjbXNnYW90b3F2ZHp0Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODkzMDc2MjksImV4cCI6MjEwNDg4MzYyOX0.YkUOBTOb40C-N0TkuDN0o5N7fVvI_qX2F1grUp-SVe8";
+  const ID_ASTA = new URLSearchParams(location.search).get("id") || "";
+
+  // Stessa chiave di config.html e statistiche.html.
+  const CHIAVE_PASSWORD = "aste_password_v2";
+  const CHIAVE_PARAMETRI = "superanalisi_parametri_v1";
+  // Utile predefinito: 15% netto sul capitale investito nello scenario
+  // centrale; almeno 5% netto anche nel prudenziale.
+  const PARAMETRI_PREDEFINITI = { utilePct: 15, minimoPrudenzialePct: 5, primaCasa: false };
+  // Il tuo valore di rivendita diventa lo scenario centrale; prudenziale e
+  // ottimistico ne sono una forchetta (STIMA, da tarare).
+  const FORCHETTA_VALORE_UTENTE = { prudenziale: 0.93, centrale: 1.0, ottimistico: 1.05 };
+
+  let passwordCorrente = null;
+  let RIGA = null;
+
+  // ============================================================ utilità
+  function escapeHtml(t) { const d = document.createElement("div"); d.textContent = t === null || t === undefined ? "" : String(t); return d.innerHTML; }
+  const vuoto = (v) => v === null || v === undefined || v === "" || (Array.isArray(v) && !v.length);
+  function eur(v) { const n = Number(v); return vuoto(v) || !Number.isFinite(n) ? "—" : "€ " + Math.round(n).toLocaleString("it-IT"); }
+  function mq(v) { const n = Number(v); return vuoto(v) || !Number.isFinite(n) ? "—" : n.toLocaleString("it-IT") + " mq"; }
+  function testo(v) { return vuoto(v) ? "—" : String(v).replace(/_/g, " "); }
+  const frase = (t) => { const s = String(t).trim(); return /[.!?]$/.test(s) ? s : s + "."; };
+  function sino(v) { return v === true || v === "true" || v === "si" ? "sì" : v === false || v === "false" || v === "no" ? "no" : testo(v); }
+  const pag = (p) => vuoto(p) ? "" : `<span class="pagina">p. ${escapeHtml(p)}</span>`;
+  const cit = (c) => vuoto(c) ? "" : `<div class="citazione">«${escapeHtml(c)}»</div>`;
+  function voce(etichetta, valore, extra = "") {
+    return `<div class="voce"><div class="etichetta">${escapeHtml(etichetta)}</div><div class="valore">${escapeHtml(valore)}${extra}</div></div>`;
+  }
+
+  async function chiamaRpc(nome, payload) {
+    const r = await fetch(`${SUPABASE_URL}/rest/v1/rpc/${nome}`, {
+      method: "POST",
+      headers: { apikey: SUPABASE_ANON_KEY, Authorization: `Bearer ${SUPABASE_ANON_KEY}`, "Content-Type": "application/json" },
+      body: JSON.stringify(payload),
+    });
+    return r.json();
+  }
+
+  async function messaggioPasswordRifiutata() {
+    try {
+      const secondi = await chiamaRpc("blocco_password", { p_tipo: "scrittura" });
+      if (typeof secondi === "number" && secondi > 0) return `Troppi tentativi errati: riprova tra ${Math.ceil(secondi / 60)} minuti.`;
+    } catch (e) {}
+    return "Password errata.";
+  }
+
+  function leggiLocale(chiave) { try { return localStorage.getItem(chiave); } catch (e) { return null; } }
+  function scriviLocale(chiave, valore) { try { localStorage.setItem(chiave, valore); } catch (e) {} }
+  function cancellaLocale(chiave) { try { localStorage.removeItem(chiave); } catch (e) {} }
+
+  // ============================================================ accesso
+  async function sblocca() {
+    const password = document.getElementById("campo-password").value;
+    const erroreEl = document.getElementById("errore-gate");
+    erroreEl.classList.add("nascosto");
+    if (!password) return;
+    let ok;
+    try { ok = await chiamaRpc("verifica_password", { password_tentativo: password }); }
+    catch (e) { erroreEl.textContent = "Impossibile contattare Supabase."; erroreEl.classList.remove("nascosto"); return; }
+    if (ok === true) { passwordCorrente = password; scriviLocale(CHIAVE_PASSWORD, password); mostraContenuto(); }
+    else { erroreEl.textContent = await messaggioPasswordRifiutata(); erroreEl.classList.remove("nascosto"); }
+  }
+
+  async function provaSbloccoAutomatico() {
+    const ricordata = leggiLocale(CHIAVE_PASSWORD);
+    if (ricordata) {
+      try {
+        if (await chiamaRpc("verifica_password", { password_tentativo: ricordata }) === true) {
+          passwordCorrente = ricordata; mostraContenuto(); return;
+        }
+        cancellaLocale(CHIAVE_PASSWORD);
+      } catch (e) {}
+    }
+    document.getElementById("stato-verifica-automatica").classList.add("nascosto");
+    document.getElementById("schermata-password").classList.remove("nascosto");
+    document.getElementById("campo-password").focus();
+  }
+
+  function mostraContenuto() {
+    document.getElementById("stato-verifica-automatica").classList.add("nascosto");
+    document.getElementById("schermata-password").classList.add("nascosto");
+    document.getElementById("schermata-contenuto").classList.remove("nascosto");
+    caricaAsta();
+  }
+
+  // ============================================================ dati
+  async function caricaAsta() {
+    const msg = document.getElementById("messaggio-caricamento");
+    if (!/^\d+$/.test(ID_ASTA)) { msg.textContent = "Manca l'asta: apri questa pagina dal pulsante \"Superanalisi\" del registro."; return; }
+    try {
+      const r = await fetch(`${SUPABASE_URL}/rest/v1/aste?select=*&id_annuncio=eq.${ID_ASTA}`,
+        { headers: { apikey: SUPABASE_ANON_KEY, Authorization: `Bearer ${SUPABASE_ANON_KEY}` } });
+      const righe = await r.json();
+      if (!Array.isArray(righe) || !righe.length) { msg.textContent = `Asta ${ID_ASTA} non trovata nel registro.`; return; }
+      RIGA = righe[0];
+      msg.classList.add("nascosto");
+      disegna();
+    } catch (e) {
+      msg.textContent = `Non riesco a leggere il registro: ${e.message}`;
+    }
+  }
+
+  function analisiV2(riga) {
+    const a = riga && riga.analisi_v2;
+    return a && typeof a === "object" && String(riga.versione_prompt || "").startsWith("v2") ? a : null;
+  }
+
+  // ============================================================ pagina
+  function disegna() {
+    const r = RIGA;
+    const a = analisiV2(r);
+    document.title = `Superanalisi · ${r.comune__indirizzo || ID_ASTA}`;
+    document.getElementById("titolo").textContent = r.comune__indirizzo || `Asta ${ID_ASTA}`;
+    document.getElementById("sottotitolo").textContent =
+      [r.tribunale, r.n__lotto ? `lotto ${r.n__lotto}` : "", r.tipologia ? String(r.tipologia).replace(/_/g, " ").toLowerCase() : ""]
+        .filter(Boolean).join(" · ");
+    const html = [sezioneAnnuncio(r, a)];
+    if (!a) {
+      html.push(`<div class="sezione"><h2>Analisi v2 non ancora disponibile</h2>
+        <p class="nota">Questa asta è stata analizzata con il prompt precedente (v1), che non estrae i dettagli con pagina e
+        citazione. Verrà rianalizzata con la v2 dal workflow "Rianalisi v2" (le preferite sono incluse) o dal prossimo
+        ricontrollo. Nel frattempo puoi usare la seconda opinione qui sotto.</p></div>`);
+    } else {
+      html.push(sezionePerizia(a));
+      html.push(sezioneValoreRivendita(r, a));
+      html.push(`<div id="sezione-conto"></div>`);
+    }
+    html.push(sezioneSecondaOpinione(r, a));
+    document.getElementById("contenuto").innerHTML = html.join("");
+    if (a) disegnaConto();
+  }
+
+  function sezioneAnnuncio(r, a) {
+    const m = (a && a._meta) || {};
+    return `<div class="sezione"><h2>Annuncio</h2><div class="griglia">
+      ${voce("Data vendita", r.data_vendita ? new Date(r.data_vendita).toLocaleDateString("it-IT") : "—")}
+      ${voce("Prezzo base", eur(r.prezzo_base))}
+      ${voce("Offerta minima", eur(r.offerta_minima))}
+      ${voce("Disponibilità (PVP)", testo(r["disponibilità_pvp"]))}
+      ${voce("Documento analizzato", testo(r.fonte_documento))}
+      ${voce("Analisi", a ? `${r.versione_prompt} · ${testo(m.modello || r.modello_ai_usato)}` : "v1")}
+    </div>
+    <p class="nota">${r.link_asta ? `<a href="${escapeHtml(r.link_asta)}" target="_blank" rel="noopener">Annuncio PVP</a>` : ""}
+      ${r.link_pdf ? ` · <a href="${escapeHtml(r.link_pdf)}" target="_blank" rel="noopener">Perizia (PDF)</a>` : ""}
+      ${r.descrizione_lotto ? `<br>${escapeHtml(r.descrizione_lotto)}` : ""}</p></div>`;
+  }
+
+  function sezionePerizia(a) {
+    const P = a.perizia || {}, I = a.identificazione || {}, CAT = a.catasto || {}, S = a.superfici || {};
+    const U = a.urbanistica || {}, CP = U.condono_pendente || {}, O = a.occupazione || {}, C = a.condominio || {};
+    const M = a.stato_manutentivo || {}, L = a.lavori_ctu || {}, V = a.valutazione_ctu || {}, F = a.formalita || {};
+    const disc = (a.discordanze || []).filter((x) => x && typeof x === "object");
+    const rischi = (a.altri_rischi || []).filter((x) => x && typeof x === "object");
+    const unita = (CAT.unita || []).filter((x) => x && typeof x === "object");
+    const diff = (U.difformita || []).filter((x) => x && typeof x === "object");
+    const quot = (V.quotazioni_citate || []).filter((x) => x && typeof x === "object");
+
+    return `<div class="sezione"><h2>Perizia</h2>
+      <div class="griglia">
+        ${voce("Tipo di documento", testo(P.tipo_documento))}
+        ${voce("Data perizia", testo(P.data_perizia), P.data_ultima_integrazione ? ` (integrazione ${escapeHtml(P.data_ultima_integrazione)})` : "")}
+        ${voce("Lotto trovato", sino(P.lotto_trovato))}
+        ${voce("Lotti / beni usati", testo(P.lotti_usati))}
+        ${voce("Quota in vendita", testo(I.quota_in_vendita))}
+        ${voce("Piano / interno", [I.piano, I.interno].filter((x) => !vuoto(x)).join(" / ") || "—")}
+        ${voce("Ascensore", sino(I.ascensore))}
+        ${voce("Anno costruzione", testo(I.anno_costruzione))}
+      </div>
+      ${vuoto(P.problemi_lettura) ? "" : `<p class="nota">⚠️ ${escapeHtml(P.problemi_lettura)}</p>`}
+
+      <h3>Superfici</h3>
+      <div class="griglia">
+        ${voce("Commerciale CTU", mq(S.commerciale_ctu_mq))}
+        ${voce("Lorda coperta", mq(S.lorda_coperta_mq))}
+        ${voce("Utile netta", mq(S.utile_netta_mq))}
+        ${voce("Catastale totale", mq(S.catastale_totale_mq))}
+        ${voce("Balconi / terrazzi", mq(S.balconi_terrazzi_mq))}
+        ${voce("Giardino / corte", mq(S.giardino_corte_mq))}
+        ${voce("Box / garage", mq(S.box_garage_mq))}
+        ${voce("Cantina", mq(S.cantina_mq))}
+      </div>
+      ${vuoto(S.coefficienti_ctu) ? "" : `<p class="nota">Coefficienti CTU: ${escapeHtml(S.coefficienti_ctu)} ${pag(S.pagina)}</p>`}
+      ${vuoto(S.note) ? "" : `<p class="nota">${escapeHtml(S.note)}</p>`}
+
+      <h3>Catasto</h3>
+      ${unita.length ? `<div class="tabella-scroll"><table><thead><tr><th>Ruolo</th><th>Foglio / part. / sub</th><th>Categoria</th><th>Consistenza</th><th>Rendita</th></tr></thead><tbody>
+        ${unita.map((u) => `<tr><td>${escapeHtml(testo(u.ruolo))}</td><td>${escapeHtml([u.foglio, u.particella, u.subalterno].map(testo).join(" / "))}</td>
+          <td>${escapeHtml(testo(u.categoria))}</td><td>${escapeHtml(testo(u.consistenza))}</td><td>${eur(u.rendita_euro)} ${pag(u.pagina)}</td></tr>`).join("")}
+      </tbody></table></div>` : `<p class="nota">Nessuna unità catastale indicata.</p>`}
+      <p class="nota">Conformità catastale: <strong>${escapeHtml(testo(CAT.conformita_catastale))}</strong>
+        ${vuoto(CAT.descrizione_difformita_catastale) ? "" : ` — ${escapeHtml(CAT.descrizione_difformita_catastale)}`}</p>
+
+      <h3>Urbanistica</h3>
+      <div class="griglia">
+        ${voce("Conformità urbanistica", testo(U.conformita_urbanistica))}
+        ${voce("Agibilità", testo(U.agibilita), U.data_agibilita ? ` (${escapeHtml(U.data_agibilita)})` : "")}
+        ${voce("Costo totale regolarizzazione (CTU)", eur(U.costo_totale_regolarizzazione_ctu_euro))}
+        ${voce("Condono pendente", sino(CP.presente), CP.presente === true || CP.presente === "true"
+          ? ` ${escapeHtml([CP.legge, CP.anno_domanda, CP.stato].filter((x) => !vuoto(x)).join(", "))} ${pag(CP.pagina)}` : "")}
+      </div>
+      ${diff.length ? `<ul class="elenco">${diff.map((x) => `<li><strong>${escapeHtml(testo(x.tipo))}</strong>: ${escapeHtml(testo(x.descrizione))}
+        ${vuoto(x.costo_ctu_euro) ? "" : ` — ${eur(x.costo_ctu_euro)}`} ${pag(x.pagina)}${cit(x.citazione)}</li>`).join("")}</ul>`
+        : `<p class="nota">Nessuna difformità indicata.</p>`}
+
+      <h3>Occupazione</h3>
+      <p><strong>${escapeHtml(testo(O.stato))}</strong>${O.data_rilevazione ? ` (rilevata ${escapeHtml(O.data_rilevazione)})` : ""} ${pag(O.pagina)}</p>
+      ${vuoto(O.estremi_contratto) ? "" : `<p class="nota">Contratto: ${escapeHtml(O.estremi_contratto)}
+        ${vuoto(O.scadenza_contratto) ? "" : ` · scadenza ${escapeHtml(O.scadenza_contratto)}`}
+        ${vuoto(O.canone_mensile_euro) ? "" : ` · canone ${eur(O.canone_mensile_euro)}/mese`}</p>`}
+      ${cit(O.citazione)}
+
+      <h3>Condominio e stato dell'immobile</h3>
+      <div class="griglia">
+        ${voce("Amministratore", testo(C.amministratore))}
+        ${voce("Spese ordinarie annue", eur(C.spese_ordinarie_annue_euro))}
+        ${voce("Arretrati", eur(C.arretrati_euro), pag(C.pagina))}
+        ${voce("Straordinarie deliberate", testo(C.straordinarie_deliberate), vuoto(C.importo_straordinarie_euro) ? "" : ` (${eur(C.importo_straordinarie_euro)})`)}
+        ${voce("Stato manutentivo", testo(M.classe), M.fonte ? ` (da ${escapeHtml(M.fonte)})` : "")}
+        ${voce("Riscaldamento", testo(M.riscaldamento))}
+        ${voce("Lavori stimati dal CTU", eur(L.importo_euro), pag(L.pagina))}
+      </div>
+      ${(M.osservazioni || []).length ? `<ul class="elenco">${M.osservazioni.map((o) => `<li>${escapeHtml(o)}</li>`).join("")}</ul>` : ""}
+      ${vuoto(M.impianti) && vuoto(M.infissi) ? "" : `<p class="nota">${vuoto(M.impianti) ? "" : `Impianti: ${escapeHtml(frase(M.impianti))} `}${vuoto(M.infissi) ? "" : `Infissi: ${escapeHtml(frase(M.infissi))}`}</p>`}
+
+      <h3>Valutazione del CTU</h3>
+      <div class="griglia">
+        ${voce("Valore di mercato", eur(V.valore_mercato_euro), pag(V.pagina))}
+        ${voce("Valore finale", eur(V.valore_finale_euro))}
+        ${voce("€/mq usati", vuoto(V.euro_mq) ? "—" : eur(V.euro_mq))}
+        ${voce("Superficie usata", mq(V.superficie_usata_mq))}
+        ${voce("Riduzione vendita giudiziaria", vuoto(V.riduzione_vendita_giudiziaria_pct) ? "—" : `${V.riduzione_vendita_giudiziaria_pct}%`)}
+        ${voce("Detrazioni", eur(V.detrazioni_euro))}
+      </div>
+      ${quot.length ? `<p class="nota">Quotazioni citate dal CTU: ${quot.map((q) => `${escapeHtml(testo(q.fonte))}${q.periodo ? ` ${escapeHtml(q.periodo)}` : ""}
+        ${eur(q.min_euro_mq)}–${eur(q.max_euro_mq)}/mq ${pag(q.pagina)}`).join(" · ")}</p>` : ""}
+
+      <h3>Formalità, discordanze e rischi</h3>
+      ${(F.non_cancellabili || []).length ? `<p><strong>Pesi che restano all'acquirente:</strong></p><ul class="elenco">${F.non_cancellabili.map((x) => `<li>${escapeHtml(x)}</li>`).join("")}</ul>`
+        : `<p class="nota">Nessun peso non cancellabile indicato. Usi civici: ${escapeHtml(testo(F.usi_civici_censi_livelli))}.</p>`}
+      ${disc.length ? `<ul class="elenco">${disc.map((d) => `<li><strong>${escapeHtml(testo(d.campo))}</strong>: ${escapeHtml(testo(d.valore_1))}
+        <span class="nota">(${escapeHtml(testo(d.fonte_1))})</span> vs ${escapeHtml(testo(d.valore_2))} <span class="nota">(${escapeHtml(testo(d.fonte_2))})</span>
+        ${vuoto(d.nota) ? "" : `<div class="nota">${escapeHtml(d.nota)}</div>`}</li>`).join("")}</ul>` : `<p class="nota">Nessuna discordanza segnalata.</p>`}
+      ${rischi.length ? `<ul class="elenco">${rischi.map((x) => `<li>${escapeHtml(testo(x.descrizione))} ${pag(x.pagina)}</li>`).join("")}</ul>` : ""}
+    </div>`;
+  }
+
+  // ============================================================ valore di rivendita
+  // Precedenza: il tuo valore > OMI (dati caricati nel registro, fase 2) >
+  // quotazioni citate dal CTU > valore del CTU (dentro underwriting.js).
+  function fonteRivendita(r, a) {
+    const utente = Number(r.valore_rivendita_utente);
+    if (Number.isFinite(utente) && utente > 0) {
+      const f = FORCHETTA_VALORE_UTENTE;
+      return { tipo: "utente", etichetta: `il tuo valore (${eur(utente)})`,
+        arvOverride: { prudenziale: Math.round(utente * f.prudenziale), centrale: Math.round(utente * f.centrale), ottimistico: Math.round(utente * f.ottimistico) } };
+    }
+    const omiMin = Number(r.omi_min_euro_mq), omiMax = Number(r.omi_max_euro_mq);
+    if (omiMin > 0 && omiMax >= omiMin) {
+      return { tipo: "omi", etichetta: `OMI ${r.omi_zona ? `zona ${r.omi_zona} ` : ""}${r.omi_periodo || ""}`.trim(), omi: { min: omiMin, max: omiMax } };
+    }
+    const quot = (((a || {}).valutazione_ctu || {}).quotazioni_citate || [])
+      .filter((q) => q && Number(q.min_euro_mq) > 0 && Number(q.max_euro_mq) >= Number(q.min_euro_mq));
+    const scelta = quot.find((q) => /omi/i.test(String(q.fonte || ""))) || quot[0];
+    if (scelta) {
+      return { tipo: "citata", etichetta: `quotazioni ${testo(scelta.fonte)}${scelta.periodo ? ` ${scelta.periodo}` : ""} citate dal CTU${scelta.pagina ? ` (p. ${scelta.pagina})` : ""}`,
+        omi: { min: Number(scelta.min_euro_mq), max: Number(scelta.max_euro_mq) } };
+    }
+    return { tipo: "ctu", etichetta: "valore del CTU (affidabilità bassa)" };
+  }
+
+  function sezioneValoreRivendita(r, a) {
+    const f = fonteRivendita(r, a);
+    const utente = Number(r.valore_rivendita_utente);
+    return `<div class="sezione"><h2>Valore di rivendita</h2>
+      <p>Fonte usata: <strong>${escapeHtml(f.etichetta)}</strong></p>
+      <p class="nota">Ordine delle fonti: il tuo valore, poi OMI (Agenzia delle Entrate – OMI), poi le quotazioni citate dal CTU,
+        infine il valore del CTU. Con il tuo valore, lo scenario prudenziale usa il ${Math.round(FORCHETTA_VALORE_UTENTE.prudenziale * 100)}%
+        e l'ottimistico il ${Math.round(FORCHETTA_VALORE_UTENTE.ottimistico * 100)}%.</p>
+      <div class="riga-form">
+        <label class="campo">Il tuo valore di rivendita (€)
+          <input type="number" id="campo-valore-utente" min="0" step="1000" value="${Number.isFinite(utente) && utente > 0 ? utente : ""}" placeholder="es. 120000">
+        </label>
+        <button class="bottone" onclick="salvaValoreUtente()">Salva</button>
+        <button class="bottone secondario" onclick="salvaValoreUtente(true)">Cancella (torna al calcolato)</button>
+      </div>
+      <p id="messaggio-valore-utente" class="messaggio nascosto"></p>
+    </div>`;
+  }
+
+  async function salvaValoreUtente(cancella = false) {
+    const msg = document.getElementById("messaggio-valore-utente");
+    const campo = document.getElementById("campo-valore-utente");
+    const valore = cancella ? null : Number(campo.value);
+    msg.className = "messaggio";
+    if (!cancella && !(valore > 0)) { msg.textContent = "Inserisci un valore maggiore di zero, oppure usa Cancella."; msg.classList.add("errore"); return; }
+    try {
+      const esito = await chiamaRpc("imposta_valore_rivendita", { password_tentativo: passwordCorrente, id_annuncio_input: Number(ID_ASTA), valore_input: valore });
+      if (esito && esito.result === "success") {
+        RIGA.valore_rivendita_utente = valore;
+        disegna();
+        const nuovo = document.getElementById("messaggio-valore-utente");
+        nuovo.textContent = cancella ? "Cancellato: torna il valore calcolato." : "Salvato.";
+        nuovo.className = "messaggio ok";
+      } else {
+        msg.textContent = (esito && esito.message) || "Salvataggio non riuscito (funzione imposta_valore_rivendita disponibile? vedi sql/valore_rivendita.sql).";
+        msg.classList.add("errore");
+      }
+    } catch (e) { msg.textContent = "Richiesta non riuscita. Controlla la connessione."; msg.classList.add("errore"); }
+  }
+
+  // ============================================================ conto dell'operazione
+  function leggiParametri() {
+    try { return { ...PARAMETRI_PREDEFINITI, ...(JSON.parse(leggiLocale(CHIAVE_PARAMETRI) || "{}")) }; }
+    catch (e) { return { ...PARAMETRI_PREDEFINITI }; }
+  }
+
+  function aggiornaParametri() {
+    const p = {
+      utilePct: Number(document.getElementById("p-utile").value),
+      minimoPrudenzialePct: Number(document.getElementById("p-minimo").value),
+      primaCasa: document.getElementById("p-prima-casa").checked,
+    };
+    if (!(p.utilePct >= 0) || !(p.minimoPrudenzialePct >= 0)) return;
+    scriviLocale(CHIAVE_PARAMETRI, JSON.stringify(p));
+    disegnaConto();
+  }
+
+  function disegnaConto() {
+    const el = document.getElementById("sezione-conto");
+    if (!el) return;
+    if (!window.Underwriting) {
+      el.innerHTML = `<div class="sezione"><h2>Conto dell'operazione</h2><p class="messaggio errore">Motore di calcolo (underwriting.js) non caricato.</p></div>`;
+      return;
+    }
+    const r = RIGA, a = analisiV2(r), p = leggiParametri(), f = fonteRivendita(r, a);
+    const annuncio = {
+      comune: r.comune__indirizzo, offertaMinima: Number(r.offerta_minima) || null, prezzoBase: Number(r.prezzo_base) || null,
+      valoreStima: Number(r.valore_stima_perito) || null, occupazione: r["disponibilità_pvp"] || null,
+      omi: f.omi || null, arvOverride: f.arvOverride || null,
+    };
+    const esito = Underwriting.analizzaAsta(a, annuncio, {
+      utileTargetPct: p.utilePct / 100, utileMinimoPrudenzialePct: p.minimoPrudenzialePct / 100,
+      targetNetto: true, primaCasa: !!p.primaCasa,
+    });
+    if (esito.arv && f.tipo === "citata") esito.arv.fonte = `${f.etichetta}: ${annuncio.omi.min}–${annuncio.omi.max} €/mq × ${esito.superficie.mq} mq`;
+
+    const scenari = ["prudenziale", "centrale", "ottimistico"];
+    const alMinimo = esito.scenariAlMinimo;
+    const nomiVoci = { prezzo: "Prezzo (offerta minima)", imposte: "Imposte di acquisto", speseProcedura: "Spese di procedura",
+      arretratiCondominiali: "Arretrati condominiali", regolarizzazione: "Regolarizzazione (+25%)", tecnico: "Tecnico e pratiche",
+      lavori: "Lavori", imprevisti: "Imprevisti (10%)", holding: "Costi di detenzione", vendita: "Costi di vendita" };
+
+    const tabella = alMinimo && alMinimo.centrale ? `<div class="tabella-scroll"><table>
+      <thead><tr><th>Al prezzo dell'offerta minima</th>${scenari.map((s) => `<th>${s}</th>`).join("")}</tr></thead><tbody>
+      <tr><td>Valore di rivendita</td>${scenari.map((s) => `<td>${eur(alMinimo[s].arv)}</td>`).join("")}</tr>
+      ${Object.keys(nomiVoci).map((k) => `<tr><td>${nomiVoci[k]}</td>${scenari.map((s) => `<td>${eur(alMinimo[s].voci[k])}</td>`).join("")}</tr>`).join("")}
+      <tr class="totale"><td>Costo totale</td>${scenari.map((s) => `<td>${eur(alMinimo[s].totale)}</td>`).join("")}</tr>
+      <tr><td>Mesi stimati</td>${scenari.map((s) => `<td>${alMinimo[s].mesi}</td>`).join("")}</tr>
+      <tr><td>Capitale investito</td>${scenari.map((s) => `<td>${eur(alMinimo[s].capitale)}</td>`).join("")}</tr>
+      <tr><td>Utile lordo</td>${scenari.map((s) => `<td>${eur(alMinimo[s].utile)}</td>`).join("")}</tr>
+      <tr class="totale"><td>Utile netto stimato</td>${scenari.map((s) => `<td>${eur(alMinimo[s].utileNettoStimato)}</td>`).join("")}</tr>
+      <tr><td>Rendimento netto sul capitale</td>${scenari.map((s) => { const c = alMinimo[s]; return `<td>${c.capitale ? Math.round(c.utileNettoStimato / c.capitale * 100) : "—"}%</td>`; }).join("")}</tr>
+      </tbody></table></div>` : "";
+
+    el.innerHTML = `<div class="sezione"><h2>Conto dell'operazione</h2>
+      <div class="riga-form">
+        <label class="campo">Utile netto richiesto (% del capitale, scenario centrale)
+          <input type="number" id="p-utile" min="0" step="1" value="${p.utilePct}" onchange="aggiornaParametri()"></label>
+        <label class="campo">Utile netto minimo nel prudenziale (%)
+          <input type="number" id="p-minimo" min="0" step="1" value="${p.minimoPrudenzialePct}" onchange="aggiornaParametri()"></label>
+        <label class="etichetta-checkbox"><input type="checkbox" id="p-prima-casa" ${p.primaCasa ? "checked" : ""} onchange="aggiornaParametri()"> Acquisto come prima casa</label>
+      </div>
+      <p class="verdetto"><span class="etichetta-stato stato-${escapeHtml(esito.classe)}">${escapeHtml(testo(esito.classe))}</span> ${escapeHtml(esito.verdetto || "")}</p>
+      <div class="griglia" style="margin-top:10px">
+        <div class="voce"><div class="etichetta">Offerta massima</div><div class="numero-grande">${eur(esito.offertaMassima)}</div></div>
+        <div class="voce"><div class="etichetta">Margine sull'offerta minima</div><div class="numero-grande">${esito.headroom == null ? "—" : eur(esito.headroom)}</div></div>
+        <div class="voce"><div class="etichetta">Qualità dei dati</div><div class="numero-grande">${escapeHtml(esito.qualita.livello)}</div></div>
+      </div>
+      ${esito.arv ? `<p class="nota">Valore di rivendita: ${escapeHtml(esito.arv.fonte)} (affidabilità ${escapeHtml(esito.arv.affidabilita)}).
+        Superficie: ${mq(esito.superficie.mq)} (${escapeHtml(esito.superficie.fonte)}). Lavori: ${eur(esito.lavori.importo)} (${escapeHtml(esito.lavori.fonte)}).</p>` : ""}
+      ${esito.maxBid ? `<p class="nota">Offerta massima per scenario: ${scenari.map((s) => `${s} ${eur(esito.maxBid[s])}`).join(" · ")} — vincolo: ${escapeHtml(esito.vincoloOffertaMassima || "—")}.</p>` : ""}
+      ${tabella}
+      ${esito.motivi.length ? `<h3>Cosa pesa sulla classe</h3><ul class="elenco">${esito.motivi.map((m) => `<li>${escapeHtml(m)}</li>`).join("")}</ul>` : ""}
+      ${esito.qualita.motivi.length ? `<h3>Qualità dei dati (${escapeHtml(esito.qualita.livello)})</h3><ul class="elenco">${esito.qualita.motivi.map((m) => `<li>${escapeHtml(m)}</li>`).join("")}</ul>` : ""}
+      ${esito.avvisi.length ? `<h3>Avvisi</h3><ul class="elenco">${esito.avvisi.map((m) => `<li>${escapeHtml(m)}</li>`).join("")}</ul>` : ""}
+      <p class="nota">Stime con parametri dichiarati in underwriting.js (imposte, spese, tempi, costi di vendita, imposta del 26% sulla
+        plusvalenza): servono a confrontare le aste, non sostituiscono il parere di un tecnico o di un commercialista. Le imposte usano
+        le stesse regole delle stime del registro, con tre prudenze in più: prezzo-valore solo se conviene, niente prezzo-valore senza
+        rendita, tecnico sempre conteggiato.</p>
+    </div>`;
+  }
+
+  // ============================================================ seconda opinione
+  // ChatGPT, Claude e Perplexity accettano il prompt nell'indirizzo (?q=);
+  // per le altre il prompt viene copiato negli appunti. Nessun sito accetta
+  // un file allegato via link: la perizia si scarica e si trascina nella chat.
+  const AI = [
+    { nome: "ChatGPT", url: "https://chatgpt.com/", q: "https://chatgpt.com/?q=" },
+    { nome: "Claude", url: "https://claude.ai/new", q: "https://claude.ai/new?q=" },
+    { nome: "Perplexity", url: "https://www.perplexity.ai/", q: "https://www.perplexity.ai/search?q=" },
+    { nome: "Gemini", url: "https://gemini.google.com/app" },
+    { nome: "Mistral Le Chat", url: "https://chat.mistral.ai/chat" },
+    { nome: "DeepSeek", url: "https://chat.deepseek.com/" },
+    { nome: "Grok", url: "https://grok.com/" },
+    { nome: "Copilot", url: "https://copilot.microsoft.com/" },
+  ];
+  const MAX_LUNGHEZZA_URL = 6000;
+
+  function costruisciPrompt(r, a) {
+    const n = (v) => vuoto(v) ? "non indicato" : v;
+    const righe = [
+      "Ti allego la perizia di stima (CTU) di un'asta giudiziaria immobiliare italiana. Leggila per intero, comprese tabelle e fotografie.",
+      "",
+      `Annuncio PVP: ${n(r.comune__indirizzo)}; ${n(r.tribunale)}; lotto ${n(r.n__lotto)}; prezzo base ${eur(r.prezzo_base)}; offerta minima ${eur(r.offerta_minima)}; vendita il ${r.data_vendita ? new Date(r.data_vendita).toLocaleDateString("it-IT") : "non indicata"}.`,
+    ];
+    if (!vuoto(r.descrizione_lotto)) righe.push(`Descrizione: ${String(r.descrizione_lotto).slice(0, 400)}`);
+    if (a) {
+      const P = a.perizia || {}, I = a.identificazione || {}, S = a.superfici || {}, U = a.urbanistica || {}, O = a.occupazione || {};
+      const V = a.valutazione_ctu || {}, C = a.condominio || {}, M = a.stato_manutentivo || {}, F = a.formalita || {};
+      const diff = (U.difformita || []).filter((x) => x && typeof x === "object");
+      righe.push("", "Un sistema automatico ha estratto questi dati dalla perizia (da verificare):",
+        `- Lotto/beni considerati: ${n(P.lotti_usati)}; quota in vendita: ${n(I.quota_in_vendita)}`,
+        `- Valore di mercato CTU: ${eur(V.valore_mercato_euro)}; valore finale: ${eur(V.valore_finale_euro)}`,
+        `- Superficie commerciale: ${mq(S.commerciale_ctu_mq)}`,
+        `- Occupazione: ${n(O.stato)}${vuoto(O.estremi_contratto) ? "" : `; contratto: ${O.estremi_contratto}`}`,
+        `- Conformità urbanistica: ${n(U.conformita_urbanistica)}; difformità: ${diff.length}${vuoto(U.costo_totale_regolarizzazione_ctu_euro) ? "" : ` (costo CTU ${eur(U.costo_totale_regolarizzazione_ctu_euro)})`}`,
+        `- Condono pendente: ${sino((U.condono_pendente || {}).presente)}`,
+        `- Arretrati condominiali: ${eur(C.arretrati_euro)}; stato manutentivo: ${n(M.classe)}`,
+        `- Pesi non cancellabili: ${(F.non_cancellabili || []).length ? F.non_cancellabili.join("; ") : "nessuno indicato"}`);
+    }
+    righe.push("", "Compiti:",
+      "1. Verifica ciascun dato indicando la pagina della perizia; segnala quelli errati o incompleti con il valore corretto.",
+      "2. Elenca i rischi per chi compra all'asta per ristrutturare e rivendere: occupazione e tempi di liberazione, abusi e sanabilità, formalità che restano, quota, condominio, stato dell'immobile, differenze con l'annuncio.",
+      "3. Indica cosa verificare prima di fare un'offerta (documenti, sopralluogo, custode, ufficio tecnico del comune).",
+      "4. Giudizio sintetico: operazione pulita, gestibile, complessa o da scartare, con il motivo.",
+      "Regole: non inventare; se un dato non è nella perizia scrivi \"non indicato\". Rispondi in italiano, in modo sintetico, con una tabella per il punto 1.");
+    return righe.join("\n");
+  }
+
+  async function copiaNegliAppunti(testoDaCopiare) {
+    try { await navigator.clipboard.writeText(testoDaCopiare); return true; }
+    catch (e) {
+      const t = document.getElementById("testo-prompt");
+      if (t) { t.focus(); t.select(); try { return document.execCommand("copy"); } catch (e2) {} }
+      return false;
+    }
+  }
+
+  async function apriAI(indice) {
+    const ai = AI[indice];
+    const prompt = document.getElementById("testo-prompt").value;
+    const copiato = await copiaNegliAppunti(prompt);
+    const conQ = ai.q ? ai.q + encodeURIComponent(prompt) : null;
+    const url = conQ && conQ.length <= MAX_LUNGHEZZA_URL ? conQ : ai.url;
+    window.open(url, "_blank", "noopener");
+    const msg = document.getElementById("messaggio-ai");
+    msg.className = "messaggio ok";
+    msg.textContent = `${ai.nome} aperto${url === conQ ? " con il prompt già scritto" : ""}${copiato ? "; prompt copiato negli appunti (incollalo se serve)" : ""}. Allega la perizia: scaricala con il pulsante qui sopra e trascinala nella chat.`;
+  }
+
+  function sezioneSecondaOpinione(r, a) {
+    const prompt = costruisciPrompt(r, a);
+    return `<div class="sezione"><h2>Seconda opinione</h2>
+      <p class="nota">Apri un'AI alla volta: il prompt viene scritto o copiato per te; allega la perizia trascinando il PDF nella chat.
+        I risultati restano nella tua conversazione, non vengono salvati qui. I piani gratuiti hanno limiti sul numero e la dimensione dei file.</p>
+      <p>${r.link_pdf ? `<a class="bottone secondario" style="text-decoration:none;display:inline-block" href="${escapeHtml(r.link_pdf)}" target="_blank" rel="noopener" download>⬇ Scarica la perizia (PDF)</a>` : "Nessun PDF della perizia nel registro."}</p>
+      <div class="pulsanti-ai">${AI.map((ai, i) => `<button class="pulsante-ai" onclick="apriAI(${i})">${escapeHtml(ai.nome)}
+        <small>${ai.q ? "prompt già scritto" : "prompt negli appunti"}</small></button>`).join("")}</div>
+      <p id="messaggio-ai" class="messaggio nascosto"></p>
+      <h3>Prompt</h3>
+      <textarea id="testo-prompt">${escapeHtml(prompt)}</textarea>
+    </div>`;
+  }
+
+  provaSbloccoAutomatico();
+</script>
+</body>
+</html>
