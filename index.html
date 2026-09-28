@@ -260,6 +260,17 @@
     white-space: nowrap;
   }
   .filtro-punteggio label { font-weight: 500; color: var(--ink); flex-shrink: 0; }
+  /* Numeri a larghezza fissa ("100–100" occupa quanto "0–100"): spostando i
+     cursori l'etichetta non si allarga e la barra non va a capo. Su PC la
+     parola è abbreviata in "Punt." (la riga è già al limite); nel pannello
+     Filtri del telefono resta "Punteggio" per intero. */
+  .filtro-punteggio label span[id^="valore-punteggio"] { display: inline-block; min-width: 3ch; font-variant-numeric: tabular-nums; }
+  .filtro-punteggio label #valore-punteggio-minimo { text-align: right; }
+  .filtro-punteggio .testo-punteggio-lungo { display: none; }
+  @media (max-width: 640px) {
+    .filtro-punteggio .testo-punteggio-lungo { display: inline; }
+    .filtro-punteggio .testo-punteggio-corto { display: none; }
+  }
 
   /* Due <input type="range"> nativi sovrapposti — trucco comune per un
      cursore a doppio estremo senza un componente su misura: ciascuno
@@ -2333,7 +2344,7 @@
         <button type="button" class="pillola" id="pillola-visite" onclick="alternaSoloVisite()" title="Mostra solo le aste con una visita in corso (richiesta, invito o appuntamento), la più vicina prima" aria-label="Visite">📅<span class="testo-pillola-mobile"> Visite</span></button>
       </div>
       <div class="filtro-punteggio">
-        <label>Punteggio <span id="valore-punteggio-minimo">0</span>–<span id="valore-punteggio-massimo">100</span></label>
+        <label title="Punteggio"><span class="testo-punteggio-lungo">Punteggio</span><span class="testo-punteggio-corto">Punt.</span> <span id="valore-punteggio-minimo">0</span>–<span id="valore-punteggio-massimo">100</span></label>
         <div class="doppio-slider">
           <div class="doppio-slider-binario"></div>
           <div class="doppio-slider-riempimento" id="riempimento-punteggio"></div>
