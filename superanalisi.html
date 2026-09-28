@@ -61,6 +61,7 @@
   .sottotitolo { color: var(--ink-muted); font-size: .95rem; margin: 0; }
   .link-torna { font-size: .85rem; font-weight: 500; color: var(--ink-muted); text-decoration: none; white-space: nowrap; }
   .link-torna:hover { color: var(--primary); }
+  .link-ritorno { display: flex; gap: 16px; flex-wrap: wrap; }
 
   .riquadro-gate { max-width: 380px; margin: 40px auto; background: var(--surface); border: 1px solid var(--border);
     border-radius: 12px; padding: 32px; text-align: center; }
@@ -129,7 +130,10 @@
       <h1 id="titolo">Asta</h1>
       <p class="sottotitolo" id="sottotitolo"></p>
     </div>
-    <a class="link-torna" href="index.html">← Registro</a>
+    <div class="link-ritorno">
+      <a class="link-torna" id="link-dettaglio" href="index.html">← Dettaglio asta</a>
+      <a class="link-torna" href="index.html">← Registro</a>
+    </div>
   </div>
 
   <p id="stato-verifica-automatica" class="nota">Verifica dell'accesso…</p>
@@ -155,6 +159,8 @@
   const SUPABASE_URL = "https://igemwrrcmsgaotoqvdzt.supabase.co";
   const SUPABASE_ANON_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImlnZW13cnJjbXNnYW90b3F2ZHp0Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODkzMDc2MjksImV4cCI6MjEwNDg4MzYyOX0.YkUOBTOb40C-N0TkuDN0o5N7fVvI_qX2F1grUp-SVe8";
   const ID_ASTA = new URLSearchParams(location.search).get("id") || "";
+  // index.html apre il dettaglio della card con l'id nel frammento (apriDaLinkDiretto).
+  if (ID_ASTA) document.getElementById("link-dettaglio").href = "index.html#" + encodeURIComponent(ID_ASTA);
 
   // Stessa chiave di config.html e statistiche.html.
   const CHIAVE_PASSWORD = "aste_password_v2";
