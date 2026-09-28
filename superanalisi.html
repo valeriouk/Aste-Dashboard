@@ -677,6 +677,7 @@
       }
       filePerizia = new File(pezzi, `perizia_${ID_ASTA}.pdf`, { type: "application/pdf" });
       pulsante.textContent = "📤 Condividi la perizia…";
+      document.getElementById("pulsante-salva").classList.remove("nascosto");
       avanzamento.textContent = `${mb(letti)} MB pronti`;
       mostra("ok", "Perizia pronta: tocca «Condividi» e scegli l'app dell'AI.");
     } catch (e) {
@@ -686,6 +687,24 @@
     }
   }
 
+  // Per le app che dal menu di condivisione prendono solo il testo (Gemini):
+  // salva il PDF già preparato nei download, e il prompt va negli appunti.
+  async function salvaPerizia() {
+    if (!filePerizia) return;
+    await copiaNegliAppunti(document.getElementById("testo-prompt").value);
+    const url = URL.createObjectURL(filePerizia);
+    const a = document.createElement("a");
+    a.href = url;
+    a.download = filePerizia.name;
+    document.body.appendChild(a);
+    a.click();
+    a.remove();
+    setTimeout(() => URL.revokeObjectURL(url), 60000);
+    const msg = document.getElementById("messaggio-ai");
+    msg.className = "messaggio ok";
+    msg.textContent = `${filePerizia.name} salvato nei download; prompt copiato negli appunti. Nell'app dell'AI allegalo con + → File e incolla il prompt.`;
+  }
+
   function sezioneSecondaOpinione(r, a) {
     const prompt = costruisciPrompt(r, a);
     return `<div class="sezione"><h2>Seconda opinione</h2>
@@ -693,8 +712,10 @@
         I risultati restano nella tua conversazione, non vengono salvati qui. I piani gratuiti hanno limiti sul numero e la dimensione dei file.</p>
       <p>${r.link_pdf ? `<a class="bottone secondario" style="text-decoration:none;display:inline-block" href="${escapeHtml(r.link_pdf)}" target="_blank" rel="noopener" download>⬇ Scarica la perizia (PDF)</a>` : "Nessun PDF della perizia nel registro."}</p>
       ${r.link_pdf && condivisioneFileSupportata() ? `<p><button class="bottone" id="pulsante-condividi" onclick="condividiPerizia()">📱 Prepara la perizia da condividere</button>
+        <button class="bottone secondario nascosto" id="pulsante-salva" onclick="salvaPerizia()">💾 Salva sul telefono</button>
         <span id="avanzamento-pdf" class="nota"></span></p>
-      <p class="nota">Dal telefono: prepara la perizia, poi «Condividi» apre il menu del telefono con il PDF e il prompt; scegli l'app dell'AI.</p>` : ""}
+      <p class="nota">Dal telefono: prepara la perizia, poi «Condividi» apre il menu del telefono con il PDF e il prompt; scegli l'app dell'AI.
+        Gemini riceve solo il testo: usa «Salva sul telefono» e allega il PDF in Gemini con + → File (il prompt è già negli appunti).</p>` : ""}
       <div class="pulsanti-ai">${AI.map((ai, i) => `<button class="pulsante-ai" onclick="apriAI(${i})">${escapeHtml(ai.nome)}
         <small>${ai.q ? "prompt già scritto" : "prompt negli appunti"}</small></button>`).join("")}</div>
       <p id="messaggio-ai" class="messaggio nascosto"></p>
