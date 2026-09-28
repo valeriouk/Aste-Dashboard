@@ -272,6 +272,7 @@
         <tr><td><a href="#omi-assegnazione">Assegnazione OMI</a></td><td>Alla fine di ogni giro dello scanner; dopo un controllo batch che ha trovato batch; dopo un'importazione OMI</td><td>secondi</td><td>no</td></tr>
         <tr><td><a href="#orari-promemoria-omi">Promemoria OMI</a></td><td>Il lunedì, dentro il giro dello scanner</td><td>—</td><td>no</td></tr>
         <tr><td><a href="#orari-batch">Controllo batch</a></td><td>Circa ogni ora, tutto il giorno; a mano con "Controlla batch ora"</td><td>meno di 1 minuto se non c'è nulla</td><td>no (i batch sono già pagati all'invio)</td></tr>
+        <tr><td><a href="#orari-visite">Promemoria delle visite</a></td><td>A ogni controllo batch orario: 3 giorni e 1 giorno prima dalle 9:00, il giorno stesso dalle 7:00, circa 2 ore prima; solleciti dalle 9:00</td><td>secondi</td><td>no</td></tr>
         <tr><td><a href="#orari-preferiti">Promemoria preferiti</a></td><td>Ogni giorno alle 10:30 (ora italiana); a mano con "Controlla preferiti ora"</td><td>meno di 1 minuto</td><td>no</td></tr>
       </tbody>
     </table></div>
@@ -357,6 +358,26 @@
       <li>La soglia dei 15 giorni ha un testo dedicato: "🏠 PRENOTA LA VISITA" (contattare custode o delegato). Le altre: "⭐ PROMEMORIA ASTA PREFERITA".</li>
       <li><strong>"⭐ Controlla preferiti ora"</strong> (Configurazione): modalità immediata, notifica subito tutte le preferite con vendita entro 15 giorni,
         ignorando le soglie già inviate e senza registrarle (non disturba il giro del giorno dopo). Se non ce ne sono: "Nessuna preferita in scadenza entro 15 giorni".</li>
+    </ul>
+  </section>
+
+  <section class="voce" id="orari-visite">
+    <h3>Promemoria delle visite (ogni ora)</h3>
+    <p>Girano dentro il <a href="#orari-batch">controllo batch orario</a>, quindi senza costi in più. Per ogni visita con appuntamento confermato
+      (vedi <a href="#registro-visite">Gestione delle visite</a>):</p>
+    <ul>
+      <li><strong>3 giorni prima</strong>, dalle 9:00: "📅 Visita tra 3 giorni" con data, ora, dettagli dell'appuntamento, indirizzo, tribunale, data
+        dell'asta, offerta minima, link all'annuncio PVP e alla scheda nel registro. Se hai confermato con meno di 3 giorni di anticipo, arriva come
+        "tra 2 giorni".</li>
+      <li><strong>Il giorno prima</strong>, dalle 9:00: "📅 Visita domani".</li>
+      <li><strong>Il giorno stesso</strong>, dalle 7:00: "🚨🚨 VISITA OGGI ALLE hh:mm", <strong>fissato in cima alla chat</strong> Telegram.</li>
+      <li><strong>Circa 2 ore prima</strong>: "🚨 Visita tra N minuti".</li>
+      <li>Se più promemoria scattano insieme (appuntamento confermato all'ultimo momento) arriva solo il più urgente.</li>
+      <li><strong>3 ore dopo l'orario</strong>, se non hai cambiato nulla, la visita diventa "Visitata (segnata in automatico)", arriva "✅ Visita segnata come
+        effettuata" e il messaggio fissato viene tolto. Se non è andata così, la riapri o la cambi dalla scheda.</li>
+      <li><strong>Solleciti</strong> (dalle 9:00, una volta sola ciascuno): visita richiesta da 5 giorni senza invito; invito ricevuto da 2 giorni e non
+        confermato; asta entro 7 giorni con la visita non ancora confermata.</li>
+      <li>Se cambi data i promemoria ripartono per la nuova data; se annulli non ne arrivano più (e il messaggio fissato viene tolto).</li>
     </ul>
   </section>
 
@@ -541,6 +562,8 @@
       <li><strong>🚩 zona segnalata</strong> (es. "Librino / San Cristoforo"): etichetta informativa decisa dallo scanner per CAP o, se manca il CAP, per
         nome della via. <strong>Non</strong> esclude l'asta e non cambia il punteggio.</li>
       <li><strong>↓ N° tentativo probabile · -X%</strong>: vedi <a href="#registro-tentativo">Tentativo probabile</a>.</li>
+      <li><strong>🕓 / ✉️ / 📅 / ✅ visita</strong>: stato della visita all'immobile; il badge con la data diventa ambra dai 5 giorni prima e rosso il giorno
+        stesso. Vedi <a href="#registro-visite">Gestione delle visite</a>.</li>
     </ul>
   </section>
 
@@ -600,11 +623,42 @@
       preferiti. Le azioni in blocco non la toccano.</p>
   </section>
 
+  <section class="voce" id="registro-visite">
+    <h3>📅 Gestione delle visite all'immobile</h3>
+    <p>Nella finestra dei dettagli di ogni asta, sotto la nota, la sezione <strong>"📅 Visita"</strong> segue la visita dalla richiesta su PVP al giorno
+      dell'appuntamento. Il pulsante blu propone sempre il passo successivo; ogni passo chiede la password di scrittura (una volta sola).</p>
+    <div class="tabella-scroll"><table>
+      <thead><tr><th>Stato</th><th>Cosa significa</th><th>Pulsanti</th></tr></thead>
+      <tbody>
+        <tr><td>nessuna</td><td>nessuna visita richiesta</td><td>"📨 Ho richiesto la visita su PVP"; "📅 Ho già l'appuntamento"</td></tr>
+        <tr><td>🕓 Richiesta</td><td>visita chiesta su PVP, in attesa dell'invito del custode o del delegato</td><td>"✉️ Invito ricevuto"; "📅 Ho già l'appuntamento"; Annulla</td></tr>
+        <tr><td>✉️ Invito ricevuto</td><td>ti hanno proposto un appuntamento, da confermare</td><td>"📅 Conferma appuntamento" (data e ora); Annulla</td></tr>
+        <tr><td>📅 Confermata</td><td>appuntamento fissato: data e ora in evidenza</td><td>"✅ Visitata"; "Cambia data"; Annulla</td></tr>
+        <tr><td>✅ Visitata</td><td>visita fatta (anche segnata in automatico 3 ore dopo l'orario)</td><td>Riapri; Rimuovi</td></tr>
+        <tr><td>✖ Annullata</td><td>visita annullata: nessun promemoria</td><td>"📨 Richiedi di nuovo"; Rimuovi</td></tr>
+      </tbody>
+    </table></div>
+    <ul>
+      <li><strong>Data e ora</strong>: si scelgono con il calendario del telefono o del PC. Non si può scegliere una data già passata. Se l'appuntamento
+        è dopo la data dell'asta compare un avviso.</li>
+      <li><strong>📝 Dettagli</strong> (facoltativi): punto d'incontro, nome e telefono del custode… Compaiono nella scheda e nei promemoria Telegram.</li>
+      <li><strong>Storico</strong>: ogni passo è registrato con data e ora (richiesta, invito, conferma, spostamenti, annullamento), anche dopo cambi e annullamenti.</li>
+      <li><strong>Riapri</strong> una visita segnata come visitata: se la data è ancora futura torna "confermata", altrimenti torna "invito ricevuto", in
+        attesa della nuova data. <strong>Rimuovi</strong> cancella la visita e il suo storico.</li>
+      <li><strong>Nella card</strong>: badge "🕓 Visita richiesta", "✉️ Invito da confermare", "📅 gio 8 ott · 10:30" (sfondo <strong>ambra</strong> dai 5 giorni
+        prima, <strong>rosso</strong> "VISITA OGGI" il giorno stesso), "✅ Visitata".</li>
+      <li><strong>Filtro "📅 Visite"</strong>: mostra solo le aste con una visita in corso (richiesta, invito, confermata), prima gli appuntamenti confermati
+        dal più vicino, poi gli inviti, poi le richieste.</li>
+      <li>Promemoria Telegram e chiusura automatica: vedi <a href="#orari-visite">Promemoria delle visite</a>.</li>
+      <li>I dati delle visite sono protetti come le note: si leggono solo con la password.</li>
+    </ul>
+  </section>
+
   <section class="voce" id="registro-dettaglio">
     <h3>Finestra dei dettagli dell'asta</h3>
     <p>Si apre cliccando una card, da "Vedi scheda completa" sulla mappa o con un link <code>index.html#ID</code>. Contiene:</p>
     <ul>
-      <li>stella, scarto, nota;</li>
+      <li>stella, scarto, nota, <a href="#registro-visite">📅 Visita</a>;</li>
       <li>Margine stimato, Offerta minima, Valore stima, Stato occupazione;</li>
       <li>Tribunale, Disponibilità (PVP) (lo stato dichiarato nell'annuncio), Prezzo base, Rilancio minimo, Superficie, €/mq, Spese sanatoria, Abusi
         edilizi, Formalità pregiudizievoli (in rosso se c'è qualcosa oltre la normale ipoteca), Fonte analisi (quale documento è stato letto), Modello AI,
@@ -756,9 +810,9 @@
   </section>
 
   <section class="voce" id="registro-csv">
-    <h3>Colonne del CSV (41)</h3>
+    <h3>Colonne del CSV (43)</h3>
     <p>File separato da punto e virgola (per Excel in italiano), con codifica che conserva gli accenti. Le prime 22 colonne sono quelle di sempre, le
-      altre 19 sono state aggiunte in coda. Costi di trasferimento e di ristrutturazione non sono esportati.</p>
+      altre 21 sono state aggiunte in coda. Costi di trasferimento e di ristrutturazione non sono esportati.</p>
     <ol>
       <li>ID annuncio</li><li>Comune / indirizzo</li><li>Tipologia (codici PVP)</li><li>Lotto</li><li>Tribunale</li>
       <li>Punteggio (vuoto se non valutata)</li><li>Margine stimato</li><li>Offerta minima</li><li>Prezzo base</li><li>Valore stima</li>
@@ -768,7 +822,7 @@
       <li>Versione prompt</li><li>Stato analisi (<a href="#analisi-stato">ok / vuota</a>)</li><li>Quota in vendita</li><li>Valore mercato CTU</li><li>Valore finale CTU</li>
       <li>Valore finale riferito a (intero / quota)</li><li>OMI zona (Agenzia Entrate - OMI)</li><li>OMI tipologia</li><li>OMI min euro/mq</li><li>OMI max euro/mq</li>
       <li>OMI semestre</li><li>Classe manutenzione</li><li>Livello ristrutturazione</li><li>Arretrati condominiali (tua correzione se presente)</li><li>Rendita catastale (tua correzione se presente)</li>
-      <li>Discordanze (quante)</li>
+      <li>Discordanze (quante)</li><li>Visita (stato)</li><li>Visita (data e ora)</li>
     </ol>
   </section>
 
@@ -1587,6 +1641,11 @@
         <tr><td>🔁 Ricontrollo perizie</td><td>Riepilogo del ricontrollo: controllate, trovate, aggiornate, solo fonte, in batch, errori.</td></tr>
         <tr><td>🧠 Rianalisi v2</td><td>Riepilogo di una rianalisi straordinaria (quando si ripassano molte aste con un prompt nuovo).</td></tr>
         <tr><td>🗺️ Nuove quotazioni OMI</td><td>Il lunedì, se è uscito un semestre OMI non ancora caricato.</td></tr>
+        <tr><td>📅 Visita tra 3 giorni / 📅 Visita domani</td><td>Promemoria dell'appuntamento confermato (dalle 9:00), con dettagli, indirizzo, asta e link.</td></tr>
+        <tr><td>🚨🚨 VISITA OGGI ALLE hh:mm</td><td>Il giorno della visita dalle 7:00, fissato in cima alla chat.</td></tr>
+        <tr><td>🚨 Visita tra N minuti</td><td>Circa 2 ore prima dell'appuntamento.</td></tr>
+        <tr><td>✅ Visita segnata come effettuata</td><td>3 ore dopo l'orario, se non l'hai cambiata; se non è andata così, riaprila dalla scheda.</td></tr>
+        <tr><td>⏳ / ⚠️ solleciti visita</td><td>Richiesta senza invito da 5 giorni; invito non confermato da 2 giorni; asta entro 7 giorni senza visita confermata.</td></tr>
         <tr><td>🏠 PRENOTA LA VISITA — ASTA PREFERITA</td><td>Preferita a 15 giorni dalla vendita: contatta custode o delegato.</td></tr>
         <tr><td>⭐ PROMEMORIA ASTA PREFERITA</td><td>Preferita a 7, 5, 3, 1 giorni dalla vendita (con la tua nota).</td></tr>
         <tr><td>✅ Controllo preferiti: nessuna in scadenza</td><td>Solo con "Controlla preferiti ora" se nessuna preferita è entro 15 giorni.</td></tr>
@@ -1923,6 +1982,18 @@
     <h3>Come passo una perizia a ChatGPT, Claude o Gemini dal telefono?</h3>
     <p>Nella Superanalisi: "📱 Prepara la perizia da condividere", poi "📤 Condividi la perizia…" e scegli l'app. Con Gemini usa "📎 Condividi solo il PDF" e incolla
       il prompt (è negli appunti). Vedi <a href="#superanalisi-seconda-opinione">seconda opinione</a>.</p>
+  </section>
+
+  <section class="voce" id="faq-visite">
+    <h3>Come seguo una visita dalla richiesta al giorno dell'appuntamento?</h3>
+    <ol>
+      <li>Richiedi la visita su PVP, poi nella scheda dell'asta premi "📨 Ho richiesto la visita su PVP".</li>
+      <li>Quando arriva l'email del custode o del delegato premi "✉️ Invito ricevuto".</li>
+      <li>Dopo aver risposto, "📅 Conferma appuntamento": scegli data e ora e scrivi nei dettagli punto d'incontro e contatto.</li>
+      <li>Ricevi i promemoria Telegram (3 giorni prima, il giorno prima, il giorno stesso fissato in chat, 2 ore prima). Se cambia l'orario usa "Cambia data";
+        se salta, "Annulla".</li>
+      <li>Dopo la visita non serve fare nulla: 3 ore dopo diventa "Visitata". Il filtro "📅 Visite" mostra tutte quelle in corso.</li>
+    </ol>
   </section>
 
   <section class="voce" id="faq-confrontare">

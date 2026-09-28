@@ -1210,6 +1210,38 @@
     margin: 4px 6px 6px 0;
   }
 
+  /* Visita all'immobile: badge nella card (ambra dai 5 giorni prima, rosso
+     il giorno stesso) e sezione "📅 Visita" nei dettagli. */
+  .badge-visita {
+    display: inline-block;
+    background: var(--surface-2);
+    color: var(--ink);
+    font-size: .72rem;
+    font-weight: 600;
+    padding: 3px 9px;
+    border-radius: 5px;
+    margin: 4px 6px 6px 0;
+  }
+  .badge-visita.vicina { background: #f3c567; color: #3b2a05; }
+  .badge-visita.oggi { background: #b8322a; color: #fff; box-shadow: 0 0 0 2px rgba(184, 50, 42, .25); }
+  .sezione-visita { border-top: 1px solid var(--border); padding: 14px 0 6px; margin: 4px 0 14px; }
+  .visita-stato { font-size: .92rem; margin: 0 0 10px; }
+  .visita-stato strong { font-size: 1rem; }
+  .visita-avviso { font-size: .82rem; color: var(--danger); margin: 0 0 8px; }
+  .visita-azioni { display: flex; flex-wrap: wrap; gap: 8px; margin: 0 0 8px; }
+  .visita-azioni button { font: inherit; font-size: .85rem; font-weight: 600; border-radius: 8px; padding: 8px 12px; cursor: pointer;
+    border: 1px solid var(--border); background: var(--surface); color: inherit; }
+  .visita-azioni button.principale { background: var(--primary); border-color: var(--primary); color: #fff; }
+  .visita-editor { display: flex; flex-direction: column; gap: 8px; background: var(--surface-2); border-radius: 8px; padding: 10px; margin: 0 0 8px; }
+  .visita-editor label { display: flex; flex-direction: column; gap: 4px; font-size: .8rem; }
+  .visita-editor input, .visita-editor textarea { font: inherit; font-size: .9rem; padding: 7px 9px; border: 1px solid var(--border); border-radius: 6px; background: var(--surface); color: inherit; }
+  .visita-editor textarea { min-height: 54px; resize: vertical; }
+  .visita-errore { color: var(--danger); font-size: .8rem; margin: 0; }
+  .visita-dettagli { font-size: .85rem; white-space: pre-wrap; margin: 0 0 8px; }
+  .visita-storico { font-size: .8rem; }
+  .visita-storico summary { cursor: pointer; color: var(--ink-muted); }
+  .visita-storico ul { margin: 6px 0 0; padding-left: 18px; }
+
   .lotto-margine {
     padding: 14px 0 2px;
     border-top: 1px solid var(--border);
@@ -2287,6 +2319,7 @@
       </div>
       <div class="gruppo-pillole" id="gruppo-aggiornate">
         <button type="button" class="pillola" id="pillola-aggiornate" onclick="alternaSoloAggiornate()" title="Mostra solo le aste con perizia ricontrollata e rianalizzata nelle ultime 24 ore" aria-label="Aggiornate">🔄<span class="testo-pillola-mobile"> Aggiornate</span></button>
+        <button type="button" class="pillola" id="pillola-visite" onclick="alternaSoloVisite()" title="Mostra solo le aste con una visita in corso (richiesta, invito o appuntamento), la più vicina prima" aria-label="Visite">📅<span class="testo-pillola-mobile"> Visite</span></button>
       </div>
       <div class="filtro-punteggio">
         <label>Punteggio <span id="valore-punteggio-minimo">0</span>–<span id="valore-punteggio-massimo">100</span></label>
@@ -2756,6 +2789,10 @@
   // flag" — funzioni server che riguardano un'altra tabella e che qui
   // non vengono toccate in alcun modo.
   let LINK_UTILI = {};
+  // id_annuncio -> riga della tabella visite (sql/visite.sql nel repo
+  // privato): stato, data_ora, dettagli, storico. Letta con i dati
+  // personali (leggi_dati_personali), scritta con imposta_visita.
+  let VISITE = {};
   // Selezione multipla (confronto, azioni in blocco) — un Set di ID, non
   // un array: aggiunta/rimozione/controllo "è selezionato?" tutti O(1),
   // e duplicati impossibili per costruzione. Sopravvive a filtri e
@@ -3734,7 +3771,7 @@
     "Quota in vendita", "Valore mercato CTU", "Valore finale CTU", "Valore finale riferito a",
     "OMI zona (Agenzia Entrate - OMI)", "OMI tipologia", "OMI min euro/mq", "OMI max euro/mq", "OMI semestre",
     "Classe manutenzione", "Livello ristrutturazione", "Arretrati condominiali", "Rendita catastale",
-    "Discordanze",
+    "Discordanze", "Visita (stato)", "Visita (data e ora)",
   ];
 
   function rigaCSV(a) {
@@ -3770,6 +3807,8 @@
       a.oneriCondominialiUtente !== null ? a.oneriCondominialiUtente : (a.oneriCondominiali || ""),
       a.renditaCatastaleUtente !== null ? a.renditaCatastaleUtente : vuotoSeNull(a.renditaCatastale),
       Array.isArray(v2.discordanze) ? v2.discordanze.length : "",
+      a.visita ? a.visita.stato : "",
+      a.visita && dataOraVisita(a.visita) ? formattaDataOraVisita(dataOraVisita(a.visita)) : "",
     );
     return valori.map(campoCSV).join(";");
   }
@@ -4785,6 +4824,9 @@
     const promessaLinkUtili = promessaPersonali
       .then(d => (Array.isArray(d.link_utili) ? d.link_utili : []))
       .catch(() => []);
+    const promessaVisite = promessaPersonali
+      .then(d => (Array.isArray(d.visite) ? d.visite : []))
+      .catch(() => []);
 
     // return qui: chi chiama avvia() può ora concatenare .then/.catch per
     // sapere DAVVERO quando il caricamento finisce (successo o fallito),
@@ -4796,8 +4838,11 @@
     return Promise.all([
       conTimeoutRigetta(promessaAste, 20000),
       conTimeoutRipiego(promessaPreferiti, 8000, []),
-      conTimeoutRipiego(promessaLinkUtili, 8000, [])
-    ]).then(([righeAste, righePreferiti, righeLinkUtili]) => {
+      conTimeoutRipiego(promessaLinkUtili, 8000, []),
+      conTimeoutRipiego(promessaVisite, 8000, [])
+    ]).then(([righeAste, righePreferiti, righeLinkUtili, righeVisite]) => {
+      VISITE = {};
+      righeVisite.forEach(v => { if (v.id_annuncio !== null && v.id_annuncio !== undefined) VISITE[String(v.id_annuncio)] = v; });
       // stato soltanto: la nota non vive più qui, vedi il commento sulla
       // dichiarazione di LINK_UTILI più sopra.
       PREFERITI = {};
@@ -4916,6 +4961,7 @@
     const annotazioni = LINK_UTILI[asta.id];
     asta.notaPreferito = annotazioni?.nota || "";
     asta.linkUtili = annotazioni?.links || [];
+    asta.visita = VISITE[asta.id] || null;
     return asta;
   }
 
@@ -5267,6 +5313,15 @@
   // "solo aste aggiornate" (perizia ricontrollata nelle ultime 24 ore,
   // vedi eAggiornata). Si somma agli altri filtri in applicaFiltri.
   let filtroSoloAggiornateAttivo = false;
+  // Filtro "📅 Visite": solo aste con una visita in corso, ordinate per
+  // appuntamento (confermate per data, poi inviti, poi richieste).
+  let filtroSoloVisiteAttivo = false;
+
+  function alternaSoloVisite() {
+    filtroSoloVisiteAttivo = !filtroSoloVisiteAttivo;
+    document.getElementById("pillola-visite").classList.toggle("attiva", filtroSoloVisiteAttivo);
+    applicaFiltri();
+  }
 
   function alternaSoloAggiornate() {
     filtroSoloAggiornateAttivo = !filtroSoloAggiornateAttivo;
@@ -5372,6 +5427,7 @@
     if (filtroPreferitiScartatiAttivo) conteggio++;
     if (mostraConcluse) conteggio++;
     if (filtroSoloAggiornateAttivo) conteggio++;
+    if (filtroSoloVisiteAttivo) conteggio++;
     if (Number(document.getElementById("punteggio-minimo").value) > 0
       || Number(document.getElementById("punteggio-massimo").value) < 100) conteggio++;
     const badge = document.getElementById("badge-filtri-attivi");
@@ -5460,7 +5516,8 @@
         || (filtroPreferitiScartatiAttivo === "preferito" ? a.preferito : a.scartato);
       const passaPunteggio = a.punteggio >= punteggioMinimo && a.punteggio <= punteggioMassimo;
       const passaAggiornate = !filtroSoloAggiornateAttivo || eAggiornata(a);
-      return passaRicerca && passaTipologia && passaOccupazione && passaConcluse && passaPreferiti && passaPunteggio && passaAggiornate;
+      const passaVisite = !filtroSoloVisiteAttivo || visitaInCorso(a);
+      return passaRicerca && passaTipologia && passaOccupazione && passaConcluse && passaPreferiti && passaPunteggio && passaAggiornate && passaVisite;
     });
 
     // Comparatore SEMPRE in ordine crescente per il criterio scelto — la
@@ -5477,6 +5534,7 @@
     // true (1): l'aritmetica del confronto fa il resto come chiave
     // primaria, il criterio scelto resta il comparatore secondario.
     filtrate.sort((a, b) => (a.scartato - b.scartato) || segno * definizione.comparatore(a, b));
+    if (filtroSoloVisiteAttivo) filtrate.sort((a, b) => chiaveOrdineVisita(a) - chiaveOrdineVisita(b));
 
     // Il range virtuale va azzerato a ogni cambio di filtro/ricerca/
     // ordinamento: altrimenti potrebbe combaciare per caso con quello di
@@ -5937,6 +5995,7 @@
             <p class="lotto-comune">${escapeHtml(a.comune)}</p>
             ${eNuova(a.dataInserimento) ? `<span class="badge-nuova" title="Trovata nelle ultime 24 ore">✨ Nuova</span>` : ""}
             ${eAggiornata(a) ? `<span class="badge-aggiornata" title="Perizia ricontrollata e rianalizzata nelle ultime 24 ore">📄 Aggiornata</span>` : ""}
+            ${badgeVisita(a)}
             ${conclusa ? `<span class="badge-conclusa">🏁 Conclusa</span>` : ""}
             ${a.zonaSegnalata ? `<span class="badge-zona">🚩 ${escapeHtml(a.zonaSegnalata)}</span>` : ""}
             ${a.tentativoStimato ? `<span class="badge-tentativo">↓ ${a.tentativoStimato.tentativo}° tentativo probabile · -${a.tentativoStimato.percentuale}%</span>` : ""}
@@ -6588,6 +6647,177 @@ ${notaHtml}
     }
   }
 
+  // ==========================================================
+  // VISITE ALL'IMMOBILE — dalla richiesta su PVP al giorno della visita.
+  // Stati (tabella visite, sql/visite.sql nel repo privato): richiesta →
+  // invito → confermata (data e ora) → visitata; oppure annullata. Ogni
+  // passo si salva con imposta_visita (password di scrittura), che tiene
+  // anche lo storico. I promemoria Telegram li manda promemoria_visite.py
+  // a ogni check batch orario (3 giorni e 1 giorno prima alle 9, il giorno
+  // stesso alle 7 fissato in chat, ~2 ore prima) e chiude da sola come
+  // "visitata" una visita passata da 3 ore.
+  // ==========================================================
+  const GIORNI_VISITA_VICINA = 5;
+  const ETICHETTE_STORICO_VISITA = {
+    richiedi: "Visita richiesta su PVP", invito: "Invito ricevuto", conferma: "Appuntamento confermato",
+    cambia_data: "Appuntamento spostato", visitata: "Segnata come visitata", visitata_automatica: "Visitata (segnata in automatico)",
+    annulla: "Annullata", riapri: "Riaperta", dettagli: "Dettagli modificati",
+  };
+
+  function dataOraVisita(v) {
+    const d = v && v.data_ora ? new Date(v.data_ora) : null;
+    return d && !isNaN(d) ? d : null;
+  }
+
+  function formattaDataOraVisita(d, conAnno = true) {
+    const giorno = d.toLocaleDateString("it-IT", {weekday: "short", day: "numeric", month: "short", ...(conAnno ? {year: "numeric"} : {})});
+    return `${giorno} · ${d.toLocaleTimeString("it-IT", {hour: "2-digit", minute: "2-digit"})}`;
+  }
+
+  // Giorni di calendario tra oggi e l'appuntamento (0 = oggi).
+  function giorniAllaVisita(d) {
+    const oggi = new Date(); oggi.setHours(0, 0, 0, 0);
+    const giorno = new Date(d); giorno.setHours(0, 0, 0, 0);
+    return Math.round((giorno - oggi) / 86400000);
+  }
+
+  function visitaInCorso(a) {
+    return !!a.visita && ["richiesta", "invito", "confermata"].includes(a.visita.stato);
+  }
+
+  // Confermate per data, poi inviti, poi richieste, poi il resto.
+  function chiaveOrdineVisita(a) {
+    const v = a.visita;
+    if (!v) return 9e15;
+    const d = dataOraVisita(v);
+    if (v.stato === "confermata" && d) return d.getTime();
+    return {invito: 8e15, richiesta: 8.5e15}[v.stato] || 9e15;
+  }
+
+  function badgeVisita(a) {
+    const v = a.visita;
+    if (!v) return "";
+    if (v.stato === "richiesta") return `<span class="badge-visita" title="Visita richiesta su PVP, in attesa di invito">🕓 Visita richiesta</span>`;
+    if (v.stato === "invito") return `<span class="badge-visita" title="Invito alla visita ricevuto, da confermare">✉️ Invito da confermare</span>`;
+    if (v.stato === "visitata") return `<span class="badge-visita" title="Immobile visitato">✅ Visitata</span>`;
+    const d = dataOraVisita(v);
+    if (v.stato !== "confermata" || !d) return "";
+    const giorni = giorniAllaVisita(d);
+    const classe = giorni === 0 ? " oggi" : (giorni > 0 && giorni <= GIORNI_VISITA_VICINA ? " vicina" : "");
+    const testo = giorni === 0 ? `📅 VISITA OGGI ${d.toLocaleTimeString("it-IT", {hour: "2-digit", minute: "2-digit"})}` : `📅 ${formattaDataOraVisita(d, false)}`;
+    return `<span class="badge-visita${classe}" title="Appuntamento per la visita">${testo}</span>`;
+  }
+
+  function sezioneVisita(a) {
+    const v = a.visita;
+    const stato = v ? v.stato : "nessuna";
+    const d = dataOraVisita(v);
+    const quando = (campo) => v && v[campo] ? new Date(v[campo]).toLocaleDateString("it-IT", {day: "numeric", month: "short"}) : "";
+    const testi = {
+      nessuna: "Nessuna visita richiesta.",
+      richiesta: `🕓 <strong>Visita richiesta su PVP</strong>${quando("richiesta_il") ? ` il ${quando("richiesta_il")}` : ""} — in attesa di invito.`,
+      invito: `✉️ <strong>Invito ricevuto</strong>${quando("invito_il") ? ` il ${quando("invito_il")}` : ""} — da confermare.`,
+      confermata: d ? `📅 <strong>${escapeHtml(formattaDataOraVisita(d))}</strong>` : "📅 <strong>Appuntamento confermato</strong>",
+      visitata: `✅ <strong>Visitata</strong>${d ? ` il ${d.toLocaleDateString("it-IT", {day: "numeric", month: "short"})}` : ""}${v && v.visitata_automatica ? " (segnata in automatico)" : ""}.`,
+      annullata: "✖ <strong>Visita annullata.</strong>",
+    };
+    const pulsante = (etichetta, azione, principale = false) =>
+      `<button type="button"${principale ? ' class="principale"' : ""} onclick="azioneVisita('${a.id}', '${azione}')">${etichetta}</button>`;
+    const pulsanti = {
+      nessuna: pulsante("📨 Ho richiesto la visita su PVP", "richiedi", true) + pulsante("📅 Ho già l'appuntamento", "apri_conferma"),
+      richiesta: pulsante("✉️ Invito ricevuto", "invito", true) + pulsante("📅 Ho già l'appuntamento", "apri_conferma") + pulsante("Annulla", "annulla"),
+      invito: pulsante("📅 Conferma appuntamento", "apri_conferma", true) + pulsante("Annulla", "annulla"),
+      confermata: pulsante("✅ Visitata", "visitata") + pulsante("Cambia data", "apri_cambia_data") + pulsante("Annulla", "annulla"),
+      visitata: pulsante("Riapri", "riapri") + pulsante("Rimuovi", "rimuovi"),
+      annullata: pulsante("📨 Richiedi di nuovo", "richiedi", true) + pulsante("Rimuovi", "rimuovi"),
+    }[stato];
+    const vendita = a.dataVendita ? new Date(`${a.dataVendita.slice(0, 10)}T23:59:59`) : null;
+    const avviso = stato === "confermata" && d && vendita && d > vendita
+      ? `<p class="visita-avviso">⚠️ L'appuntamento è dopo la data dell'asta (${escapeHtml(formattaData(a.dataVendita))}).</p>` : "";
+    const storico = v && Array.isArray(v.storico) && v.storico.length ? `
+      <details class="visita-storico"><summary>Storico (${v.storico.length})</summary><ul>${v.storico.slice().reverse().map(p => {
+        const q = new Date(p.quando);
+        const extra = p.data_ora ? ` → ${escapeHtml(formattaDataOraVisita(new Date(p.data_ora)))}` : "";
+        return `<li>${escapeHtml(q.toLocaleDateString("it-IT", {day: "numeric", month: "short"}))} ${escapeHtml(q.toLocaleTimeString("it-IT", {hour: "2-digit", minute: "2-digit"}))}: ${escapeHtml(ETICHETTE_STORICO_VISITA[p.azione] || p.azione)}${extra}</li>`;
+      }).join("")}</ul></details>` : "";
+    return `
+      <div class="sezione-visita" data-id-visita="${a.id}">
+        <h3 class="sezione-costi-titolo">📅 Visita</h3>
+        <p class="visita-stato">${testi[stato]}</p>
+        ${avviso}
+        ${v && v.dettagli ? `<p class="visita-dettagli">📝 ${escapeHtml(v.dettagli)}</p>` : ""}
+        <div class="visita-azioni">${pulsanti}${v ? pulsante("📝 Dettagli", "apri_dettagli") : ""}</div>
+        <div class="visita-editor nascosto">
+          <label class="visita-etichetta-data">Data e ora dell'appuntamento <input type="datetime-local" class="visita-campo-data"></label>
+          <label>Dettagli (facoltativo) <textarea class="visita-campo-dettagli" placeholder="Punto d'incontro, nome e telefono del custode…">${escapeHtml(v && v.dettagli || "")}</textarea></label>
+          <div class="visita-azioni">
+            <button type="button" class="principale visita-salva">Salva</button>
+            <button type="button" onclick="this.closest('.visita-editor').classList.add('nascosto')">Annulla</button>
+          </div>
+          <p class="visita-errore nascosto"></p>
+        </div>
+        ${storico}
+      </div>`;
+  }
+
+  // "YYYY-MM-DDTHH:MM" nell'ora del dispositivo, per <input type="datetime-local">.
+  function valoreCampoDataOra(d) {
+    const due = (n) => String(n).padStart(2, "0");
+    return `${d.getFullYear()}-${due(d.getMonth() + 1)}-${due(d.getDate())}T${due(d.getHours())}:${due(d.getMinutes())}`;
+  }
+
+  function azioneVisita(id, azione) {
+    const asta = ASTE.find(a => a.id === id);
+    if (!asta) return;
+    const sezione = document.querySelector(`.sezione-visita[data-id-visita="${id}"]`);
+    if (azione.startsWith("apri_")) {
+      const editor = sezione.querySelector(".visita-editor");
+      const campoData = editor.querySelector(".visita-campo-data");
+      const soloDettagli = azione === "apri_dettagli";
+      editor.querySelector(".visita-etichetta-data").classList.toggle("nascosto", soloDettagli);
+      const d = dataOraVisita(asta.visita);
+      campoData.value = d ? valoreCampoDataOra(d) : "";
+      editor.querySelector(".visita-errore").classList.add("nascosto");
+      editor.classList.remove("nascosto");
+      editor.querySelector(".visita-salva").onclick = () => {
+        const dettagli = editor.querySelector(".visita-campo-dettagli").value;
+        if (soloDettagli) { richiediPasswordSeServe(() => eseguiAzioneVisita(id, "dettagli", null, dettagli)); return; }
+        const errore = editor.querySelector(".visita-errore");
+        const scelta = campoData.value ? new Date(campoData.value) : null;
+        if (!scelta || isNaN(scelta)) { errore.textContent = "Scegli data e ora dell'appuntamento."; errore.classList.remove("nascosto"); return; }
+        if (scelta < new Date()) { errore.textContent = "La data scelta è già passata."; errore.classList.remove("nascosto"); return; }
+        const tipo = azione === "apri_cambia_data" ? "cambia_data" : "conferma";
+        richiediPasswordSeServe(() => eseguiAzioneVisita(id, tipo, scelta.toISOString(), dettagli));
+      };
+      (soloDettagli ? editor.querySelector(".visita-campo-dettagli") : campoData).focus();
+      return;
+    }
+    if (azione === "annulla" && !confirm("Annullare la visita? I promemoria non verranno più inviati.")) return;
+    if (azione === "rimuovi" && !confirm("Rimuovere la visita e il suo storico da questa asta?")) return;
+    richiediPasswordSeServe(() => eseguiAzioneVisita(id, azione));
+  }
+
+  async function eseguiAzioneVisita(id, azione, dataOra = null, dettagli = null) {
+    const asta = ASTE.find(a => a.id === id);
+    if (!asta) return;
+    try {
+      const risultato = await accodaScritturaProtetta("imposta_visita", {
+        password_tentativo: passwordCorrente, id_annuncio_input: Number(id), azione,
+        data_ora_input: dataOra, dettagli_input: dettagli,
+      });
+      if (risultato.result !== "success") throw new Error(risultato.message || "");
+      if (risultato.visita) VISITE[id] = risultato.visita; else delete VISITE[id];
+      asta.visita = VISITE[id] || null;
+      applicaFiltri();
+      aggiornaFinestraSeApertaSu(id);
+    } catch (e) {
+      console.error("imposta_visita fallita:", e);
+      gestisceErroreAzionePassword(e);
+      mostraToast(`${indirizzoTroncato(asta.comune)} — non sono riuscita a salvare la visita: ${dettaglioErrore(e)}`);
+    }
+  }
+
+
   // Indirizzo assoluto (origin + percorso della pagina stessa, mai
   // relativo: chi lo riceve lo apre da un altro dispositivo, un link
   // relativo non vorrebbe dire nulla lì) con l'id nel frammento — letto
@@ -6729,6 +6959,7 @@ ${notaHtml}
             <p class="lotto-comune">${escapeHtml(a.comune)}</p>
             ${eNuova(a.dataInserimento) ? `<span class="badge-nuova" title="Trovata nelle ultime 24 ore">✨ Nuova</span>` : ""}
             ${eAggiornata(a) ? `<span class="badge-aggiornata" title="Perizia ricontrollata e rianalizzata nelle ultime 24 ore">📄 Aggiornata</span>` : ""}
+            ${badgeVisita(a)}
             ${conclusa ? `<span class="badge-conclusa">🏁 Conclusa</span>` : ""}
             ${a.zonaSegnalata ? `<span class="badge-zona">🚩 ${escapeHtml(a.zonaSegnalata)}</span>` : ""}
             ${a.tentativoStimato ? `<span class="badge-tentativo" title="Stima dedotta dallo sconto sulla perizia, non un dato dichiarato da PVP">↓ ${a.tentativoStimato.tentativo}° tentativo probabile · sconto ${a.tentativoStimato.percentuale}% sulla stima</span>` : ""}
@@ -6762,6 +6993,7 @@ ${notaHtml}
           <button type="button" class="bottone-azione-lotto${a.scartato ? ' scartato-attivo' : ''}" title="Non interessa" onclick="onClickScarta(event, '${a.id}')">${iconaScarta}</button>
         </div>
         ${notaHtml}
+        ${sezioneVisita(a)}
         <div class="lotto-margine">
           <p class="cifra-etichetta">Margine stimato</p>
           <p class="lotto-margine-valore">${a.margine !== null ? formattaEuro(a.margine) : "—"}</p>
