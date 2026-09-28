@@ -239,7 +239,8 @@
       },
       statoManutentivo: enumOr(M.classe, ENUM.classe, 'non_valutabile', avvisi, 'stato_manutentivo.classe'),
       lavoriCtu: num(L.importo_euro),
-      valoreCtu: { mercato: num(V.valore_mercato_euro), finale: num(V.valore_finale_euro) },
+      valoreCtu: { mercato: num(V.valore_mercato_euro), finale: num(V.valore_finale_euro),
+        finaleRiferitoA: V.valore_finale_riferito_a == null ? null : String(V.valore_finale_riferito_a) },
       quotaInVendita: I.quota_in_vendita == null ? null : String(I.quota_in_vendita),
       formalitaNonCancellabili: arr(F.non_cancellabili).filter((x) => x && String(x).trim()),
       discordanze: arr(e.discordanze),
@@ -458,6 +459,14 @@
     return /^((piena\s+propriet\S*\s*)?1\s*\/\s*1|inter\w*|100\s*%|piena\s+propriet\S*)$/.test(t);
   }
 
+  // Stessa regola di frazione_quota in analisi_v2.py: "5/6" → 0,833; null se
+  // la quota non è una sola frazione ("1/3 e 1/2", "1/1 di usufrutto"...).
+  function frazioneQuota(quota) {
+    const m = String(quota == null ? "" : quota).trim().toLowerCase().match(/^(?:quota\s+(?:di\s+)?)?(\d+)\s*\/\s*(\d+)$/);
+    if (!m || !Number(m[2]) || Number(m[1]) > Number(m[2])) return null;
+    return Number(m[1]) / Number(m[2]);
+  }
+
   function arvScenari(sup, d, annuncio, params, etaPerizia) {
     if (annuncio.arvOverride) {
       return { ...annuncio.arvOverride, fonte: 'override (comparabili verificati)', affidabilita: 'media' };
@@ -474,10 +483,15 @@
       };
     }
     // Come analisi_v2.campi_legacy: con una quota parziale il valore di
-    // mercato è quello del bene intero, il finale è quello della quota.
-    const vCtu = quotaIntera(d.quotaInVendita)
+    // mercato è quello del bene intero, il finale è quello della quota;
+    // v2.6: se il CTU ha stimato l'intero (o c'è solo il mercato), × quota.
+    let vCtu = quotaIntera(d.quotaInVendita)
       ? (d.valoreCtu.mercato != null ? d.valoreCtu.mercato : d.valoreCtu.finale)
       : (d.valoreCtu.finale != null ? d.valoreCtu.finale : d.valoreCtu.mercato);
+    const frazione = quotaIntera(d.quotaInVendita) ? null : frazioneQuota(d.quotaInVendita);
+    if (frazione && vCtu != null && (d.valoreCtu.finale == null || d.valoreCtu.finaleRiferitoA === "intero")) {
+      vCtu = Math.round(vCtu * frazione);
+    }
     if (vCtu != null && etaPerizia != null && etaPerizia <= params.maxEtaPeriziaAnni) {
       const k = params.proxyCtu;
       return {
