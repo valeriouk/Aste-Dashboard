@@ -544,7 +544,11 @@
         document.getElementById("gate").classList.add("nascosto");
         carica();
       } else {
-        document.getElementById("gate-errore").textContent = "Password errata.";
+        // Se il database ha bloccato i tentativi (sql/limite_tentativi_password.sql) lo dice.
+        const secondi = await chiamaRpc("blocco_password", { p_tipo: "lettura" }).catch(() => 0);
+        document.getElementById("gate-errore").textContent = typeof secondi === "number" && secondi > 0
+          ? `Troppi tentativi errati: riprova tra ${Math.ceil(secondi / 60)} minuti.`
+          : "Password errata.";
       }
     } catch (e) {
       document.getElementById("gate-errore").textContent = `Verifica non riuscita: ${e.message}`;

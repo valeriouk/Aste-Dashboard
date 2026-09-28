@@ -893,6 +893,19 @@
     return risposta.json();
   }
 
+  // Dopo una password rifiutata: se il database ha bloccato i tentativi
+  // (5 errori → 15 minuti, vedi sql/limite_tentativi_password.sql in
+  // aste-immobiliari) lo dice, altrimenti "Password errata.".
+  async function messaggioPasswordRifiutata(tipo = "scrittura") {
+    try {
+      const secondi = await chiamaRpc("blocco_password", {p_tipo: tipo});
+      if (typeof secondi === "number" && secondi > 0) {
+        return `Troppi tentativi errati: riprova tra ${Math.ceil(secondi / 60)} minuti.`;
+      }
+    } catch (e) {}
+    return "Password errata.";
+  }
+
   async function sblocca() {
     const password = document.getElementById("campo-password").value;
     const erroreEl = document.getElementById("errore-gate");
@@ -914,7 +927,7 @@
       caricaConfigurazioneAttuale();
       caricaStatoPasswordLettura();
     } else {
-      erroreEl.textContent = "Password errata.";
+      erroreEl.textContent = await messaggioPasswordRifiutata();
       erroreEl.classList.remove("nascosto");
     }
   }
