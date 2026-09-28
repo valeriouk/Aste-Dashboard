@@ -4479,14 +4479,19 @@
     return trascorseMs >= 0 && trascorseMs < SOGLIA_NUOVA_ORE * 3600 * 1000;
   }
 
-  // Stesso schema di eNuova, ma su ultimo_ricontrollo_perizia: true se un
-  // ricontrollo automatico ha ritrovato e rianalizzato la perizia
-  // nelle ultime SOGLIA_AGGIORNATA_ORE ore.
+  // Stesso schema di eNuova: true se nelle ultime SOGLIA_AGGIORNATA_ORE ore
+  // l'asta è stata ricontrollata (ultimo_ricontrollo_perizia) E la sua
+  // analisi è stata davvero rifatta (data_analisi_v2). Il solo ricontrollo
+  // non basta: ultimo_ricontrollo_perizia viene scritto anche quando il
+  // ricontrollo non trova nulla di nuovo (perizia ancora assente, errore).
   const SOGLIA_AGGIORNATA_ORE = 24;
-  function eAggiornata(ultimoRicontrolloPerizia) {
-    if (!ultimoRicontrolloPerizia) return false;
-    const trascorseMs = Date.now() - new Date(ultimoRicontrolloPerizia).getTime();
-    return trascorseMs >= 0 && trascorseMs < SOGLIA_AGGIORNATA_ORE * 3600 * 1000;
+  function eAggiornata(a) {
+    const recente = (data) => {
+      if (!data) return false;
+      const trascorseMs = Date.now() - new Date(data).getTime();
+      return trascorseMs >= 0 && trascorseMs < SOGLIA_AGGIORNATA_ORE * 3600 * 1000;
+    };
+    return recente(a.ultimoRicontrolloPerizia) && recente(a.dataAnalisiV2);
   }
 
   // Distanza assoluta in giorni tra una data ISO e oggi, indipendentemente
@@ -4865,6 +4870,7 @@
       lon: numeroSicuro(r.longitudine, null),
       dataInserimento: r.data_inserimento || "",
       ultimoRicontrolloPerizia: r.ultimo_ricontrollo_perizia || "",
+      dataAnalisiV2: r.data_analisi_v2 || "",
       renditaCatastale: numeroSicuro(r.rendita_catastale, null),
       renditaCatastaleUtente: numeroSicuro(r.rendita_catastale_utente, null),
       oneriCondominiali: numeroSicuro(r.oneri_condominiali),
@@ -5438,7 +5444,7 @@
       const passaPreferiti = !filtroPreferitiScartatiAttivo
         || (filtroPreferitiScartatiAttivo === "preferito" ? a.preferito : a.scartato);
       const passaPunteggio = a.punteggio >= punteggioMinimo && a.punteggio <= punteggioMassimo;
-      const passaAggiornate = !filtroSoloAggiornateAttivo || eAggiornata(a.ultimoRicontrolloPerizia);
+      const passaAggiornate = !filtroSoloAggiornateAttivo || eAggiornata(a);
       return passaRicerca && passaTipologia && passaOccupazione && passaConcluse && passaPreferiti && passaPunteggio && passaAggiornate;
     });
 
@@ -5918,7 +5924,7 @@
             <p class="lotto-id">${a.lotto ? "Lotto " + escapeHtml(a.lotto) + " · " : ""}${conPuntiDiRottura(a.tipologia)}</p>
             <p class="lotto-comune">${escapeHtml(a.comune)}</p>
             ${eNuova(a.dataInserimento) ? `<span class="badge-nuova" title="Trovata nelle ultime 24 ore">✨ Nuova</span>` : ""}
-            ${eAggiornata(a.ultimoRicontrolloPerizia) ? `<span class="badge-aggiornata" title="Perizia ricontrollata e rianalizzata nelle ultime 24 ore">📄 Aggiornata</span>` : ""}
+            ${eAggiornata(a) ? `<span class="badge-aggiornata" title="Perizia ricontrollata e rianalizzata nelle ultime 24 ore">📄 Aggiornata</span>` : ""}
             ${conclusa ? `<span class="badge-conclusa">🏁 Conclusa</span>` : ""}
             ${a.zonaSegnalata ? `<span class="badge-zona">🚩 ${escapeHtml(a.zonaSegnalata)}</span>` : ""}
             ${a.tentativoStimato ? `<span class="badge-tentativo">↓ ${a.tentativoStimato.tentativo}° tentativo probabile · -${a.tentativoStimato.percentuale}%</span>` : ""}
@@ -6710,7 +6716,7 @@ ${notaHtml}
             <p class="lotto-id">${a.lotto ? "Lotto " + escapeHtml(a.lotto) + " · " : ""}${conPuntiDiRottura(a.tipologia)}</p>
             <p class="lotto-comune">${escapeHtml(a.comune)}</p>
             ${eNuova(a.dataInserimento) ? `<span class="badge-nuova" title="Trovata nelle ultime 24 ore">✨ Nuova</span>` : ""}
-            ${eAggiornata(a.ultimoRicontrolloPerizia) ? `<span class="badge-aggiornata" title="Perizia ricontrollata e rianalizzata nelle ultime 24 ore">📄 Aggiornata</span>` : ""}
+            ${eAggiornata(a) ? `<span class="badge-aggiornata" title="Perizia ricontrollata e rianalizzata nelle ultime 24 ore">📄 Aggiornata</span>` : ""}
             ${conclusa ? `<span class="badge-conclusa">🏁 Conclusa</span>` : ""}
             ${a.zonaSegnalata ? `<span class="badge-zona">🚩 ${escapeHtml(a.zonaSegnalata)}</span>` : ""}
             ${a.tentativoStimato ? `<span class="badge-tentativo" title="Stima dedotta dallo sconto sulla perizia, non un dato dichiarato da PVP">↓ ${a.tentativoStimato.tentativo}° tentativo probabile · sconto ${a.tentativoStimato.percentuale}% sulla stima</span>` : ""}
