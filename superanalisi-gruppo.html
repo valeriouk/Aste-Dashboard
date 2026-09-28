@@ -1,0 +1,527 @@
+<!DOCTYPE html>
+<html lang="it">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Superanalisi di gruppo · Registro Opportunità</title>
+
+<link rel="manifest" href="manifest.json">
+<link rel="icon" href="favicon-32.png" sizes="32x32">
+<link rel="apple-touch-icon" href="apple-touch-icon.png">
+<meta name="theme-color" content="#1e2320">
+
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,400;9..144,500;9..144,600&family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500;600&display=swap" rel="stylesheet">
+
+<!--
+  superanalisi-gruppo.html — classifica di 2-10 aste selezionate nel registro
+  (barra di selezione di index.html, "Superanalisi di gruppo"):
+  superanalisi-gruppo.html?ids=<id>,<id>,...
+  Per ogni asta lo stesso conto di superanalisi.html (underwriting.js, stessa
+  scelta del valore di rivendita, stessi parametri salvati), poi una tabella
+  dalla migliore alla peggiore e un prompt di gruppo per un'AI esterna (annunci
+  di vendita in zona, classifica). Solo letture: nessuna scrittura, nessun
+  costo Gemini. Stessa password di superanalisi.html.
+  Le funzioni in comune con superanalisi.html sono copiate qui apposta, per
+  non toccare quella pagina: se ne cambi una, controlla anche l'altra.
+-->
+
+<style>
+  :root {
+    --bg: #eef1ec;
+    --surface: #ffffff;
+    --surface-2: #e3e7e0;
+    --border: #d5dad1;
+    --primary: #234c6a;
+    --primary-soft: rgba(35, 76, 106, .10);
+    --secondary: #a15c3e;
+    --secondary-soft: rgba(161, 92, 62, .10);
+    --ok: #3f6b4a;
+    --ok-soft: rgba(63, 107, 74, .12);
+    --danger: #8b3d2e;
+    --danger-soft: rgba(139, 61, 46, .10);
+    --ink: #1e2320;
+    --ink-muted: #5b615a;
+    --ink-faint: #8c9289;
+    --font-display: 'Fraunces', Georgia, serif;
+    --font-body: 'Inter', system-ui, -apple-system, sans-serif;
+    --font-mono: 'JetBrains Mono', ui-monospace, monospace;
+  }
+  * { box-sizing: border-box; }
+  html, body { margin: 0; padding: 0; }
+  body { background: var(--bg); color: var(--ink); font-family: var(--font-body); line-height: 1.5; -webkit-font-smoothing: antialiased; }
+  a { color: var(--secondary); }
+  :focus-visible { outline: 2px solid var(--primary); outline-offset: 3px; border-radius: 4px; }
+  .nascosto { display: none !important; }
+
+  .contenitore { max-width: 1100px; margin: 0 auto; padding: 40px 20px 96px; }
+  .intestazione { display: flex; justify-content: space-between; align-items: flex-end; flex-wrap: wrap; gap: 16px;
+    padding-bottom: 24px; margin-bottom: 28px; border-bottom: 1px solid var(--border); }
+  .eyebrow { font-family: var(--font-mono); font-size: .72rem; letter-spacing: .12em; text-transform: uppercase; color: var(--primary); margin: 0 0 10px; }
+  h1 { font-family: var(--font-display); font-size: 1.8rem; margin: 0 0 6px; }
+  .sottotitolo { color: var(--ink-muted); font-size: .95rem; margin: 0; }
+  .link-torna { font-size: .85rem; font-weight: 500; color: var(--ink-muted); text-decoration: none; white-space: nowrap; }
+  .link-torna:hover { color: var(--primary); }
+
+  .riquadro-gate { max-width: 380px; margin: 40px auto; background: var(--surface); border: 1px solid var(--border);
+    border-radius: 12px; padding: 32px; text-align: center; }
+  .riquadro-gate h2 { font-family: var(--font-display); font-size: 1.3rem; margin: 0 0 8px; }
+  .riquadro-gate p { color: var(--ink-muted); font-size: .9rem; margin: 0 0 20px; }
+  .riquadro-gate form { display: flex; flex-direction: column; gap: 10px; }
+  input[type="password"] { background: var(--bg); border: 1px solid var(--border); border-radius: 8px; padding: 9px 12px;
+    font-family: var(--font-body); font-size: .95rem; color: var(--ink); }
+  .bottone { background: var(--ink); color: var(--surface); border: none; border-radius: 8px; padding: 10px 14px;
+    font-family: var(--font-body); font-size: .88rem; font-weight: 600; cursor: pointer; }
+  .bottone.secondario { background: var(--surface-2); color: var(--ink); }
+  .bottone:hover { opacity: .9; }
+  .messaggio { font-size: .85rem; margin: 8px 0 0; }
+  .messaggio.errore { color: var(--danger); }
+  .messaggio.ok { color: var(--ok); }
+
+  .sezione { background: var(--surface); border: 1px solid var(--border); border-radius: 12px; padding: 22px 22px 18px; margin-bottom: 18px; }
+  .sezione h2 { font-family: var(--font-display); font-size: 1.25rem; margin: 0 0 12px; }
+  .sezione h3 { font-size: .78rem; font-weight: 700; letter-spacing: .06em; text-transform: uppercase; color: var(--primary); margin: 18px 0 8px; }
+  .nota { color: var(--ink-muted); font-size: .82rem; margin: 6px 0 0; }
+
+  .etichetta-stato { display: inline-block; font-size: .74rem; font-weight: 600; border-radius: 999px; padding: 2px 9px; white-space: nowrap; }
+  .stato-PULITA { background: var(--ok-soft); color: var(--ok); }
+  .stato-GESTIBILE { background: var(--primary-soft); color: var(--primary); }
+  .stato-COMPLESSA { background: var(--secondary-soft); color: var(--secondary); }
+  .stato-DA_SCARTARE, .stato-NON_CALCOLABILE { background: var(--danger-soft); color: var(--danger); }
+
+  .tabella-scroll { overflow-x: auto; }
+  table { border-collapse: collapse; width: 100%; font-size: .84rem; }
+  th, td { text-align: right; padding: 7px 8px; border-bottom: 1px solid var(--border); vertical-align: top; }
+  th { font-size: .72rem; color: var(--ink-faint); text-transform: uppercase; letter-spacing: .04em; font-weight: 600; white-space: nowrap; }
+  td.sx, th.sx { text-align: left; }
+  td.num { white-space: nowrap; font-family: var(--font-mono); font-size: .8rem; }
+  td .piccolo { display: block; color: var(--ink-muted); font-size: .74rem; }
+  td ul { margin: 0; padding-left: 16px; text-align: left; font-size: .76rem; color: var(--ink-muted); min-width: 200px; }
+
+  .pulsanti-ai { display: grid; grid-template-columns: repeat(auto-fill, minmax(165px, 1fr)); gap: 8px; margin-top: 10px; }
+  .pulsante-ai { background: var(--surface-2); border: 1px solid var(--border); border-radius: 8px; padding: 10px 12px;
+    text-align: left; cursor: pointer; font-family: var(--font-body); font-size: .88rem; font-weight: 600; color: var(--ink); }
+  .pulsante-ai small { display: block; font-weight: 400; color: var(--ink-muted); font-size: .74rem; }
+  .pulsante-ai:hover { border-color: var(--primary); }
+  .riga-pulsanti { display: flex; flex-wrap: wrap; gap: 8px; margin-top: 10px; }
+  textarea { width: 100%; min-height: 200px; font-family: var(--font-mono); font-size: .76rem; border: 1px solid var(--border);
+    border-radius: 8px; padding: 10px; background: var(--bg); color: var(--ink); }
+  @media (max-width: 560px) { .contenitore { padding: 24px 14px 72px; } h1 { font-size: 1.45rem; } }
+</style>
+</head>
+<body>
+<div class="contenitore">
+  <div class="intestazione">
+    <div>
+      <p class="eyebrow">Superanalisi di gruppo</p>
+      <h1>Classifica delle aste selezionate</h1>
+      <p class="sottotitolo" id="sottotitolo"></p>
+    </div>
+    <a class="link-torna" href="index.html">← Registro</a>
+  </div>
+
+  <p id="stato-verifica-automatica" class="nota">Verifica dell'accesso…</p>
+
+  <div id="schermata-password" class="riquadro-gate nascosto">
+    <h2>Accesso</h2>
+    <p>Inserisci la password di scrittura (la stessa di Configurazione).</p>
+    <form onsubmit="event.preventDefault(); sblocca();">
+      <input type="password" id="campo-password" autocomplete="current-password" placeholder="Password">
+      <button class="bottone" type="submit">Sblocca</button>
+      <p id="errore-gate" class="messaggio errore nascosto"></p>
+    </form>
+  </div>
+
+  <div id="schermata-contenuto" class="nascosto">
+    <p id="messaggio-caricamento" class="nota">Caricamento…</p>
+    <div id="contenuto"></div>
+  </div>
+</div>
+
+<script src="underwriting.js"></script>
+<script>
+  const SUPABASE_URL = "https://igemwrrcmsgaotoqvdzt.supabase.co";
+  const SUPABASE_ANON_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImlnZW13cnJjbXNnYW90b3F2ZHp0Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODkzMDc2MjksImV4cCI6MjEwNDg4MzYyOX0.YkUOBTOb40C-N0TkuDN0o5N7fVvI_qX2F1grUp-SVe8";
+  const MAX_ASTE = 10;
+  const IDS = [...new Set((new URLSearchParams(location.search).get("ids") || "").split(/[^\d]+/).filter(Boolean))];
+
+  // Stesse chiavi e stessi valori di superanalisi.html: stessa password,
+  // stessi parametri del conto (utile target e minimo prudenziale).
+  const CHIAVE_PASSWORD = "aste_password_v2";
+  const CHIAVE_PARAMETRI = "superanalisi_parametri_v1";
+  const PARAMETRI_PREDEFINITI = { utilePct: 15, minimoPrudenzialePct: 5, primaCasa: false };
+  const FORCHETTA_VALORE_UTENTE = { prudenziale: 0.93, centrale: 1.0, ottimistico: 1.05 };
+  // Ordine della classifica: prima le aste con utile netto centrale positivo
+  // (o nullo), poi quelle in perdita, poi le da scartare, infine le non
+  // calcolabili; dentro ogni gruppo prima il giudizio, poi l'utile netto %
+  // centrale.
+  const ORDINE_CLASSE = { PULITA: 0, GESTIBILE: 1, COMPLESSA: 2, DA_SCARTARE: 3, NON_CALCOLABILE: 4 };
+
+  let passwordCorrente = null;
+  let RISULTATI = [];      // una voce per asta: { r, a, esito, rendimento, ... }, già in ordine di classifica
+
+  // ============================================================ utilità
+  function escapeHtml(t) { const d = document.createElement("div"); d.textContent = t === null || t === undefined ? "" : String(t); return d.innerHTML; }
+  const vuoto = (v) => v === null || v === undefined || v === "" || (Array.isArray(v) && !v.length);
+  function eur(v) { const n = Number(v); return vuoto(v) || !Number.isFinite(n) ? "—" : "€ " + Math.round(n).toLocaleString("it-IT"); }
+  function testo(v) { return vuoto(v) ? "—" : String(v).replace(/_/g, " "); }
+  const pct = (x) => x == null || !Number.isFinite(x) ? "—" : `${Math.round(x * 100)}%`;
+
+  async function chiamaRpc(nome, payload) {
+    const r = await fetch(`${SUPABASE_URL}/rest/v1/rpc/${nome}`, {
+      method: "POST",
+      headers: { apikey: SUPABASE_ANON_KEY, Authorization: `Bearer ${SUPABASE_ANON_KEY}`, "Content-Type": "application/json" },
+      body: JSON.stringify(payload),
+    });
+    return r.json();
+  }
+
+  async function messaggioPasswordRifiutata() {
+    try {
+      const secondi = await chiamaRpc("blocco_password", { p_tipo: "scrittura" });
+      if (typeof secondi === "number" && secondi > 0) return `Troppi tentativi errati: riprova tra ${Math.ceil(secondi / 60)} minuti.`;
+    } catch (e) {}
+    return "Password errata.";
+  }
+
+  function leggiLocale(chiave) { try { return localStorage.getItem(chiave); } catch (e) { return null; } }
+  function scriviLocale(chiave, valore) { try { localStorage.setItem(chiave, valore); } catch (e) {} }
+  function cancellaLocale(chiave) { try { localStorage.removeItem(chiave); } catch (e) {} }
+
+  // ============================================================ accesso (come superanalisi.html)
+  async function sblocca() {
+    const password = document.getElementById("campo-password").value;
+    const erroreEl = document.getElementById("errore-gate");
+    erroreEl.classList.add("nascosto");
+    if (!password) return;
+    let ok;
+    try { ok = await chiamaRpc("verifica_password", { password_tentativo: password }); }
+    catch (e) { erroreEl.textContent = "Impossibile contattare Supabase."; erroreEl.classList.remove("nascosto"); return; }
+    if (ok === true) { passwordCorrente = password; scriviLocale(CHIAVE_PASSWORD, password); mostraContenuto(); }
+    else { erroreEl.textContent = await messaggioPasswordRifiutata(); erroreEl.classList.remove("nascosto"); }
+  }
+
+  async function provaSbloccoAutomatico() {
+    const ricordata = leggiLocale(CHIAVE_PASSWORD);
+    if (ricordata) {
+      try {
+        if (await chiamaRpc("verifica_password", { password_tentativo: ricordata }) === true) {
+          passwordCorrente = ricordata; mostraContenuto(); return;
+        }
+        cancellaLocale(CHIAVE_PASSWORD);
+      } catch (e) {}
+    }
+    document.getElementById("stato-verifica-automatica").classList.add("nascosto");
+    document.getElementById("schermata-password").classList.remove("nascosto");
+    document.getElementById("campo-password").focus();
+  }
+
+  function mostraContenuto() {
+    document.getElementById("stato-verifica-automatica").classList.add("nascosto");
+    document.getElementById("schermata-password").classList.add("nascosto");
+    document.getElementById("schermata-contenuto").classList.remove("nascosto");
+    caricaAste();
+  }
+
+  // ============================================================ dati
+  async function caricaAste() {
+    const msg = document.getElementById("messaggio-caricamento");
+    if (IDS.length < 2) { msg.textContent = "Servono almeno 2 aste: selezionale nel registro e usa \"Superanalisi di gruppo\"."; return; }
+    const ids = IDS.slice(0, MAX_ASTE);
+    try {
+      const r = await fetch(`${SUPABASE_URL}/rest/v1/aste?select=*&id_annuncio=in.(${ids.join(",")})`,
+        { headers: { apikey: SUPABASE_ANON_KEY, Authorization: `Bearer ${SUPABASE_ANON_KEY}` } });
+      const righe = await r.json();
+      if (!Array.isArray(righe) || !righe.length) { msg.textContent = "Nessuna delle aste selezionate è nel registro."; return; }
+      RISULTATI = righe.map(calcola).sort(confronta);
+      const mancanti = ids.filter((id) => !righe.some((x) => String(x.id_annuncio) === id));
+      msg.textContent = [
+        IDS.length > MAX_ASTE ? `Selezionate ${IDS.length} aste: uso le prime ${MAX_ASTE}.` : "",
+        mancanti.length ? `Non trovate nel registro: ${mancanti.join(", ")}.` : "",
+      ].filter(Boolean).join(" ");
+      if (!msg.textContent) msg.classList.add("nascosto");
+      disegna();
+    } catch (e) {
+      msg.textContent = `Non riesco a leggere il registro: ${e.message}`;
+    }
+  }
+
+  function analisiV2(riga) {
+    const a = riga && riga.analisi_v2;
+    return a && typeof a === "object" && String(riga.versione_prompt || "").startsWith("v2") ? a : null;
+  }
+
+  // Come fonteRivendita in superanalisi.html: il tuo valore > OMI >
+  // quotazioni citate dal CTU > valore del CTU (dentro underwriting.js).
+  function fonteRivendita(r, a) {
+    const utente = Number(r.valore_rivendita_utente);
+    if (Number.isFinite(utente) && utente > 0) {
+      const f = FORCHETTA_VALORE_UTENTE;
+      return { tipo: "utente", etichetta: "il tuo valore",
+        arvOverride: { prudenziale: Math.round(utente * f.prudenziale), centrale: Math.round(utente * f.centrale), ottimistico: Math.round(utente * f.ottimistico) } };
+    }
+    const omiMin = Number(r.omi_min_euro_mq), omiMax = Number(r.omi_max_euro_mq);
+    if (omiMin > 0 && omiMax >= omiMin) {
+      return { tipo: "omi", omi: { min: omiMin, max: omiMax }, etichetta: `OMI ${r.omi_zona || ""} ${omiMin}–${omiMax} €/mq` };
+    }
+    const quot = (((a || {}).valutazione_ctu || {}).quotazioni_citate || [])
+      .filter((q) => q && Number(q.min_euro_mq) > 0 && Number(q.max_euro_mq) >= Number(q.min_euro_mq));
+    const scelta = quot.find((q) => /omi/i.test(String(q.fonte || ""))) || quot[0];
+    if (scelta) {
+      return { tipo: "citata", etichetta: `quotazioni citate dal CTU ${Number(scelta.min_euro_mq)}–${Number(scelta.max_euro_mq)} €/mq`,
+        omi: { min: Number(scelta.min_euro_mq), max: Number(scelta.max_euro_mq) } };
+    }
+    return { tipo: "ctu", etichetta: "valore del CTU" };
+  }
+
+  function leggiParametri() {
+    try { return { ...PARAMETRI_PREDEFINITI, ...(JSON.parse(leggiLocale(CHIAVE_PARAMETRI) || "{}")) }; }
+    catch (e) { return { ...PARAMETRI_PREDEFINITI }; }
+  }
+
+  // Stesso conto di disegnaConto() in superanalisi.html.
+  function calcola(r) {
+    const a = analisiV2(r);
+    const voce = { r, a, esito: null, fonte: null, classe: "NON_CALCOLABILE", rendimento: {}, motivo: "" };
+    if (!a) { voce.motivo = "analisi v2 non disponibile"; return voce; }
+    if (!window.Underwriting) { voce.motivo = "motore di calcolo non caricato"; return voce; }
+    const p = leggiParametri(), f = fonteRivendita(r, a);
+    const annuncio = {
+      comune: r.comune__indirizzo, offertaMinima: Number(r.offerta_minima) || null, prezzoBase: Number(r.prezzo_base) || null,
+      valoreStima: Number(r.valore_stima_perito) || null, occupazione: r["disponibilità_pvp"] || null,
+      omi: f.omi || null, arvOverride: f.arvOverride || null,
+    };
+    const esito = Underwriting.analizzaAsta(a, annuncio, {
+      utileTargetPct: p.utilePct / 100, utileMinimoPrudenzialePct: p.minimoPrudenzialePct / 100,
+      targetNetto: true, primaCasa: !!p.primaCasa,
+    });
+    voce.esito = esito;
+    voce.fonte = f;
+    const al = esito.scenariAlMinimo;
+    if (!esito.arv || !al || !al.centrale) {
+      voce.motivo = esito.verdetto || "valore di rivendita non calcolabile";
+      voce.classe = esito.classe === "DA_SCARTARE" ? "DA_SCARTARE" : "NON_CALCOLABILE";
+      return voce;
+    }
+    voce.classe = esito.classe;
+    for (const s of ["prudenziale", "centrale", "ottimistico"]) {
+      const c = al[s];
+      voce.rendimento[s] = c && c.capitale ? c.utileNettoStimato / c.capitale : null;
+    }
+    return voce;
+  }
+
+  const fascia = (v) => v.classe === "DA_SCARTARE" ? 2 : v.rendimento.centrale == null ? 3 : v.rendimento.centrale >= 0 ? 0 : 1;
+
+  function confronta(x, y) {
+    const df = fascia(x) - fascia(y);
+    if (df) return df;
+    const dc = (ORDINE_CLASSE[x.classe] ?? 9) - (ORDINE_CLASSE[y.classe] ?? 9);
+    if (dc) return dc;
+    const rx = x.rendimento.centrale, ry = y.rendimento.centrale;
+    if (rx == null && ry == null) return 0;
+    if (rx == null) return 1;
+    if (ry == null) return -1;
+    return ry - rx;
+  }
+
+  // ============================================================ pagina
+  function disegna() {
+    const p = leggiParametri();
+    document.getElementById("sottotitolo").textContent =
+      `${RISULTATI.length} aste · utile netto richiesto ${p.utilePct}% (minimo ${p.minimoPrudenzialePct}% nel prudenziale), come in Superanalisi`;
+    document.getElementById("contenuto").innerHTML = sezioneClassifica() + sezioneSecondaOpinione();
+  }
+
+  function rischiPrincipali(v) {
+    const e = v.esito;
+    if (!e) return [v.motivo];
+    return [...(e.motivi || []), ...(e.avvisi || [])].slice(0, 3);
+  }
+
+  function sezioneClassifica() {
+    const righe = RISULTATI.map((v, i) => {
+      const r = v.r, e = v.esito;
+      const ar = e && e.arv;
+      return `<tr>
+        <td class="num">${i + 1}</td>
+        <td class="sx"><a href="superanalisi.html?id=${encodeURIComponent(r.id_annuncio)}" target="_blank" rel="noopener">${escapeHtml(r.comune__indirizzo || r.id_annuncio)}</a>
+          <span class="piccolo">${escapeHtml([r.tribunale, r.n__lotto ? `lotto ${r.n__lotto}` : "", testo(r.tipologia).toLowerCase()].filter(Boolean).join(" · "))}</span></td>
+        <td class="num">${eur(r.offerta_minima)}</td>
+        <td class="num">${ar ? eur(ar.centrale) : "—"}<span class="piccolo">${escapeHtml(v.fonte ? v.fonte.etichetta : "")}</span></td>
+        <td class="num">${pct(v.rendimento.centrale)}</td>
+        <td class="num">${pct(v.rendimento.prudenziale)}</td>
+        <td class="num">${e ? eur(e.offertaMassima) : "—"}</td>
+        <td class="sx"><span class="etichetta-stato stato-${escapeHtml(v.classe)}">${escapeHtml(testo(v.classe))}</span></td>
+        <td class="sx"><ul>${rischiPrincipali(v).map((m) => `<li>${escapeHtml(m)}</li>`).join("")}</ul></td>
+        <td class="num">${e ? escapeHtml(e.qualita.livello) : "—"}</td>
+      </tr>`;
+    }).join("");
+    return `<div class="sezione"><h2>Classifica</h2>
+      <div class="tabella-scroll"><table>
+        <thead><tr><th>#</th><th class="sx">Asta</th><th>Offerta minima</th><th>Rivendita (centrale)</th>
+          <th>Utile netto % centrale</th><th>Utile netto % prudenziale</th><th>Offerta massima</th><th class="sx">Giudizio</th>
+          <th class="sx">Rischi principali</th><th>Dati</th></tr></thead>
+        <tbody>${righe}</tbody></table></div>
+      <p class="nota">Ordine: prima le aste con utile netto positivo nello scenario centrale (all'offerta minima), poi quelle in perdita,
+        poi quelle da scartare, infine le non calcolabili (es. quote parziali); dentro ogni gruppo prima il giudizio (pulita, gestibile,
+        complessa), poi l'utile netto sul capitale. Stesso conto della Superanalisi di ogni asta (underwriting.js); valori OMI: Agenzia Entrate - OMI.
+        "Dati" è la qualità dei dati (A migliore). Sono stime per confrontare le aste, non sostituiscono un sopralluogo o il parere di un tecnico.</p>
+    </div>`;
+  }
+
+  // ============================================================ seconda opinione
+  const AI = [
+    { nome: "ChatGPT", url: "https://chatgpt.com/", q: "https://chatgpt.com/?q=" },
+    { nome: "Claude", url: "https://claude.ai/new", q: "https://claude.ai/new?q=" },
+    { nome: "Perplexity", url: "https://www.perplexity.ai/", q: "https://www.perplexity.ai/search?q=" },
+    { nome: "Gemini", url: "https://gemini.google.com/app" },
+    { nome: "Mistral Le Chat", url: "https://chat.mistral.ai/chat" },
+    { nome: "DeepSeek", url: "https://chat.deepseek.com/" },
+    { nome: "Grok", url: "https://grok.com/" },
+    { nome: "Copilot", url: "https://copilot.microsoft.com/" },
+  ];
+  const MAX_LUNGHEZZA_URL = 6000;
+
+  // Una riga per asta, usata sia nel prompt sia nel CSV del gruppo.
+  function datiAsta(v) {
+    const r = v.r, a = v.a || {}, e = v.esito;
+    const I = a.identificazione || {}, S = a.superfici || {}, U = a.urbanistica || {}, O = a.occupazione || {};
+    const V = a.valutazione_ctu || {}, C = a.condominio || {}, M = a.stato_manutentivo || {}, P = a.perizia || {};
+    const diff = (U.difformita || []).filter((x) => x && typeof x === "object");
+    return {
+      "ID": r.id_annuncio, "Indirizzo": r.comune__indirizzo || "", "Tribunale": r.tribunale || "", "Lotto": r.n__lotto || "",
+      "Tipologia": r.tipologia || "", "Prezzo base": r.prezzo_base || "", "Offerta minima": r.offerta_minima || "",
+      "Data vendita": r.data_vendita ? new Date(r.data_vendita).toLocaleDateString("it-IT") : "",
+      "Data perizia": P.data_perizia || "", "Quota in vendita": I.quota_in_vendita || "",
+      "Superficie commerciale mq": S.commerciale_ctu_mq || r.superficie_mq || "",
+      "Occupazione": O.stato || r.stato_occupazione || "", "Stato manutentivo": M.classe || "",
+      "Conformita urbanistica": U.conformita_urbanistica || "",
+      "Difformita": diff.map((d) => `${d.tipo || "?"}: ${d.descrizione || ""}`).join(" | "),
+      "Costo regolarizzazione CTU": U.costo_totale_regolarizzazione_ctu_euro || r.spese_sanatoria || "",
+      "Condono pendente": (U.condono_pendente || {}).presente === true || (U.condono_pendente || {}).presente === "true" ? "si" : "",
+      "Arretrati condominiali": C.arretrati_euro || "",
+      "Valore mercato CTU": V.valore_mercato_euro || "", "Valore finale CTU": V.valore_finale_euro || "",
+      "OMI (Agenzia Entrate)": r.omi_min_euro_mq ? `zona ${r.omi_zona || "?"} ${r.omi_tipologia || ""} ${r.omi_min_euro_mq}-${r.omi_max_euro_mq} euro/mq (${r.omi_periodo || ""})` : "",
+      "Nostra rivendita centrale": e && e.arv ? Math.round(e.arv.centrale) : "",
+      "Nostro utile netto % centrale": v.rendimento.centrale != null ? Math.round(v.rendimento.centrale * 100) : "",
+      "Nostro utile netto % prudenziale": v.rendimento.prudenziale != null ? Math.round(v.rendimento.prudenziale * 100) : "",
+      "Nostra offerta massima": e && e.offertaMassima != null ? Math.round(e.offertaMassima) : "",
+      "Nostro giudizio": v.classe,
+      "Link PVP": r.link_asta || "", "Link perizia": r.link_pdf || "",
+    };
+  }
+
+  function costruisciPrompt() {
+    const blocchi = RISULTATI.map((v, i) => {
+      const d = datiAsta(v);
+      return [`ASTA ${i + 1}`, ...Object.entries(d).filter(([, x]) => !vuoto(x)).map(([k, x]) => `- ${k}: ${x}`)].join("\n");
+    });
+    return [
+      `Sono un investitore che compra immobili alle aste giudiziarie italiane per ristrutturarli e rivenderli. Ti do ${RISULTATI.length} aste già preselezionate, con i dati estratti in automatico dalle perizie (possono contenere errori) e un nostro conto indicativo.`,
+      "",
+      ...blocchi.flatMap((b) => [b, ""]),
+      "Compiti:",
+      "1. Per ogni asta cerca annunci di vendita attuali nella stessa zona (stessa tipologia, superficie simile) su portali come immobiliare.it, idealista.it, casa.it, e indica 2-3 annunci con link e €/mq. Da questi stima un prezzo di vendita realistico dopo la ristrutturazione. Se non trovi annunci, scrivi \"non trovati\" e usa l'OMI indicato: non inventare annunci o link.",
+      "2. Se riesci ad aprire il link della perizia, controlla i dati principali (quota, superficie, occupazione, abusi e costi, valore del CTU) e segnala quelli errati. Dichiara per quali aste hai letto davvero la perizia.",
+      "3. Stima i costi (acquisto all'offerta minima, imposte, lavori, regolarizzazione, arretrati, vendita) e il margine netto.",
+      "4. Elenca i rischi principali di ogni asta (occupazione, abusi, quota, condominio, stato, tempi).",
+      "5. Tabella finale ordinata dalla migliore alla peggiore per un'operazione di ristrutturazione e rivendita (in alto le più pulite e con più margine), con colonne: posizione, ID, indirizzo, prezzo di vendita stimato (€/mq e totale), margine netto stimato, rischi principali, giudizio (conviene / da approfondire / scartare).",
+      "Rispondi in italiano, in modo sintetico. Se un dato manca scrivi \"non indicato\".",
+    ].join("\n");
+  }
+
+  function csvGruppo() {
+    const righe = RISULTATI.map(datiAsta);
+    const intestazioni = Object.keys(righe[0] || {});
+    const campo = (x) => { const t = x === null || x === undefined ? "" : String(x); return /[;"\n\r]/.test(t) ? '"' + t.replace(/"/g, '""') + '"' : t; };
+    return "﻿" + [intestazioni.map(campo).join(";"), ...righe.map((d) => intestazioni.map((k) => campo(d[k])).join(";"))].join("\r\n");
+  }
+
+  const nomeCsv = () => `superanalisi-gruppo-${new Date().toISOString().slice(0, 10)}.csv`;
+
+  async function copiaNegliAppunti(testoDaCopiare) {
+    try { await navigator.clipboard.writeText(testoDaCopiare); return true; }
+    catch (e) {
+      const t = document.getElementById("testo-prompt");
+      if (t) { t.focus(); t.select(); try { return document.execCommand("copy"); } catch (e2) {} }
+      return false;
+    }
+  }
+
+  function mostraMessaggio(classe, t) {
+    const msg = document.getElementById("messaggio-ai");
+    msg.className = "messaggio " + classe;
+    msg.textContent = t;
+  }
+
+  async function apriAI(indice) {
+    const ai = AI[indice];
+    const prompt = document.getElementById("testo-prompt").value;
+    const copiato = await copiaNegliAppunti(prompt);
+    const conQ = ai.q ? ai.q + encodeURIComponent(prompt) : null;
+    const url = conQ && conQ.length <= MAX_LUNGHEZZA_URL ? conQ : ai.url;
+    window.open(url, "_blank", "noopener");
+    mostraMessaggio("ok", `${ai.nome} aperto${url === conQ ? " con il prompt già scritto" : ""}${copiato ? "; prompt copiato negli appunti: incollalo nella chat" : ""}.`);
+  }
+
+  function scaricaCsv() {
+    const url = URL.createObjectURL(new Blob([csvGruppo()], { type: "text/csv;charset=utf-8;" }));
+    const link = document.createElement("a");
+    link.href = url;
+    link.download = nomeCsv();
+    document.body.appendChild(link);
+    link.click();
+    link.remove();
+    setTimeout(() => URL.revokeObjectURL(url), 60000);
+  }
+
+  function fileCsv() { return new File([csvGruppo()], nomeCsv(), { type: "text/csv" }); }
+
+  function condivisioneFileSupportata() {
+    try { return !!(navigator.canShare && navigator.canShare({ files: [new File([""], "prova.csv", { type: "text/csv" })] })); }
+    catch (e) { return false; }
+  }
+
+  // Come in superanalisi.html: "Condividi" manda file e prompt; alcune app
+  // (Gemini) tengono solo il testo, per loro c'è "Condividi solo il CSV".
+  async function condividi(soloFile) {
+    const prompt = document.getElementById("testo-prompt").value;
+    await copiaNegliAppunti(prompt);
+    try {
+      await navigator.share(soloFile ? { files: [fileCsv()] } : { files: [fileCsv()], title: "Superanalisi di gruppo", text: prompt });
+      mostraMessaggio("ok", soloFile ? "CSV condiviso. Incolla il prompt nella chat: è negli appunti."
+        : "Condiviso. Il prompt è anche negli appunti, se l'app non l'ha ricevuto.");
+    } catch (e) {
+      if (e.name !== "AbortError") mostraMessaggio("errore", `Condivisione non riuscita (${e.message}).`);
+    }
+  }
+
+  function sezioneSecondaOpinione() {
+    const prompt = costruisciPrompt();
+    const condividere = condivisioneFileSupportata();
+    return `<div class="sezione"><h2>Seconda opinione di gruppo</h2>
+      <p class="nota">Il prompt contiene i dati di tutte le aste e chiede all'AI di cercare annunci di vendita nella zona, stimare il prezzo di
+        rivendita e rifare la classifica. Le AI con ricerca sul web (Perplexity, ChatGPT con ricerca, Gemini) sono le più adatte. La lettura
+        delle perizie dai link non è garantita: per le 2-3 migliori usa la Superanalisi della singola asta, con la perizia allegata.
+        I risultati restano nella tua conversazione, non vengono salvati qui.</p>
+      <div class="pulsanti-ai">${AI.map((ai, i) => `<button class="pulsante-ai" onclick="apriAI(${i})">${escapeHtml(ai.nome)}
+        <small>${ai.q ? "prompt nell'indirizzo o negli appunti" : "prompt negli appunti"}</small></button>`).join("")}</div>
+      <div class="riga-pulsanti">
+        <button class="bottone secondario" onclick="scaricaCsv()">⬇ Scarica CSV del gruppo</button>
+        ${condividere ? `<button class="bottone" onclick="condividi(false)">📤 Condividi (prompt + CSV)</button>
+        <button class="bottone secondario" onclick="condividi(true)">📎 Condividi solo il CSV</button>` : ""}
+      </div>
+      ${condividere ? `<p class="nota">Dal telefono: «Condividi» manda prompt e CSV all'app dell'AI. Gemini riceve solo il testo: usa
+        «Condividi solo il CSV», scegli Gemini e incolla il prompt, che è già negli appunti.</p>` : ""}
+      <p id="messaggio-ai" class="messaggio nascosto"></p>
+      <h3>Prompt</h3>
+      <textarea id="testo-prompt">${escapeHtml(prompt)}</textarea>
+    </div>`;
+  }
+
+  provaSbloccoAutomatico();
+</script>
+</body>
+</html>

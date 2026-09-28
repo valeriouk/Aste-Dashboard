@@ -2474,6 +2474,7 @@
       <button type="button" class="barra-selezione-scarta" onclick="eseguiAzioneInBlocco('scartato')">✕ Scarta tutte</button>
       <button type="button" class="barra-selezione-rimuovi" onclick="eseguiAzioneInBlocco(null)">⊖ Rimuovi flag</button>
       <button type="button" id="bottone-confronta" onclick="apriConfronto()">⇄ Confronta</button>
+      <button type="button" onclick="apriSuperanalisiGruppo()">🧠 Superanalisi di gruppo</button>
     </div>
     <div class="barra-selezione-azioni">
       <button type="button" onclick="esportaCSV('selezionate')">Esporta selezionate</button>
@@ -3790,6 +3791,17 @@
     const nomeFile = `aste-${suffissi[ambito] || "filtrate"}-${dataOggi}.csv`;
     scaricaTestoComeFile(contenuto, nomeFile, "text/csv;charset=utf-8;");
     mostraToast(elenco.length === 1 ? "1 asta esportata." : `${elenco.length} aste esportate.`);
+  }
+
+  // Superanalisi di gruppo (superanalisi-gruppo.html): classifica e prompt
+  // per un'AI esterna su 2-10 aste selezionate, qualunque sia il loro stato.
+  function apriSuperanalisiGruppo() {
+    const ids = Array.from(astaSelezionate);
+    if (ids.length < 2 || ids.length > 10) {
+      mostraToast("Seleziona da 2 a 10 aste per la superanalisi di gruppo.");
+      return;
+    }
+    window.open(`superanalisi-gruppo.html?ids=${ids.map(encodeURIComponent).join(",")}`, "_blank", "noopener");
   }
 
   // Azione in blocco — preferito o scartato per tutte le aste

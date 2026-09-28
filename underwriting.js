@@ -683,6 +683,16 @@
       avvisi,
     };
 
+    // Quota parziale (o usufrutto, nuda proprietà...): chi compra non può
+    // ristrutturare e rivendere l'intero, e i valori OMI/utente/citati sono
+    // dell'intero: il conto non si applica (prima dava utili falsi, es. 112%
+    // su una quota di 1/2 con rivendita OMI dell'intero).
+    if (!quotaIntera(d.quotaInVendita)) {
+      esito.arv = null;
+      esito.verdetto = `NON CALCOLABILE: si vende solo una quota (${d.quotaInVendita}), il conto di ristrutturazione e rivendita non si applica`;
+      esito.punteggio = punteggioCompatibile(esito.classe, null, qualita.livello);
+      return esito;
+    }
     if (!arv || lavori.importo == null) {
       esito.verdetto = `CALCOLO NON AFFIDABILE: ${!arv ? 'manca l\'ARV (inserisci i valori dai comparabili: il valore del CTU si usa solo con una perizia recente)' : 'costo lavori non determinabile'}`;
       esito.punteggio = punteggioCompatibile(esito.classe, null, qualita.livello);
