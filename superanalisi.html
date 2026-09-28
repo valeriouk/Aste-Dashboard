@@ -687,22 +687,20 @@
     }
   }
 
-  // Per le app che dal menu di condivisione prendono solo il testo (Gemini):
-  // salva il PDF già preparato nei download, e il prompt va negli appunti.
-  async function salvaPerizia() {
+  // Per le app che, ricevendo PDF e testo insieme, tengono solo il testo
+  // (Gemini): condivide il solo PDF; il prompt va negli appunti. Il download
+  // con un link blob: non va bene, su telefono passava il link invece del file.
+  async function condividiSoloPdf() {
     if (!filePerizia) return;
     await copiaNegliAppunti(document.getElementById("testo-prompt").value);
-    const url = URL.createObjectURL(filePerizia);
-    const a = document.createElement("a");
-    a.href = url;
-    a.download = filePerizia.name;
-    document.body.appendChild(a);
-    a.click();
-    a.remove();
-    setTimeout(() => URL.revokeObjectURL(url), 60000);
     const msg = document.getElementById("messaggio-ai");
-    msg.className = "messaggio ok";
-    msg.textContent = `${filePerizia.name} salvato nei download; prompt copiato negli appunti. Nell'app dell'AI allegalo con + → File e incolla il prompt.`;
+    try {
+      await navigator.share({ files: [filePerizia] });
+      msg.className = "messaggio ok";
+      msg.textContent = "PDF condiviso. Incolla il prompt nella chat: è negli appunti.";
+    } catch (e) {
+      if (e.name !== "AbortError") { msg.className = "messaggio errore"; msg.textContent = `Condivisione non riuscita (${e.message}).`; }
+    }
   }
 
   function sezioneSecondaOpinione(r, a) {
@@ -712,10 +710,10 @@
         I risultati restano nella tua conversazione, non vengono salvati qui. I piani gratuiti hanno limiti sul numero e la dimensione dei file.</p>
       <p>${r.link_pdf ? `<a class="bottone secondario" style="text-decoration:none;display:inline-block" href="${escapeHtml(r.link_pdf)}" target="_blank" rel="noopener" download>⬇ Scarica la perizia (PDF)</a>` : "Nessun PDF della perizia nel registro."}</p>
       ${r.link_pdf && condivisioneFileSupportata() ? `<p><button class="bottone" id="pulsante-condividi" onclick="condividiPerizia()">📱 Prepara la perizia da condividere</button>
-        <button class="bottone secondario nascosto" id="pulsante-salva" onclick="salvaPerizia()">💾 Salva sul telefono</button>
+        <button class="bottone secondario nascosto" id="pulsante-salva" onclick="condividiSoloPdf()">📎 Condividi solo il PDF</button>
         <span id="avanzamento-pdf" class="nota"></span></p>
       <p class="nota">Dal telefono: prepara la perizia, poi «Condividi» apre il menu del telefono con il PDF e il prompt; scegli l'app dell'AI.
-        Gemini riceve solo il testo: usa «Salva sul telefono» e allega il PDF in Gemini con + → File (il prompt è già negli appunti).</p>` : ""}
+        Gemini riceve solo il testo: usa «Condividi solo il PDF», scegli Gemini e incolla il prompt, che è già negli appunti.</p>` : ""}
       <div class="pulsanti-ai">${AI.map((ai, i) => `<button class="pulsante-ai" onclick="apriAI(${i})">${escapeHtml(ai.nome)}
         <small>${ai.q ? "prompt già scritto" : "prompt negli appunti"}</small></button>`).join("")}</div>
       <p id="messaggio-ai" class="messaggio nascosto"></p>
