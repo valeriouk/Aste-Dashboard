@@ -324,6 +324,7 @@
         ${voce("Lotto trovato", sino(P.lotto_trovato))}
         ${voce("Lotti / beni usati", testo(P.lotti_usati))}
         ${voce("Quota in vendita", testo(I.quota_in_vendita))}
+        ${vuoto(I.quota_pignorata_perizia) ? "" : voce("Quota secondo la perizia", testo(I.quota_pignorata_perizia))}
         ${voce("Piano / interno", [I.piano, I.interno].filter((x) => !vuoto(x)).join(" / ") || "—")}
         ${voce("Ascensore", sino(I.ascensore))}
         ${voce("Anno costruzione", testo(I.anno_costruzione))}
@@ -387,7 +388,7 @@
       <h3>Valutazione del CTU</h3>
       <div class="griglia">
         ${voce("Valore di mercato", eur(V.valore_mercato_euro), pag(V.pagina))}
-        ${voce("Valore finale", eur(V.valore_finale_euro))}
+        ${voce("Valore finale", eur(V.valore_finale_euro), vuoto(V.valore_finale_riferito_a) ? "" : ` (riferito a: ${escapeHtml(testo(V.valore_finale_riferito_a))})`)}
         ${voce("€/mq usati", vuoto(V.euro_mq) ? "—" : eur(V.euro_mq))}
         ${voce("Superficie usata", mq(V.superficie_usata_mq))}
         ${voce("Riduzione vendita giudiziaria", vuoto(V.riduzione_vendita_giudiziaria_pct) ? "—" : `${V.riduzione_vendita_giudiziaria_pct}%`)}
