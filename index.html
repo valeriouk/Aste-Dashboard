@@ -1714,6 +1714,17 @@
   .menu-condividi a { display: block; padding: 9px 10px; border-radius: 7px; font-family: var(--font-body); font-size: .85rem;
     color: var(--ink); text-decoration: none; }
   .menu-condividi a:hover { background: var(--surface-2); }
+  /* Link utili: allegati PVP e pagine dei gestori letti in diretta
+     (Edge Function allegati-asta), poi i link aggiunti dall'utente. */
+  .allegati-gruppo { margin: 0 0 10px; }
+  .allegati-gruppo-titolo, .link-utili-sottotitolo { font-size: .76rem; font-weight: 700; letter-spacing: .04em; text-transform: uppercase;
+    color: var(--ink-muted); margin: 8px 0 4px; }
+  .allegati-elenco { display: flex; flex-direction: column; gap: 3px; }
+  .allegati-elenco a { font-size: .88rem; }
+  .allegati-elenco .allegato-info { font-size: .74rem; color: var(--ink-faint); margin-left: 6px; }
+  .allegati-nota { font-size: .8rem; color: var(--ink-muted); margin: 4px 0 8px; }
+  .allegati-nota button { font: inherit; font-size: .78rem; margin-left: 6px; padding: 2px 8px; border: 1px solid var(--border);
+    border-radius: 6px; background: var(--surface); cursor: pointer; }
   .menu-indirizzo .nota-menu { font-size: .75rem; color: var(--ink-muted); padding: 4px 10px 6px; margin: 0; max-width: 240px; }
 
   /* Testo visibile SOLO nel PDF/stampa (vedi @media print più sotto) —
@@ -6569,6 +6580,66 @@ ${notaHtml}
     try { return new URL(url).hostname.replace(/^www\./, ""); } catch (e) { return url; }
   }
 
+  // ==========================================================
+  // ALLEGATI PVP E PAGINE DEI GESTORI — letti in diretta a ogni apertura
+  // dei dettagli dalla Edge Function allegati-asta (copia in
+  // aste-immobiliari/supabase/functions/allegati-asta), con la password di
+  // lettura. Niente viene salvato: memoria solo per la sessione. I link
+  // aprono i file direttamente dal PVP e le pagine dell'asta sui gestori.
+  // ==========================================================
+  const URL_FUNZIONE_ALLEGATI = `${SUPABASE_URL}/functions/v1/allegati-asta`;
+  const ALLEGATI_PVP = {};   // id -> {stato: "caricamento" | "ok" | "errore", allegati, gestori, messaggio}
+
+  function contenutoAllegatiPvp(a) {
+    const voce = ALLEGATI_PVP[a.id];
+    if (!voce) { setTimeout(() => caricaAllegatiPvp(a.id), 0); return `<p class="allegati-nota">Caricamento allegati dal PVP…</p>`; }
+    if (voce.stato === "caricamento") return `<p class="allegati-nota">Caricamento allegati dal PVP…</p>`;
+    if (voce.stato === "errore") {
+      return `<p class="allegati-nota">Allegati non disponibili (${escapeHtml(voce.messaggio || "errore")}).
+        ${a.urlAsta ? `<a class="lotto-link" href="${escapeHtml(a.urlAsta)}" target="_blank" rel="noopener">Apri l'annuncio PVP</a>` : ""}
+        <button type="button" onclick="caricaAllegatiPvp('${a.id}', true)">Riprova</button></p>`;
+    }
+    const mb = (b) => b ? ` · ${(b / 1048576).toLocaleString("it-IT", {maximumFractionDigits: 1})} MB` : "";
+    const rigaAllegato = (x) => `<span><a class="lotto-link" href="${escapeHtml(x.url)}" target="_blank" rel="noopener">${escapeHtml(x.nome)}</a>
+      <span class="allegato-info">${escapeHtml(x.tipo || "")}${mb(x.byte)}</span></span>`;
+    const gruppo = (titolo, righe) => righe.length ? `<div class="allegati-gruppo"><p class="allegati-gruppo-titolo">${titolo}</p>
+      <div class="allegati-elenco">${righe.join("")}</div></div>` : "";
+    const foto = (voce.allegati || []).filter(x => x.foto);
+    const documenti = (voce.allegati || []).filter(x => !x.foto);
+    const gestori = voce.gestori || [];
+    if (!foto.length && !documenti.length && !gestori.length) return `<p class="allegati-nota">Nessun allegato né sito del gestore sul PVP.</p>`;
+    return gruppo("📷 Foto", foto.map(rigaAllegato))
+      + gruppo("📄 Documenti PVP", documenti.map(rigaAllegato))
+      + gruppo("🏛️ L'asta sui siti dei gestori", gestori.map(g => `<span><a class="lotto-link" href="${escapeHtml(g.url)}" target="_blank" rel="noopener">${escapeHtml(g.nome)}</a>
+          ${g.gestore_vendita ? `<span class="allegato-info">gestore della vendita</span>` : ""}</span>`));
+  }
+
+  async function caricaAllegatiPvp(id, riprova = false) {
+    if (ALLEGATI_PVP[id] && !riprova && ALLEGATI_PVP[id].stato !== "errore") return;
+    ALLEGATI_PVP[id] = {stato: "caricamento"};
+    aggiornaAllegatiPvp(id);
+    try {
+      const r = await fetch(URL_FUNZIONE_ALLEGATI, {
+        method: "POST",
+        headers: {apikey: SUPABASE_ANON_KEY, Authorization: `Bearer ${SUPABASE_ANON_KEY}`, "Content-Type": "application/json"},
+        body: JSON.stringify({password_tentativo: passwordLetturaCorrente || leggiPasswordLetturaRicordata() || "", id_annuncio: id}),
+      });
+      const d = await r.json().catch(() => ({}));
+      ALLEGATI_PVP[id] = d.ok ? {stato: "ok", allegati: d.allegati || [], gestori: d.gestori || []}
+        : {stato: "errore", messaggio: d.messaggio || `HTTP ${r.status}`};
+    } catch (e) {
+      ALLEGATI_PVP[id] = {stato: "errore", messaggio: "richiesta non riuscita"};
+    }
+    aggiornaAllegatiPvp(id);
+  }
+
+  // Aggiorna solo il riquadro degli allegati, senza ridisegnare la finestra.
+  function aggiornaAllegatiPvp(id) {
+    const el = document.getElementById(`allegati-pvp-${id}`);
+    const asta = ASTE.find(a => a.id === id);
+    if (el && asta) el.innerHTML = contenutoAllegatiPvp(asta);
+  }
+
   function bloccoLinkUtili(a) {
     const link = a.linkUtili || [];
     const righeLink = link.map((l, i) => `
@@ -6580,6 +6651,8 @@ ${notaHtml}
     return `
       <div class="sezione-link-utili">
         <h3 class="sezione-costi-titolo">🔗 Link utili</h3>
+        <div class="allegati-pvp" id="allegati-pvp-${a.id}">${contenutoAllegatiPvp(a)}</div>
+        <p class="link-utili-sottotitolo">✏️ I tuoi link</p>
         <div class="link-utili-elenco">${righeLink}</div>
         ${puoAggiungerne ? `
           <button type="button" class="link-utile-bolla" onclick="apriEditorLinkUtile(this, '${a.id}')">+ Aggiungi link</button>
