@@ -120,8 +120,16 @@
     .impaginazione { grid-template-columns: minmax(0, 1fr); padding: 0 16px; }
     .pulsante-indice { display: inline-block; }
     .link-registro { display: none; }
-    nav.indice { position: fixed; top: 58px; left: 0; bottom: 0; width: min(88vw, 340px); max-height: none; background: var(--surface); border-right: 1px solid var(--border); padding: 16px; z-index: 30; transform: translateX(-105%); transition: transform .2s; box-shadow: 4px 0 20px rgba(0,0,0,.08); }
+    /* align-self: stretch e altezza esplicita: con "start" (quello del
+       computer) un pannello fisso prende l'altezza del contenuto invece che
+       dello schermo, non scorre, e il dito fa scorrere la pagina dietro. */
+    nav.indice { position: fixed; top: 58px; left: 0; bottom: 0; align-self: stretch; height: calc(100vh - 58px); height: calc(100dvh - 58px);
+      width: min(88vw, 340px); max-height: none; overflow-y: auto; overscroll-behavior: contain; -webkit-overflow-scrolling: touch;
+      background: var(--surface); border-right: 1px solid var(--border); padding: 16px 16px 40px; z-index: 30; transform: translateX(-105%); transition: transform .2s; box-shadow: 4px 0 20px rgba(0,0,0,.08); }
     nav.indice.aperto { transform: translateX(0); }
+    /* Con l'indice aperto la pagina dietro resta ferma; il velo lo chiude al tocco. */
+    body.indice-aperto { overflow: hidden; }
+    .velo-indice { position: fixed; top: 58px; left: 0; right: 0; bottom: 0; background: rgba(30, 35, 32, .28); z-index: 29; }
     h1 { font-size: 1.55rem; }
     .voce { padding: 14px 14px 10px; }
   }
@@ -158,6 +166,7 @@
 
   <div class="impaginazione">
     <nav class="indice" id="indice" aria-label="Indice"></nav>
+    <div class="velo-indice nascosto" id="velo-indice" onclick="chiudiIndice()"></div>
 
     <main id="contenuto">
       <div class="intestazione">
@@ -2010,8 +2019,16 @@
       if (!h.querySelector("a.ancora")) h.insertAdjacentHTML("beforeend", ` <a class="ancora" href="#${id}" title="Link a questa voce">#</a>`);
     });
   }
-  function alternaIndice() { document.getElementById("indice").classList.toggle("aperto"); }
-  function chiudiIndice() { document.getElementById("indice").classList.remove("aperto"); }
+  function alternaIndice() {
+    const aperto = document.getElementById("indice").classList.toggle("aperto");
+    document.body.classList.toggle("indice-aperto", aperto);
+    document.getElementById("velo-indice").classList.toggle("nascosto", !aperto);
+  }
+  function chiudiIndice() {
+    document.getElementById("indice").classList.remove("aperto");
+    document.body.classList.remove("indice-aperto");
+    document.getElementById("velo-indice").classList.add("nascosto");
+  }
 
   // ---------------------------------------------------------------- ricerca
   // Trova le voci che contengono TUTTE le parole scritte (senza distinguere
