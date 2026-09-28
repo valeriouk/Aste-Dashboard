@@ -235,6 +235,7 @@
       statoManutentivo: enumOr(M.classe, ENUM.classe, 'non_valutabile', avvisi, 'stato_manutentivo.classe'),
       lavoriCtu: num(L.importo_euro),
       valoreCtu: { mercato: num(V.valore_mercato_euro), finale: num(V.valore_finale_euro) },
+      quotaInVendita: I.quota_in_vendita == null ? null : String(I.quota_in_vendita),
       formalitaNonCancellabili: arr(F.non_cancellabili).filter((x) => x && String(x).trim()),
       discordanze: arr(e.discordanze),
     };
@@ -443,6 +444,15 @@
   // ===========================================================================
   // 5. ARV — priorità: override (comparabili Fase 2) > OMI > proxy valore CTU
   // ===========================================================================
+  // Stessa regola di quota_intera in analisi_v2.py: intero se "1/1", "intera",
+  // "100%", "piena proprietà" o se la quota non è indicata.
+  function quotaIntera(quota) {
+    const t = String(quota == null ? "" : quota).trim().toLowerCase();
+    if (!t) return true;
+    // propriet\S* e non propriet\w+: in JavaScript \w non comprende "à".
+    return /^((piena\s+propriet\S*\s*)?1\s*\/\s*1|inter\w*|100\s*%|piena\s+propriet\S*)$/.test(t);
+  }
+
   function arvScenari(sup, d, annuncio, params, etaPerizia) {
     if (annuncio.arvOverride) {
       return { ...annuncio.arvOverride, fonte: 'override (comparabili verificati)', affidabilita: 'media' };
@@ -458,7 +468,11 @@
         affidabilita: sup.approssimata ? 'bassa' : 'screening',
       };
     }
-    const vCtu = d.valoreCtu.mercato != null ? d.valoreCtu.mercato : d.valoreCtu.finale;
+    // Come analisi_v2.campi_legacy: con una quota parziale il valore di
+    // mercato è quello del bene intero, il finale è quello della quota.
+    const vCtu = quotaIntera(d.quotaInVendita)
+      ? (d.valoreCtu.mercato != null ? d.valoreCtu.mercato : d.valoreCtu.finale)
+      : (d.valoreCtu.finale != null ? d.valoreCtu.finale : d.valoreCtu.mercato);
     if (vCtu != null && etaPerizia != null && etaPerizia <= params.maxEtaPeriziaAnni) {
       const k = params.proxyCtu;
       return {

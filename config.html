@@ -838,6 +838,14 @@
         <p class="nota-campo">La ricerca estesa prova anche gli allegati PVP e le pagine dell'asta sui siti collegati all'annuncio (quelli con la bandierina), prima di ripiegare sull'avviso di vendita. Rispetta la scelta su astegiudiziarie fatta in "Altri filtri".</p>
       </div>
       <div class="campo-form">
+        <label for="campo-prompt-analisi">Prompt di analisi della perizia</label>
+        <select id="campo-prompt-analisi">
+          <option value="v2">v2: fatti con pagina e citazione, lotto giusto, quote, contratti</option>
+          <option value="v1">v1: prompt precedente</option>
+        </select>
+        <p class="nota-campo">Vale dal prossimo giro dello scanner, per le aste nuove e per il ricontrollo. Tornare a v1 riporta tutto come prima; i batch già inviati vengono letti con il prompt con cui sono partiti.</p>
+      </div>
+      <div class="campo-form">
         <label class="etichetta-checkbox" style="margin-top:0">
           <input type="checkbox" id="campo-ricontrollo-attivo">
           Ricontrolla le aste future ancora lette dall'avviso
@@ -1094,7 +1102,7 @@
 
   let configAttuale = {};
   let pianificazioneAttuale = {};
-  let ricercaPeriziaAttuale = {estesa: true, ricontrollo_attivo: true, ricontrollo_giorni: 2, ricontrollo_max: 15};
+  let ricercaPeriziaAttuale = {estesa: true, ricontrollo_attivo: true, ricontrollo_giorni: 2, ricontrollo_max: 15, prompt: "v1"};
 
   async function caricaConfigurazioneAttuale() {
     const statoEl = document.getElementById("stato-caricamento-config");
@@ -1161,6 +1169,8 @@
       pianificazioneAttuale.verifica_batch_minuti = VALORI_PREDEFINITI.verificaBatchMinuti;
 
       ricercaPeriziaAttuale.estesa = String(config.ricerca_perizia_estesa ?? true).toLowerCase() === "true";
+      // Stesso default dello scanner (PROMPT_ANALISI in app.py): v1 se il parametro manca.
+      ricercaPeriziaAttuale.prompt = String(config.prompt_analisi ?? "v1").trim().toLowerCase() === "v2" ? "v2" : "v1";
       ricercaPeriziaAttuale.ricontrollo_attivo = String(config.ricontrollo_perizie_attivo ?? true).toLowerCase() !== "false";
       ricercaPeriziaAttuale.ricontrollo_giorni = Number(config.ricontrollo_perizie_giorni ?? 2) || 2;
       ricercaPeriziaAttuale.ricontrollo_max = Number(config.ricontrollo_perizie_max ?? 15) || 15;
@@ -1242,13 +1252,13 @@
     const r = ricercaPeriziaAttuale;
     const el = document.getElementById("riepilogo-ricerca-perizia");
     if (!r.estesa) {
-      el.textContent = "Come prima: astegiudiziarie, poi avviso";
+      el.textContent = `Come prima: astegiudiziarie, poi avviso · prompt ${r.prompt}`;
       return;
     }
     el.textContent = "Ricerca estesa · " + (r.ricontrollo_attivo
       ? `ricontrollo ogni ${r.ricontrollo_giorni} ${r.ricontrollo_giorni === 1 ? "giorno" : "giorni"}, max ${r.ricontrollo_max} aste per giro`
         + (r.ricontrollo_max > SOGLIA_BATCH_RICONTROLLO ? " (in batch)" : "")
-      : "ricontrollo spento");
+      : "ricontrollo spento") + ` · prompt ${r.prompt}`;
   }
 
   function aggiornaAvvisoBatchRicontrollo() {
@@ -1320,6 +1330,7 @@
       document.getElementById("campo-batch-locale").checked = configAttuale.usa_batch_gemini;
     } else if (nome === "ricercaPerizia") {
       document.getElementById("campo-ricerca-estesa").value = String(ricercaPeriziaAttuale.estesa);
+      document.getElementById("campo-prompt-analisi").value = ricercaPeriziaAttuale.prompt;
       document.getElementById("campo-ricontrollo-attivo").checked = ricercaPeriziaAttuale.ricontrollo_attivo;
       document.getElementById("campo-ricontrollo-giorni").value = ricercaPeriziaAttuale.ricontrollo_giorni;
       document.getElementById("campo-ricontrollo-max").value = ricercaPeriziaAttuale.ricontrollo_max;
@@ -1588,6 +1599,7 @@
       ricercaPeriziaAttuale.ricontrollo_attivo = document.getElementById("campo-ricontrollo-attivo").checked;
       ricercaPeriziaAttuale.ricontrollo_giorni = giorni;
       ricercaPeriziaAttuale.ricontrollo_max = massimo;
+      ricercaPeriziaAttuale.prompt = document.getElementById("campo-prompt-analisi").value;
     } else if (nomeCard === "pianificazioneScanner") {
       const giorni = [...document.querySelectorAll(".checkbox-giorno-scanner:checked")].map(cb => cb.value);
       const orari = [];
@@ -1607,6 +1619,15 @@
       let risultato;
       if (nomeCard === "ricercaPerizia") {
         risultato = await salvaRicercaPeriziaSulServer();
+        if (risultato.result === "success") {
+          // Funzione SQL a parte (sql/prompt_analisi.sql in aste-immobiliari).
+          const esitoPrompt = await chiamaRpc("imposta_prompt_analisi", {
+            password_tentativo: passwordCorrente, valore: ricercaPeriziaAttuale.prompt
+          });
+          if (!esitoPrompt || esitoPrompt.result !== "success") {
+            risultato = {result: "error", message: `Ricerca salvata, prompt no: ${(esitoPrompt && esitoPrompt.message) || "funzione imposta_prompt_analisi non disponibile"}`};
+          }
+        }
       } else if (nomeCard === "pianificazioneScanner") {
         risultato = await chiamaRpc("imposta_pianificazione", {
           password_tentativo: passwordCorrente,
