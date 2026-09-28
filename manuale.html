@@ -1,0 +1,2085 @@
+<!DOCTYPE html>
+<html lang="it">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Manuale · Registro Opportunità</title>
+
+<link rel="manifest" href="manifest.json">
+<link rel="icon" href="favicon-32.png" sizes="32x32">
+<link rel="apple-touch-icon" href="apple-touch-icon.png">
+<meta name="theme-color" content="#1e2320">
+
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,400;9..144,500;9..144,600&family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500;600&display=swap" rel="stylesheet">
+
+<!--
+  manuale.html — manuale d'uso di tutto il sistema (registro, configurazione,
+  statistiche, superanalisi, analisi delle perizie, OMI, processi automatici,
+  notifiche, glossario). Pagina pubblica su GitHub Pages: NON deve contenere
+  password, chiavi, token, indirizzi di servizi (monitoraggio, cron esterno),
+  ID Telegram né il testo del prompt Gemini.
+  Lo sblocco usa la stessa password di lettura del registro: nasconde la
+  pagina a chi la apre dal browser, ma il testo resta nel file pubblicato
+  (vedi la chat del 29/09/2026: accettato, il contenuto non è riservato).
+  Va aggiornato insieme a ogni modifica che cambia una funzione descritta.
+  Struttura: ogni argomento cercabile è una <section class="voce" id="...">
+  dentro un <section class="capitolo">; la ricerca filtra le voci.
+-->
+
+<style>
+  :root {
+    --bg: #eef1ec;
+    --surface: #ffffff;
+    --surface-2: #e3e7e0;
+    --border: #d5dad1;
+    --primary: #234c6a;
+    --primary-soft: rgba(35, 76, 106, .10);
+    --secondary: #a15c3e;
+    --secondary-soft: rgba(161, 92, 62, .10);
+    --ok: #3f6b4a;
+    --ok-soft: rgba(63, 107, 74, .12);
+    --danger: #8b3d2e;
+    --danger-soft: rgba(139, 61, 46, .10);
+    --warn-soft: rgba(230, 162, 60, .16);
+    --ink: #1e2320;
+    --ink-muted: #5b615a;
+    --ink-faint: #8c9289;
+    --font-display: 'Fraunces', Georgia, serif;
+    --font-body: 'Inter', system-ui, -apple-system, sans-serif;
+    --font-mono: 'JetBrains Mono', ui-monospace, monospace;
+    --larghezza-indice: 290px;
+  }
+  * { box-sizing: border-box; }
+  html { scroll-padding-top: 76px; }
+  html, body { margin: 0; padding: 0; }
+  body { background: var(--bg); color: var(--ink); font-family: var(--font-body); line-height: 1.6; -webkit-font-smoothing: antialiased; }
+  a { color: var(--secondary); }
+  :focus-visible { outline: 2px solid var(--primary); outline-offset: 3px; border-radius: 4px; }
+  .nascosto { display: none !important; }
+
+  /* Gate password (stessa password di lettura del registro) */
+  .gate { position: fixed; inset: 0; background: var(--bg); display: flex; align-items: center; justify-content: center; z-index: 50; padding: 16px; }
+  .riquadro-gate { max-width: 380px; width: 100%; background: var(--surface); border: 1px solid var(--border); border-radius: 12px; padding: 32px; text-align: center; }
+  .riquadro-gate h2 { font-family: var(--font-display); font-size: 1.3rem; margin: 0 0 8px; }
+  .riquadro-gate p { color: var(--ink-muted); font-size: .9rem; margin: 0 0 20px; }
+  .riquadro-gate form { display: flex; flex-direction: column; gap: 10px; }
+  input[type="password"], input[type="search"] { background: var(--bg); border: 1px solid var(--border); border-radius: 8px; padding: 9px 12px; font-family: var(--font-body); font-size: .95rem; color: var(--ink); }
+  .bottone { background: var(--ink); color: var(--surface); border: none; border-radius: 8px; padding: 10px 14px; font-family: var(--font-body); font-size: .88rem; font-weight: 600; cursor: pointer; }
+  .messaggio-errore { color: var(--danger); font-size: .85rem; margin: 6px 0 0; min-height: 1em; }
+
+  /* Barra di ricerca fissa */
+  .barra { position: sticky; top: 0; z-index: 20; background: rgba(238, 241, 236, .96); backdrop-filter: blur(6px); border-bottom: 1px solid var(--border); }
+  .barra-interna { max-width: 1240px; margin: 0 auto; padding: 10px 16px; display: flex; gap: 10px; align-items: center; }
+  .barra input[type="search"] { flex: 1; min-width: 0; font-size: 1rem; padding: 10px 14px; background: var(--surface); }
+  .conteggio-ricerca { font-size: .8rem; color: var(--ink-muted); white-space: nowrap; }
+  .pulsante-indice { display: none; background: var(--surface); border: 1px solid var(--border); border-radius: 8px; padding: 9px 12px; font-weight: 600; cursor: pointer; font-family: var(--font-body); color: var(--ink); }
+  .link-registro { font-size: .85rem; color: var(--ink-muted); text-decoration: none; white-space: nowrap; }
+
+  /* Impaginazione: indice a sinistra, contenuto a destra */
+  .impaginazione { max-width: 1240px; margin: 0 auto; display: grid; grid-template-columns: var(--larghezza-indice) minmax(0, 1fr); gap: 28px; padding: 0 16px; }
+  nav.indice { position: sticky; top: 62px; align-self: start; max-height: calc(100vh - 70px); overflow-y: auto; padding: 18px 4px 40px 0; font-size: .86rem; }
+  nav.indice ol { list-style: none; margin: 0; padding: 0; }
+  nav.indice > ol > li { margin: 0 0 10px; }
+  nav.indice > ol > li > a { font-weight: 700; color: var(--ink); text-decoration: none; }
+  nav.indice ol ol { margin: 4px 0 0 10px; border-left: 2px solid var(--border); padding-left: 10px; }
+  nav.indice ol ol li { margin: 2px 0; }
+  nav.indice ol ol a { color: var(--ink-muted); text-decoration: none; }
+  nav.indice a:hover { color: var(--primary); }
+  nav.indice li.senza-risultati { display: none; }
+
+  main { padding: 22px 0 120px; min-width: 0; }
+  .intestazione { margin-bottom: 26px; }
+  .eyebrow { font-family: var(--font-mono); font-size: .72rem; letter-spacing: .12em; text-transform: uppercase; color: var(--primary); margin: 0 0 8px; }
+  h1 { font-family: var(--font-display); font-size: 2rem; margin: 0 0 8px; }
+  .sottotitolo { color: var(--ink-muted); margin: 0; }
+  .capitolo { margin-bottom: 34px; }
+  .capitolo > h2 { font-family: var(--font-display); font-size: 1.5rem; margin: 0 0 14px; padding-bottom: 8px; border-bottom: 2px solid var(--border); }
+  .voce { background: var(--surface); border: 1px solid var(--border); border-radius: 12px; padding: 16px 20px 12px; margin-bottom: 12px; }
+  .voce h3 { font-size: 1.02rem; margin: 0 0 8px; display: flex; gap: 8px; align-items: baseline; }
+  .voce h3 a.ancora { font-family: var(--font-mono); font-size: .75rem; color: var(--ink-faint); text-decoration: none; }
+  .voce h3 a.ancora:hover { color: var(--primary); }
+  .voce h4 { font-size: .78rem; font-weight: 700; letter-spacing: .06em; text-transform: uppercase; color: var(--primary); margin: 14px 0 6px; }
+  .voce p { margin: 0 0 8px; }
+  .voce ul, .voce ol { margin: 0 0 8px; padding-left: 20px; }
+  .voce li { margin: 2px 0; }
+  code, .mono { font-family: var(--font-mono); font-size: .84em; background: var(--surface-2); border-radius: 4px; padding: 1px 5px; }
+  .formula { font-family: var(--font-mono); font-size: .86rem; background: var(--primary-soft); border-left: 3px solid var(--primary); padding: 8px 12px; border-radius: 6px; margin: 6px 0 10px; white-space: pre-wrap; }
+  .nota { background: var(--warn-soft); border-radius: 8px; padding: 8px 12px; font-size: .9rem; margin: 6px 0 10px; }
+  .stima { display: inline-block; font-size: .7rem; font-weight: 700; letter-spacing: .04em; color: var(--secondary); background: var(--secondary-soft); border-radius: 999px; padding: 0 7px; vertical-align: 1px; }
+  .tabella-scroll { overflow-x: auto; margin: 6px 0 10px; }
+  table { border-collapse: collapse; width: 100%; font-size: .88rem; }
+  th, td { text-align: left; padding: 6px 8px; border-bottom: 1px solid var(--border); vertical-align: top; }
+  th { font-size: .74rem; color: var(--ink-faint); text-transform: uppercase; letter-spacing: .04em; font-weight: 600; }
+  mark { background: #ffe58a; color: inherit; border-radius: 2px; padding: 0 1px; }
+  .nessun-risultato { background: var(--surface); border: 1px dashed var(--border); border-radius: 12px; padding: 24px; text-align: center; color: var(--ink-muted); }
+  .torna-su { position: fixed; right: 16px; bottom: 16px; background: var(--ink); color: var(--surface); border: none; border-radius: 999px; width: 42px; height: 42px; font-size: 1.1rem; cursor: pointer; z-index: 25; }
+
+  @media (max-width: 900px) {
+    .impaginazione { grid-template-columns: minmax(0, 1fr); padding: 0 16px; }
+    .pulsante-indice { display: inline-block; }
+    .link-registro { display: none; }
+    nav.indice { position: fixed; top: 58px; left: 0; bottom: 0; width: min(88vw, 340px); max-height: none; background: var(--surface); border-right: 1px solid var(--border); padding: 16px; z-index: 30; transform: translateX(-105%); transition: transform .2s; box-shadow: 4px 0 20px rgba(0,0,0,.08); }
+    nav.indice.aperto { transform: translateX(0); }
+    h1 { font-size: 1.55rem; }
+    .voce { padding: 14px 14px 10px; }
+  }
+  @media print {
+    .barra, nav.indice, .torna-su, .gate { display: none !important; }
+    .impaginazione { display: block; }
+    .voce { break-inside: avoid; }
+  }
+</style>
+</head>
+<body>
+
+<div id="gate" class="gate">
+  <div class="riquadro-gate">
+    <h2>Manuale</h2>
+    <p id="testo-gate">Verifica dell'accesso…</p>
+    <form id="modulo-gate" class="nascosto" onsubmit="event.preventDefault(); sblocca();">
+      <input type="password" id="campo-password" autocomplete="current-password" placeholder="Password di lettura del registro">
+      <button class="bottone" type="submit">Sblocca</button>
+      <p id="errore-gate" class="messaggio-errore"></p>
+    </form>
+  </div>
+</div>
+
+<div id="pagina" class="nascosto">
+  <div class="barra">
+    <div class="barra-interna">
+      <button type="button" class="pulsante-indice" onclick="alternaIndice()" aria-label="Apri l'indice">☰ Indice</button>
+      <input type="search" id="campo-ricerca" placeholder="Cerca nel manuale: un campo, un valore, un'abbreviazione… (tasto /)" autocomplete="off" aria-label="Cerca nel manuale">
+      <span class="conteggio-ricerca" id="conteggio-ricerca"></span>
+      <a class="link-registro" href="index.html">← Registro</a>
+    </div>
+  </div>
+
+  <div class="impaginazione">
+    <nav class="indice" id="indice" aria-label="Indice"></nav>
+
+    <main id="contenuto">
+      <div class="intestazione">
+        <p class="eyebrow">Manuale di utilizzo</p>
+        <h1>Scansione aste giudiziarie — come funziona tutto</h1>
+        <p class="sottotitolo">Ogni pagina, campo, pulsante, calcolo e processo automatico del sistema, con la logica usata. Scrivi nella
+          casella in alto una parola che non capisci (es. "offerta massima", "prezzo-valore", "F/5", "classe C", "fascia OMI") per vedere solo le voci che ne parlano.
+          Ogni voce ha un link permanente (il simbolo # accanto al titolo).</p>
+      </div>
+
+<section class="capitolo" id="sistema">
+  <h2>1. Come funziona il sistema</h2>
+
+  <section class="voce" id="sistema-panoramica">
+    <h3>Panoramica: dal PVP al registro</h3>
+    <p>Il sistema cerca da solo le aste giudiziarie immobiliari, ne legge la perizia con un'intelligenza artificiale (Gemini di Google),
+      calcola alcuni indicatori e mette tutto nel <strong>registro</strong> (<code>index.html</code>). I passi, in ordine:</p>
+    <ol>
+      <li><strong>Ricerca sul PVP</strong> (Portale delle Vendite Pubbliche): lo <em>scanner</em> interroga il portale con i filtri scelti in
+        <a href="#config-area">Configurazione</a> (area, prezzo, tipologia) e raccoglie gli annunci.</li>
+      <li><strong>Esclusione dei doppioni</strong>: le aste già analizzate con successo vengono saltate; quelle presenti ma mai analizzate
+        bene vengono <em>ritentate per prime</em>; quelle con un'analisi in corso (batch) vengono saltate.</li>
+      <li><strong>Ricerca del documento</strong>: per ogni asta nuova si cerca la <a href="#analisi-ricerca-perizia">perizia di stima</a>
+        (allegati PVP, siti delle vendite, astegiudiziarie); se non c'è, si ripiega sull'avviso di vendita.</li>
+      <li><strong>Analisi della perizia</strong> con Gemini: estrae i fatti (superfici, quota, occupazione, abusi, valori del CTU…) con
+        pagina e citazione. Vedi il capitolo <a href="#analisi">Analisi della perizia</a>.</li>
+      <li><strong>Calcoli e scrittura nel database</strong>: margine stimato, €/mq, livello di ristrutturazione, punteggio; l'asta compare nel
+        registro e arriva una <a href="#notifiche">notifica Telegram</a>.</li>
+      <li><strong>Dopo il giro</strong>: <a href="#orari-ricontrollo">ricontrollo delle perizie</a> per le aste ancora senza perizia,
+        <a href="#omi-assegnazione">assegnazione dei valori OMI</a>, e il lunedì il <a href="#orari-promemoria-omi">promemoria OMI</a>.</li>
+    </ol>
+    <p>Poi ci sei tu: nel registro filtri, metti le stelle alle aste interessanti, apri la <a href="#superanalisi">Superanalisi</a> per il conto
+      completo dell'operazione, e ricevi i <a href="#orari-preferiti">promemoria</a> prima delle vendite.</p>
+  </section>
+
+  <section class="voce" id="sistema-pagine">
+    <h3>Le pagine del sistema</h3>
+    <div class="tabella-scroll"><table>
+      <thead><tr><th>Pagina</th><th>A cosa serve</th><th>Password</th></tr></thead>
+      <tbody>
+        <tr><td><a href="#registro">Registro</a> (<code>index.html</code>)</td><td>Elenco e mappa delle aste, filtri, stelle, note, costi stimati</td><td>lettura (se attiva) per aprirlo; scrittura per stelle, scarti, note, link, correzioni</td></tr>
+        <tr><td><a href="#config">Configurazione</a> (<code>config.html</code>)</td><td>Filtri dello scanner, orari, modelli, avvio manuale dei processi, password</td><td>scrittura</td></tr>
+        <tr><td><a href="#statistiche">Statistiche</a> (<code>statistiche.html</code>)</td><td>Numeri del registro, perizie analizzate, costi Gemini stimati, visite</td><td>scrittura</td></tr>
+        <tr><td><a href="#superanalisi">Superanalisi</a> (<code>superanalisi.html?id=…</code>)</td><td>Dettaglio di un'asta preferita: perizia, valore di rivendita, conto, seconda opinione AI</td><td>scrittura</td></tr>
+        <tr><td><a href="#gruppo">Superanalisi di gruppo</a></td><td>Classifica di 2-10 aste selezionate e prompt per un'AI esterna</td><td>scrittura</td></tr>
+        <tr><td>Manuale (<code>manuale.html</code>)</td><td>Questa pagina</td><td>lettura del registro</td></tr>
+      </tbody>
+    </table></div>
+  </section>
+
+  <section class="voce" id="sistema-password">
+    <h3>Password: di lettura e di scrittura, blocco dopo 5 errori</h3>
+    <ul>
+      <li><strong>Password di scrittura</strong>: una sola password per Configurazione, Statistiche, Superanalisi e per tutte le modifiche
+        nel registro (stella, scarto, nota, link utili, rendita e spese condominiali, azioni in blocco). Si cambia in
+        <a href="#config-password">Configurazione → Cambia password</a> (almeno 6 caratteri).</li>
+      <li><strong>Password di lettura</strong> (facoltativa): se attiva, serve per <em>aprire</em> il registro e questo manuale. Si attiva o
+        disattiva in <a href="#config-password-lettura">Configurazione</a>.</li>
+      <li><strong>Ricordata sul dispositivo</strong>: una password corretta viene memorizzata nel browser di quel dispositivo e riusata
+        alle visite successive (viene ricontrollata col server). Sbloccare Configurazione sblocca anche Statistiche e Superanalisi.</li>
+      <li><strong>Blocco dei tentativi</strong>: dopo <strong>5 password sbagliate di fila</strong> scatta un <strong>blocco di 15 minuti</strong>
+        (messaggio "Troppi tentativi errati: riprova tra N minuti"). Durante il blocco è rifiutata anche la password giusta; ogni tentativo
+        sbagliato ha 1 secondo di attesa. I contatori di lettura e scrittura sono separati. Il blocco vale per tutti: chi prova password a caso
+        blocca anche te per 15 minuti.</li>
+      <li>I processi automatici (scanner, controlli) non usano queste password: hanno un accesso di servizio proprio.</li>
+    </ul>
+    <p class="nota">Nota su questo manuale: la password nasconde la pagina a chi la apre dal browser, ma il testo è comunque nel file pubblicato.
+      Per questo qui non ci sono password, chiavi o indirizzi dei servizi.</p>
+  </section>
+
+  <section class="voce" id="sistema-costi">
+    <h3>Costi: Gemini e minuti GitHub</h3>
+    <ul>
+      <li><strong>Gemini</strong> (Google) si paga a consumo: ogni perizia analizzata costa. Il costo cresce con le dimensioni della perizia e
+        con le <a href="#analisi-perizie-aggiuntive">perizie aggiuntive</a>. Una stima del consumo è in <a href="#stat-ricariche">Statistiche → Costi Gemini</a>.</li>
+      <li><strong>Batch</strong>: le analisi inviate "in blocco" costano circa la metà ma arrivano dopo (di solito 20-30 minuti, al massimo 24 ore).
+        Vedi <a href="#orari-batch-o-sincrono">Batch o subito</a>.</li>
+      <li><strong>Nessuna spesa</strong> per: asta già analizzata (anche se la stessa perizia è su un altro annuncio dello stesso lotto: si riusa
+        l'analisi), modalità "solo conteggio", ricerca del documento, calcoli del registro e della superanalisi, notifiche preferiti, OMI.</li>
+      <li><strong>Minuti GitHub Actions</strong>: i processi automatici girano sui server di GitHub, che conta i minuti di esecuzione
+        (arrotondati per eccesso al minuto). Lo scanner è il più lungo; i controlli batch e i promemoria durano pochi secondi.</li>
+    </ul>
+  </section>
+</section>
+<section class="capitolo" id="orari">
+  <h2>2. Orari e processi automatici</h2>
+
+  <section class="voce" id="orari-riepilogo">
+    <h3>Tabella degli orari</h3>
+    <div class="tabella-scroll"><table>
+      <thead><tr><th>Processo</th><th>Quando parte</th><th>Durata tipica</th><th>Costo Gemini</th></tr></thead>
+      <tbody>
+        <tr><td><a href="#orari-scanner">Scanner</a></td><td>Agli orari scelti in <a href="#config-pianificazione">Configurazione → Pianificazione</a> (10:00 e/o 16:00, ora italiana, nei giorni scelti; predefinito lun-ven alle 10:00). A mano con "Avvia scanner ora".</td><td>minuti (dipende dalle aste nuove)</td><td>sì, per le aste nuove</td></tr>
+        <tr><td><a href="#orari-ricontrollo">Ricontrollo perizie</a></td><td>Alla fine di ogni giro dello scanner</td><td>15-30 s per asta</td><td>solo se trova una perizia nuova</td></tr>
+        <tr><td><a href="#omi-assegnazione">Assegnazione OMI</a></td><td>Alla fine di ogni giro dello scanner; dopo un controllo batch che ha trovato batch; dopo un'importazione OMI</td><td>secondi</td><td>no</td></tr>
+        <tr><td><a href="#orari-promemoria-omi">Promemoria OMI</a></td><td>Il lunedì, dentro il giro dello scanner</td><td>—</td><td>no</td></tr>
+        <tr><td><a href="#orari-batch">Controllo batch</a></td><td>Circa ogni ora, tutto il giorno; a mano con "Controlla batch ora"</td><td>meno di 1 minuto se non c'è nulla</td><td>no (i batch sono già pagati all'invio)</td></tr>
+        <tr><td><a href="#orari-preferiti">Promemoria preferiti</a></td><td>Ogni giorno alle 10:30 (ora italiana); a mano con "Controlla preferiti ora"</td><td>meno di 1 minuto</td><td>no</td></tr>
+      </tbody>
+    </table></div>
+    <p>Gli avvii automatici sono dati da un servizio esterno di pianificazione (cron esterno, gratuito), che chiama GitHub Actions agli orari
+      giusti. Non si usa il pianificatore interno di GitHub perché si è dimostrato inaffidabile (partenze con ore di ritardo).</p>
+  </section>
+
+  <section class="voce" id="orari-scanner">
+    <h3>Scanner: quando e come parte</h3>
+    <ul>
+      <li>Il cron esterno chiama lo scanner agli orari possibili (10:00 e 16:00). A ogni chiamata un controllo leggero decide se partire davvero:
+        <ol>
+          <li>se la <a href="#config-pianificazione">scansione automatica</a> è disattivata, non parte;</li>
+          <li>se oggi non è uno dei giorni scelti, non parte (nessun giorno scelto = tutti i giorni);</li>
+          <li>parte se l'ora italiana è tra l'orario scelto e 20 minuti dopo (tolleranza) e quello "slot" (data + orario) non è già stato eseguito;</li>
+          <li>prima di partire segna lo slot come "preso": così una scansione lunga non viene lanciata due volte. Se poi fallisce, quello slot non viene
+            ritentato: le aste verranno ritrovate al giro successivo.</li>
+        </ol></li>
+      <li>Con "▶ Avvia scanner ora" (Configurazione) parte <strong>sempre</strong>, ignorando giorni, orari e l'interruttore della pianificazione.</li>
+      <li>Due scansioni non girano mai insieme: se ne arriva una mentre l'altra è in corso, aspetta.</li>
+      <li>Se il database non risponde, lo scanner si ferma subito senza spendere nulla e manda "⛔ Scanner aste interrotto".</li>
+      <li>Le modifiche in Configurazione valgono dal giro successivo (la configurazione si rilegge all'inizio di ogni giro).</li>
+    </ul>
+  </section>
+
+  <section class="voce" id="orari-batch-o-sincrono">
+    <h3>Batch o subito (sincrono): quale modalità di analisi</h3>
+    <ul>
+      <li><strong>Batch</strong> (a blocchi, asincrono): le perizie vengono spedite a Gemini tutte insieme; costa circa la metà; i risultati arrivano
+        di solito in 20-30 minuti, al massimo entro 24 ore, e li raccoglie il <a href="#orari-batch">controllo batch</a>. Si usa se è attiva
+        "<a href="#config-modelli">Usa il batch anche in ricerca locale</a>" (predefinito), <strong>sempre</strong> con "tutta Italia", e nel
+        <a href="#orari-ricontrollo">ricontrollo</a> con più di 15 aste per giro. Nel batch si usa solo il primo modello della cascata: se la
+        risposta è vuota, l'asta torna "da riprovare" e viene ripagata a un giro successivo.</li>
+      <li><strong>Sincrono</strong> (una alla volta, subito): prezzo pieno, notifica immediata. Si usa con batch e tutta Italia spenti, e nel
+        ricontrollo fino a 15 aste per giro. Se un modello fallisce si passa al successivo della <a href="#config-modelli">cascata</a>.</li>
+    </ul>
+  </section>
+
+  <section class="voce" id="orari-batch">
+    <h3>Controllo batch (ogni ora)</h3>
+    <ul>
+      <li>Parte circa ogni ora dal cron esterno, oppure con "🔄 Controlla batch ora". Tra due controlli automatici devono passare almeno 15 minuti
+        (il controllo manuale ignora questo limite).</li>
+      <li>Se non ci sono batch in sospeso, esce subito ("Nessun batch in sospeso").</li>
+      <li>Per ogni batch in sospeso:
+        <ul>
+          <li><strong>ancora in lavorazione</strong>: non aspetta, riprova al controllo successivo. Dopo <strong>25 ore</strong> dal primo invio lo
+            abbandona: le aste nuove vengono scritte come "analisi non riuscita" e tornano "da riprovare";</li>
+          <li><strong>pronto</strong>: scrive i risultati nel registro, calcola margine ed €/mq, manda una notifica "NUOVA ASTA" per ogni asta nuova
+            (con 1,2 s di pausa tra i messaggi); le aste del ricontrollo ricevono "📄 Perizia trovata al ricontrollo";</li>
+          <li><strong>fallito o scaduto</strong>: le aste vengono scritte come da riprovare, senza notifica.</li>
+        </ul></li>
+      <li>Alla fine, se c'erano batch, riassegna i <a href="#omi-assegnazione">valori OMI</a>.</li>
+    </ul>
+  </section>
+
+  <section class="voce" id="orari-ricontrollo">
+    <h3>Ricontrollo delle perizie (dopo ogni giro dello scanner)</h3>
+    <p>Spesso la perizia viene pubblicata dopo l'annuncio. Il ricontrollo riprova a trovarla per le aste che sono state analizzate
+      <em>dall'avviso</em> o senza documento.</p>
+    <ul>
+      <li><strong>Quando</strong>: alla fine di ogni giro dello scanner, solo se in <a href="#config-perizia">Configurazione → Ricerca della perizia</a>
+        sono attive sia la ricerca estesa sia il ricontrollo, e non in modalità "solo conteggio".</li>
+      <li><strong>Quali aste</strong>: vendita da oggi in poi; documento attuale "Avviso (PVP)", "Primo allegato disponibile (PVP)" o nessuno; non
+        ricontrollate negli ultimi N giorni (predefinito 2); non in un batch in corso; non scartate; dentro l'area e il prezzo attuali. Ordinate dalla
+        vendita più vicina, al massimo M per giro (predefinito 15).</li>
+      <li><strong>Per ciascuna</strong>: rifà la ricerca del documento (gratis). Se non trova una perizia, segna l'asta come ricontrollata. Se la trova:
+        stesso file già analizzato → aggiorna solo la fonte; perizia già analizzata altrove → riusa l'analisi; altrimenti la analizza (sincrono fino a
+        15 aste per giro, batch oltre). L'asta viene aggiornata solo se la nuova analisi è riuscita.</li>
+      <li><strong>Notifiche</strong>: "📄 Perizia trovata al ricontrollo" per ogni asta aggiornata e un riepilogo "🔁 Ricontrollo perizie".</li>
+      <li><strong>Limite</strong>: le aste che hanno <em>già</em> una perizia non vengono ricontrollate; se su PVP compare un'integrazione della perizia,
+        il sistema non se ne accorge.</li>
+    </ul>
+  </section>
+
+  <section class="voce" id="orari-preferiti">
+    <h3>Promemoria delle aste preferite (ogni giorno alle 10:30)</h3>
+    <ul>
+      <li>Riguarda solo le aste con la stella (preferite). Le soglie sono <strong>15, 7, 5, 3 e 1 giorni</strong> prima della vendita.</li>
+      <li>Funziona a <strong>fasce</strong>, non a giorni esatti: con 6 giorni mancanti vale la soglia dei 7, con 4 quella dei 5. Ogni soglia si invia
+        una sola volta per asta; se il promemoria salta un giorno, la soglia arriva il giorno dopo. Se salta più giorni si invia solo la soglia più
+        urgente raggiunta.</li>
+      <li>La soglia dei 15 giorni ha un testo dedicato: "🏠 PRENOTA LA VISITA" (contattare custode o delegato). Le altre: "⭐ PROMEMORIA ASTA PREFERITA".</li>
+      <li><strong>"⭐ Controlla preferiti ora"</strong> (Configurazione): modalità immediata, notifica subito tutte le preferite con vendita entro 15 giorni,
+        ignorando le soglie già inviate e senza registrarle (non disturba il giro del giorno dopo). Se non ce ne sono: "Nessuna preferita in scadenza entro 15 giorni".</li>
+    </ul>
+  </section>
+
+  <section class="voce" id="orari-promemoria-omi">
+    <h3>Promemoria OMI (il lunedì)</h3>
+    <p>Le quotazioni OMI escono ogni semestre e vanno caricate a mano. Il lunedì, durante il giro dello scanner, il sistema confronta il semestre
+      caricato con quello che dovrebbe essere già pubblicato:</p>
+    <ul>
+      <li>da gennaio a marzo si attende il 1° semestre dell'anno precedente;</li>
+      <li>dal 1° aprile il 2° semestre dell'anno precedente;</li>
+      <li>dal 1° ottobre il 1° semestre dell'anno in corso.</li>
+    </ul>
+    <p>Se quello caricato è più vecchio arriva "🗺️ Nuove quotazioni OMI" su Telegram, ogni lunedì finché non importi il nuovo semestre. Arriva solo se lo
+      scanner gira di lunedì. Vedi <a href="#omi-aggiornamento">come aggiornare l'OMI</a>.</p>
+  </section>
+
+  <section class="voce" id="orari-monitoraggio">
+    <h3>Controllo di funzionamento (heartbeat)</h3>
+    <p>Ognuna delle tre catene automatiche (scanner, controllo batch, promemoria preferiti) manda un "battito" a un servizio di monitoraggio esterno
+      ogni volta che viene avviata dal cron esterno. Se il battito non arriva entro il tempo previsto, il servizio avvisa via email: vuol dire che il
+      cron esterno ha smesso di chiamare o che GitHub non ha avviato il processo. Gli avvii manuali non mandano il battito, perché non dimostrano che
+      l'automatismo funzioni.</p>
+  </section>
+
+  <section class="voce" id="orari-se-salta">
+    <h3>Cosa succede se un processo salta</h3>
+    <ul>
+      <li><strong>Scanner</strong>: nessuna asta si perde; il giro successivo la ritrova, purché sia ancora futura e nei filtri. Le aste già analizzate
+        prima dell'interruzione non vengono ripagate (la scrittura avviene asta per asta).</li>
+      <li><strong>Controllo batch</strong>: i risultati restano pronti da Google e vengono raccolti al controllo successivo (entro le 25 ore).</li>
+      <li><strong>Promemoria preferiti</strong>: la soglia arriva il giorno dopo; con più giorni saltati si perdono le soglie intermedie.</li>
+      <li>In ogni caso il monitoraggio esterno avvisa via email.</li>
+    </ul>
+  </section>
+</section>
+<section class="capitolo" id="registro">
+  <h2>3. Registro (index.html)</h2>
+
+  <section class="voce" id="registro-apertura">
+    <h3>Apertura, caricamento e messaggi a pagina intera</h3>
+    <ul>
+      <li>Se è attiva la <a href="#config-password-lettura">password di lettura</a> compare "Registro protetto": senza password il registro non si
+        vede. Se è già ricordata sul dispositivo ed è valida, si entra direttamente.</li>
+      <li>"Apertura del registro… / Lettura del database in corso." durante il caricamento (massimo 20 secondi per le aste; preferiti, note e link
+        hanno 8 secondi, poi la pagina prosegue senza).</li>
+      <li>"Non riesco a leggere il registro" + dettaglio (tempo scaduto, codice HTTP…): problema di rete o del database.</li>
+      <li>"Il registro è vuoto": nessuna asta ancora trovata dallo scanner.</li>
+      <li>"Nessuna corrispondenza": i filtri attivi escludono tutte le aste.</li>
+    </ul>
+  </section>
+
+  <section class="voce" id="registro-intestazione">
+    <h3>Intestazione: titolo, versione, "aggiornato", numeri in alto</h3>
+    <ul>
+      <li>Il titolo "Registro Opportunità" è un link che ricarica la pagina.</li>
+      <li>La riga "v2.xx · Configurazione · aggiornato HH:MM": versione della pagina, link a Configurazione e l'<strong>ora in cui la pagina ha
+        caricato i dati</strong> (non l'ora dell'ultima scansione).</li>
+      <li>Accanto a "Configurazione" c'è il link a questo Manuale.</li>
+      <li><strong>Aste nel registro</strong>: "N attive di TOT" (attive = vendita oggi o futura, o senza data); con "Concluse" attivo, "N concluse di TOT".</li>
+      <li><strong>Punteggio più alto</strong>: il massimo <a href="#analisi-score">punteggio</a> tra tutte le aste, "NN/100".</li>
+      <li><strong>Margine positivo</strong>: il <em>numero</em> di aste con <a href="#registro-margine">margine stimato</a> maggiore di zero (non il
+        margine massimo: un margine sballato, per esempio di una perizia condivisa tra più lotti, falsava il massimo).</li>
+      <li>Questi tre numeri sono calcolati su <strong>tutte</strong> le aste, ignorando i filtri. Sotto la barra: "N di TOT aste mostrate" (con i filtri).</li>
+    </ul>
+  </section>
+
+  <section class="voce" id="registro-ricerca">
+    <h3>Casella "Cerca"</h3>
+    <p>Filtra mentre scrivi, senza distinguere maiuscole e minuscole, cercando il testo esatto (non sinonimi) in: comune e indirizzo, descrizione
+      del lotto, note dell'AI, la tua nota personale, tipologia (codici PVP come "ABITAZIONE_TIPO_ECO"), stato di occupazione, formalità, abusi edilizi,
+      data di vendita nel formato GG/MM/AAAA (es. "15/09").</p>
+    <p>Parole speciali sul <a href="#registro-tentativo">tentativo probabile</a>: "2°", "3°"…, "secondo", "terzo", "quarto", "quinto", "tentativo",
+      "riproposizione", "ribasso", "sconto", "44%". Trovano solo le aste con un tentativo stimato.</p>
+  </section>
+
+  <section class="voce" id="registro-filtro-tipo">
+    <h3>Filtro "Tipo" (tipologia)</h3>
+    <p>Sette categorie: Abitazioni, Garage e posti auto, Negozi e uffici, Terreni, Depositi e magazzini, Fabbricati e complessi, Altro. Ogni
+      codice di tipologia PVP è associato a una categoria; un codice non previsto, o un'asta senza tipologia, va in "Altro". Un'asta con più beni può
+      stare in più categorie (es. abitazione + garage). Nessuna casella spuntata = nessun filtro; con più caselle basta appartenere ad almeno una.
+      Il pulsante diventa "Tipo (n)".</p>
+  </section>
+
+  <section class="voce" id="registro-filtro-occupazione">
+    <h3>Filtri "Libero" / "Occ." (occupato)</h3>
+    <p>Si escludono a vicenda; ricliccare quello attivo lo spegne. Si basano sul testo dello stato di occupazione con una regola prudente:</p>
+    <ul>
+      <li><strong>Libero</strong>: il testo <em>inizia</em> con "libero" e non contiene "occupat";</li>
+      <li><strong>Occupato</strong>: il testo contiene "occupat" e non inizia con "libero";</li>
+      <li>testi misti, vuoti o "N/D" non passano nessuno dei due filtri (si vedono solo senza filtro).</li>
+    </ul>
+  </section>
+
+  <section class="voce" id="registro-filtro-stella">
+    <h3>Filtri "★" (preferiti) e "✕" (scartati)</h3>
+    <p>Mostrano solo le aste preferite o solo quelle scartate; si escludono a vicenda. Quando uno è attivo, sulla mappa il pulsante "★/✕ sulla mappa"
+      è disattivato (preferite o scartate sono già le sole mostrate).</p>
+  </section>
+
+  <section class="voce" id="registro-concluse">
+    <h3>Pulsante "Concluse" e asta conclusa</h3>
+    <p>Un'asta è <strong>conclusa</strong> se la data di vendita è precedente a oggi (data del tuo dispositivo): il giorno della vendita è ancora attiva;
+      senza data non è mai conclusa. Di norma le concluse sono nascoste. "Concluse" <strong>cambia vista</strong>: da acceso mostra <em>solo</em> le
+      concluse (badge "🏁 Conclusa"). Le aste scadute si possono cancellare da <a href="#config-manutenzione">Configurazione → Manutenzione</a>.</p>
+  </section>
+
+  <section class="voce" id="registro-aggiornate">
+    <h3>Filtro "🔄 Aggiornate" e badge "📄 Aggiornata"</h3>
+    <p>Un'asta è "aggiornata" se nelle ultime <strong>24 ore</strong> è stata ricontrollata <strong>e</strong> la sua analisi è stata davvero rifatta
+      (per esempio il <a href="#orari-ricontrollo">ricontrollo</a> ha trovato la perizia, o c'è stata una rianalisi). Le aste solo "guardate" dal
+      ricontrollo senza novità non compaiono. Un'asta aggiornata con il vecchio prompt v1 non risulta aggiornata (il v1 non registra la data
+      dell'analisi v2).</p>
+  </section>
+
+  <section class="voce" id="registro-filtro-punteggio">
+    <h3>Cursore "Punteggio 0-100"</h3>
+    <p>Doppio cursore a passi di 5: mostra le aste con punteggio tra il minimo e il massimo. Le aste non valutate hanno punteggio 0 e spariscono appena
+      il minimo supera 0. Vedi <a href="#analisi-score">cos'è il punteggio</a>.</p>
+  </section>
+
+  <section class="voce" id="registro-ordinamento">
+    <h3>Ordinamento</h3>
+    <div class="tabella-scroll"><table>
+      <thead><tr><th>Criterio</th><th>Ordina per</th><th>Direzione iniziale</th></tr></thead>
+      <tbody>
+        <tr><td>Punteggio (predefinito)</td><td>punteggio</td><td>alto → basso</td></tr>
+        <tr><td>Margine</td><td>margine stimato (mancante = in fondo)</td><td>alto → basso</td></tr>
+        <tr><td>Offerta</td><td>offerta minima</td><td>bassa → alta</td></tr>
+        <tr><td>Data</td><td>giorni tra vendita e oggi (in valore assoluto): la più imminente; tra le concluse la più recente</td><td>vicina → lontana</td></tr>
+        <tr><td>Distanza</td><td>km dal punto di riferimento (mancante = in fondo)</td><td>vicina → lontana</td></tr>
+        <tr><td>Più recenti</td><td>data di inserimento nel registro</td><td>nuove → vecchie</td></tr>
+      </tbody>
+    </table></div>
+    <p>Cliccare il criterio già attivo inverte la direzione. Le aste <strong>scartate vanno sempre in fondo</strong>, qualunque criterio.</p>
+  </section>
+
+  <section class="voce" id="registro-seleziona-esporta">
+    <h3>"Seleziona tutte" ed "Esporta CSV"</h3>
+    <ul>
+      <li><strong>Seleziona tutte</strong>: seleziona tutte le aste che passano i filtri, anche quelle fuori dallo schermo. Poi usa la
+        <a href="#registro-selezione">barra di selezione</a>.</li>
+      <li><strong>Esporta CSV</strong>: scarica le aste filtrate, nell'ordine attuale, nel file <code>aste-filtrate-AAAA-MM-GG.csv</code>. Le colonne
+        sono spiegate in <a href="#registro-csv">Colonne del CSV</a>.</li>
+    </ul>
+  </section>
+
+  <section class="voce" id="registro-card">
+    <h3>La card di un'asta</h3>
+    <ul>
+      <li><strong>Casella</strong> in alto a sinistra: seleziona l'asta per il <a href="#registro-confronta">confronto</a> o le azioni in blocco.</li>
+      <li><strong>Sigillo</strong> con il <a href="#registro-sigillo">punteggio</a>.</li>
+      <li>"Lotto X · TIPOLOGIA" (codice PVP), comune/indirizzo, <a href="#registro-badge">badge</a>, "X km · vendita GG/MM/AAAA".</li>
+      <li><strong>Stella</strong> (preferito) e <strong>cerchio con X</strong> (non interessa): vedi <a href="#registro-stella-scarto">qui</a>.</li>
+      <li><strong>Nota personale</strong>: vedi <a href="#registro-nota">qui</a>.</li>
+      <li>Cifre: <a href="#registro-margine">Margine stimato</a>, Offerta minima, Valore stima (valore del perito), Superficie ed
+        <a href="#registro-euro-mq">€/mq (offerta)</a> se la superficie è nota, Stato occupazione.</li>
+      <li>Una card <strong>scartata</strong> è sbiadita e va in fondo; una <strong>selezionata</strong> ha bordo blu.</li>
+      <li>Cliccando la card si apre la <a href="#registro-dettaglio">finestra dei dettagli</a>.</li>
+    </ul>
+  </section>
+
+  <section class="voce" id="registro-sigillo">
+    <h3>Sigillo del punteggio e colori</h3>
+    <div class="tabella-scroll"><table>
+      <thead><tr><th>Livello</th><th>Condizione</th><th>Colore</th></tr></thead>
+      <tbody>
+        <tr><td>Alto</td><td>punteggio ≥ 70</td><td>verde</td></tr>
+        <tr><td>Medio</td><td>punteggio da 40 a 69</td><td>ambra</td></tr>
+        <tr><td>Basso</td><td>punteggio sotto 40 (anche 0 se c'è un valore di stima)</td><td>rosso spento</td></tr>
+        <tr><td>Non valutato</td><td>né punteggio (≤ 0) né valore di stima</td><td>grigio tratteggiato</td></tr>
+      </tbody>
+    </table></div>
+    <p>Gli stessi colori si usano per i punti sulla mappa. Il verde è riservato al punteggio alto.</p>
+  </section>
+
+  <section class="voce" id="registro-badge">
+    <h3>Badge: Nuova, Aggiornata, Conclusa, zona segnalata, tentativo</h3>
+    <ul>
+      <li><strong>✨ Nuova</strong>: inserita nel registro da meno di 24 ore (all'ora esatta). Sulla mappa ha un anello.</li>
+      <li><strong>📄 Aggiornata</strong>: vedi <a href="#registro-aggiornate">Aggiornate</a>.</li>
+      <li><strong>🏁 Conclusa</strong>: data di vendita passata.</li>
+      <li><strong>🚩 zona segnalata</strong> (es. "Librino / San Cristoforo"): etichetta informativa decisa dallo scanner per CAP o, se manca il CAP, per
+        nome della via. <strong>Non</strong> esclude l'asta e non cambia il punteggio.</li>
+      <li><strong>↓ N° tentativo probabile · -X%</strong>: vedi <a href="#registro-tentativo">Tentativo probabile</a>.</li>
+    </ul>
+  </section>
+
+  <section class="voce" id="registro-tentativo">
+    <h3>Tentativo probabile (ribasso) — come si calcola</h3>
+    <div class="formula">sconto = 1 − prezzo base ÷ valore di stima</div>
+    <div class="tabella-scroll"><table>
+      <thead><tr><th>Sconto</th><th>Tentativo</th></tr></thead>
+      <tbody>
+        <tr><td>sotto 12%</td><td>nessun badge (vicino al valore pieno)</td></tr>
+        <tr><td>12% - 33%</td><td>2° tentativo</td></tr>
+        <tr><td>34% - 50%</td><td>3°</td></tr>
+        <tr><td>51% - 62%</td><td>4°</td></tr>
+        <tr><td>63% o più</td><td>5° o oltre</td></tr>
+      </tbody>
+    </table></div>
+    <p>Perché così: di solito a ogni asta deserta il prezzo base scende del 25% (2° tentativo ≈ 25% di sconto, 3° ≈ 44% perché 0,75 × 0,75 = 0,5625,
+      4° ≈ 58%). Le fasce sono larghe perché alcuni tribunali ribassano del 20%. Si usa il <strong>prezzo base</strong>, non l'offerta minima: l'offerta
+      minima è sempre il 75% del prezzo base dello stesso turno, e usarla conterebbe due volte lo stesso sconto. Il PVP non dichiara il numero del
+      tentativo, quindi è sempre "probabile". Un colore blu tenue: spesso è una buona notizia per chi cerca margine.</p>
+  </section>
+
+  <section class="voce" id="registro-margine">
+    <h3>Margine stimato (registro)</h3>
+    <div class="formula">margine stimato = valore di stima − offerta minima − spese di sanatoria</div>
+    <p>È calcolato dallo scanner al momento dell'analisi e salvato; la pagina lo mostra così com'è. È un indicatore <strong>grezzo</strong> per
+      confrontare le aste: <strong>non</strong> sottrae imposte, ristrutturazione, spese condominiali, compenso del delegato, rilanci. Non tiene conto
+      delle correzioni che fai a rendita e spese condominiali. Vuoto se il valore di stima manca. Il conto completo è nella
+      <a href="#superanalisi-conto">Superanalisi</a>.</p>
+    <p>Il "valore di stima" è quello del perito, scelto con le regole di <a href="#analisi-valore-registro">questa voce</a> (con una quota parziale è
+      il valore della quota).</p>
+  </section>
+
+  <section class="voce" id="registro-euro-mq">
+    <h3>€/mq (offerta)</h3>
+    <div class="formula">€/mq = offerta minima ÷ superficie (mq)</div>
+    <p>Quanto costa al metro quadro l'immobile se lo compri all'offerta minima. Utile da confrontare con i valori di mercato della zona
+      (<a href="#omi">OMI</a>). Compare solo se la superficie è nota. La superficie è scelta con le regole di <a href="#analisi-superficie">questa voce</a>.</p>
+  </section>
+
+  <section class="voce" id="registro-stella-scarto">
+    <h3>Stella (preferito) e scarto (non interessa)</h3>
+    <ul>
+      <li>La stella mette l'asta tra le <strong>preferite</strong>: riceve i <a href="#orari-preferiti">promemoria</a> e il pulsante
+        <a href="#superanalisi">Superanalisi</a>. Ricliccata, la toglie.</li>
+      <li>Lo scarto la segna come <strong>non interessante</strong>: va in fondo, sbiadita, nascosta dalla mappa ed esclusa dal
+        <a href="#orari-ricontrollo">ricontrollo</a>. Compare il messaggio "— scartata." con il pulsante "Aggiungi una nota".</li>
+      <li>Preferita e scartata si escludono. L'effetto è immediato; se il salvataggio fallisce, lo stato torna com'era.</li>
+      <li>Serve la password di scrittura (chiesta una volta; poi ricordata).</li>
+    </ul>
+  </section>
+
+  <section class="voce" id="registro-nota">
+    <h3>Nota personale</h3>
+    <p>Ogni asta può avere una nota, indipendente da stella e scarto. "+ Aggiungi una nota" apre l'editor: <strong>Invio salva</strong>,
+      Maiusc+Invio va a capo; "Elimina" chiede conferma (secondo clic entro 4 secondi). La nota è cercabile, compare nel CSV e nei promemoria dei
+      preferiti. Le azioni in blocco non la toccano.</p>
+  </section>
+
+  <section class="voce" id="registro-dettaglio">
+    <h3>Finestra dei dettagli dell'asta</h3>
+    <p>Si apre cliccando una card, da "Vedi scheda completa" sulla mappa o con un link <code>index.html#ID</code>. Contiene:</p>
+    <ul>
+      <li>stella, scarto, nota;</li>
+      <li>Margine stimato, Offerta minima, Valore stima, Stato occupazione;</li>
+      <li>Tribunale, Disponibilità (PVP) (lo stato dichiarato nell'annuncio), Prezzo base, Rilancio minimo, Superficie, €/mq, Spese sanatoria, Abusi
+        edilizi, Formalità pregiudizievoli (in rosso se c'è qualcosa oltre la normale ipoteca), Fonte analisi (quale documento è stato letto), Modello AI,
+        ID Annuncio;</li>
+      <li>📍 Posizione: mappa con un cerchio di 500 m (se ci sono le coordinate);</li>
+      <li>note dell'AI e descrizione del lotto;</li>
+      <li><a href="#registro-costi-trasferimento">💶 Costi di trasferimento</a> e <a href="#registro-ristrutturazione">🔨 Costi di ristrutturazione</a>;</li>
+      <li>link "Apri annuncio PVP", "Apri documento" e, <strong>solo per le preferite</strong>, "Superanalisi";</li>
+      <li><a href="#registro-link-utili">🔗 Link utili</a>.</li>
+    </ul>
+  </section>
+
+  <section class="voce" id="registro-costi-trasferimento">
+    <h3>💶 Costi di trasferimento (stima): i quattro scenari</h3>
+    <p>Quanto costa, oltre al prezzo, diventare proprietari. Quattro colonne: prima casa o seconda casa, ciascuna con base
+      <a href="#glossario-prezzo-valore">prezzo-valore</a> o base prezzo di acquisizione.</p>
+    <div class="tabella-scroll"><table>
+      <thead><tr><th>Colonna</th><th>Base imponibile</th><th>Imposta di registro</th></tr></thead>
+      <tbody>
+        <tr><td>Prima casa, prezzo-valore</td><td>rendita × 1,05 × 110</td><td>2%</td></tr>
+        <tr><td>Prima casa, prezzo acquisizione</td><td>prezzo base</td><td>2%</td></tr>
+        <tr><td>Seconda casa, prezzo-valore</td><td>rendita × 1,05 × 120</td><td>9%</td></tr>
+        <tr><td>Seconda casa, prezzo acquisizione</td><td>prezzo base</td><td>9%</td></tr>
+      </tbody>
+    </table></div>
+    <ul>
+      <li>Registro = il maggiore tra base × aliquota e <strong>1.000 €</strong> (minimo di legge). Ipotecaria 50 €, catastale 50 € (fisse).</li>
+      <li>Costi uguali nei quattro scenari (prima tabella): <a href="#registro-delegato">compenso del delegato</a> + cassa 4% + IVA 22%;
+        <strong>pratica edilizia (CILA/SCIA) 1.500 €</strong> se ci sono spese di sanatoria (&gt; 0); <strong>sanatoria abusi</strong> (le spese
+        stimate); <strong>spese condominiali arretrate</strong>.</li>
+      <li>TOTALE STIMATO = registro + ipotecaria + catastale + delegato (con cassa e IVA) + pratica edilizia + sanatoria + spese condominiali.</li>
+      <li>Il "prezzo di acquisizione" usato è il <strong>prezzo base</strong> dell'annuncio (non l'offerta minima): prudente, perché a un prezzo più basso
+        il registro calcolato sul prezzo scende.</li>
+      <li>Con prezzo base oltre 500.000 € il compenso del delegato non è verificato: il totale non viene mostrato (avviso rosso).</li>
+      <li>La <a href="#registro-rendita">rendita catastale</a> usata e la sua fonte sono scritte sotto la prima tabella; con rendita stimata le colonne
+        prezzo-valore hanno l'asterisco *.</li>
+    </ul>
+  </section>
+
+  <section class="voce" id="registro-rendita">
+    <h3>Rendita catastale usata nei costi e correzione "Rendita catastale (€)"</h3>
+    <p>Ordine di scelta:</p>
+    <ol>
+      <li><strong>inserita da te</strong> (campo "Rendita catastale (€)", se maggiore di 0; uno 0 viene ignorato);</li>
+      <li><strong>letta dalla perizia</strong>;</li>
+      <li><strong>stimata</strong> dal valore di stima: rendita = valore di stima × 0,32 ÷ 126, cioè valore catastale ≈ 32% della stima <span class="stima">STIMA</span>;</li>
+      <li><strong>assunta</strong> dal prezzo base (rendita = prezzo base ÷ 126) se manca anche il valore di stima.</li>
+    </ol>
+    <p><strong>Perché 0,32</strong>: uno studio IFEL/IRPET (Federalismo in Toscana 3/2017) trova in media un rapporto 0,42 tra valore catastale (ai fini
+      IMU, moltiplicatore 160) e valore di mercato OMI, molto variabile (0,28-0,56, più alto al Sud, Sicilia esclusa). Riportato al moltiplicatore 120 del
+      prezzo-valore: 0,42 × 120/160 ≈ 0,32. È un ordine di grandezza, non un dato misurato sulle aste di Catania. Si parte dal valore di stima e non dal
+      prezzo base perché la rendita è fissa, mentre il prezzo base scende a ogni tentativo.</p>
+    <p><strong>Correzioni</strong>: nella finestra dei dettagli i campi "Rendita catastale (€)" e "Spese condominiali arretrate (€)" + "Salva e ricalcola"
+      (anche Invio) salvano un tuo valore che ha la precedenza. Campo vuoto = torna al valore automatico. Per le spese condominiali anche uno 0 conta.
+      Numeri negativi rifiutati ("Inserisci un numero valido, non negativo."). La rendita la trovi nella visura catastale.</p>
+  </section>
+
+  <section class="voce" id="registro-delegato">
+    <h3>Compenso del delegato alla vendita</h3>
+    <p>La parte del compenso del professionista delegato che il giudice pone a carico di chi si aggiudica (DM 227/2015). Nel registro la fascia si sceglie
+      sul prezzo base:</p>
+    <div class="tabella-scroll"><table>
+      <thead><tr><th>Prezzo base</th><th>Compenso</th><th>+ cassa 4% + IVA 22%</th></tr></thead>
+      <tbody>
+        <tr><td>fino a 100.000 €</td><td>550 €</td><td>697,84 €</td></tr>
+        <tr><td>100.001 - 500.000 €</td><td>660 €</td><td>≈ 837,41 €</td></tr>
+        <tr><td>oltre 500.000 €</td><td>non verificato: nessun totale</td><td>—</td></tr>
+      </tbody>
+    </table></div>
+    <p>È un'aggiunta prudente, non certa: dipende dal tribunale. Nella Superanalisi la fascia si sceglie invece sul prezzo di acquisto usato nel conto.</p>
+  </section>
+
+  <section class="voce" id="registro-ristrutturazione">
+    <h3>🔨 Costi di ristrutturazione e livello suggerito</h3>
+    <div class="tabella-scroll"><table>
+      <thead><tr><th>Livello</th><th>€/mq</th><th>Quando (dalla perizia)</th></tr></thead>
+      <tbody>
+        <tr><td>Nessuna</td><td>0</td><td>pronto da abitare; oppure terreni, lastrici solari, aree urbane</td></tr>
+        <tr><td>Leggera</td><td>150</td><td>finiture datate ma funzionali (da rinfrescare)</td></tr>
+        <tr><td>Media</td><td>350</td><td>bagni, cucina, pavimenti da rifare; anche quando lo stato non è valutabile (prudenza)</td></tr>
+        <tr><td>Pesante</td><td>600</td><td>da rifare anche impianti e infissi, oppure degrado</td></tr>
+      </tbody>
+    </table></div>
+    <div class="formula">costo = superficie (mq) × €/mq del livello</div>
+    <p>La tabella mostra tutti e quattro i livelli; quello suggerito dalla perizia è segnato con "●". Compare solo se c'è la superficie. Questi costi
+      <strong>non</strong> sono sommati né al totale dei costi di trasferimento né al margine. Sono gli stessi €/mq usati nella Superanalisi
+      (dove si aggiungono ricarichi e imprevisti). Vedi anche <a href="#analisi-classe-manutenzione">classi di manutenzione</a>.</p>
+  </section>
+
+  <section class="voce" id="registro-link-utili">
+    <h3>🔗 Link utili</h3>
+    <p>Fino a <strong>6 link</strong> per asta (annunci simili, pagine del tribunale, mappe…), indipendenti da stella e nota. "+ Aggiungi link": indirizzo
+      (deve iniziare con http:// o https://) ed etichetta facoltativa; senza etichetta si vede il dominio. La "×" lo rimuove. Serve la password di scrittura.</p>
+  </section>
+
+  <section class="voce" id="registro-condividi-stampa">
+    <h3>Condividi, Stampa (PDF), Espandi</h3>
+    <ul>
+      <li><strong>Condividi</strong>: menu di condivisione del telefono, oppure "Copia link", "Invia email", "Invia su WhatsApp". Il link apre direttamente
+        la scheda dell'asta (<code>index.html#ID</code>, chi lo apre deve avere l'accesso al registro).</li>
+      <li><strong>Stampa</strong>: stampa o salva in PDF la sola scheda, con data e link PVP; include il tentativo probabile, esclude pulsanti e mappa.</li>
+      <li><strong>Espandi</strong> (computer): finestra più larga; la scelta resta passando da un'asta all'altra.</li>
+    </ul>
+  </section>
+
+  <section class="voce" id="registro-tastiera">
+    <h3>Scorciatoie da tastiera e gesti</h3>
+    <ul>
+      <li>Nella finestra dei dettagli: <strong>← / →</strong> asta precedente o successiva (nell'ordine dell'elenco al momento dell'apertura; ai bordi si
+        ferma), <strong>S</strong> stella, <strong>X</strong> scarto, <strong>Invio</strong> nota, <strong>Esc</strong> chiude.</li>
+      <li>Su telefono: la finestra si chiude trascinandola in giù; il registro si ricarica trascinando la pagina in giù dall'alto; il pulsante "Filtri" apre
+        un pannello con tutti i filtri (il numero indica quanti tipi di filtro sono attivi).</li>
+      <li>Il registro si può installare come app ("Aggiungi a schermata Home").</li>
+    </ul>
+  </section>
+
+  <section class="voce" id="registro-mappa">
+    <h3>Vista Mappa</h3>
+    <ul>
+      <li>Mostra tutte le aste filtrate. Posizione: coordinate dell'annuncio; se mancano, il centro del comune (tra circa 33 comuni del Catanese), con un
+        piccolo spostamento per non sovrapporre i punti e la scritta "Posizione approssimata (centro comune)" nel popup.</li>
+      <li>Colori come il <a href="#registro-sigillo">sigillo</a>; anello attorno alle aste nuove (24 ore). Legenda: Punteggio alto/medio/basso, Non valutato, Nuova (24h).</li>
+      <li><strong>Preferite e scartate sono nascoste</strong> per non riaprirle per errore: "★/✕ sulla mappa" le rimostra con un distintivo.</li>
+      <li>"✨ Solo nuove": solo le aste inserite nelle ultime 24 ore.</li>
+      <li>La mappa si adatta ai risultati finché non la sposti o zoomi a mano. Sotto compare quante aste non sono mostrate e perché.</li>
+      <li>Popup: indirizzo, offerta minima, margine, punteggio, stella/scarto, "Vedi scheda completa", "Apri annuncio PVP".</li>
+    </ul>
+  </section>
+
+  <section class="voce" id="registro-selezione">
+    <h3>Selezione multipla e azioni in blocco (Preferisci, Scarta, Rimuovi flag, Annulla)</h3>
+    <ul>
+      <li>Con almeno un'asta selezionata compare la barra scura in basso: "N selezionate". La selezione resta anche cambiando filtri.</li>
+      <li><strong>★ Preferisci tutte</strong>, <strong>✕ Scarta tutte</strong>, <strong>⊖ Rimuovi flag</strong> (tornano neutre). Con più di 10 aste
+        chiede conferma, dicendo quante perderanno la stella o lo scarto e quante non sono visibili con i filtri attuali.</li>
+      <li>Al termine: messaggio con "Annulla" (12 secondi) e link "↶ Annulla ultimo blocco (N aste)" valido <strong>48 ore</strong> (ricordato sul
+        dispositivo). L'annullamento ripristina solo le aste che non hai modificato dopo.</li>
+      <li>Le azioni in blocco non toccano le note.</li>
+      <li><strong>⇄ Confronta</strong>: vedi <a href="#registro-confronta">Confronta</a>. <strong>🧠 Superanalisi di gruppo</strong>: vedi
+        <a href="#gruppo">qui</a> (da 2 a 10 aste, qualunque stato).</li>
+      <li><strong>Esporta selezionate</strong>: CSV delle sole selezionate (<code>aste-selezionate-AAAA-MM-GG.csv</code>). <strong>Deseleziona tutto</strong>.</li>
+    </ul>
+  </section>
+
+  <section class="voce" id="registro-confronta">
+    <h3>⇄ Confronta (2 o 3 aste)</h3>
+    <p>Affianca 2 o 3 aste selezionate: punteggio, indirizzo, stella/scarto e le righe Margine stimato, Offerta minima, Valore stima, Superficie, €/mq
+      (offerta), Stato occupazione, Distanza, Vendita, Probabile riproposizione. Con 1 o più di 3 aste il pulsante è disattivato.</p>
+  </section>
+
+  <section class="voce" id="registro-csv">
+    <h3>Colonne del CSV (41)</h3>
+    <p>File separato da punto e virgola (per Excel in italiano), con codifica che conserva gli accenti. Le prime 22 colonne sono quelle di sempre, le
+      altre 19 sono state aggiunte in coda. Costi di trasferimento e di ristrutturazione non sono esportati.</p>
+    <ol>
+      <li>ID annuncio</li><li>Comune / indirizzo</li><li>Tipologia (codici PVP)</li><li>Lotto</li><li>Tribunale</li>
+      <li>Punteggio (vuoto se non valutata)</li><li>Margine stimato</li><li>Offerta minima</li><li>Prezzo base</li><li>Valore stima</li>
+      <li>Superficie mq</li><li>Euro/mq offerta</li><li>Stato occupazione</li><li>Disponibilita PVP</li><li>Formalita pregiudizievoli</li>
+      <li>Abusi edilizi</li><li>Spese sanatoria</li><li>Probabile tentativo ("3° - 44%")</li><li>Data vendita</li><li>Stato (Preferito / Scartato)</li>
+      <li>Nota</li><li>Link PVP</li><li>Link perizia</li><li>Fonte documento</li><li>Data perizia</li>
+      <li>Versione prompt</li><li>Stato analisi (<a href="#analisi-stato">ok / vuota</a>)</li><li>Quota in vendita</li><li>Valore mercato CTU</li><li>Valore finale CTU</li>
+      <li>Valore finale riferito a (intero / quota)</li><li>OMI zona (Agenzia Entrate - OMI)</li><li>OMI tipologia</li><li>OMI min euro/mq</li><li>OMI max euro/mq</li>
+      <li>OMI semestre</li><li>Classe manutenzione</li><li>Livello ristrutturazione</li><li>Arretrati condominiali (tua correzione se presente)</li><li>Rendita catastale (tua correzione se presente)</li>
+      <li>Discordanze (quante)</li>
+    </ol>
+  </section>
+
+  <section class="voce" id="registro-messaggi">
+    <h3>Messaggi in basso (toast) e finestre password</h3>
+    <ul>
+      <li>"Password richiesta": alla prima modifica chiede la password di scrittura; dopo la conferma l'azione viene eseguita da sola.</li>
+      <li>"— non sono riuscita a salvare: …": salvataggio fallito, lo stato torna com'era (per stelle, note, link, correzioni).</li>
+      <li>"N aste esportate.", "Nessuna asta da esportare con i filtri attuali.", "Seleziona almeno 2 aste per confrontarle.", "Puoi confrontare al massimo
+        3 aste alla volta.", "Seleziona da 2 a 10 aste per la superanalisi di gruppo.", "Link copiato.".</li>
+      <li>"Troppi tentativi errati: riprova tra N minuti.": vedi <a href="#sistema-password">blocco password</a>.</li>
+    </ul>
+  </section>
+</section>
+<section class="capitolo" id="config">
+  <h2>4. Configurazione (config.html)</h2>
+
+  <section class="voce" id="config-generale">
+    <h3>Come funziona la pagina</h3>
+    <ul>
+      <li>Serve la password di scrittura. Ogni riquadro ("card") mostra il valore attuale; "Modifica" apre una finestra; "Salva" chiede conferma
+        ("Confermi?" per 4 secondi, poi un secondo tocco) e salva subito ("Salvato.", la finestra si chiude da sola).</li>
+      <li>Lo scanner rilegge la configurazione all'inizio di ogni giro: le modifiche valgono dal <strong>giro successivo</strong>.</li>
+      <li>I tre pulsanti in alto e "Elimina aste scadute" funzionano con doppio tocco (conferma entro 4 secondi).</li>
+    </ul>
+  </section>
+
+  <section class="voce" id="config-avvio-scanner">
+    <h3>"▶ Avvia scanner ora"</h3>
+    <p>Avvia subito un giro completo dello scanner con i filtri attuali, anche se la pianificazione è in pausa o non è l'orario: ricerca su PVP, analisi
+      Gemini (subito o in batch, secondo le impostazioni), notifiche, poi ricontrollo perizie e OMI. <strong>Consuma Gemini</strong> per le aste nuove
+      e minuti GitHub. Messaggi: "Avvio in corso…", "Scanner avviato." (con eventuale link "Apri esecuzione"), oppure l'errore.</p>
+  </section>
+
+  <section class="voce" id="config-controlla-batch">
+    <h3>"🔄 Controlla batch ora"</h3>
+    <p>Avvia subito il <a href="#orari-batch">controllo dei batch</a> in sospeso (senza aspettare quello automatico orario, e ignorando il limite dei
+      15 minuti): scrive nel registro i risultati già pronti e manda le notifiche. Non consuma Gemini (i batch sono già pagati all'invio).</p>
+  </section>
+
+  <section class="voce" id="config-controlla-preferiti">
+    <h3>"⭐ Controlla preferiti ora"</h3>
+    <p>Manda subito su Telegram i promemoria di tutte le preferite con vendita entro 15 giorni, ignorando le soglie già inviate e senza registrarle.
+      Vedi <a href="#orari-preferiti">promemoria preferiti</a>. Non consuma Gemini.</p>
+  </section>
+
+  <section class="voce" id="config-ripristina">
+    <h3>"↺ Ripristina tutti i valori predefiniti"</h3>
+    <p>Riporta ai valori predefiniti (e salva subito) area, prezzo, tipologia, altri filtri, modelli, pianificazione e ricerca della perizia:</p>
+    <div class="tabella-scroll"><table>
+      <thead><tr><th>Voce</th><th>Valore predefinito</th></tr></thead>
+      <tbody>
+        <tr><td>Prezzo base</td><td>nessun minimo, massimo 110.000 €</td></tr>
+        <tr><td>Area</td><td>Catania centro, raggio 22 km, tutta Italia no</td></tr>
+        <tr><td>Tipologie</td><td>tutte</td></tr>
+        <tr><td>Altri filtri</td><td>solo aste future, perizia da astegiudiziarie attiva, pausa 1 s, modalità normale</td></tr>
+        <tr><td>Modelli</td><td>cascata consigliata, batch anche in locale attivo</td></tr>
+        <tr><td>Pianificazione</td><td>attiva, lunedì-venerdì alle 10:00</td></tr>
+        <tr><td>Ricerca della perizia</td><td>estesa, ricontrollo ogni 2 giorni, massimo 15 aste per giro</td></tr>
+      </tbody>
+    </table></div>
+    <p>Non cambia la scelta del prompt (v1/v2).</p>
+  </section>
+
+  <section class="voce" id="config-area">
+    <h3>Card "Area di ricerca": punto, raggio, tutta Italia</h3>
+    <ul>
+      <li><strong>Mappa e segnaposto</strong>: il punto di riferimento (clicca sulla mappa o trascina il segnaposto; "Cerca un indirizzo o una città" lo
+        sposta). Il cerchio mostra il raggio. Dal punto si calcola anche la colonna "distanza" di ogni asta.</li>
+      <li><strong>Raggio di ricerca</strong>: da 1 a 300 km.</li>
+      <li><strong>"Cerca su tutta Italia"</strong>: ignora punto e raggio e cerca in tutto il paese (legge fino a 300 pagine di annunci). Usa
+        <strong>sempre il batch</strong>: le analisi arrivano da pochi minuti a 24 ore dopo, con una notifica all'invio e una per ogni asta quando è
+        pronta. La distanza resta calcolata dal punto scelto.</li>
+    </ul>
+  </section>
+
+  <section class="voce" id="config-prezzo">
+    <h3>Card "Filtri di prezzo"</h3>
+    <p>Prezzo base minimo e massimo (da 0 a 5.000.000 €, a passi di 1.000). "Nessun limite minimo" = 0; "Nessun limite massimo" = senza tetto. Il massimo
+      non può essere inferiore al minimo. Il filtro è sul <strong>prezzo base</strong> dell'asta (non sull'offerta minima). Vale anche per il ricontrollo.</p>
+  </section>
+
+  <section class="voce" id="config-tipologia">
+    <h3>Card "Tipologia immobili"</h3>
+    <p>Categorie da cercare: Abitazioni, Garage e posti auto, Negozi e uffici, Terreni, Depositi e magazzini, Fabbricati e complessi. Nessuna spunta = tutte
+      le tipologie (anche quelle che nel registro finiscono in "Altro", che da sola non si può scegliere).</p>
+  </section>
+
+  <section class="voce" id="config-altri-filtri">
+    <h3>Card "Altri filtri": aste future, astegiudiziarie, pausa, solo conteggio</h3>
+    <ul>
+      <li><strong>Aste da includere</strong>: "Solo aste future" (predefinito) oppure "Includi anche concluse (analisi storiche)".</li>
+      <li><strong>Perizia da astegiudiziarie.it</strong>: attiva/disattiva la ricerca della perizia su quel sito. Le sue condizioni d'uso vietano lo scraping
+        automatico: attivala solo se è una scelta consapevole.</li>
+      <li><strong>Pausa tra un'asta e l'altra</strong> (0-60 s): attesa tra un'analisi e la successiva; riduce errori e l'esaurimento della quota Gemini.</li>
+      <li><strong>Modalità di esecuzione</strong>: "Normale" oppure "<strong>Solo conteggio</strong>": lo scanner conta le aste nei filtri e si ferma, senza
+        browser, senza Gemini (nessun costo) e senza scrivere nel database; arriva comunque un messaggio Telegram col conteggio (da analizzare, da
+        riprovare, mai viste, già completate). Salta anche il ricontrollo.</li>
+      <li><strong>"Conteggia anche le aste non analizzate (tutto il registro)"</strong> (solo con Solo conteggio): aggiunge al messaggio il totale delle
+        aste senza un'analisi riuscita in tutto il registro.</li>
+    </ul>
+  </section>
+
+  <section class="voce" id="config-modelli">
+    <h3>Card "Modelli Gemini": cascata e batch</h3>
+    <ul>
+      <li><strong>Cascata dei modelli</strong> (separati da virgola, in ordine di priorità): si usa il primo; se esaurisce la quota o dà errore, si passa al
+        successivo per il resto del giro. Se un modello risponde "vuoto" su un'asta, si prova il successivo solo per quell'asta (può costare di più).
+        "↺ Ripristina cascata consigliata" riempie il campo (poi serve Salva). Serve almeno un modello.</li>
+      <li><strong>"Usa il batch anche in ricerca locale"</strong> (predefinito attivo): analisi in batch, costo circa dimezzato, risultati di norma entro
+        un'ora (al massimo 24). Spegnilo solo se ti serve la notifica immediata. Vedi <a href="#orari-batch-o-sincrono">Batch o subito</a>.</li>
+    </ul>
+  </section>
+
+  <section class="voce" id="config-pianificazione">
+    <h3>Card "Pianificazione scansione": giorni e orari</h3>
+    <ul>
+      <li><strong>"Scansione automatica attiva"</strong>: spenta = nessun avvio automatico (giorni e orari restano salvati). "Avvia scanner ora" funziona sempre.</li>
+      <li><strong>Giorni</strong>: Lun…Dom; nessuno selezionato = tutti i giorni.</li>
+      <li><strong>Orari</strong> (ora italiana): 10:00 e/o 16:00, gli unici che il cron esterno chiama. L'avvio arriva con al massimo una ventina di minuti di scarto.</li>
+      <li>La card mostra anche "Ultima esecuzione" automatica. Dettagli in <a href="#orari-scanner">Scanner: quando parte</a>.</li>
+    </ul>
+  </section>
+
+  <section class="voce" id="config-perizia">
+    <h3>Card "Ricerca della perizia": ricerca estesa, prompt, ricontrollo</h3>
+    <ul>
+      <li><strong>Dove cercare la perizia</strong>: "Ricerca estesa" (allegati PVP, astegiudiziarie, altri siti collegati all'annuncio, poi avviso) oppure
+        "Come prima" (astegiudiziarie, poi avviso). Con la ricerca estesa si leggono insieme anche le <a href="#analisi-perizie-aggiuntive">integrazioni</a>.
+        Dettagli in <a href="#analisi-ricerca-perizia">Come si trova la perizia</a>.</li>
+      <li><strong>Prompt di analisi della perizia</strong>: "v2" (fatti con pagina e citazione, lotto giusto, quote, contratti) oppure "v1" (precedente).
+        Vale dal prossimo giro, per le aste nuove e il ricontrollo; i batch già inviati si leggono con il prompt con cui sono partiti.</li>
+      <li><strong>"Ricontrolla le aste future ancora lette dall'avviso"</strong>: vedi <a href="#orari-ricontrollo">Ricontrollo</a>. Funziona solo con la ricerca estesa.</li>
+      <li><strong>Ricontrolla ogni (giorni)</strong>: 1-30 (predefinito 2), ogni asta al massimo una volta ogni N giorni.</li>
+      <li><strong>Aste ricontrollate al massimo per giro</strong>: 1-100 (predefinito 15). Circa 15-30 secondi per asta più l'analisi. <strong>Oltre 15</strong>
+        il ricontrollo usa sempre il batch (anche con il batch spento): costa meno ma i risultati arrivano fino a 24 ore dopo. Fino a 15 le analisi sono
+        immediate, a prezzo pieno.</li>
+    </ul>
+  </section>
+
+  <section class="voce" id="config-manutenzione">
+    <h3>Manutenzione: "🗑 Elimina aste scadute"</h3>
+    <p>Cancella dal registro tutte le aste con data di vendita già passata. <strong>Irreversibile</strong>: lo storico di quelle aste va perso. Il loro
+      numero resta conteggiato in Statistiche ("Aste storiche").</p>
+  </section>
+
+  <section class="voce" id="config-password">
+    <h3>Cambia password (scrittura)</h3>
+    <p>Password attuale, nuova (almeno 6 caratteri) e conferma. Vale subito per Configurazione, Statistiche, Superanalisi e le modifiche nel registro.</p>
+  </section>
+
+  <section class="voce" id="config-password-lettura">
+    <h3>Password di lettura per il registro</h3>
+    <p>Facoltativa e separata dalla password di scrittura. Con "Richiedi una password per aprire index.html" spuntata e una password scritta, il registro
+      (e questo manuale) si apre solo con quella. Casella non spuntata + Salva = disattivata: il registro si apre con il solo link. Campo vuoto con casella
+      spuntata = la password resta quella di prima.</p>
+  </section>
+</section>
+
+<section class="capitolo" id="statistiche">
+  <h2>5. Statistiche (statistiche.html)</h2>
+
+  <section class="voce" id="stat-numeri">
+    <h3>Numeri principali</h3>
+    <div class="tabella-scroll"><table>
+      <thead><tr><th>Riquadro</th><th>Cosa misura</th></tr></thead>
+      <tbody>
+        <tr><td>Aste nel registro</td><td>aste presenti ora</td></tr>
+        <tr><td>Aste storiche (incluse le eliminate)</td><td>presenti + cancellate con "Elimina aste scadute"</td></tr>
+        <tr><td>Da riprovare</td><td>aste senza un'analisi riuscita (punteggio vuoto o ≤ 1); in rosso se più di 0</td></tr>
+        <tr><td>Punteggio medio</td><td>media del punteggio delle aste analizzate (punteggio &gt; 1)</td></tr>
+        <tr><td>Margine medio stimato</td><td>media del <a href="#registro-margine">margine stimato</a> delle aste analizzate</td></tr>
+        <tr><td>Batch Gemini in sospeso</td><td>batch inviati e non ancora raccolti dal controllo batch</td></tr>
+      </tbody>
+    </table></div>
+    <p>Tutti i numeri riguardano l'intero database, senza filtri di periodo.</p>
+  </section>
+
+  <section class="voce" id="stat-liste">
+    <h3>Liste a barre: tipologia, tribunale, zone, punteggio, ristrutturazione</h3>
+    <p>Ogni lista mostra le prime 8 voci (il resto in "+ altri N"). Per tipologia; per tribunale; zone segnalate (nascosta se non ce ne sono); distribuzione
+      del punteggio in fasce (non valutata ≤ 1, 1-20, 21-40, 41-60, 61-80, 81-100); livello di ristrutturazione suggerito. Gli abusi edilizi non sono
+      contati perché sono un testo, non una categoria.</p>
+  </section>
+
+  <section class="voce" id="stat-perizie">
+    <h3>Perizie analizzate da Gemini</h3>
+    <ul>
+      <li><strong>Perizie distinte</strong>: numero di documenti diversi (riconosciuti dall'impronta digitale del file, "hash"). La stessa perizia su più
+        annunci si analizza una volta sola.</li>
+      <li><strong>Perizie ogni 10 aste</strong>: se vicino a 10, quasi ogni asta ha la sua perizia. Eccezione nota: due lotti della stessa procedura trovati
+        nello stesso batch non si riconoscono e vengono contati (e pagati) due volte.</li>
+      <li><strong>Nel tempo</strong>: perizie nuove per giorno. <strong>Per modello usato</strong>: quale modello Gemini ha analizzato ogni perizia la prima volta.</li>
+    </ul>
+  </section>
+
+  <section class="voce" id="stat-ricariche">
+    <h3>Costi Gemini: saldo stimato e registro ricariche</h3>
+    <div class="formula">saldo = ultima "correzione" (o 0) + ricariche successive − perizie nuove da allora × costo medio a perizia</div>
+    <ul>
+      <li><strong>Costo medio assunto a perizia</strong> (predefinito 0,01 €): <span class="stima">STIMA</span>. Gemini fattura a "token" (pezzi di testo e
+        immagini) e il sistema non li registra; regolalo confrontando il consumo reale su Google AI Studio. Resta solo su quel browser.</li>
+      <li><strong>Aggiungi al registro</strong>: "Ricarica" (aggiungo credito) oppure "Correzione" (imposto il saldo esatto, da cui il calcolo riparte), con
+        importo e nota. Unica parte della pagina che scrive dati. Le voci non si cancellano dalla pagina.</li>
+    </ul>
+  </section>
+
+  <section class="voce" id="stat-visite">
+    <h3>Visite</h3>
+    <p>Aperture per giorno del registro e della configurazione. Ogni ricaricamento conta come una visita; nessun dato su persone o paese di provenienza.</p>
+  </section>
+</section>
+<section class="capitolo" id="superanalisi">
+  <h2>6. Superanalisi (superanalisi.html)</h2>
+
+  <section class="voce" id="superanalisi-apertura">
+    <h3>Cos'è e come si apre</h3>
+    <p>La pagina di approfondimento di <strong>una</strong> asta: tutti i dati estratti dalla perizia con pagina e citazione, il valore di rivendita, il
+      <strong>conto dell'operazione</strong> di acquisto-ristrutturazione-rivendita e la seconda opinione di altre AI. Si apre dal pulsante
+      "Superanalisi" nella finestra dei dettagli di un'asta <strong>preferita</strong>. Serve la password di scrittura. In alto: "← Dettaglio asta"
+      (riapre la scheda nel registro) e "← Registro". Nessuna scrittura nel database tranne il tuo valore di rivendita; nessun costo Gemini.</p>
+    <p>Se l'asta è stata analizzata con il vecchio prompt v1 compare "Analisi v2 non ancora disponibile": si vedono solo annuncio e seconda opinione.</p>
+  </section>
+
+  <section class="voce" id="superanalisi-annuncio">
+    <h3>Sezione "Annuncio"</h3>
+    <p>Data vendita, Prezzo base, Offerta minima, Disponibilità (PVP), Documento analizzato (quale file è stato letto: perizia da PVP, da
+      astegiudiziarie, avviso…), Analisi (versione del prompt e modello AI). Link all'annuncio PVP, alla perizia (PDF) e descrizione del lotto.</p>
+  </section>
+
+  <section class="voce" id="superanalisi-perizia">
+    <h3>Sezione "Perizia": come leggerla</h3>
+    <p>Riporta i <a href="#analisi">dati estratti dall'AI</a>. "—" = dato non presente. Il riquadro <span class="mono">p. N</span> è la pagina del PDF
+      dove si trova il dato; il testo tra «» è la citazione. Sottosezioni: dati generali (tipo di documento, data perizia e integrazione, lotto trovato,
+      lotti usati, <a href="#analisi-quota">quota in vendita</a> e quota secondo la perizia, piano, ascensore, anno), <a href="#analisi-superficie">Superfici</a>,
+      <a href="#analisi-catasto">Catasto</a>, <a href="#analisi-urbanistica">Urbanistica</a>, <a href="#analisi-occupazione">Occupazione</a>,
+      <a href="#analisi-condominio">Condominio e stato</a>, <a href="#analisi-valori-ctu">Valutazione del CTU</a>,
+      <a href="#analisi-formalita">Formalità, discordanze e rischi</a>. Ogni campo è spiegato nel capitolo 8.</p>
+  </section>
+
+  <section class="voce" id="superanalisi-rivendita">
+    <h3>Valore di rivendita (ARV): da dove viene</h3>
+    <p>ARV (<em>After Repair Value</em>) = il prezzo a cui si pensa di rivendere dopo i lavori. Fonte, in ordine (si usa la prima disponibile):</p>
+    <ol>
+      <li><strong>Il tuo valore</strong> (campo "Il tuo valore di rivendita (€)", salvato nel database): diventa lo scenario centrale; prudenziale = 93%,
+        ottimistico = 105% <span class="stima">STIMA</span>. Affidabilità "media".</li>
+      <li><strong>OMI</strong> della zona dell'asta (<a href="#omi">Agenzia Entrate - OMI</a>): €/mq minimo-massimo × superficie. Affidabilità "screening"
+        ("bassa" se la superficie è approssimata).</li>
+      <li><strong>Quotazioni citate dal CTU</strong> in perizia (OMI o Borsino), usate come l'OMI.</li>
+      <li><strong>Valore del CTU</strong> ("proxy"): solo se la perizia ha al massimo 3 anni; affidabilità "bassa".</li>
+    </ol>
+    <p>Con fonte OMI: controlla che la zona corrisponda all'indirizzo su <a href="https://www1.agenziaentrate.gov.it/servizi/geopoi_omi/index.php" target="_blank" rel="noopener">GEOPOI</a>
+      (le coordinate dell'annuncio a volte sono approssimative); se non torna, inserisci il tuo valore. "Salva" lo memorizza; "Cancella (torna al calcolato)" lo toglie.</p>
+  </section>
+
+  <section class="voce" id="superanalisi-scenari">
+    <h3>Tre scenari: prudenziale, centrale, ottimistico</h3>
+    <div class="tabella-scroll"><table>
+      <thead><tr><th>Elemento</th><th>Prudenziale</th><th>Centrale</th><th>Ottimistico</th></tr></thead>
+      <tbody>
+        <tr><td>Rivendita da OMI (posizione nel range min-max)</td><td>metà range (50%)</td><td>75% del range</td><td>massimo</td></tr>
+        <tr><td>Rivendita dal valore CTU</td><td>× 0,85</td><td>× 0,95</td><td>× 1,05</td></tr>
+        <tr><td>Rivendita dal tuo valore</td><td>× 0,93</td><td>× 1,00</td><td>× 1,05</td></tr>
+        <tr><td>Costo dei lavori</td><td>× 1,20</td><td>× 1,00</td><td>× 1,00</td></tr>
+        <tr><td>Mesi dell'operazione</td><td colspan="3">secondo l'occupazione, vedi <a href="#superanalisi-mesi">Mesi stimati</a></td></tr>
+      </tbody>
+    </table></div>
+    <p>Tutti questi coefficienti sono <span class="stima">STIMA</span>: ipotesi ragionevoli da tarare con l'esperienza, non dati misurati.</p>
+  </section>
+
+  <section class="voce" id="superanalisi-parametri">
+    <h3>Parametri del conto: utile richiesto, minimo prudenziale, prima casa</h3>
+    <ul>
+      <li><strong>Utile netto richiesto (% del capitale, scenario centrale)</strong>: predefinito 15%. È l'obiettivo di guadagno, al netto dell'imposta
+        stimata sulla plusvalenza, in percentuale del capitale investito.</li>
+      <li><strong>Utile netto minimo nel prudenziale (%)</strong>: predefinito 5%. Anche nello scenario pessimista non vuoi scendere sotto questo.</li>
+      <li><strong>Acquisto come prima casa</strong>: imposte agevolate (registro 2%, <a href="#glossario-prezzo-valore">prezzo-valore</a> × 110).</li>
+      <li>I parametri restano <strong>solo sul dispositivo</strong> (non nel database) e valgono anche per la Superanalisi di gruppo.</li>
+    </ul>
+  </section>
+
+  <section class="voce" id="superanalisi-conto">
+    <h3>Conto dell'operazione: tabella voce per voce</h3>
+    <p>La tabella calcola l'operazione comprando all'<strong>offerta minima</strong>, per ciascuno scenario:</p>
+    <div class="tabella-scroll"><table>
+      <thead><tr><th>Riga</th><th>Come si calcola</th></tr></thead>
+      <tbody>
+        <tr><td>Valore di rivendita</td><td><a href="#superanalisi-rivendita">ARV</a> dello scenario</td></tr>
+        <tr><td>Prezzo (offerta minima)</td><td>offerta minima dell'annuncio</td></tr>
+        <tr><td>Imposte di acquisto</td><td><a href="#superanalisi-imposte">registro + 100 €</a></td></tr>
+        <tr><td>Spese di procedura</td><td>compenso del delegato (+ cassa 4% + IVA 22%) + 300 € di spese varie <span class="stima">STIMA</span> (bolli, copie, visure)</td></tr>
+        <tr><td>Arretrati condominiali</td><td>arretrati a tuo carico: al massimo 2 anni di spese ordinarie (art. 63 disp. att. c.c.); tutti se le spese annue non sono note</td></tr>
+        <tr><td>Regolarizzazione (+25%)</td><td>costo di sanatoria/ripristino del CTU × 1,25 <span class="stima">STIMA</span></td></tr>
+        <tr><td>Tecnico e pratiche</td><td>2.500 € <span class="stima">STIMA</span> (tecnico, CILA/SCIA, APE, aggiornamenti catastali)</td></tr>
+        <tr><td>Lavori</td><td><a href="#superanalisi-lavori">costo lavori</a> × moltiplicatore dello scenario</td></tr>
+        <tr><td>Imprevisti (10%)</td><td>10% di (lavori + regolarizzazione) <span class="stima">STIMA</span></td></tr>
+        <tr><td>Costi di detenzione</td><td>150 €/mese × mesi stimati <span class="stima">STIMA</span> (IMU seconda casa, utenze, condominio, assicurazione)</td></tr>
+        <tr><td>Costi di vendita</td><td>3,66% dell'ARV (agenzia 3% + IVA) + 500 € <span class="stima">STIMA</span> (APE, conformità, visure)</td></tr>
+        <tr><td><strong>Costo totale</strong></td><td>somma di tutte le voci sopra</td></tr>
+        <tr><td>Mesi stimati</td><td><a href="#superanalisi-mesi">vedi tabella</a></td></tr>
+        <tr><td>Capitale investito</td><td>costo totale − costi di vendita (i soldi da anticipare prima di vendere)</td></tr>
+        <tr><td>Utile lordo</td><td>ARV − costo totale</td></tr>
+        <tr><td><strong>Utile netto stimato</strong></td><td>utile lordo − imposta sulla plusvalenza</td></tr>
+        <tr><td>Rendimento netto sul capitale</td><td>utile netto ÷ capitale investito</td></tr>
+      </tbody>
+    </table></div>
+    <p><strong>Imposta sulla plusvalenza</strong> <span class="stima">STIMA</span>: 26% di (utile lordo + costi di detenzione + arretrati), perché
+      per un privato quei costi non sono deducibili. Rivendere entro 5 anni un immobile che non è stato abitazione principale genera una plusvalenza
+      tassabile (art. 67 TUIR); il 26% è l'imposta sostitutiva applicabile tramite il notaio. Verifica il tuo caso con il commercialista.</p>
+  </section>
+
+  <section class="voce" id="superanalisi-imposte">
+    <h3>Imposte di acquisto nella Superanalisi</h3>
+    <ul>
+      <li>Registro 9% (2% prima casa), minimo 1.000 €; ipotecaria + catastale 100 €.</li>
+      <li>Base: il prezzo pagato, oppure il <a href="#glossario-prezzo-valore">prezzo-valore</a> (rendita × 1,05 × 120, o × 110 prima casa) se è più basso
+        e se <strong>tutte</strong> le unità hanno la rendita. Solo per persone fisiche.</li>
+      <li>Rispetto al registro è più prudente: prezzo-valore solo se conviene, niente prezzo-valore senza rendita reale (nessuna rendita stimata), tecnico
+        sempre conteggiato. Per questo i numeri possono differire dai <a href="#registro-costi-trasferimento">costi di trasferimento</a> del registro.</li>
+    </ul>
+  </section>
+
+  <section class="voce" id="superanalisi-lavori">
+    <h3>Costo dei lavori nella Superanalisi</h3>
+    <div class="formula">lavori = il maggiore tra (€/mq della classe × superficie) e (lavori stimati dal CTU × 1,30)</div>
+    <ul>
+      <li>€/mq per <a href="#analisi-classe-manutenzione">classe di manutenzione</a>: A 0, B 150, C 350, D 600, E 600. Classe non valutabile → si usa la D
+        (prudenza).</li>
+      <li>Superficie: la lorda se c'è, altrimenti la commerciale (prima di togliere le parti da demolire).</li>
+      <li>Ricarico del 30% sui lavori del CTU <span class="stima">STIMA</span>: la stima del perito serve a "rendere fruibile" l'immobile, non a renderlo
+        vendibile a prezzo pieno.</li>
+    </ul>
+  </section>
+
+  <section class="voce" id="superanalisi-mesi">
+    <h3>Mesi stimati dell'operazione (dall'aggiudicazione al rogito di vendita)</h3>
+    <div class="tabella-scroll"><table>
+      <thead><tr><th>Occupazione</th><th>Prudenziale</th><th>Centrale</th><th>Ottimistico</th></tr></thead>
+      <tbody>
+        <tr><td>libero</td><td>12</td><td>9</td><td>7</td></tr>
+        <tr><td>occupato dal debitore</td><td>18</td><td>12</td><td>9</td></tr>
+        <tr><td>occupato da terzi senza titolo / locato non opponibile</td><td>24</td><td>15</td><td>10</td></tr>
+        <tr><td>locato opponibile</td><td>36</td><td>24</td><td>18</td></tr>
+        <tr><td>altro</td><td>24</td><td>18</td><td>12</td></tr>
+        <tr><td>non indicato</td><td>18</td><td>12</td><td>9</td></tr>
+      </tbody>
+    </table></div>
+    <p>Con un condono pendente: +12 mesi nello scenario prudenziale. Tutti valori <span class="stima">STIMA</span>.</p>
+    <p><strong>Occupazione usata</strong>: quella della perizia, ma se l'annuncio PVP (più recente) dice altro si usa l'annuncio, con un avviso
+      ("confermare col custode"); se la perizia parla di un contratto di locazione si tiene la perizia.</p>
+  </section>
+
+  <section class="voce" id="superanalisi-offerta-massima">
+    <h3>Offerta massima e "Margine sull'offerta minima"</h3>
+    <ul>
+      <li><strong>Offerta massima</strong> = il prezzo più alto a cui comprare restando dentro gli obiettivi: il più basso tra (a) il prezzo che dà l'utile
+        netto richiesto nello scenario centrale e (b) il prezzo che dà l'utile minimo nello scenario prudenziale. Calcolato per tentativi successivi
+        (ricerca binaria) tra 0 e l'ARV.</li>
+      <li>"Vincolo": quale dei due limiti comanda (scenario centrale o prudenziale), oppure "target irraggiungibile" se nemmeno a prezzo zero si arriva all'obiettivo.</li>
+      <li><strong>Margine sull'offerta minima</strong> (headroom) = offerta massima − offerta minima: se positivo, quanto puoi rilanciare sopra il minimo;
+        se negativo, all'offerta minima non raggiungi l'obiettivo.</li>
+      <li>"Offerta massima per scenario": lo stesso calcolo con l'obiettivo percentuale in ciascuno scenario.</li>
+    </ul>
+  </section>
+
+  <section class="voce" id="superanalisi-classe">
+    <h3>Giudizio dell'operazione: PULITA, GESTIBILE, COMPLESSA, DA SCARTARE</h3>
+    <p>Basta un motivo di una classe più grave per finire in quella classe. L'elenco "Cosa pesa sulla classe" mostra i motivi.</p>
+    <h4>DA SCARTARE</h4>
+    <ul><li>difformità dichiarate non sanabili;</li><li>pesi che restano all'acquirente (formalità non cancellabili);</li>
+      <li>locazione opponibile (non vendibile libero fino alla scadenza);</li><li>qualità dei dati D (documentazione insufficiente).</li></ul>
+    <h4>COMPLESSA</h4>
+    <ul><li>condono o sanatoria pendente;</li><li>occupato da terzi (senza titolo, contratto non opponibile, altro contratto);</li>
+      <li>costo di regolarizzazione non determinato;</li><li>difformità senza giudizio di sanabilità;</li><li>difformità su prospetti o parti comuni;</li>
+      <li>superficie ridotta dopo il ripristino;</li><li>perizia di oltre 7 anni;</li><li>stato di degrado (classe E);</li>
+      <li>si vende solo una quota (resta la comproprietà con altri).</li></ul>
+    <h4>GESTIBILE</h4>
+    <ul><li>occupato dal debitore (liberazione a cura del custode);</li><li>opere da rimuovere o ripristinare;</li>
+      <li>regolarizzazione CTU oltre 5.000 € (senza il ricarico del 25%);</li><li>perizia tra 3 e 7 anni;</li><li>ristrutturazione completa (classe D);</li>
+      <li>lavori straordinari condominiali deliberati;</li><li>occupazione non indicata;</li><li>qualità dei dati C.</li></ul>
+    <h4>PULITA</h4>
+    <p>Nessuno dei motivi sopra.</p>
+  </section>
+
+  <section class="voce" id="superanalisi-verdetto">
+    <h3>Frasi del verdetto e "NON CALCOLABILE"</h3>
+    <ul>
+      <li>"SCARTARE — motivo": classe da scartare.</li>
+      <li>"CLASSE — offerta massima € X (rilancio possibile € H sul minimo)": obiettivi raggiunti all'offerta minima.</li>
+      <li>"CLASSE — 15% netto sul capitale solo nello scenario centrale; nel prudenziale l'utile scende sotto 5% del capitale".</li>
+      <li>"CLASSE — al prezzo minimo non raggiunge 15% netto sul capitale nello scenario centrale".</li>
+      <li>"<strong>NON CALCOLABILE</strong>: si vende solo una quota (…), il conto di ristrutturazione e rivendita non si applica": chi compra una quota
+        (o usufrutto, nuda proprietà…) non può ristrutturare e rivendere l'intero.</li>
+      <li>"CALCOLO NON AFFIDABILE: manca l'ARV…": nessuna fonte di rivendita (niente OMI, niente tuo valore, perizia troppo vecchia per il proxy CTU).
+        Inserisci il tuo valore di rivendita.</li>
+    </ul>
+  </section>
+
+  <section class="voce" id="superanalisi-qualita">
+    <h3>Qualità dei dati: A, B, C, D</h3>
+    <ul>
+      <li><strong>D</strong> (bloccante, porta a "da scartare"): lotto non individuato nella perizia; nessuna superficie utilizzabile; né occupazione né
+        conformità urbanistica indicate.</li>
+      <li><strong>C</strong>: almeno un problema grave (documento che non è una perizia, perizia di oltre 7 anni, solo superficie non qualificata, conformità
+        urbanistica non verificata, occupazione non indicata, stato manutentivo non valutabile) oppure almeno 3 problemi lievi.</li>
+      <li><strong>B</strong>: 1-2 problemi lievi (tipo di documento o data non indicati, perizia tra 3 e 7 anni, rendita mancante, niente foto, niente
+        planimetria, arretrati condominiali non indicati, discordanze da chiarire).</li>
+      <li><strong>A</strong>: nessun problema.</li>
+    </ul>
+    <p>L'età della perizia si misura dalla data dell'ultima integrazione, se c'è.</p>
+  </section>
+
+  <section class="voce" id="superanalisi-avvisi">
+    <h3>Avvisi sotto il conto</h3>
+    <ul>
+      <li>"Costi di regolarizzazione incompleti: MAX_BID sovrastimato": una difformità non ha costo, quindi l'offerta massima è troppo alta.</li>
+      <li>"ARV a bassa affidabilità (…)": la rivendita viene dal valore del CTU o da una superficie approssimata.</li>
+      <li>Differenze di occupazione tra perizia e annuncio ("confermare col custode").</li>
+      <li>"Valore non previsto per …": l'AI ha scritto un valore fuori schema, trattato con il valore prudente.</li>
+    </ul>
+    <p>Le stime servono a confrontare le aste, non sostituiscono il parere di un tecnico o di un commercialista.</p>
+  </section>
+
+  <section class="voce" id="superanalisi-seconda-opinione">
+    <h3>Seconda opinione: pulsanti AI, prompt, perizia</h3>
+    <ul>
+      <li><strong>8 pulsanti</strong>: ChatGPT, Claude, Perplexity (prompt già scritto nell'indirizzo, se non troppo lungo: oltre 6.000 caratteri solo negli
+        appunti), Gemini, Mistral Le Chat, DeepSeek, Grok, Copilot (prompt negli appunti: incollalo). Apri un'AI alla volta.</li>
+      <li><strong>Prompt</strong> (modificabile): chiede di leggere la perizia allegata, verificare con la pagina i dati estratti (quota, valori, superficie,
+        occupazione, abusi e costi, condono, condominio, pesi), elencare i rischi per chi ristruttura e rivende, dire cosa verificare prima dell'offerta e dare
+        un giudizio sintetico. I risultati restano nella tua conversazione, non vengono salvati.</li>
+      <li><strong>⬇ Scarica la perizia (PDF)</strong>: su computer, per trascinarla nella chat.</li>
+      <li><strong>Dal telefono</strong>: "📱 Prepara la perizia da condividere" la scarica (avanzamento in MB, massimo 50 MB), poi "📤 Condividi la perizia…"
+        apre il menu del telefono con PDF e prompt. Due tocchi perché il menu si apre solo subito dopo un tocco. "📎 Condividi solo il PDF" serve per
+        Gemini, che dal menu prende solo il testo: scegli Gemini e incolla il prompt, già negli appunti.</li>
+      <li>I piani gratuiti delle AI hanno limiti sul numero e sulla dimensione dei file.</li>
+    </ul>
+  </section>
+</section>
+
+<section class="capitolo" id="gruppo">
+  <h2>7. Superanalisi di gruppo</h2>
+
+  <section class="voce" id="gruppo-cose">
+    <h3>Cos'è e come si apre</h3>
+    <p>Classifica da 2 a 10 aste insieme. Nel registro selezionale (casella della card) e premi "🧠 Superanalisi di gruppo" nella barra in basso; qualunque
+      asta, anche non preferita. Oltre 10 si usano le prime 10. Stessa password della Superanalisi. Solo letture, nessun costo Gemini.</p>
+    <p>Per ogni asta fa <strong>lo stesso conto</strong> della <a href="#superanalisi-conto">Superanalisi</a> (stessa fonte di rivendita, stesso tuo valore,
+      stessi parametri utile % e minimo %). I parametri si cambiano dalla Superanalisi di un'asta.</p>
+  </section>
+
+  <section class="voce" id="gruppo-ordine">
+    <h3>Ordine della classifica</h3>
+    <ol>
+      <li>prima le aste con utile netto positivo (o zero) nello scenario centrale all'offerta minima;</li>
+      <li>poi quelle in perdita;</li>
+      <li>poi quelle <strong>da scartare</strong> (sempre in fondo, anche se con utile positivo);</li>
+      <li>infine le <strong>non calcolabili</strong> (quote parziali, analisi v2 mancante, nessuna fonte di rivendita).</li>
+    </ol>
+    <p>Dentro ogni gruppo: prima il giudizio (pulita, gestibile, complessa), poi l'utile netto % più alto.</p>
+  </section>
+
+  <section class="voce" id="gruppo-tabella">
+    <h3>Colonne della classifica</h3>
+    <p># (posizione), Asta (link alla sua Superanalisi; sotto tribunale, lotto, tipologia), Offerta minima, Rivendita (centrale) con la fonte, Utile netto %
+      centrale, Utile netto % prudenziale, Offerta massima, Giudizio, Rischi principali (primi 3 motivi o avvisi), Dati (<a href="#superanalisi-qualita">qualità A-D</a>).</p>
+  </section>
+
+  <section class="voce" id="gruppo-seconda-opinione">
+    <h3>Seconda opinione di gruppo, CSV e condivisione</h3>
+    <ul>
+      <li>Il <strong>prompt di gruppo</strong> contiene i dati di tutte le aste e chiede all'AI di: cercare 2-3 annunci di vendita attuali nella zona
+        (immobiliare.it, idealista.it, casa.it) con link ed €/mq e stimare il prezzo di vendita dopo i lavori (senza inventare annunci); aprire le perizie se
+        può e dire quali ha letto davvero; stimare costi e margine; elencare i rischi; fare una tabella dalla migliore alla peggiore.</li>
+      <li>Le AI più adatte sono quelle che cercano sul web (Perplexity, ChatGPT con ricerca, Gemini). La lettura delle perizie dai link non è garantita: per
+        le 2-3 migliori usa la Superanalisi singola con la perizia allegata.</li>
+      <li><strong>⬇ Scarica CSV del gruppo</strong> (28 colonne: dati dell'annuncio, perizia, OMI e il nostro conto). Dal telefono: "📤 Condividi (prompt + CSV)"
+        e "📎 Condividi solo il CSV" (per Gemini).</li>
+    </ul>
+  </section>
+</section>
+<section class="capitolo" id="analisi">
+  <h2>8. Analisi della perizia (Gemini)</h2>
+
+  <section class="voce" id="analisi-ricerca-perizia">
+    <h3>Come si trova la perizia</h3>
+    <p>Con la <a href="#config-perizia">ricerca estesa</a> attiva, lo scanner prova in quest'ordine e si ferma al primo PDF valido (vero PDF, almeno
+      1.000 byte, al massimo 50 MB):</p>
+    <ol>
+      <li><strong>Allegati PVP</strong> che dal nome sembrano una perizia ("perizia", "stima", "CTU", "relazione", "elaborato peritale"…), preferendo quelli
+        che citano il lotto dell'annuncio. Esclusi avvisi, bandi, ordinanze, relazioni notarili, certificati, planimetrie, foto, visure, decreti.</li>
+      <li><strong>astegiudiziarie.it</strong> (se attivo in <a href="#config-altri-filtri">Altri filtri</a>): link con "perizia", scartando foto,
+        planimetrie, allegati, visure.</li>
+      <li><strong>Pagine dell'asta sui siti collegati all'annuncio</strong> (quelli con la bandierina su PVP: gestore della vendita, siti di pubblicità),
+        al massimo 4 siti, scartando documenti del sito (listini, manuali, condizioni, privacy…). Un documento senza nome chiaro passa solo se le prime
+        pagine contengono il linguaggio tipico di una perizia.</li>
+      <li><strong>Ultima possibilità</strong>: allegati PVP con "perizia" nel nome scartati prima (es. "perizia con foto"), se il testo è davvero da perizia.</li>
+      <li><strong>Ripiego</strong>: l'avviso di vendita, altrimenti il primo allegato. L'asta verrà <a href="#orari-ricontrollo">ricontrollata</a>.</li>
+    </ol>
+    <p>La "Fonte analisi" (o "Documento analizzato") dice quale documento è stato letto: "Perizia (PVP)", "Perizia (astegiudiziarie.it)", "Perizia (nome sito)",
+      "Avviso (PVP)", "Primo allegato disponibile (PVP)".</p>
+  </section>
+
+  <section class="voce" id="analisi-perizie-aggiuntive">
+    <h3>Perizie aggiuntive e integrazioni</h3>
+    <p>Dalla stessa fonte si prendono fino a 2 documenti in più (integrazione, aggiornamento, supplemento, chiarimenti, rettifica, errata corrige, addendum, o
+      altre perizie dello stesso lotto), escludendo i doppioni (stessi byte, stesso numero di pagine, stesso nome a meno di "privacy/omissis/copia"), con un
+      limite complessivo di dimensione. Gemini li legge come un'unica perizia: usa i dati più recenti e riporta le differenze nelle
+      <a href="#analisi-formalita">discordanze</a>. Aumentano il costo dell'analisi.</p>
+  </section>
+
+  <section class="voce" id="analisi-riuso">
+    <h3>Riuso delle analisi (perizia già vista)</h3>
+    <p>Ogni documento ha un'impronta digitale (hash). Se la stessa perizia, per lo stesso lotto, è già stata analizzata con la versione attuale del prompt,
+      l'analisi viene riusata senza chiamare Gemini (succede con aste ripubblicate o lotti della stessa procedura). Cambiando versione del prompt, le analisi
+      vecchie non vengono più riusate. Nel batch due lotti con la stessa perizia inviati nello stesso giro vengono analizzati entrambi.</p>
+  </section>
+
+  <section class="voce" id="analisi-regole">
+    <h3>Regole che l'AI deve seguire</h3>
+    <ul>
+      <li><strong>Estrae fatti, non stima</strong>: valori di mercato, margini e costi li calcola il sistema. L'unica valutazione dell'AI è il
+        <a href="#analisi-score">punteggio</a>.</li>
+      <li>Solo ciò che è scritto nel documento o visibile nelle foto; <strong>null</strong> (vuoto, "—") se il dato non c'è: meglio un vuoto che un numero inventato.</li>
+      <li><strong>"non_indicato"</strong> = il documento non ne parla; <strong>"non_verificato_dal_ctu"</strong> = il perito dichiara di non aver potuto verificare
+        (accesso negato, documenti non trovati…).</li>
+      <li>Per difformità, condono e occupazione indica <strong>pagina e citazione</strong> (massimo 30 parole).</li>
+      <li>Se il documento non è una perizia (avviso, ordinanza) lo dice e non completa i dati mancanti.</li>
+      <li>Contraddizioni nel documento o differenze con l'annuncio: non sceglie, le riporta nelle <a href="#analisi-formalita">discordanze</a>.</li>
+      <li>Foto: descrive solo ciò che si vede ("presenza apparente di…"), senza diagnosi.</li>
+    </ul>
+  </section>
+
+  <section class="voce" id="analisi-lotto">
+    <h3>Lotto trovato, lotti usati, più lotti sommati</h3>
+    <p>Una perizia può descrivere molti beni. L'AI estrae <strong>solo quelli venduti con l'annuncio</strong>, collegandoli con il numero di lotto e con i dati
+      dell'annuncio (descrizione, superficie, dati catastali, prezzo), perché la numerazione dell'annuncio può non coincidere con quella della perizia. Se
+      l'annuncio corrisponde a più lotti della perizia, somma valori e superfici. "Lotti / beni usati" dice quali ha usato; "Lotto trovato = no" se non riesce a
+      collegarli (in quel caso valori e superfici restano vuoti e l'analisi non viene accettata).</p>
+  </section>
+
+  <section class="voce" id="analisi-quota">
+    <h3>Quota in vendita e quota secondo la perizia</h3>
+    <ul>
+      <li><strong>Quota in vendita</strong>: la parte del diritto che si compra con l'annuncio ("1/1" = intero; "1/2" = metà indivisa…). Regole:
+        <ol>
+          <li>se l'annuncio indica il diritto o la quota ("quota del 50%", "piena proprietà", "5/6"), <strong>vale l'annuncio</strong>;</li>
+          <li>altrimenti la quota pignorata secondo la perizia; se tutti i comproprietari sono debitori esecutati (es. due coniugi al 50%), si vende l'intero: "1/1";</li>
+          <li>se la procedura è un "Contenzioso Civile" (di norma una divisione giudiziale) e l'annuncio non indica la quota, si vende l'intero: "1/1".</li>
+        </ol></li>
+      <li><strong>Quota secondo la perizia</strong>: quella pignorata o stimata dal perito; se diversa dalla quota in vendita, la differenza è nelle discordanze.</li>
+      <li>Con una quota parziale il conto della Superanalisi è "<a href="#superanalisi-verdetto">non calcolabile</a>" e il valore nel registro è quello della
+        quota (vedi <a href="#analisi-valore-registro">valore di stima</a>).</li>
+    </ul>
+  </section>
+
+  <section class="voce" id="analisi-catasto">
+    <h3>Catasto: unità, categoria, rendita, conformità catastale</h3>
+    <p>Per ogni unità: ruolo (principale o pertinenza, es. box o cantina), foglio / particella / subalterno (l'indirizzo catastale), <a href="#glossario-categorie">categoria</a>,
+      classe, consistenza (vani o mq), <a href="#glossario-rendita">rendita</a> e pagina. <strong>Conformità catastale</strong>: conforme / difforme (la
+      planimetria in catasto non corrisponde allo stato reale) / non verificata / non indicata. Nel registro la rendita è la somma di tutte le unità se tutte
+      l'hanno, altrimenti quella dell'unità principale.</p>
+  </section>
+
+  <section class="voce" id="analisi-superficie">
+    <h3>Superfici: commerciale, lorda, utile, catastale, pertinenze</h3>
+    <ul>
+      <li><strong>Commerciale CTU</strong>: la superficie che il perito usa per la stima (con i suoi coefficienti).</li>
+      <li><strong>Lorda coperta</strong>: vani coperti con i muri, senza balconi e terrazzi.</li>
+      <li><strong>Utile netta</strong>: la superficie calpestabile.</li>
+      <li><strong>Catastale totale</strong> e <strong>catastale escluse aree scoperte</strong>: i due valori della visura catastale (calcolati secondo il DPR 138/1998).</li>
+      <li><strong>Pertinenze</strong>: balconi/terrazzi, giardino/corte, box/garage, cantina, posto auto.</li>
+      <li><strong>Non qualificata</strong>: una superficie di cui il perito non dice il tipo.</li>
+      <li><strong>Include parti da demolire</strong>: sì se la superficie usata comprende parti abusive da demolire (vanno tolte).</li>
+    </ul>
+    <p><strong>Superficie nel registro</strong> (e nel conto), la prima disponibile:</p>
+    <ol>
+      <li>commerciale CTU;</li>
+      <li>lorda + 30% balconi + 10% giardino + 50% box + 25% cantina;</li>
+      <li>catastale totale;</li>
+      <li>catastale escluse aree scoperte + 30% balconi;</li>
+      <li>non qualificata (approssimata).</li>
+    </ol>
+    <p>Nella Superanalisi si tolgono i metri quadri da demolire, salvo che il perito dica che la superficie è già al netto.</p>
+  </section>
+
+  <section class="voce" id="analisi-urbanistica">
+    <h3>Urbanistica: conformità, difformità, condono, agibilità</h3>
+    <ul>
+      <li><strong>Conformità urbanistica</strong>: l'immobile corrisponde ai titoli edilizi (licenza, concessione, permesso)? conforme / difforme / non verificata / non indicata.</li>
+      <li><strong>Difformità</strong> (abusi), ciascuna con descrizione, costo stimato dal CTU, metri quadri che fa perdere, se tocca prospetti o parti comuni,
+        pagina e citazione. Tipi:
+        <ul>
+          <li><strong>sanabile</strong>: regolarizzabile (sanatoria, CILA/SCIA tardiva, accertamento di conformità, aggiornamento catastale);</li>
+          <li><strong>da rimuovere</strong>: demolizione o ripristino dello stato legittimo;</li>
+          <li><strong>non sanabile</strong>: non regolarizzabile (porta a "da scartare");</li>
+          <li><strong>condono pendente</strong>: domanda presentata e non ancora definita;</li>
+          <li><strong>non determinato</strong>: il perito non si pronuncia.</li>
+        </ul></li>
+      <li><strong>Condono pendente</strong>: legge (es. <a href="#glossario-condoni">L. 47/1985, 724/1994, 326/2003</a>), anno della domanda, stato, integrazioni
+        richieste non presentate, costo stimato.</li>
+      <li><strong>Costo totale di regolarizzazione</strong>: solo se il perito indica un totale; altrimenti si sommano le voci (più il condono se non già contato).
+        Diventa le "Spese sanatoria" del registro.</li>
+      <li><strong>Agibilità</strong>: presente / assente / non verificata / non indicata, con la data. Vedi <a href="#glossario-agibilita">glossario</a>.</li>
+      <li><strong>Abusi edilizi</strong> (testo nel registro): descrizione dell'AI, altrimenti l'elenco delle difformità, altrimenti "Nessuna difformità indicata dal CTU" se conforme, altrimenti "N/D".</li>
+    </ul>
+  </section>
+
+  <section class="voce" id="analisi-occupazione">
+    <h3>Stato di occupazione</h3>
+    <div class="tabella-scroll"><table>
+      <thead><tr><th>Stato</th><th>Significato</th><th>Testo nel registro</th></tr></thead>
+      <tbody>
+        <tr><td>libero</td><td>solo se il documento lo afferma</td><td>Libero</td></tr>
+        <tr><td>occupato_debitore</td><td>dall'esecutato e/o dalla sua famiglia</td><td>Occupato dall'esecutato</td></tr>
+        <tr><td>occupato_terzi_senza_titolo</td><td>da altri, senza contratto valido</td><td>Occupato da terzi senza titolo</td></tr>
+        <tr><td>locato_opponibile</td><td>contratto che il perito dichiara <a href="#glossario-opponibilita">opponibile</a> alla procedura</td><td>Occupato con titolo opponibile (locazione)</td></tr>
+        <tr><td>locato_non_opponibile</td><td>contratto dichiarato non opponibile</td><td>Occupato con contratto non opponibile</td></tr>
+        <tr><td>altro</td><td>c'è un contratto (locazione, comodato…) ma il perito non si pronuncia sull'opponibilità</td><td>descrizione dell'AI</td></tr>
+        <tr><td>non_indicato</td><td>il documento non ne parla (i dati dell'annuncio non vengono usati per completarlo)</td><td>N/D</td></tr>
+      </tbody>
+    </table></div>
+    <p>Con un contratto: estremi, scadenza, canone mensile. La "Disponibilità (PVP)" è invece ciò che dichiara l'annuncio, spesso più recente.</p>
+  </section>
+
+  <section class="voce" id="analisi-condominio">
+    <h3>Condominio: amministratore, spese, arretrati, straordinarie</h3>
+    <p>Amministratore (sì/no), spese ordinarie annue, <strong>arretrati</strong> (rate non pagate: chi compra ne risponde per l'anno in corso e il precedente,
+      <a href="#glossario-oneri-condominiali">art. 63 disp. att. c.c.</a>), lavori straordinari deliberati e importo. Gli arretrati diventano le "Spese
+      condominiali arretrate" del registro (correggibili a mano).</p>
+  </section>
+
+  <section class="voce" id="analisi-classe-manutenzione">
+    <h3>Classe dello stato manutentivo (A-E)</h3>
+    <div class="tabella-scroll"><table>
+      <thead><tr><th>Classe</th><th>Significato</th><th>Livello di ristrutturazione</th></tr></thead>
+      <tbody>
+        <tr><td>A_pronto</td><td>abitabile senza lavori, finiture recenti</td><td>nessuna</td></tr>
+        <tr><td>B_rinfrescare</td><td>finiture datate ma funzionali: tinteggiatura e piccoli interventi</td><td>leggera</td></tr>
+        <tr><td>C_rimodernare</td><td>bagni, cucina e/o pavimenti da rifare; impianti funzionanti ma datati</td><td>media</td></tr>
+        <tr><td>D_ristrutturare</td><td>da rifare anche impianti e/o infissi</td><td>pesante</td></tr>
+        <tr><td>E_degrado</td><td>degrado importante: infiltrazioni estese, parti non abitabili, rustico</td><td>pesante</td></tr>
+        <tr><td>non_valutabile</td><td>testo e foto non bastano</td><td>media (prudenza)</td></tr>
+      </tbody>
+    </table></div>
+    <p>La valuta l'AI su testo e foto. Anche: impianti, infissi, riscaldamento (autonomo, centralizzato, assente), osservazioni, lavori stimati dal CTU.
+      Per <a href="#analisi-senza-fabbricato">terreni e lastrici</a> il livello è sempre "nessuna".</p>
+  </section>
+
+  <section class="voce" id="analisi-valori-ctu">
+    <h3>Valutazione del CTU: valore di mercato, valore finale, riferito a</h3>
+    <ul>
+      <li><strong>Valore di mercato</strong>: il valore del <strong>bene intero</strong> dopo le correzioni di stima del perito (aggiunte e detrazioni per le
+        caratteristiche) e <strong>prima</strong> delle riduzioni per vendita giudiziaria, per quota e per costi di regolarizzazione. Anche quando il perito
+        stima solo una quota, qui va il valore dell'intero.</li>
+      <li><strong>Valore finale</strong>: il valore finale di stima del perito, dopo tutte le riduzioni (spesso vicino al prezzo base della prima asta).</li>
+      <li><strong>Riferito a</strong>: "intero" o "quota" (se il perito l'ha già calcolato sulla quota) o "non chiaro".</li>
+      <li>€/mq usati, superficie usata, riduzione per vendita giudiziaria (%), detrazioni.</li>
+      <li><strong>Quotazioni citate dal CTU</strong>: OMI, Borsino o altre banche dati riportate in perizia, con periodo e €/mq.</li>
+    </ul>
+  </section>
+
+  <section class="voce" id="analisi-valore-registro">
+    <h3>Valore di stima nel registro: quale valore del CTU</h3>
+    <ul>
+      <li>Si vende l'<strong>intero</strong>: valore di mercato (se manca, il finale). Il valore di mercato è prima delle riduzioni perché i costi di
+        regolarizzazione sono già sottratti a parte nel margine.</li>
+      <li>Si vende una <strong>quota</strong>: valore finale (il valore della quota).</li>
+      <li>Quota con una sola frazione (es. 5/6) e valore finale riferito all'intero, oppure valore finale mancante: valore × quota (es. 159.125 × 5/6 = 132.604).</li>
+      <li>Quote multiple ("1/3 e 1/2") o altri diritti (usufrutto…): valore finale, senza moltiplicare.</li>
+    </ul>
+  </section>
+
+  <section class="voce" id="analisi-formalita">
+    <h3>Formalità, discordanze, altri rischi</h3>
+    <ul>
+      <li><strong>Pesi non cancellabili</strong>: servitù, vincoli, domande giudiziali, convenzioni che <strong>restano</strong> all'acquirente dopo il
+        decreto di trasferimento (portano a "da scartare"). Le normali ipoteche e trascrizioni del pignoramento vengono cancellate (vedi
+        <a href="#glossario-formalita">formalità</a>). Nel registro: "Nessuna criticità oltre l'ipoteca standard da cancellare" oppure l'elenco, in rosso.</li>
+      <li><strong>Usi civici, censi, livelli</strong>: antichi diritti collettivi o oneri sul terreno.</li>
+      <li><strong>Discordanze</strong>: contraddizioni interne alla perizia, differenze tra perizia e annuncio, differenze dovute a date diverse (tipo
+        "temporale", es. occupato alla data della perizia e libero nell'annuncio). Non conta la differenza tra stima e prezzo base.</li>
+      <li><strong>Altri rischi</strong>: altro che il perito segnala, con la pagina.</li>
+    </ul>
+  </section>
+
+  <section class="voce" id="analisi-score">
+    <h3>Punteggio (score flipping 1-100)</h3>
+    <p>Quanto l'operazione "compra all'asta, ristruttura, rivendi" sembra <strong>pulita e con margine</strong>, secondo l'AI, dopo aver estratto i fatti.
+      Considera: valore del CTU rispetto a prezzo base e offerta minima, occupazione e contratti, difformità e costi, condono, pesi non cancellabili, quota,
+      stato manutentivo, discordanze e rischi.</p>
+    <ul>
+      <li><strong>Alto</strong>: ampio margine, libero, nessun problema rilevante. <strong>Basso</strong>: abusi non sanabili, occupanti con titolo, quota
+        parziale, costi occulti.</li>
+      <li><strong>1</strong>: non valutabile (es. solo avviso senza dati).</li>
+      <li><strong>Al massimo 30</strong> per <a href="#analisi-senza-fabbricato">terreni, lastrici e aree urbane</a> (non sono operazioni di ristrutturazione).</li>
+      <li>0 o 1 nel registro = analisi non riuscita: l'asta resta "da riprovare".</li>
+    </ul>
+    <p>È un giudizio dell'AI, diverso dal <a href="#superanalisi-classe">giudizio</a> calcolato dalla Superanalisi con regole fisse.</p>
+  </section>
+
+  <section class="voce" id="analisi-senza-fabbricato">
+    <h3>Terreni, lastrici solari e aree urbane ("senza fabbricato")</h3>
+    <p>Un bene è "senza fabbricato" se tutte le unità principali sono in categoria F/5 (lastrico solare) o F/1 (area urbana), oppure se è un terreno: unità
+      senza categoria catastale, consistenza in mq/ha/are, nessuna superficie coperta o utile, nessuna camera. Per questi il livello di ristrutturazione è
+      "nessuna" (altrimenti il registro calcolerebbe costi assurdi, es. 1.180 mq di terreno × 350 €/mq) e il punteggio al massimo 30.</p>
+  </section>
+
+  <section class="voce" id="analisi-stato">
+    <h3>Stato dell'analisi (ok / vuota) e aste "da riprovare"</h3>
+    <ul>
+      <li><strong>ok</strong>: l'analisi contiene almeno un fatto utile (una superficie, una rendita, l'occupazione, la conformità urbanistica, un valore del CTU o
+        una difformità).</li>
+      <li><strong>vuota</strong>: nessun fatto utile.</li>
+      <li>Un'asta è <strong>da riprovare</strong> se non ha un'analisi riuscita (valore, superficie e punteggio vuoti o punteggio ≤ 1): lo scanner la ritenta per
+        prima al giro successivo. Le conta Statistiche → "Da riprovare".</li>
+      <li>Un'asta già analizzata viene aggiornata solo se l'analisi precedente non era riuscita e la nuova sì (o dal ricontrollo quando trova la perizia).</li>
+    </ul>
+  </section>
+
+  <section class="voce" id="analisi-versioni">
+    <h3>Versioni del prompt (v1, v2.x)</h3>
+    <ul>
+      <li><strong>v1</strong>: prompt precedente, 11 campi; il livello di ristrutturazione lo sceglie direttamente l'AI.</li>
+      <li><strong>v2</strong>: fatti con pagina e citazione, analisi completa salvata per la Superanalisi. Evoluzioni: v2.1 lotti con numerazione diversa,
+        opponibilità non dedotta; v2.2 definizione del valore di mercato, quota parziale → valore finale; v2.4 quotazioni OMI/Borsino citate dal CTU; v2.5
+        comproprietari tutti esecutati → intero; v2.6 quota dall'annuncio, "Contenzioso Civile" → intero, valore riferito a intero/quota, punteggio massimo 30
+        per terreni e lastrici.</li>
+      <li>La versione usata per ogni asta è nella colonna "Versione prompt" del CSV e nella Superanalisi (riga "Analisi"). Si sceglie in
+        <a href="#config-perizia">Configurazione</a>.</li>
+    </ul>
+  </section>
+</section>
+<section class="capitolo" id="omi">
+  <h2>9. OMI (quotazioni dell'Agenzia delle Entrate)</h2>
+
+  <section class="voce" id="omi-cose">
+    <h3>Cos'è l'OMI</h3>
+    <p>L'<strong>Osservatorio del Mercato Immobiliare</strong> dell'Agenzia delle Entrate pubblica ogni semestre, per ogni comune diviso in <strong>zone</strong>,
+      un intervallo di valori di compravendita in €/mq per tipologia di immobile e stato conservativo. Sono valori medi di zona, non la stima di un singolo
+      immobile: nel sistema servono come prima stima del <a href="#superanalisi-rivendita">valore di rivendita</a>. Fonte da citare sempre:
+      "Agenzia Entrate - OMI". I dati sono caricati per tutta Italia.</p>
+  </section>
+
+  <section class="voce" id="omi-zone-fasce">
+    <h3>Zone e fasce OMI (B, C, D, E, R)</h3>
+    <p>Ogni zona ha un codice (es. "B1", "C1", "D18") e una descrizione con le vie principali. La lettera indica la <strong>fascia</strong>:
+      <strong>B</strong> centrale, <strong>C</strong> semicentrale, <strong>D</strong> periferica, <strong>E</strong> suburbana, <strong>R</strong> rurale.
+      La zona dell'asta si trova dalle coordinate dell'annuncio PVP: se sono approssimative la zona può essere sbagliata. Controllala su
+      <a href="https://www1.agenziaentrate.gov.it/servizi/geopoi_omi/index.php" target="_blank" rel="noopener">GEOPOI</a> (mappa ufficiale delle zone OMI).</p>
+  </section>
+
+  <section class="voce" id="omi-tipologia-stato">
+    <h3>Tipologia OMI e stato conservativo</h3>
+    <p>La tipologia PVP dell'asta viene tradotta in una tipologia OMI, con alternative se la prima non è quotata nella zona:</p>
+    <div class="tabella-scroll"><table>
+      <thead><tr><th>Tipologia PVP</th><th>Tipologia OMI (in ordine)</th></tr></thead>
+      <tbody>
+        <tr><td>abitazione civile, appartamento, fabbricato, compendio</td><td>abitazioni civili → economiche → signorili → tipiche</td></tr>
+        <tr><td>abitazione signorile</td><td>signorili → civili → economiche</td></tr>
+        <tr><td>economica, popolare</td><td>economiche → civili → tipiche</td></tr>
+        <tr><td>rurale</td><td>tipiche → economiche → civili</td></tr>
+        <tr><td>villa, villino</td><td>ville e villini → civili → economiche</td></tr>
+        <tr><td>negozio / ufficio</td><td>negozi / uffici (uffici strutturati)</td></tr>
+        <tr><td>magazzino, deposito, cantina / laboratorio / capannone</td><td>magazzini / laboratori / capannoni</td></tr>
+        <tr><td>garage / posto auto</td><td>box → autorimesse → posti auto coperti / posti auto coperti → scoperti → box</td></tr>
+      </tbody>
+    </table></div>
+    <p>Se l'asta ha più beni vince l'abitazione, poi il commerciale, poi il deposito, poi il box (es. "abitazione + posto auto" usa l'abitazione). Terreni e
+      lastrici non hanno quotazione OMI. Lo <strong>stato conservativo</strong> preferito è NORMALE (esistono anche OTTIMO e SCADENTE). Limiti: un
+      "compendio pignorato" viene valutato come abitazione civile, e un posto auto scoperto quotato come coperto o box risulta sopravvalutato.</p>
+  </section>
+
+  <section class="voce" id="omi-assegnazione">
+    <h3>Assegnazione dei valori OMI alle aste</h3>
+    <p>Riguarda le aste <strong>future con coordinate</strong>. A ogni giro dello scanner (e dopo un controllo batch con risultati, e dopo un'importazione)
+      il sistema cerca la zona che contiene il punto dell'asta e salva zona, descrizione, fascia, tipologia, stato, €/mq minimo e massimo e semestre. Le
+      aste passate conservano gli ultimi valori. Le vedi in Superanalisi e nelle colonne OMI del CSV.</p>
+  </section>
+
+  <section class="voce" id="omi-aggiornamento">
+    <h3>Aggiornare l'OMI ogni semestre</h3>
+    <ol>
+      <li>Quando arriva il <a href="#orari-promemoria-omi">promemoria del lunedì</a>, entra nell'area riservata dell'Agenzia delle Entrate e scarica, per
+        tutto il territorio nazionale e per l'ultimo semestre, le quotazioni e i perimetri delle zone (KML).</li>
+      <li>Lancia sul computer lo script di importazione del repository privato (con la password di scrittura; c'è una modalità di prova che legge senza
+        caricare). Le istruzioni dettagliate sono nella documentazione del repository privato.</li>
+      <li>Lo script carica il nuovo semestre, toglie quello vecchio e riassegna i valori alle aste.</li>
+    </ol>
+    <p>Il 2° semestre di un anno esce di solito verso marzo dell'anno dopo; il 1° verso settembre-ottobre.</p>
+  </section>
+</section>
+
+<section class="capitolo" id="notifiche">
+  <h2>10. Notifiche Telegram</h2>
+
+  <section class="voce" id="notifiche-elenco">
+    <h3>Tutti i messaggi e cosa significano</h3>
+    <div class="tabella-scroll"><table>
+      <thead><tr><th>Messaggio</th><th>Quando arriva</th></tr></thead>
+      <tbody>
+        <tr><td>🏠 NUOVA ASTA IMMOBILIARE</td><td>Per ogni asta nuova analizzata (subito, dal batch o riusando un'analisi). Contiene indirizzo, zona segnalata, distanza, tipologia,
+          superficie ed €/mq, tribunale, data, disponibilità, offerta minima, prezzo base, valore di stima, margine, punteggio, occupazione, sanatoria, formalità,
+          fonte, modello, note e link.</td></tr>
+        <tr><td>✅ nessuna asta entro i filtri</td><td>Lo scanner non ha trovato annunci con i filtri attuali (li elenca).</td></tr>
+        <tr><td>✅ tutte già note, nessuna novità</td><td>Tutte le aste trovate erano già analizzate o in un batch.</td></tr>
+        <tr><td>🔢 Scanner aste — solo conteggio</td><td>Modalità <a href="#config-altri-filtri">solo conteggio</a>: numeri, nessuna spesa.</td></tr>
+        <tr><td>✅ completato / ⚠️ completato con errori</td><td>Fine di un giro con analisi subito (sincrono): quante aste analizzate e quante con errori.</td></tr>
+        <tr><td>📦 Ricerca … completata</td><td>Batch inviato a Gemini: criteri, numero di aste, modello; i risultati arriveranno da pochi minuti a 24 ore dopo.</td></tr>
+        <tr><td>✅ Ricerca completata, nessun documento leggibile</td><td>Nessuna asta aveva un documento valido da inviare.</td></tr>
+        <tr><td>⚠️ invio del batch a Gemini fallito</td><td>Si riproverà al giro successivo.</td></tr>
+        <tr><td>⛔ Scanner aste interrotto</td><td>Il database non rispondeva: il giro si è fermato senza spendere.</td></tr>
+        <tr><td>📄 Perizia trovata al ricontrollo</td><td>Il <a href="#orari-ricontrollo">ricontrollo</a> ha trovato la perizia e aggiornato l'analisi.</td></tr>
+        <tr><td>🔁 Ricontrollo perizie</td><td>Riepilogo del ricontrollo: controllate, trovate, aggiornate, solo fonte, in batch, errori.</td></tr>
+        <tr><td>🧠 Rianalisi v2</td><td>Riepilogo di una rianalisi straordinaria (quando si ripassano molte aste con un prompt nuovo).</td></tr>
+        <tr><td>🗺️ Nuove quotazioni OMI</td><td>Il lunedì, se è uscito un semestre OMI non ancora caricato.</td></tr>
+        <tr><td>🏠 PRENOTA LA VISITA — ASTA PREFERITA</td><td>Preferita a 15 giorni dalla vendita: contatta custode o delegato.</td></tr>
+        <tr><td>⭐ PROMEMORIA ASTA PREFERITA</td><td>Preferita a 7, 5, 3, 1 giorni dalla vendita (con la tua nota).</td></tr>
+        <tr><td>✅ Controllo preferiti: nessuna in scadenza</td><td>Solo con "Controlla preferiti ora" se nessuna preferita è entro 15 giorni.</td></tr>
+      </tbody>
+    </table></div>
+    <p>Se Telegram segnala troppi messaggi, il sistema aspetta e riprova. Le aste di un batch fallito o scaduto vengono scritte ma non notificate.</p>
+  </section>
+</section>
+<section class="capitolo" id="glossario">
+  <h2>11. Glossario, norme e abbreviazioni</h2>
+  <p class="nota">Spiegazioni sintetiche per orientarsi, non consulenza legale o fiscale. Le norme cambiano: per decidere un'offerta verifica con il delegato,
+    un tecnico, un notaio o un commercialista.</p>
+
+  <section class="voce" id="glossario-procedura">
+    <h3>La procedura: esecuzione, G.E., R.G.E., CTU, delegato, custode</h3>
+    <ul>
+      <li><strong>Esecuzione immobiliare</strong>: la procedura con cui un creditore fa vendere dal tribunale l'immobile del debitore. Inizia con il
+        <strong>pignoramento</strong> (trascritto nei registri immobiliari).</li>
+      <li><strong>G.E.</strong> (Giudice dell'Esecuzione): il giudice che segue la procedura. <strong>R.G.E.</strong> (Ruolo Generale delle Esecuzioni): il
+        numero della procedura, es. "R.G.E. 148/2023".</li>
+      <li><strong>CTU / esperto stimatore / perito</strong>: il tecnico nominato dal giudice che scrive la <strong>perizia di stima</strong> (descrizione,
+        conformità, occupazione, valore; criteri dell'art. 568 c.p.c.).</li>
+      <li><strong>Delegato alla vendita</strong> (art. 591-bis c.p.c.): di solito un notaio, avvocato o commercialista che organizza e svolge l'asta.</li>
+      <li><strong>Custode giudiziario</strong>: gestisce l'immobile durante la procedura, organizza le visite e cura la liberazione. È la persona da contattare
+        per vedere l'immobile.</li>
+      <li><strong>Contenzioso civile / divisione giudiziale</strong>: una causa, non un'esecuzione; spesso serve a vendere un bene in comproprietà dopo che
+        un'esecuzione ha colpito solo una quota. In questi casi di norma si vende l'intero.</li>
+      <li><strong>Procedure concorsuali</strong> (fallimento, oggi liquidazione giudiziale): vendite di beni di imprese insolventi, con regole in parte diverse.</li>
+    </ul>
+  </section>
+
+  <section class="voce" id="glossario-documenti">
+    <h3>Documenti: perizia, avviso di vendita, ordinanza, lotto</h3>
+    <ul>
+      <li><strong>Perizia</strong>: il documento più completo (spesso 30-100 pagine). È quello che il sistema cerca di far leggere all'AI.</li>
+      <li><strong>Avviso di vendita</strong>: poche pagine con data, prezzo base, offerta minima, modalità; descrizione sintetica del bene.</li>
+      <li><strong>Ordinanza di vendita</strong>: il provvedimento del giudice che dispone la vendita e le sue regole.</li>
+      <li><strong>Lotto</strong>: l'insieme di beni venduti insieme in un'unica asta (es. appartamento + box). Una perizia può descrivere più lotti.</li>
+      <li><strong>Relazione notarile / certificato ventennale</strong>: la storia della proprietà e delle formalità degli ultimi 20 anni (non è la perizia).</li>
+    </ul>
+  </section>
+
+  <section class="voce" id="glossario-prezzi-asta">
+    <h3>Prezzo base, offerta minima, rilancio, ribasso, cauzione</h3>
+    <ul>
+      <li><strong>Prezzo base</strong>: il prezzo di partenza dell'asta fissato dal giudice (alla prima asta di solito vicino al valore finale di stima).</li>
+      <li><strong>Offerta minima</strong>: l'offerta più bassa ammessa, fino a un quarto in meno del prezzo base (75% del prezzo base, art. 571 c.p.c.).
+        Un'offerta tra minima e base può non bastare se il giudice ritiene di poter vendere meglio.</li>
+      <li><strong>Rilancio minimo</strong>: l'aumento minimo tra un'offerta e l'altra nella gara tra più offerenti.</li>
+      <li><strong>Ribasso / tentativo</strong>: se l'asta va deserta, il prezzo base della successiva scende (di norma fino a un quarto). Vedi
+        <a href="#registro-tentativo">tentativo probabile</a>.</li>
+      <li><strong>Vendita senza incanto</strong>, <strong>asincrona telematica</strong>: offerte segrete depositate prima, poi eventuale gara online in più giorni.</li>
+      <li><strong>Cauzione</strong>: di solito il 10% del prezzo offerto, versata con l'offerta; persa se l'aggiudicatario non paga il saldo.</li>
+    </ul>
+  </section>
+
+  <section class="voce" id="glossario-dopo-aggiudicazione">
+    <h3>Dopo l'aggiudicazione: saldo, decreto di trasferimento, liberazione</h3>
+    <ul>
+      <li><strong>Aggiudicazione</strong>: vinci l'asta. Il <strong>saldo prezzo</strong> va pagato entro il termine dell'avviso (spesso 120 giorni), insieme
+        alle spese di trasferimento.</li>
+      <li><strong>Decreto di trasferimento</strong> (art. 586 c.p.c.): l'atto del giudice che ti rende proprietario e ordina la cancellazione di ipoteche e
+        pignoramenti. Vale come titolo per la liberazione dell'immobile.</li>
+      <li><strong>Liberazione</strong>: se l'immobile è occupato senza titolo opponibile, la cura il custode. Per questo "occupato dal debitore" è di solito
+        gestibile ma allunga i tempi (vedi <a href="#superanalisi-mesi">mesi stimati</a>).</li>
+      <li><strong>Visto e piaciuto</strong>: la vendita giudiziaria è senza garanzia per vizi; per questo il perito applica una riduzione (spesso 10-20%).</li>
+    </ul>
+  </section>
+
+  <section class="voce" id="glossario-diritti">
+    <h3>Diritti: piena proprietà, quota, nuda proprietà, usufrutto, superficie</h3>
+    <ul>
+      <li><strong>Piena proprietà 1/1</strong>: l'intero bene.</li>
+      <li><strong>Quota indivisa</strong> (es. 1/2, 5/6): una parte astratta del bene in comproprietà con altri; non si può usare né vendere l'intero da soli,
+        e il valore di mercato di una quota è molto più basso della sua frazione del totale.</li>
+      <li><strong>Nuda proprietà</strong>: la proprietà senza il diritto di usare il bene, finché dura l'usufrutto.</li>
+      <li><strong>Usufrutto</strong>: il diritto di usare il bene e percepirne i frutti (es. affitti), di solito vita natural durante dell'usufruttuario.</li>
+      <li><strong>Diritto di superficie</strong>: la proprietà della costruzione su un suolo di altri, spesso a tempo.</li>
+    </ul>
+    <p>Con questi diritti parziali il conto della Superanalisi è "<a href="#superanalisi-verdetto">non calcolabile</a>".</p>
+  </section>
+
+  <section class="voce" id="glossario-categorie">
+    <h3>Categorie catastali (A/3, C/6, F/5…) e dati catastali</h3>
+    <div class="tabella-scroll"><table>
+      <thead><tr><th>Categoria</th><th>Significato</th></tr></thead>
+      <tbody>
+        <tr><td>A/1, A/8, A/9</td><td>abitazioni signorili, ville, castelli (di lusso: niente agevolazione prima casa)</td></tr>
+        <tr><td>A/2</td><td>abitazione civile</td></tr>
+        <tr><td>A/3</td><td>abitazione economica</td></tr>
+        <tr><td>A/4, A/5</td><td>abitazione popolare, ultrapopolare</td></tr>
+        <tr><td>A/6</td><td>abitazione rurale</td></tr>
+        <tr><td>A/7</td><td>villino</td></tr>
+        <tr><td>A/10</td><td>ufficio, studio privato</td></tr>
+        <tr><td>C/1</td><td>negozio, bottega</td></tr>
+        <tr><td>C/2</td><td>magazzino, deposito, cantina, soffitta</td></tr>
+        <tr><td>C/3</td><td>laboratorio artigianale</td></tr>
+        <tr><td>C/6</td><td>box, garage, posto auto, autorimessa</td></tr>
+        <tr><td>C/7</td><td>tettoia</td></tr>
+        <tr><td>D/…</td><td>immobili a destinazione speciale (capannoni, alberghi, opifici)</td></tr>
+        <tr><td>F/1</td><td>area urbana (senza costruzione)</td></tr>
+        <tr><td>F/2</td><td>unità collabente (rudere)</td></tr>
+        <tr><td>F/3</td><td>in corso di costruzione</td></tr>
+        <tr><td>F/4</td><td>in corso di definizione</td></tr>
+        <tr><td>F/5</td><td>lastrico solare (copertura piana)</td></tr>
+      </tbody>
+    </table></div>
+    <p><strong>Foglio, particella, subalterno</strong>: l'"indirizzo" catastale dell'unità (mappa, lotto di terreno, singola unità nell'edificio).
+      <strong>Classe</strong>: livello di qualità nella categoria. <strong>Consistenza</strong>: vani (abitazioni) o mq. <strong>Visura</strong>: il
+      documento che riporta questi dati e la rendita. I <strong>terreni</strong> stanno nel catasto terreni (qualità di coltura, reddito dominicale e agrario,
+      superficie in ha/are/centiare), senza categoria.</p>
+  </section>
+
+  <section class="voce" id="glossario-rendita">
+    <h3>Rendita catastale e valore catastale</h3>
+    <p>La <strong>rendita catastale</strong> è un reddito convenzionale che il catasto attribuisce a ogni unità (si legge in visura). Moltiplicata per 1,05
+      (rivalutazione del 5%) e per un coefficiente dà il <strong>valore catastale</strong>: 110 (prima casa), 120 (altre abitazioni) nell'imposta di registro,
+      160 per l'IMU. Il valore catastale di solito è molto più basso del valore di mercato.</p>
+  </section>
+
+  <section class="voce" id="glossario-prezzo-valore">
+    <h3>Prezzo-valore</h3>
+    <p>Regola (art. 1, comma 497, L. 266/2005) che permette a una <strong>persona fisica</strong> che compra un'<strong>abitazione</strong> (e pertinenze) di
+      pagare l'imposta di registro sul <strong>valore catastale</strong> invece che sul prezzo, anche se il prezzo è più alto. La Corte Costituzionale
+      (sentenza 6/2014) l'ha estesa alle vendite all'asta. Spesso fa risparmiare molto, soprattutto sulla seconda casa: 9% sul valore catastale invece che sul
+      prezzo. Nel sistema: rendita × 1,05 × 110 (prima casa) o × 120 (seconda casa). Non si applica a società né a immobili non abitativi.</p>
+  </section>
+
+  <section class="voce" id="glossario-imposte">
+    <h3>Imposte di acquisto: registro 9% e 2%, ipotecaria, catastale, prima casa, IVA</h3>
+    <ul>
+      <li><strong>Imposta di registro</strong>: 9% per la seconda casa, 2% per la prima casa, minimo 1.000 €. Base: prezzo o <a href="#glossario-prezzo-valore">prezzo-valore</a>.</li>
+      <li><strong>Imposta ipotecaria e catastale</strong>: 50 € ciascuna (in misura fissa) quando si applica il registro.</li>
+      <li><strong>Prima casa</strong>: agevolazione con requisiti (per esempio residenza nel comune entro 18 mesi, non possedere un'altra abitazione nello stesso
+        comune né altre prime case agevolate; esclusi A/1, A/8, A/9). Chi fa flipping di solito non la usa.</li>
+      <li><strong>IVA</strong>: se a vendere è un'impresa (es. costruttore), la vendita può essere soggetta a IVA invece che a registro. Il sistema assume
+        sempre il registro.</li>
+      <li><strong>IMU</strong>: imposta comunale annuale sugli immobili che non sono abitazione principale; entra nei <a href="#superanalisi-conto">costi di detenzione</a>.</li>
+    </ul>
+  </section>
+
+  <section class="voce" id="glossario-plusvalenza">
+    <h3>Plusvalenza e imposta del 26%</h3>
+    <p>Se un privato rivende entro 5 anni dall'acquisto un immobile (che non è stato la sua abitazione principale per la maggior parte del tempo), la differenza
+      tra prezzo di vendita e costo è una <strong>plusvalenza</strong> tassabile (art. 67 TUIR). Si può chiedere al notaio l'imposta sostitutiva, oggi del 26%.
+      La Superanalisi usa il 26% come stima; per un'impresa il regime è diverso. Verifica con il commercialista.</p>
+  </section>
+
+  <section class="voce" id="glossario-condoni">
+    <h3>Condoni edilizi (L. 47/1985, L. 724/1994, L. 326/2003)</h3>
+    <p>Tre leggi straordinarie che hanno permesso di regolarizzare abusi realizzati entro certe date, pagando oblazione e oneri: 1985 (abusi fino al 1983), 1994
+      (fino al 1993), 2003 (fino al 31 marzo 2003, con limiti più stretti). Una domanda <strong>pendente</strong> è stata presentata ma non ancora definita dal
+      comune: esito, costi e tempi sono incerti (per questo "complessa" e +12 mesi nel prudenziale). Chi compra all'asta, per abusi anteriori al pignoramento e
+      nei limiti di quelle leggi, può di norma presentare domanda di sanatoria entro 120 giorni dal decreto di trasferimento (art. 40 L. 47/1985, art. 46 DPR
+      380/2001): da verificare con un tecnico caso per caso.</p>
+  </section>
+
+  <section class="voce" id="glossario-titoli-sanatoria">
+    <h3>Titoli edilizi e sanatoria: permesso di costruire, SCIA, CILA, accertamento di conformità</h3>
+    <ul>
+      <li><strong>Permesso di costruire</strong> (in passato licenza o concessione edilizia): titolo per nuove costruzioni e interventi importanti.</li>
+      <li><strong>SCIA</strong> (Segnalazione Certificata di Inizio Attività) e <strong>CILA</strong> (Comunicazione di Inizio Lavori Asseverata): titoli per
+        ristrutturazioni e manutenzioni; una CILA o SCIA "tardiva" regolarizza lavori interni già fatti, con sanzione.</li>
+      <li><strong>Accertamento di conformità</strong> (art. 36 DPR 380/2001, e dal 2024 anche art. 36-bis): sanatoria ordinaria per opere conformi alle
+        regole urbanistiche; se non è possibile, l'abuso va rimosso ("da rimuovere" / "non sanabile").</li>
+      <li><strong>DPR 380/2001</strong>: il Testo Unico dell'Edilizia.</li>
+    </ul>
+  </section>
+
+  <section class="voce" id="glossario-agibilita">
+    <h3>Agibilità e APE</h3>
+    <ul>
+      <li><strong>Agibilità</strong> (un tempo "abitabilità"; oggi segnalazione certificata di agibilità, art. 24 DPR 380/2001): attesta sicurezza, igiene e
+        conformità. La mancanza non impedisce l'acquisto all'asta ma va considerata per la rivendita.</li>
+      <li><strong>APE</strong> (Attestato di Prestazione Energetica): classe energetica dell'immobile, obbligatoria per vendere e affittare; nei costi di vendita.</li>
+    </ul>
+  </section>
+
+  <section class="voce" id="glossario-opponibilita">
+    <h3>Locazione opponibile e non opponibile, comodato</h3>
+    <p>Un contratto di affitto è <strong>opponibile</strong> all'acquirente se ha data certa anteriore al pignoramento (art. 2923 c.c.): chi compra deve
+      rispettarlo fino alla scadenza (se supera i 9 anni, solo se trascritto). Non è opponibile se stipulato dopo il pignoramento, e il canone "vile"
+      (inferiore di un terzo al giusto) non è opponibile. Il sistema segna "opponibile" solo se il perito lo dice espressamente; altrimenti "altro". Il
+      <strong>comodato</strong> è un prestito d'uso gratuito, di regola non opponibile se successivo al pignoramento. Una locazione opponibile porta a
+      <a href="#superanalisi-classe">"da scartare"</a> per un'operazione di rivendita a breve.</p>
+  </section>
+
+  <section class="voce" id="glossario-oneri-condominiali">
+    <h3>Spese condominiali arretrate (art. 63 disp. att. c.c.)</h3>
+    <p>Chi compra un'unità in condominio risponde, insieme al vecchio proprietario, dei contributi non pagati dell'anno in corso e di quello precedente. Per
+      questo la Superanalisi mette a carico al massimo 2 anni di spese ordinarie; nel registro si usano gli arretrati indicati dal perito (correggibili). Chiedi
+      all'amministratore la situazione aggiornata.</p>
+  </section>
+
+  <section class="voce" id="glossario-formalita">
+    <h3>Formalità pregiudizievoli, trascrizioni, iscrizioni, usi civici</h3>
+    <ul>
+      <li><strong>Formalità pregiudizievoli</strong>: annotazioni nei registri immobiliari che pesano sul bene: <strong>iscrizioni</strong> (ipoteche) e
+        <strong>trascrizioni</strong> (pignoramenti, sequestri, domande giudiziali). Quelle legate al debito vengono cancellate con il decreto di trasferimento.</li>
+      <li><strong>Non cancellabili</strong>: servitù, vincoli, convenzioni edilizie, alcune domande giudiziali, diritti di terzi: restano all'acquirente.</li>
+      <li><strong>Usi civici, censi, livelli</strong>: antichi diritti collettivi (pascolo, legnatico) o oneri sui terreni; possono limitare la proprietà.</li>
+    </ul>
+  </section>
+
+  <section class="voce" id="glossario-superficie-commerciale">
+    <h3>Superficie commerciale e coefficienti (DPR 138/1998)</h3>
+    <p>La superficie usata per dare un prezzo: i vani al 100% (muri compresi) più le pertinenze con coefficienti ridotti. Il sistema usa balconi e terrazzi
+      30%, giardino e corte 10%, box 50%, cantina 25%; il DPR 138/1998 è il riferimento del catasto per la superficie catastale.</p>
+  </section>
+
+  <section class="voce" id="glossario-investimento">
+    <h3>Termini dell'investimento: flipping, ARV, headroom, holding, ROI</h3>
+    <ul>
+      <li><strong>Flipping</strong>: comprare, ristrutturare e rivendere in tempi brevi.</li>
+      <li><strong>ARV</strong> (After Repair Value): valore di rivendita dopo i lavori.</li>
+      <li><strong>MAX BID / offerta massima</strong>: il prezzo più alto che rispetta gli obiettivi di utile.</li>
+      <li><strong>Headroom</strong> ("margine sull'offerta minima"): offerta massima − offerta minima.</li>
+      <li><strong>Holding / costi di detenzione</strong>: costi mensili mentre possiedi l'immobile (IMU, utenze, condominio, assicurazione).</li>
+      <li><strong>ROI / rendimento sul capitale</strong>: utile diviso capitale investito.</li>
+      <li><strong>Scenario prudenziale / centrale / ottimistico</strong>: tre ipotesi su prezzo di vendita, lavori e tempi.</li>
+    </ul>
+  </section>
+
+  <section class="voce" id="glossario-tecnici">
+    <h3>Termini tecnici del sistema: batch, token, hash, prompt, cascata, cron, heartbeat</h3>
+    <ul>
+      <li><strong>Gemini</strong>: l'intelligenza artificiale di Google che legge le perizie. <strong>Modello</strong>: la versione di Gemini (flash, flash-lite…).</li>
+      <li><strong>Prompt</strong>: le istruzioni date all'AI (v1, v2.x). <strong>Cascata</strong>: elenco di modelli da provare in ordine.</li>
+      <li><strong>Batch</strong>: invio in blocco, asincrono, a metà prezzo. <strong>Sincrono</strong>: una perizia alla volta, subito.</li>
+      <li><strong>Token</strong>: l'unità con cui Gemini conta (e fa pagare) testo e immagini letti e scritti.</li>
+      <li><strong>Hash</strong>: impronta digitale di un file; due file identici hanno lo stesso hash (serve a non rianalizzare la stessa perizia).</li>
+      <li><strong>Cron</strong>: servizio che avvia un processo a orari fissi. <strong>Heartbeat</strong> (battito): segnale mandato a ogni avvio; se manca,
+        scatta l'allarme.</li>
+      <li><strong>GitHub Actions</strong>: il servizio dove girano scanner e controlli. <strong>Supabase</strong>: il database. <strong>Edge Function</strong>:
+        piccolo programma sul server (es. per scaricare il PDF della perizia per il telefono).</li>
+      <li><strong>PWA</strong>: pagina installabile come app. <strong>CSV</strong>: file di testo a colonne, apribile con Excel.</li>
+    </ul>
+  </section>
+
+  <section class="voce" id="glossario-abbreviazioni">
+    <h3>Abbreviazioni</h3>
+    <div class="tabella-scroll"><table>
+      <thead><tr><th>Sigla</th><th>Significato</th></tr></thead>
+      <tbody>
+        <tr><td>PVP</td><td>Portale delle Vendite Pubbliche (Ministero della Giustizia), dove sono pubblicate le aste (art. 490 c.p.c.)</td></tr>
+        <tr><td>CTU</td><td>Consulente Tecnico d'Ufficio (il perito)</td></tr>
+        <tr><td>G.E.</td><td>Giudice dell'Esecuzione</td></tr>
+        <tr><td>R.G.E.</td><td>Ruolo Generale delle Esecuzioni (numero della procedura)</td></tr>
+        <tr><td>OMI</td><td>Osservatorio del Mercato Immobiliare (Agenzia delle Entrate)</td></tr>
+        <tr><td>GEOPOI</td><td>mappa online delle zone OMI</td></tr>
+        <tr><td>c.p.c. / c.c.</td><td>codice di procedura civile / codice civile</td></tr>
+        <tr><td>disp. att.</td><td>disposizioni di attuazione (del codice civile)</td></tr>
+        <tr><td>DPR / DM / L. / DL</td><td>Decreto del Presidente della Repubblica / Decreto Ministeriale / Legge / Decreto-legge</td></tr>
+        <tr><td>TUIR</td><td>Testo Unico delle Imposte sui Redditi</td></tr>
+        <tr><td>CILA / SCIA</td><td>Comunicazione di Inizio Lavori Asseverata / Segnalazione Certificata di Inizio Attività</td></tr>
+        <tr><td>APE</td><td>Attestato di Prestazione Energetica</td></tr>
+        <tr><td>IMU / IVA</td><td>Imposta Municipale Propria / Imposta sul Valore Aggiunto</td></tr>
+        <tr><td>ARV</td><td>After Repair Value (valore dopo i lavori)</td></tr>
+        <tr><td>ROI</td><td>Return On Investment (rendimento)</td></tr>
+        <tr><td>N/D</td><td>non disponibile</td></tr>
+        <tr><td>mq / ha</td><td>metri quadri / ettari (1 ha = 10.000 mq)</td></tr>
+        <tr><td>€/mq</td><td>euro al metro quadro</td></tr>
+        <tr><td>CAP</td><td>codice di avviamento postale</td></tr>
+        <tr><td>v1, v2.6</td><td>versioni del prompt di analisi</td></tr>
+      </tbody>
+    </table></div>
+  </section>
+</section>
+<section class="capitolo" id="faq">
+  <h2>12. Domande frequenti</h2>
+
+  <section class="voce" id="faq-margine-diverso">
+    <h3>Perché il margine del registro è diverso dall'utile della Superanalisi?</h3>
+    <p>Il <a href="#registro-margine">margine del registro</a> è solo valore di stima − offerta minima − sanatoria: un indicatore rapido. L'<a href="#superanalisi-conto">utile
+      della Superanalisi</a> usa il valore di rivendita (OMI o tuo), sottrae imposte, procedura, lavori, imprevisti, tempi, vendita e imposta sulla plusvalenza.
+      Per decidere un'offerta conta la Superanalisi.</p>
+  </section>
+
+  <section class="voce" id="faq-costi-diversi">
+    <h3>Perché le imposte del registro e della Superanalisi non coincidono?</h3>
+    <p>Il registro calcola sul <strong>prezzo base</strong> e, senza rendita, la stima (0,32 del valore). La Superanalisi calcola sul prezzo dell'offerta minima
+      e usa il prezzo-valore solo con la rendita reale di tutte le unità e solo se conviene. Vedi <a href="#superanalisi-imposte">imposte nella Superanalisi</a>.</p>
+  </section>
+
+  <section class="voce" id="faq-valore-sbagliato">
+    <h3>Un valore della perizia mi sembra sbagliato: cosa faccio?</h3>
+    <ol>
+      <li>Apri la Superanalisi: ogni dato ha la pagina della perizia ("p. N"); controlla il PDF a quella pagina.</li>
+      <li>Guarda le <a href="#analisi-formalita">discordanze</a>: spesso l'AI ha già segnalato la contraddizione.</li>
+      <li>Se il problema è la quota o il lotto, confronta con l'annuncio PVP (vale ciò che è in vendita).</li>
+      <li>Correggi quello che puoi: rendita e spese condominiali nel registro, valore di rivendita nella Superanalisi.</li>
+      <li>Chiedi una seconda opinione con i pulsanti AI, allegando la perizia.</li>
+    </ol>
+  </section>
+
+  <section class="voce" id="faq-non-calcolabile">
+    <h3>Perché la Superanalisi dice "non calcolabile" o "calcolo non affidabile"?</h3>
+    <p>"Non calcolabile": si vende solo una quota o un diritto parziale. "Calcolo non affidabile": non c'è una fonte per il valore di rivendita (niente OMI,
+      niente tuo valore, perizia più vecchia di 3 anni): inserisci il tuo valore. Vedi <a href="#superanalisi-verdetto">verdetti</a>.</p>
+  </section>
+
+  <section class="voce" id="faq-avviso">
+    <h3>Perché un'asta è stata analizzata dall'avviso e non dalla perizia?</h3>
+    <p>Quando lo scanner l'ha trovata la perizia non era disponibile o non era riconoscibile. Il <a href="#orari-ricontrollo">ricontrollo</a> riproverà ogni pochi
+      giorni fino alla vendita; quando la trova, l'asta risulta "Aggiornata" e arriva "📄 Perizia trovata al ricontrollo".</p>
+  </section>
+
+  <section class="voce" id="faq-da-riprovare">
+    <h3>Cosa significa "non valutato" o "da riprovare"?</h3>
+    <p>L'analisi non è riuscita (documento illeggibile, lotto non trovato, risposta vuota dell'AI). L'asta resta nel registro e viene ritentata per prima al giro
+      successivo dello scanner. Vedi <a href="#analisi-stato">stato dell'analisi</a>.</p>
+  </section>
+
+  <section class="voce" id="faq-notifica-mancata">
+    <h3>Non mi è arrivata una notifica o lo scanner non è partito</h3>
+    <ul>
+      <li>Controlla in <a href="#config-pianificazione">Configurazione</a> che la scansione automatica sia attiva, con i giorni e gli orari giusti.</li>
+      <li>Con il batch attivo le notifiche delle aste nuove arrivano quando il controllo batch raccoglie i risultati (di norma entro un'ora).</li>
+      <li>Se un automatismo si è fermato, il monitoraggio esterno avvisa via email. Puoi sempre usare "Avvia scanner ora" o "Controlla batch ora".</li>
+    </ul>
+  </section>
+
+  <section class="voce" id="faq-costi-gemini">
+    <h3>Come riduco i costi Gemini?</h3>
+    <ul>
+      <li>Lascia attivo il <a href="#config-modelli">batch</a> (circa metà prezzo).</li>
+      <li>Restringi area, prezzo e tipologie: meno aste nuove, meno analisi.</li>
+      <li>Usa "<a href="#config-altri-filtri">Solo conteggio</a>" per provare nuovi filtri senza spendere.</li>
+      <li>Tieni il ricontrollo a 15 aste per giro o meno (oltre va in batch, più economico ma più lento).</li>
+    </ul>
+  </section>
+
+  <section class="voce" id="faq-condividere">
+    <h3>Come passo una perizia a ChatGPT, Claude o Gemini dal telefono?</h3>
+    <p>Nella Superanalisi: "📱 Prepara la perizia da condividere", poi "📤 Condividi la perizia…" e scegli l'app. Con Gemini usa "📎 Condividi solo il PDF" e incolla
+      il prompt (è negli appunti). Vedi <a href="#superanalisi-seconda-opinione">seconda opinione</a>.</p>
+  </section>
+
+  <section class="voce" id="faq-confrontare">
+    <h3>Come scelgo le migliori tra molte aste?</h3>
+    <ol>
+      <li>Nel registro filtra per punteggio, tipo e occupazione e metti la stella a quelle interessanti.</li>
+      <li>Seleziona 2-10 aste e apri la <a href="#gruppo">Superanalisi di gruppo</a>: classifica con il nostro conto.</li>
+      <li>Passa il prompt di gruppo a un'AI con ricerca web per i prezzi di vendita reali della zona.</li>
+      <li>Per le 2-3 migliori apri la Superanalisi singola, controlla la perizia, inserisci il tuo valore di rivendita e chiedi la seconda opinione con la perizia allegata.</li>
+      <li>Prima dell'offerta: sopralluogo con il custode, verifica urbanistica in comune, situazione condominiale aggiornata.</li>
+    </ol>
+  </section>
+</section>
+
+      <div id="nessun-risultato" class="nessun-risultato nascosto">Nessuna voce contiene tutte le parole cercate. Prova con meno parole o con un sinonimo.</div>
+    </main>
+  </div>
+  <button type="button" class="torna-su" onclick="window.scrollTo({top: 0, behavior: 'smooth'})" aria-label="Torna all'inizio">↑</button>
+</div>
+
+<script>
+  // Stessa chiave pubblica e stessa password di lettura di index.html.
+  const SUPABASE_URL = "https://igemwrrcmsgaotoqvdzt.supabase.co";
+  const SUPABASE_ANON_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImlnZW13cnJjbXNnYW90b3F2ZHp0Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODkzMDc2MjksImV4cCI6MjEwNDg4MzYyOX0.YkUOBTOb40C-N0TkuDN0o5N7fVvI_qX2F1grUp-SVe8";
+  const CHIAVE_PASSWORD_LETTURA = "aste_password_lettura_v1";
+
+  async function chiamaRpc(nome, payload) {
+    const r = await fetch(`${SUPABASE_URL}/rest/v1/rpc/${nome}`, {
+      method: "POST",
+      headers: { apikey: SUPABASE_ANON_KEY, Authorization: `Bearer ${SUPABASE_ANON_KEY}`, "Content-Type": "application/json" },
+      body: JSON.stringify(payload),
+    });
+    return r.json();
+  }
+  function leggiLocale(k) { try { return localStorage.getItem(k); } catch (e) { return null; } }
+  function scriviLocale(k, v) { try { localStorage.setItem(k, v); } catch (e) {} }
+
+  async function messaggioPasswordRifiutata() {
+    try {
+      const secondi = await chiamaRpc("blocco_password", { p_tipo: "lettura" });
+      if (typeof secondi === "number" && secondi > 0) return `Troppi tentativi errati: riprova tra ${Math.ceil(secondi / 60)} minuti.`;
+    } catch (e) {}
+    return "Password errata.";
+  }
+
+  function mostraPagina() {
+    document.getElementById("gate").classList.add("nascosto");
+    document.getElementById("pagina").classList.remove("nascosto");
+    costruisciIndice();
+    if (location.hash) {
+      const el = document.getElementById(decodeURIComponent(location.hash.slice(1)));
+      if (el) setTimeout(() => el.scrollIntoView(), 50);
+    }
+  }
+
+  function mostraGate() {
+    document.getElementById("testo-gate").textContent = "Inserisci la password di lettura del registro.";
+    document.getElementById("modulo-gate").classList.remove("nascosto");
+    document.getElementById("campo-password").focus();
+  }
+
+  // Come provaSbloccoLetturaAutomatico di index.html: se la password di
+  // lettura non è attiva, si entra; se è ricordata e valida, si entra.
+  async function provaSbloccoAutomatico() {
+    try {
+      if (!(await chiamaRpc("serve_password_lettura", {}))) { mostraPagina(); return; }
+    } catch (e) {}
+    const ricordata = leggiLocale(CHIAVE_PASSWORD_LETTURA);
+    if (ricordata) {
+      try {
+        if (await chiamaRpc("verifica_password_lettura", { password_tentativo: ricordata })) { mostraPagina(); return; }
+      } catch (e) {}
+    }
+    mostraGate();
+  }
+
+  async function sblocca() {
+    const password = document.getElementById("campo-password").value;
+    const errore = document.getElementById("errore-gate");
+    errore.textContent = "";
+    if (!password) return;
+    try {
+      if (await chiamaRpc("verifica_password_lettura", { password_tentativo: password })) {
+        scriviLocale(CHIAVE_PASSWORD_LETTURA, password);
+        mostraPagina();
+      } else {
+        errore.textContent = await messaggioPasswordRifiutata();
+      }
+    } catch (e) { errore.textContent = "Impossibile contattare il database. Controlla la connessione."; }
+  }
+
+  // ---------------------------------------------------------------- indice
+  function costruisciIndice() {
+    const capitoli = [...document.querySelectorAll("section.capitolo")];
+    const html = capitoli.map((c) => {
+      const voci = [...c.querySelectorAll("section.voce")];
+      return `<li data-capitolo="${c.id}"><a href="#${c.id}" onclick="chiudiIndice()">${c.querySelector("h2").textContent}</a>
+        <ol>${voci.map((v) => `<li data-voce="${v.id}"><a href="#${v.id}" onclick="chiudiIndice()">${v.querySelector("h3").firstChild.textContent.trim()}</a></li>`).join("")}</ol></li>`;
+    }).join("");
+    document.getElementById("indice").innerHTML = `<ol>${html}</ol>`;
+    // Link permanente (#) accanto al titolo di ogni voce.
+    document.querySelectorAll("section.voce h3").forEach((h) => {
+      const id = h.closest("section.voce").id;
+      if (!h.querySelector("a.ancora")) h.insertAdjacentHTML("beforeend", ` <a class="ancora" href="#${id}" title="Link a questa voce">#</a>`);
+    });
+  }
+  function alternaIndice() { document.getElementById("indice").classList.toggle("aperto"); }
+  function chiudiIndice() { document.getElementById("indice").classList.remove("aperto"); }
+
+  // ---------------------------------------------------------------- ricerca
+  // Trova le voci che contengono TUTTE le parole scritte (senza distinguere
+  // maiuscole, minuscole e accenti), nasconde le altre ed evidenzia le parole.
+  const normalizza = (t) => t.toLowerCase().normalize("NFD").replace(/[̀-ͯ]/g, "");
+
+  function togliEvidenziazioni() {
+    document.querySelectorAll("#contenuto mark").forEach((m) => m.replaceWith(document.createTextNode(m.textContent)));
+    document.getElementById("contenuto").normalize();
+  }
+
+  function evidenzia(radice, parole) {
+    const walker = document.createTreeWalker(radice, NodeFilter.SHOW_TEXT);
+    const nodi = [];
+    while (walker.nextNode()) nodi.push(walker.currentNode);
+    for (const nodo of nodi) {
+      const testo = nodo.textContent, norm = normalizza(testo);
+      const intervalli = [];
+      for (const p of parole) {
+        let i = norm.indexOf(p);
+        while (i !== -1) { intervalli.push([i, i + p.length]); i = norm.indexOf(p, i + p.length); }
+      }
+      if (!intervalli.length) continue;
+      intervalli.sort((a, b) => a[0] - b[0]);
+      const frammento = document.createDocumentFragment();
+      let pos = 0;
+      for (const [a, b] of intervalli) {
+        if (a < pos) continue;
+        frammento.append(testo.slice(pos, a));
+        const m = document.createElement("mark"); m.textContent = testo.slice(a, b); frammento.append(m);
+        pos = b;
+      }
+      frammento.append(testo.slice(pos));
+      nodo.replaceWith(frammento);
+    }
+  }
+
+  function cerca() {
+    const q = normalizza(document.getElementById("campo-ricerca").value.trim());
+    const parole = q.split(/\s+/).filter((p) => p.length >= 2);
+    togliEvidenziazioni();
+    let trovate = 0;
+    document.querySelectorAll("section.capitolo").forEach((c) => {
+      let visibiliNelCapitolo = 0;
+      c.querySelectorAll("section.voce").forEach((v) => {
+        const ok = !parole.length || parole.every((p) => normalizza(v.textContent).includes(p));
+        v.classList.toggle("nascosto", !ok);
+        const li = document.querySelector(`li[data-voce="${v.id}"]`);
+        if (li) li.classList.toggle("senza-risultati", !ok);
+        if (ok) { visibiliNelCapitolo++; if (parole.length) evidenzia(v, parole); }
+      });
+      c.classList.toggle("nascosto", !visibiliNelCapitolo);
+      const liC = document.querySelector(`li[data-capitolo="${c.id}"]`);
+      if (liC) liC.classList.toggle("senza-risultati", !visibiliNelCapitolo);
+      trovate += visibiliNelCapitolo;
+    });
+    document.getElementById("conteggio-ricerca").textContent = parole.length ? `${trovate} ${trovate === 1 ? "voce" : "voci"}` : "";
+    document.getElementById("nessun-risultato").classList.toggle("nascosto", !(parole.length && !trovate));
+  }
+
+  let attesaRicerca = null;
+  document.getElementById("campo-ricerca").addEventListener("input", () => { clearTimeout(attesaRicerca); attesaRicerca = setTimeout(cerca, 150); });
+  document.getElementById("campo-ricerca").addEventListener("keydown", (e) => { if (e.key === "Escape") { e.target.value = ""; cerca(); } });
+  document.addEventListener("keydown", (e) => {
+    if (e.key === "/" && document.activeElement.tagName !== "INPUT") { e.preventDefault(); document.getElementById("campo-ricerca").focus(); }
+  });
+
+  provaSbloccoAutomatico();
+</script>
+</body>
+</html>

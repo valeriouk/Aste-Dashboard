@@ -510,7 +510,7 @@
 
       <div class="barra-ripristino">
         <button type="button" class="bottone-secondario" id="bottone-ripristina-predefiniti" onclick="confermaRipristinaPredefiniti()">↺ Ripristina tutti i valori predefiniti</button>
-        <p class="nota-campo">Riporta tutte le sette card qui sotto — area, prezzo, tipologia, altri filtri, modelli, pianificazione (lun-ven alle 10:00) e ricerca della perizia (estesa, con ricontrollo ogni 2 giorni, massimo 15 aste per giro) — ai valori predefiniti. Salva subito, come ogni altra modifica in questa pagina.</p>
+        <p class="nota-campo">Riporta tutte le sette card qui sotto — area, prezzo, tipologia, altri filtri, modelli, pianificazione (lun-ven alle 10:00) e ricerca della perizia (estesa, con ricontrollo ogni 2 giorni, massimo 15 aste per giro) — ai valori predefiniti. La scelta del prompt (v1/v2) resta com'è. Salva subito, come ogni altra modifica in questa pagina.</p>
         <p id="messaggio-ripristina-predefiniti" class="messaggio-salvataggio-card"></p>
       </div>
 
@@ -740,7 +740,7 @@
         <label for="campo-solo-conteggio">Modalità di esecuzione</label>
         <select id="campo-solo-conteggio" onchange="aggiornaStatoConteggiaNonAnalizzate()">
           <option value="false">Normale</option>
-          <option value="true">Solo conteggio (nessuna notifica né scrittura)</option>
+          <option value="true">Solo conteggio (nessuna analisi né scrittura: arriva solo il messaggio col conteggio)</option>
         </select>
         <label class="etichetta-checkbox">
           <input type="checkbox" id="campo-conteggia-non-analizzate" disabled>

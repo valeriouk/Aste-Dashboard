@@ -2211,7 +2211,7 @@
       <p class="eyebrow">Scansione Aste Giudiziarie</p>
       <h1><a href="index.html" title="Ricarica il registro" style="color:inherit;text-decoration:none;">Registro Opportunità</a></h1>
       <p class="sottotitolo">Aste residenziali filtrate per prezzo, distanza e margine potenziale stimato.</p>
-      <p class="versione-pagina">v2.22 ·<a href="config.html">Configurazione</a> · aggiornato <strong id="testo-aggiornato">—</strong></p>
+      <p class="versione-pagina">v2.22 ·<a href="config.html">Configurazione</a> · <a href="manuale.html">Manuale</a> · aggiornato <strong id="testo-aggiornato">—</strong></p>
     </div>
     <div class="statistiche-compatte">
       <div class="stat-compatta">
@@ -2286,7 +2286,7 @@
         <button type="button" class="pillola" id="pillola-concluse" onclick="alternaMostraConcluse()">Concluse</button>
       </div>
       <div class="gruppo-pillole" id="gruppo-aggiornate">
-        <button type="button" class="pillola" id="pillola-aggiornate" onclick="alternaSoloAggiornate()" title="Mostra solo le aste con perizia ricontrollata nelle ultime 24 ore" aria-label="Aggiornate">🔄<span class="testo-pillola-mobile"> Aggiornate</span></button>
+        <button type="button" class="pillola" id="pillola-aggiornate" onclick="alternaSoloAggiornate()" title="Mostra solo le aste con perizia ricontrollata e rianalizzata nelle ultime 24 ore" aria-label="Aggiornate">🔄<span class="testo-pillola-mobile"> Aggiornate</span></button>
       </div>
       <div class="filtro-punteggio">
         <label>Punteggio <span id="valore-punteggio-minimo">0</span>–<span id="valore-punteggio-massimo">100</span></label>
@@ -2387,7 +2387,7 @@
   <div id="overlay-password" class="overlay-password nascosto">
     <div class="riquadro-password-inline">
       <h3>Password richiesta</h3>
-      <p>Serve solo la prima volta in questa sessione, per preferiti, scarti e note.</p>
+      <p>Serve solo la prima volta in questa sessione, per preferiti, scarti, note, link utili, correzioni dei costi e azioni in blocco.</p>
       <input type="password" id="campo-password-inline" placeholder="Password" autocomplete="current-password" onkeydown="if(event.key==='Enter') confermaPasswordInline()">
       <div class="riga-bottoni-password">
         <button type="button" class="bottone-password-annulla" onclick="chiudiModalePassword()">Annulla</button>
@@ -3818,12 +3818,9 @@
   // uno scan tutta Italia) un blocco può contenere anche centinaia di
   // aste, e un toast per ciascuna sarebbe inutilizzabile.
   //
-  // Le note esistenti su un'asta selezionata vengono azzerate da un
-  // cambio di stato in blocco esattamente come lo sarebbero da un
-  // cambio singolo (stessa regola, in imposta_stato_preferito lato
-  // server) — nessuna eccezione speciale per il blocco, per non avere
-  // due comportamenti diversi per la stessa azione a seconda di come
-  // viene lanciata.
+  // Le note NON vengono toccate dai cambi di stato, né singoli né in
+  // blocco: la nota vive in LINK_UTILI (tabella link_utili_asta),
+  // indipendente da preferito/scartato — vedi il commento su LINK_UTILI.
   //
   // Le scritture del blocco (Preferisci/Scarta/Rimuovi flag/Annulla) NON
   // passano da accodaScritturaProtetta (la coda seriale usata dai clic
@@ -4203,8 +4200,8 @@
 
   // Chiamata SOLO su un vero cambio di stato (mai una riconferma dello
   // stesso: quel caso non passa più da qui, vedi onClickStella/Scarta
-  // sopra) — la nota va quindi sempre cancellata in locale, stessa
-  // cascata già applicata lato server in gestisciImpostaStatoPreferito.
+  // sopra). La nota non viene toccata: vive in LINK_UTILI, indipendente
+  // dallo stato.
   async function eseguiImpostaStato(id, stato) {
     const asta = ASTE.find(a => a.id === id);
     if (!asta) return;
@@ -5896,9 +5893,6 @@
       ? `<svg viewBox="0 0 24 24" fill="currentColor"><circle cx="12" cy="12" r="10"/><path d="M8.7 8.7l6.6 6.6m0-6.6l-6.6 6.6" stroke="var(--surface)" stroke-width="1.8" stroke-linecap="round" fill="none"/></svg>`
       : `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"><circle cx="12" cy="12" r="9.2" stroke-linecap="butt"/><path d="M9 9l6 6m0-6l-6 6"/></svg>`;
 
-    // La nuvoletta compare solo se l'asta è preferita o scartata — una
-    // nota senza uno dei due stati non esiste, stessa invarianza già
-    // imposta lato server nella funzione salva_nota_preferito sul database.
     // Sempre visibile, indipendente da preferito/scartato — la nota vive
     // in LINK_UTILI, disponibile per qualunque asta (vedi il commento
     // sulla dichiarazione di LINK_UTILI).
