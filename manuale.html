@@ -200,7 +200,7 @@
       <li><strong>Calcoli e scrittura nel database</strong>: margine stimato, €/mq, livello di ristrutturazione, punteggio; l'asta compare nel
         registro e arriva una <a href="#notifiche">notifica Telegram</a>.</li>
       <li><strong>Dopo il giro</strong>: <a href="#orari-ricontrollo">ricontrollo delle perizie</a> per le aste ancora senza perizia,
-        <a href="#omi-assegnazione">assegnazione dei valori OMI</a>, e il lunedì il <a href="#orari-promemoria-omi">promemoria OMI</a>.</li>
+        <a href="#orari-storico">storico delle aste</a> dal PVP, <a href="#omi-assegnazione">assegnazione dei valori OMI</a>, e il lunedì il <a href="#orari-promemoria-omi">promemoria OMI</a>.</li>
     </ol>
     <p>Poi ci sei tu: nel registro filtri, metti le stelle alle aste interessanti, apri la <a href="#superanalisi">Superanalisi</a> per il conto
       completo dell'operazione, e ricevi i <a href="#orari-preferiti">promemoria</a> prima delle vendite.</p>
@@ -269,6 +269,7 @@
       <tbody>
         <tr><td><a href="#orari-scanner">Scanner</a></td><td>Agli orari scelti in <a href="#config-pianificazione">Configurazione → Pianificazione</a> (10:00 e/o 16:00, ora italiana, nei giorni scelti; predefinito lun-ven alle 10:00). A mano con "Avvia scanner ora".</td><td>minuti (dipende dalle aste nuove)</td><td>sì, per le aste nuove</td></tr>
         <tr><td><a href="#orari-ricontrollo">Ricontrollo perizie</a></td><td>Alla fine di ogni giro dello scanner</td><td>15-30 s per asta</td><td>solo se trova una perizia nuova</td></tr>
+        <tr><td><a href="#orari-storico">Storico delle aste</a></td><td>Alla fine di ogni giro dello scanner</td><td>al massimo 4 minuti per giro (2-10 s per asta)</td><td>no</td></tr>
         <tr><td><a href="#omi-assegnazione">Assegnazione OMI</a></td><td>Alla fine di ogni giro dello scanner; dopo un controllo batch che ha trovato batch; dopo un'importazione OMI</td><td>secondi</td><td>no</td></tr>
         <tr><td><a href="#orari-promemoria-omi">Promemoria OMI</a></td><td>Il lunedì, dentro il giro dello scanner</td><td>—</td><td>no</td></tr>
         <tr><td><a href="#orari-batch">Controllo batch</a></td><td>Circa ogni ora, tutto il giorno; a mano con "Controlla batch ora"</td><td>meno di 1 minuto se non c'è nulla</td><td>no (i batch sono già pagati all'invio)</td></tr>
@@ -345,6 +346,26 @@
       <li><strong>Notifiche</strong>: "📄 Perizia trovata al ricontrollo" per ogni asta aggiornata e un riepilogo "🔁 Ricontrollo perizie".</li>
       <li><strong>Limite</strong>: le aste che hanno <em>già</em> una perizia non vengono ricontrollate; se su PVP compare un'integrazione della perizia,
         il sistema non se ne accorge.</li>
+    </ul>
+  </section>
+
+  <section class="voce" id="orari-storico">
+    <h3>Storico delle aste (dopo ogni giro dello scanner)</h3>
+    <p>Cerca sul PVP le aste precedenti dello stesso immobile, per mostrare nel registro il <a href="#registro-tentativo">tentativo e i ribassi veri</a>.
+      Nessun costo Gemini: solo richieste al PVP.</p>
+    <ul>
+      <li><strong>Quando</strong>: alla fine di ogni giro dello scanner, non in modalità "solo conteggio". Al massimo circa 4 minuti per giro: le aste
+        rimaste vengono fatte al giro successivo.</li>
+      <li><strong>Quali aste</strong>: quelle con vendita da oggi in poi. Prima quelle senza storico (dalla vendita più vicina), poi le altre una volta a
+        settimana, per leggere gli esiti pubblicati dopo. Dopo un errore si riprova il giorno dopo.</li>
+      <li><strong>Come riconosce l'immobile</strong>: dai dettagli PVP legge procedura (numero, anno, tribunale), lotto e dati catastali; cerca tutte le
+        aste della stessa procedura e tiene quelle con data precedente che hanno almeno un immobile catastale (foglio, particella, subalterno) in comune.
+        Se i dati catastali mancano usa il numero di lotto; se la procedura ha un solo lotto a ogni data le abbina tutte. Con dati catastali diversi
+        l'asta non viene abbinata, anche con lo stesso numero di lotto.</li>
+      <li><strong>Esito</strong>: quello pubblicato dal PVP (deserta, aggiudicata, sospesa), che però manca per circa metà delle aste passate.</li>
+      <li><strong>Limiti</strong>: le aste mai pubblicate sul PVP (per esempio prima del 2018) non si vedono; il registro segnala quando un ribasso è più
+        ampio del solito o il primo tentativo trovato parte già molto sotto la stima. Se il PVP non risponde lo storico già calcolato resta com'è, e dopo
+        3 errori di fila il giro si ferma lì.</li>
     </ul>
   </section>
 
@@ -449,8 +470,9 @@
     <p>Filtra mentre scrivi, senza distinguere maiuscole e minuscole, cercando il testo esatto (non sinonimi) in: comune e indirizzo, descrizione
       del lotto, note dell'AI, la tua nota personale, tipologia (codici PVP come "ABITAZIONE_TIPO_ECO"), stato di occupazione, formalità, abusi edilizi,
       data di vendita nel formato GG/MM/AAAA (es. "15/09").</p>
-    <p>Parole speciali sul <a href="#registro-tentativo">tentativo probabile</a>: "2°", "3°"…, "secondo", "terzo", "quarto", "quinto", "tentativo",
-      "riproposizione", "ribasso", "sconto", "44%". Trovano solo le aste con un tentativo stimato.</p>
+    <p>Parole speciali sul <a href="#registro-tentativo">tentativo</a>: "1°", "2°", "3°"…, "primo", "secondo", "terzo"…, "tentativo", "prima asta",
+      "riproposizione", "ribasso", "sconto", "25%" (ribasso totale dal 1° tentativo), "deserta" (almeno un'asta precedente deserta). Trovano solo le
+      aste che hanno lo <a href="#orari-storico">storico</a>.</p>
   </section>
 
   <section class="voce" id="registro-filtro-tipo">
@@ -561,29 +583,30 @@
       <li><strong>🏁 Conclusa</strong>: data di vendita passata.</li>
       <li><strong>🚩 zona segnalata</strong> (es. "Librino / San Cristoforo"): etichetta informativa decisa dallo scanner per CAP o, se manca il CAP, per
         nome della via. <strong>Non</strong> esclude l'asta e non cambia il punteggio.</li>
-      <li><strong>↓ N° tentativo probabile · -X%</strong>: vedi <a href="#registro-tentativo">Tentativo probabile</a>.</li>
+      <li><strong>↓ N° tentativo · -X% dal 1°</strong> (blu tenue) oppure <strong>1° tentativo</strong> (grigio): vedi
+        <a href="#registro-tentativo">Tentativo e storico delle aste</a>.</li>
       <li><strong>🕓 / ✉️ / 📅 / ✅ visita</strong>: stato della visita all'immobile; il badge con la data diventa ambra dai 5 giorni prima e rosso il giorno
         stesso. Vedi <a href="#registro-visite">Gestione delle visite</a>.</li>
     </ul>
   </section>
 
   <section class="voce" id="registro-tentativo">
-    <h3>Tentativo probabile (ribasso) — come si calcola</h3>
-    <div class="formula">sconto = 1 − prezzo base ÷ valore di stima</div>
-    <div class="tabella-scroll"><table>
-      <thead><tr><th>Sconto</th><th>Tentativo</th></tr></thead>
-      <tbody>
-        <tr><td>sotto 12%</td><td>nessun badge (vicino al valore pieno)</td></tr>
-        <tr><td>12% - 33%</td><td>2° tentativo</td></tr>
-        <tr><td>34% - 50%</td><td>3°</td></tr>
-        <tr><td>51% - 62%</td><td>4°</td></tr>
-        <tr><td>63% o più</td><td>5° o oltre</td></tr>
-      </tbody>
-    </table></div>
-    <p>Perché così: di solito a ogni asta deserta il prezzo base scende del 25% (2° tentativo ≈ 25% di sconto, 3° ≈ 44% perché 0,75 × 0,75 = 0,5625,
-      4° ≈ 58%). Le fasce sono larghe perché alcuni tribunali ribassano del 20%. Si usa il <strong>prezzo base</strong>, non l'offerta minima: l'offerta
-      minima è sempre il 75% del prezzo base dello stesso turno, e usarla conterebbe due volte lo stesso sconto. Il PVP non dichiara il numero del
-      tentativo, quindi è sempre "probabile". Un colore blu tenue: spesso è una buona notizia per chi cerca margine.</p>
+    <h3>Tentativo e storico delle aste (dal PVP)</h3>
+    <p>Dati veri letti dal PVP dallo <a href="#orari-storico">storico delle aste</a>, non più una stima dallo sconto sulla perizia.</p>
+    <ul>
+      <li><strong>Badge nella card</strong>: "↓ 2° tentativo · -25% dal 1°" quando ci sono aste precedenti dello stesso immobile (il ribasso è tra il
+        prezzo base del 1° tentativo trovato e quello attuale); "1° tentativo" in grigio quando non ce ne sono. Nessun badge se lo storico non è ancora
+        stato calcolato (per esempio un'asta appena trovata, fino al giro successivo) o se il PVP non ha risposto.</li>
+      <li><strong>📉 Storico delle aste (PVP)</strong>, nella <a href="#registro-dettaglio">finestra dei dettagli</a>: una riga per tentativo con data (clic
+        = apre quell'annuncio sul PVP), prezzo base, esito e ribasso rispetto al tentativo prima; l'ultima riga è l'asta attuale ("in corso" o
+        "conclusa"). Se il PVP non ha pubblicato l'esito compare "non venduta · esito non pubblicato": c'è un tentativo dopo, quindi non è stata venduta.</li>
+      <li><strong>Sotto la tabella</strong>: ribasso totale dal 1° tentativo (in % e in euro); di quanto il prezzo base attuale è sotto la stima del perito;
+        procedura (RG, tribunale, lotto) e dati catastali (foglio, particella, subalterno), utili per una visura.</li>
+      <li><strong>Avvisi</strong>: "⚠️ Ribasso più ampio del solito" quando tra due tentativi il prezzo scende sotto il 66% del precedente (due ribassi del
+        25% danno il 56%): forse un'asta intermedia non è stata pubblicata sul PVP; "Il 1° tentativo trovato parte già X% sotto la stima" quando parte
+        sotto l'85% della stima: possono esserci aste precedenti non sul PVP; "riconosciute dal numero di lotto" quando mancano i dati catastali
+        (abbinamento meno sicuro, da verificare); "storico si completa ai prossimi giri" per le procedure con molti lotti.</li>
+    </ul>
   </section>
 
   <section class="voce" id="registro-margine">
@@ -666,6 +689,7 @@
       <li>Tribunale, Disponibilità (PVP) (lo stato dichiarato nell'annuncio), Prezzo base, Rilancio minimo, Superficie, €/mq, Spese sanatoria, Abusi
         edilizi, Formalità pregiudizievoli (in rosso se c'è qualcosa oltre la normale ipoteca), Fonte analisi (quale documento è stato letto), Modello AI,
         ID Annuncio;</li>
+      <li><a href="#registro-tentativo">📉 Storico delle aste (PVP)</a>: i tentativi precedenti dello stesso immobile, con ribassi ed esiti;</li>
       <li>📍 Posizione: mappa con un cerchio di 500 m (se ci sono le coordinate);</li>
       <li>note dell'AI e descrizione del lotto;</li>
       <li><a href="#registro-costi-trasferimento">💶 Costi di trasferimento</a> e <a href="#registro-ristrutturazione">🔨 Costi di ristrutturazione</a>;</li>
@@ -774,7 +798,7 @@
     <ul>
       <li><strong>Condividi</strong>: menu di condivisione del telefono, oppure "Copia link", "Invia email", "Invia su WhatsApp". Il link apre direttamente
         la scheda dell'asta (<code>index.html#ID</code>, chi lo apre deve avere l'accesso al registro).</li>
-      <li><strong>Stampa</strong>: stampa o salva in PDF la sola scheda, con data e link PVP; include il tentativo probabile, esclude pulsanti e mappa.</li>
+      <li><strong>Stampa</strong>: stampa o salva in PDF la sola scheda, con data e link PVP; include il tentativo e lo storico delle aste, esclude pulsanti e mappa.</li>
       <li><strong>Espandi</strong> (computer): finestra più larga; la scelta resta passando da un'asta all'altra.</li>
     </ul>
   </section>
@@ -821,23 +845,24 @@
   <section class="voce" id="registro-confronta">
     <h3>⇄ Confronta (2 o 3 aste)</h3>
     <p>Affianca 2 o 3 aste selezionate: punteggio, indirizzo, stella/scarto e le righe Margine stimato, Offerta minima, Valore stima, Superficie, €/mq
-      (offerta), Stato occupazione, Distanza, Vendita, Probabile riproposizione. Con 1 o più di 3 aste il pulsante è disattivato.</p>
+      (offerta), Stato occupazione, Distanza, Vendita, Tentativo (storico PVP). Con 1 o più di 3 aste il pulsante è disattivato.</p>
   </section>
 
   <section class="voce" id="registro-csv">
-    <h3>Colonne del CSV (43)</h3>
+    <h3>Colonne del CSV (45)</h3>
     <p>File separato da punto e virgola (per Excel in italiano), con codifica che conserva gli accenti. Le prime 22 colonne sono quelle di sempre, le
-      altre 21 sono state aggiunte in coda. Costi di trasferimento e di ristrutturazione non sono esportati.</p>
+      altre 23 sono state aggiunte in coda. Costi di trasferimento e di ristrutturazione non sono esportati.</p>
     <ol>
       <li>ID annuncio</li><li>Comune / indirizzo</li><li>Tipologia (codici PVP)</li><li>Lotto</li><li>Tribunale</li>
       <li>Punteggio (vuoto se non valutata)</li><li>Margine stimato</li><li>Offerta minima</li><li>Prezzo base</li><li>Valore stima</li>
       <li>Superficie mq</li><li>Euro/mq offerta</li><li>Stato occupazione</li><li>Disponibilita PVP</li><li>Formalita pregiudizievoli</li>
-      <li>Abusi edilizi</li><li>Spese sanatoria</li><li>Probabile tentativo ("3° - 44%")</li><li>Data vendita</li><li>Stato (Preferito / Scartato)</li>
+      <li>Abusi edilizi</li><li>Spese sanatoria</li><li>Tentativo (storico PVP): "3° - 44%" (ribasso dal 1° tentativo) o "1°"</li><li>Data vendita</li><li>Stato (Preferito / Scartato)</li>
       <li>Nota</li><li>Link PVP</li><li>Link perizia</li><li>Fonte documento</li><li>Data perizia</li>
       <li>Versione prompt</li><li>Stato analisi (<a href="#analisi-stato">ok / vuota</a>)</li><li>Quota in vendita</li><li>Valore mercato CTU</li><li>Valore finale CTU</li>
       <li>Valore finale riferito a (intero / quota)</li><li>OMI zona (Agenzia Entrate - OMI)</li><li>OMI tipologia</li><li>OMI min euro/mq</li><li>OMI max euro/mq</li>
       <li>OMI semestre</li><li>Classe manutenzione</li><li>Livello ristrutturazione</li><li>Arretrati condominiali (tua correzione se presente)</li><li>Rendita catastale (tua correzione se presente)</li>
       <li>Discordanze (quante)</li><li>Visita (stato)</li><li>Visita (data e ora)</li>
+      <li>Prezzo base 1 tentativo</li><li>Data 1 tentativo</li>
     </ol>
   </section>
 
@@ -868,7 +893,7 @@
   <section class="voce" id="config-avvio-scanner">
     <h3>"▶ Avvia scanner ora"</h3>
     <p>Avvia subito un giro completo dello scanner con i filtri attuali, anche se la pianificazione è in pausa o non è l'orario: ricerca su PVP, analisi
-      Gemini (subito o in batch, secondo le impostazioni), notifiche, poi ricontrollo perizie e OMI. <strong>Consuma Gemini</strong> per le aste nuove
+      Gemini (subito o in batch, secondo le impostazioni), notifiche, poi ricontrollo perizie, storico delle aste e OMI. <strong>Consuma Gemini</strong> per le aste nuove
       e minuti GitHub. Messaggi: "Avvio in corso…", "Scanner avviato." (con eventuale link "Apri esecuzione"), oppure l'errore.</p>
   </section>
 
@@ -1711,7 +1736,7 @@
         Un'offerta tra minima e base può non bastare se il giudice ritiene di poter vendere meglio.</li>
       <li><strong>Rilancio minimo</strong>: l'aumento minimo tra un'offerta e l'altra nella gara tra più offerenti.</li>
       <li><strong>Ribasso / tentativo</strong>: se l'asta va deserta, il prezzo base della successiva scende (di norma fino a un quarto). Vedi
-        <a href="#registro-tentativo">tentativo probabile</a>.</li>
+        <a href="#registro-tentativo">tentativo e storico delle aste</a>.</li>
       <li><strong>Vendita senza incanto</strong>, <strong>asincrona telematica</strong>: offerte segrete depositate prima, poi eventuale gara online in più giorni.</li>
       <li><strong>Cauzione</strong>: di solito il 10% del prezzo offerto, versata con l'offerta; persa se l'aggiudicatario non paga il saldo.</li>
     </ul>

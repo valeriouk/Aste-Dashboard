@@ -1602,12 +1602,27 @@
     border-bottom: 1px solid var(--border);
     border-radius: 16px 16px 0 0;
   }
-  /* "Tentativo probabile" non compare più nell'intestazione a schermo: è
+  /* Il badge del tentativo non compare più nell'intestazione a schermo: è
      già sulla card nella griglia ed era il badge più lungo, quello che
      più allungava il blocco fisso. Resta solo in stampa/PDF (vedi
      @media print) — lì la card non c'è, e la scheda esportata
      perderebbe l'informazione. */
   .finestra-dettagli-header .badge-tentativo { display: none; }
+  /* Asta al 1° tentativo sul PVP: informazione neutra, grigia. */
+  .badge-tentativo.primo { background: var(--surface-2); color: var(--ink-muted); }
+  /* Storico delle aste nei dettagli (colonna storico_aste, storico_aste.py). */
+  .tabella-storico td:nth-child(2) a { color: inherit; }
+  .tabella-storico tr.attuale td { font-weight: 700; color: var(--primary); }
+  .tabella-storico .ribasso-anomalo { color: var(--danger); cursor: help; }
+  .tabella-storico td:nth-child(4) { white-space: normal; }
+  @media (max-width: 640px) {
+    /* Telefono: tutte e cinque le colonne visibili senza scorrere di lato. */
+    .tabella-storico { font-size: .74rem; }
+    .tabella-storico th, .tabella-storico td { padding: 6px 4px; }
+    .tabella-storico th { white-space: normal; }
+    .tabella-storico .storico-esteso { display: none; }
+  }
+  @media (min-width: 641px) { .tabella-storico .storico-breve { display: none; } }
   .finestra-dettagli-testata {
     display: flex;
     gap: 14px;
@@ -3797,7 +3812,7 @@
     "Punteggio", "Margine stimato", "Offerta minima", "Prezzo base",
     "Valore stima", "Superficie mq", "Euro/mq offerta", "Stato occupazione",
     "Disponibilita PVP", "Formalita pregiudizievoli", "Abusi edilizi",
-    "Spese sanatoria", "Probabile tentativo", "Data vendita", "Stato",
+    "Spese sanatoria", "Tentativo (storico PVP)", "Data vendita", "Stato",
     "Nota", "Link PVP",
     // In coda, per non spostare le colonne di sempre: dati dell'analisi v2 e OMI.
     "Link perizia", "Fonte documento", "Data perizia", "Versione prompt", "Stato analisi",
@@ -3805,11 +3820,12 @@
     "OMI zona (Agenzia Entrate - OMI)", "OMI tipologia", "OMI min euro/mq", "OMI max euro/mq", "OMI semestre",
     "Classe manutenzione", "Livello ristrutturazione", "Arretrati condominiali", "Rendita catastale",
     "Discordanze", "Visita (stato)", "Visita (data e ora)",
+    "Prezzo base 1 tentativo", "Data 1 tentativo",
   ];
 
   function rigaCSV(a) {
     const stato = a.preferito ? "Preferito" : (a.scartato ? "Scartato" : "");
-    const tentativoTesto = a.tentativoStimato ? `${a.tentativoStimato.tentativo}\u00B0 - ${a.tentativoStimato.percentuale}%` : "";
+    const tentativoTesto = testoTentativo(a.storico, " - ");
     const valori = [
       a.id, a.comune, a.tipologia, a.lotto, a.tribunale,
       a.punteggio > 0 ? a.punteggio : "",
@@ -3842,6 +3858,8 @@
       Array.isArray(v2.discordanze) ? v2.discordanze.length : "",
       a.visita ? a.visita.stato : "",
       a.visita && dataOraVisita(a.visita) ? formattaDataOraVisita(dataOraVisita(a.visita)) : "",
+      a.storico && a.storico.tentativo > 1 ? a.storico.prezzoPrimo : "",
+      a.storico && a.storico.tentativo > 1 ? formattaData(a.storico.dataPrimo) : "",
     );
     return valori.map(campoCSV).join(";");
   }
@@ -4598,51 +4616,116 @@
     return "basso";
   }
 
-  // Nomi delle soglie in italiano, per il testo cercabile — indice 0 e 1
-  // inutilizzati apposta (0 non ha senso, 1 non genera mai un badge: vedi
-  // sotto, la prima soglia utile è la 2).
-  const ORDINALI_TENTATIVO = ["", "", "secondo", "terzo", "quarto", "quinto"];
+  // ==========================================================
+  // STORICO DELLE ASTE — tentativi precedenti dello stesso immobile sul PVP
+  // ==========================================================
+  // Dati veri, non più una stima dallo sconto sulla perizia: storico_aste.py
+  // (a fine giro dello scanner) cerca sul PVP le aste della stessa procedura
+  // e riconosce lo stesso immobile dai dati catastali (o dal lotto se
+  // mancano), salvandole nella colonna storico_aste. Qui solo lettura e
+  // presentazione. Senza storico valido (non ancora calcolato, PVP non
+  // raggiungibile, aste concluse prima dello storico) non si mostra nulla.
+  const ORDINALI_TENTATIVO = ["", "primo", "secondo", "terzo", "quarto", "quinto", "sesto", "settimo", "ottavo", "nono", "decimo"];
+  const ESITI_PVP = {ASDES: "deserta", AGGIU: "aggiudicata", SOSPE: "sospesa"};
+  // Sotto questo rapporto tra due prezzi base consecutivi (0,75 × 0,75 ≈
+  // 0,56; 0,8 × 0,8 = 0,64) il ribasso è più ampio del solito: forse un
+  // tentativo intermedio non è stato pubblicato sul PVP.
+  const RAPPORTO_RIBASSO_ANOMALO = 0.66;
 
-  // Stima — MAI un fatto certo — se questa sia una riproposizione a
-  // ribasso di un'asta andata deserta, guardando quanto il PREZZO BASE
-  // di questo annuncio si discosta dal valore di stima del perito.
-  //
-  // PREZZO BASE, non offerta minima — trovato un errore reale qui,
-  // segnalato in chat con un caso preciso (prezzo base ~86.251, stima
-  // 115.000: 25% di sconto, secondo tentativo — ma calcolato
-  // sull'offerta minima di 64.688 risultava 44%, terzo tentativo,
-  // SBAGLIATO). Il motivo: l'offerta minima è per regola SEMPRE circa il
-  // 75% del prezzo base DELLO STESSO turno d'asta (non è un ribasso tra
-  // un turno e l'altro, è la soglia minima di rilancio ammessa DENTRO
-  // ogni singolo turno) — usare l'offerta minima come riferimento
-  // sommava questo 25% "interno al turno" al ribasso vero "tra un turno
-  // e l'altro", contando lo stesso tipo di sconto due volte e facendo
-  // risultare un tentativo di troppo. Il prezzo base invece si riduce
-  // SOLO tra un turno e l'altro, è il riferimento giusto.
-  //
-  // Le aste giudiziarie italiane, quando la vendita va deserta, vengono
-  // tipicamente ripubblicate con un ribasso del 25% sul prezzo base
-  // precedente (non è una regola scritta uguale in ogni tribunale, ma è
-  // la convenzione più diffusa) — quindi un secondo tentativo tende a un
-  // ~25% di sconto sul valore di stima, un terzo a un ~44% (0.75² =
-  // 0.5625, cioè uno sconto del 43.75%), un quarto a un ~58% (0.75³), e
-  // così via componendo. Fasce ampie apposta attorno a questi centri: la
-  // percentuale REALE varia da tribunale a tribunale (alcuni usano 20%
-  // invece di 25%), e PVP stesso non dichiara mai esplicitamente
-  // "questo è il terzo tentativo" — non c'è NESSUN campo che lo dica con
-  // certezza, questo è un indizio dedotto dai numeri, non un dato letto
-  // da qualche parte. Per questo il testo mostrato dice sempre
-  // "probabile", mai un fatto.
-  function stimaTentativoAsta(prezzoBase, valoreStima) {
-    if (!valoreStima || valoreStima <= 0 || !prezzoBase || prezzoBase <= 0) return null;
-    const sconto = 1 - (prezzoBase / valoreStima);
-    if (sconto < 0.12) return null; // vicino al valore pieno: nessun indizio di riproposizione
-    let tentativo;
-    if (sconto < 0.34) tentativo = 2;
-    else if (sconto < 0.51) tentativo = 3;
-    else if (sconto < 0.63) tentativo = 4;
-    else tentativo = 5; // "5° o oltre" — oltre questo punto l'incertezza composta è troppa per fasce più fini
-    return { tentativo, percentuale: Math.round(sconto * 100) };
+  function storicoAsta(dati, prezzoBase) {
+    if (!dati || typeof dati !== "object" || dati.errore || !Array.isArray(dati.tentativi)) return null;
+    const precedenti = dati.tentativi.filter(t => t && t.data);
+    const primo = precedenti[0];
+    const prezzoPrimo = primo ? numeroSicuro(primo.prezzo_base) : prezzoBase;
+    const ribasso = primo && prezzoPrimo > 0 && prezzoBase > 0 ? 1 - prezzoBase / prezzoPrimo : 0;
+    return {
+      tentativo: precedenti.length + 1,
+      precedenti,
+      prezzoPrimo,
+      dataPrimo: primo ? primo.data : "",
+      ribassoTotalePct: Math.round(ribasso * 100),
+      dati,
+    };
+  }
+
+  // Testo breve per confronto ("2° · -25%") e CSV ("2° - 25%", come prima); "1°" al primo tentativo.
+  function testoTentativo(st, separatore = " · -") {
+    if (!st) return "";
+    return st.tentativo > 1 && st.ribassoTotalePct > 0 ? `${st.tentativo}°${separatore}${st.ribassoTotalePct}%` : `${st.tentativo}°`;
+  }
+
+  function badgeTentativo(st) {
+    if (!st) return "";
+    if (st.tentativo === 1) {
+      return `<span class="badge-tentativo primo" title="Nessuna asta precedente dello stesso immobile trovata sul PVP">1° tentativo</span>`;
+    }
+    const ribasso = st.ribassoTotalePct > 0 ? ` · -${st.ribassoTotalePct}% dal 1°` : "";
+    return `<span class="badge-tentativo" title="Dallo storico delle aste sul PVP: ${st.tentativo === 2 ? "1 asta precedente" : `${st.tentativo - 1} aste precedenti`} dello stesso immobile">↓ ${st.tentativo}° tentativo${ribasso}</span>`;
+  }
+
+  function sezioneStoricoAste(a) {
+    const st = a.storico;
+    if (!st) return "";
+    const d = st.dati;
+    const urlAnnuncio = (id) => `https://pvp.giustizia.it/pvp/it/detail_annuncio.page?idAnnuncio=${encodeURIComponent(id)}`;
+    const righe = [...st.precedenti.map(t => ({
+      id: t.id, data: t.data, prezzo: numeroSicuro(t.prezzo_base),
+      esito: ESITI_PVP[t.esito] || t.esito || "non venduta · esito non pubblicato",
+      abbinamento: t.abbinamento,
+    })), {id: a.id, data: a.dataVendita, prezzo: a.prezzoBase, esito: astaConclusa(a.dataVendita) ? "conclusa" : "in corso", attuale: true}];
+    const anomalie = [];
+    const righeHtml = righe.map((riga, i) => {
+      let ribasso = "—";
+      const prima = righe[i - 1];
+      if (prima && prima.prezzo > 0 && riga.prezzo > 0) {
+        const rapporto = riga.prezzo / prima.prezzo;
+        const pct = Math.round((1 - rapporto) * 100);
+        ribasso = pct > 0 ? `-${pct}%` : pct < 0 ? `+${-pct}%` : "=";
+        if (rapporto < RAPPORTO_RIBASSO_ANOMALO) {
+          anomalie.push(`${formattaData(prima.data)} → ${formattaData(riga.data)}`);
+          ribasso = `<span class="ribasso-anomalo" title="Ribasso più ampio del solito: forse un'asta intermedia non è stata pubblicata sul PVP">${ribasso} ⚠️</span>`;
+        }
+      }
+      const data = riga.attuale ? formattaData(riga.data)
+        : `<a href="${escapeHtml(urlAnnuncio(riga.id))}" target="_blank" rel="noopener">${formattaData(riga.data)}</a>`;
+      return `<tr${riga.attuale ? ' class="attuale"' : ""}><td>${i + 1}°${riga.attuale ? `<span class="storico-esteso"> · questa</span>` : ""}</td><td>${data}</td>
+        <td>${formattaEuro(riga.prezzo)}</td><td>${escapeHtml(riga.esito)}</td><td>${ribasso}</td></tr>`;
+    }).join("");
+
+    const note = [];
+    if (st.tentativo > 1 && st.ribassoTotalePct > 0) {
+      note.push(`Ribasso totale dal 1° tentativo: <strong>-${st.ribassoTotalePct}%</strong> (-${formattaEuro(st.prezzoPrimo - a.prezzoBase)}).`);
+    }
+    if (a.valoreStima > 0 && a.prezzoBase > 0) {
+      const sotto = Math.round((1 - a.prezzoBase / a.valoreStima) * 100);
+      note.push(sotto > 0
+        ? `Prezzo base attuale: ${sotto}% sotto la stima del perito (${formattaEuro(a.valoreStima)}).`
+        : `Prezzo base attuale pari o sopra la stima del perito (${formattaEuro(a.valoreStima)}).`);
+      if (st.prezzoPrimo > 0 && st.prezzoPrimo < a.valoreStima * 0.85) {
+        note.push(`Il 1° tentativo trovato parte già ${Math.round((1 - st.prezzoPrimo / a.valoreStima) * 100)}% sotto la stima: possono esserci aste precedenti non pubblicate sul PVP.`);
+      }
+    }
+    if (anomalie.length) note.push(`⚠️ Ribasso più ampio del solito (${anomalie.join(", ")}): forse un'asta intermedia non è stata pubblicata sul PVP.`);
+    if (st.precedenti.some(t => t.abbinamento !== "catasto")) {
+      note.push("Alcune aste precedenti sono riconosciute dal numero di lotto, perché mancano i dati catastali: verificale sul PVP.");
+    }
+    if (d.incompleto) note.push("Procedura con molti lotti: lo storico si completa ai prossimi giri dello scanner.");
+    const proc = d.procedura || {};
+    const catasto = (d.catasto || []).map(([sezione, foglio, particella, sub]) =>
+      `${sezione ? `Sez. ${sezione} ` : ""}Fg ${foglio} Part. ${particella}${sub ? ` Sub ${sub}` : ""}`).join(" · ");
+    return `
+      <div class="sezione-costi sezione-storico">
+        <h3 class="sezione-costi-titolo">📉 Storico delle aste (PVP)</h3>
+        <div class="tabella-scroll">
+          <table class="tabella-costi tabella-storico">
+            <thead><tr><th><span class="storico-esteso">Tentativo</span><span class="storico-breve">N°</span></th><th>Data</th><th>Prezzo base</th><th>Esito</th><th>Ribasso</th></tr></thead>
+            <tbody>${righeHtml}</tbody>
+          </table>
+        </div>
+        ${note.map(n => `<p class="sezione-costi-nota">${n}</p>`).join("")}
+        <p class="sezione-costi-nota">${proc.numero ? `Procedura RG ${escapeHtml(proc.numero)}${proc.anno ? "/" + escapeHtml(proc.anno) : ""}` : ""}${proc.tribunale ? ` · ${escapeHtml(proc.tribunale)}` : ""}${d.lotto ? ` · lotto ${escapeHtml(d.lotto)}` : ""}${catasto ? `<br>Dati catastali: ${escapeHtml(catasto)}` : ""}</p>
+        <p class="sezione-costi-nota">Aggiornato il ${formattaData(d.calcolato_il)} dai dati del PVP: le aste mai pubblicate sul PVP (per esempio prima del 2018) non compaiono.</p>
+      </div>`;
   }
 
   // ==========================================================
@@ -4920,14 +5003,16 @@
     const valoreStima = numeroSicuro(r.valore_stima_perito);
     const offertaMinima = numeroSicuro(r.offerta_minima);
     const prezzoBase = numeroSicuro(r.prezzo_base);
-    const tentativoStimato = stimaTentativoAsta(prezzoBase, valoreStima);
+    const storico = storicoAsta(r.storico_aste, prezzoBase);
     // Testo dedicato SOLO per la ricerca, più generoso di come viene
     // mostrato in un badge: include sia la forma ordinale ("3°") sia la
     // parola per esteso ("terzo") sia la percentuale nuda ("44%"),
     // così digitare una qualunque di queste forme trova l'asta, senza
     // dover indovinare esattamente come è scritto il badge.
-    const testoTentativoRicerca = tentativoStimato
-      ? `${tentativoStimato.tentativo}° tentativo ${ORDINALI_TENTATIVO[tentativoStimato.tentativo]} tentativo riproposizione ribasso sconto ${tentativoStimato.percentuale}%`
+    const testoTentativoRicerca = storico
+      ? `${storico.tentativo}° tentativo ${ORDINALI_TENTATIVO[storico.tentativo] || ""} tentativo`
+        + (storico.tentativo > 1 ? ` riproposizione ribasso sconto ${storico.ribassoTotalePct}%` : " prima asta")
+        + (storico.precedenti.some(t => t.esito === "ASDES") ? " deserta" : "")
       : "";
     return {
       id: r.id_annuncio !== null && r.id_annuncio !== undefined ? String(r.id_annuncio) : "",
@@ -4957,7 +5042,7 @@
       urlPdf: r.link_pdf || "",
       fonteDocumento: r.fonte_documento || "",
       modelloUsato: r.modello_ai_usato || "",
-      tentativoStimato: tentativoStimato,
+      storico: storico,
       testoTentativoRicerca: testoTentativoRicerca,
       lat: numeroSicuro(r.latitudine, null),
       lon: numeroSicuro(r.longitudine, null),
@@ -6032,7 +6117,7 @@
             ${badgeVisita(a)}
             ${conclusa ? `<span class="badge-conclusa">🏁 Conclusa</span>` : ""}
             ${a.zonaSegnalata ? `<span class="badge-zona">🚩 ${escapeHtml(a.zonaSegnalata)}</span>` : ""}
-            ${a.tentativoStimato ? `<span class="badge-tentativo">↓ ${a.tentativoStimato.tentativo}° tentativo probabile · -${a.tentativoStimato.percentuale}%</span>` : ""}
+            ${badgeTentativo(a.storico)}
             <p class="lotto-meta">${escapeHtml(distanzaTesto)} · vendita ${formattaData(a.dataVendita)}</p>
           </div>
           <div class="lotto-azioni">
@@ -6150,7 +6235,7 @@ ${notaHtml}
     {etichetta: "Stato occupazione", formatta: a => escapeHtml(a.statoOccupazione)},
     {etichetta: "Distanza", formatta: a => a.distanza !== null ? `${a.distanza} km` : "N/D"},
     {etichetta: "Vendita", formatta: a => formattaData(a.dataVendita)},
-    {etichetta: "Probabile riproposizione", formatta: a => a.tentativoStimato ? `${a.tentativoStimato.tentativo}° · -${a.tentativoStimato.percentuale}%` : "—"},
+    {etichetta: "Tentativo (storico PVP)", formatta: a => testoTentativo(a.storico) || "—"},
   ];
 
   function contenutoConfronto(aste) {
@@ -7085,7 +7170,7 @@ ${notaHtml}
             ${badgeVisita(a)}
             ${conclusa ? `<span class="badge-conclusa">🏁 Conclusa</span>` : ""}
             ${a.zonaSegnalata ? `<span class="badge-zona">🚩 ${escapeHtml(a.zonaSegnalata)}</span>` : ""}
-            ${a.tentativoStimato ? `<span class="badge-tentativo" title="Stima dedotta dallo sconto sulla perizia, non un dato dichiarato da PVP">↓ ${a.tentativoStimato.tentativo}° tentativo probabile · sconto ${a.tentativoStimato.percentuale}% sulla stima</span>` : ""}
+            ${badgeTentativo(a.storico)}
             <p class="lotto-meta">${escapeHtml(distanzaTesto)} · vendita ${formattaData(a.dataVendita)}</p>
           </div>
         </div>
@@ -7148,6 +7233,7 @@ ${notaHtml}
           <div class="dettaglio-riga"><span>Modello AI</span><span>${escapeHtml(a.modelloUsato || "N/D")}</span></div>
           <div class="dettaglio-riga"><span>ID Annuncio</span><span>${escapeHtml(a.id)}</span></div>
         </div>
+        ${sezioneStoricoAste(a)}
         ${a.lat !== null && a.lon !== null ? `<div class="sezione-costi sezione-mappa-dettagli">
           <h3 class="sezione-costi-titolo">📍 Posizione</h3>
           <div id="mappa-dettagli" class="mappa-dettagli"></div>
