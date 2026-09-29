@@ -2323,6 +2323,7 @@
   .indice-dettagli button { flex-shrink: 0; font: inherit; font-size: .78rem; font-weight: 500; color: var(--ink-muted); background: var(--surface-2);
     border: none; border-radius: 999px; padding: 6px 12px; min-height: 32px; cursor: pointer; white-space: nowrap; }
   .indice-dettagli button:hover { color: var(--ink); }
+  .indice-dettagli button.attiva { background: var(--ink); color: var(--surface); }
   .azioni-rapide-dettagli { display: flex; flex-wrap: wrap; gap: 8px; margin: 0 0 16px; }
   .azioni-rapide-dettagli .lotto-link { margin: 0; min-height: 40px; }
   .sezione-dettagli { scroll-margin-top: 12px; }
@@ -3797,6 +3798,7 @@
         contenitore.innerHTML = contenutoFinestraDettagli(asta);
         ripristinaModificheInSospeso(contenitore, inSospeso);
         inizializzaMappaDettagli(asta, vistaMappa);
+        aggiornaVoceIndice();
       }
     }
     // Stesso principio, per il confronto: id può comparire in una
@@ -6522,6 +6524,8 @@ ${notaHtml}
     document.getElementById("overlay-dettagli-asta").classList.add("aperto");
     document.body.style.overflow = "hidden"; // la pagina sotto non scorre mentre la finestra è aperta
     document.querySelector(".finestra-dettagli-asta").scrollTop = 0;   // ogni asta si apre dall'inizio
+    sezioneSceltaIndice = null;
+    bloccoVoceIndiceFinoA = 0;
     aggiornaIntestazioneCompatta();
     // Un passo nella cronologia (#ID): il tasto Indietro del telefono chiude
     // la scheda invece di uscire dal registro. Passando da un'asta all'altra
@@ -7652,7 +7656,7 @@ ${notaHtml}
           <button type="button" class="finestra-dettagli-chiudi" onclick="chiudiDettagliAsta()" aria-label="Chiudi">×</button>
         </div>
         <nav class="indice-dettagli" aria-label="Sezioni della scheda">
-          ${sezioni.filter(([id]) => id !== "sez-descrizione").map(([id, titolo]) => `<button type="button" onclick="vaiASezioneDettagli('${id}')">${titolo}</button>`).join("")}
+          ${sezioni.filter(([id]) => id !== "sez-descrizione").map(([id, titolo]) => `<button type="button" data-sez="${id}" onclick="vaiASezioneDettagli('${id}')">${titolo}</button>`).join("")}
         </nav>
       </div>
       <div class="finestra-dettagli-corpo">
@@ -7678,7 +7682,55 @@ ${notaHtml}
     const intestazione = finestra.querySelector(".finestra-dettagli-header");
     const alto = finestra.scrollTop + sezione.getBoundingClientRect().top - finestra.getBoundingClientRect().top
       - (intestazione ? intestazione.offsetHeight : 0) - 8;
+    sezioneSceltaIndice = id;
+    bloccoVoceIndiceFinoA = Date.now() + 900;   // niente lampeggi sulle voci attraversate
+    evidenziaVoceIndice(id);
     finestra.scrollTo({top: Math.max(0, alto), behavior: "smooth"});
+  }
+
+  // Voce dell'indice evidenziata = sezione che si sta guardando: quella la
+  // cui parte alta è passata sotto l'intestazione. In fondo alla scheda le
+  // ultime sezioni non possono salire fin lì: resta la voce toccata (se è a
+  // schermo), altrimenti l'ultima sezione visibile.
+  let sezioneSceltaIndice = null;
+  let bloccoVoceIndiceFinoA = 0;
+  function evidenziaVoceIndice(id) {
+    const indice = document.querySelector(".finestra-dettagli-asta .indice-dettagli");
+    if (!indice) return;
+    let attiva = null;
+    indice.querySelectorAll("button[data-sez]").forEach(b => {
+      b.classList.toggle("attiva", b.dataset.sez === id);
+      if (b.dataset.sez === id) attiva = b;
+    });
+    // sul telefono l'indice scorre di lato: tiene a vista la voce attiva
+    if (attiva && indice.scrollWidth > indice.clientWidth) {
+      const sx = attiva.offsetLeft - indice.offsetLeft, dx = sx + attiva.offsetWidth;
+      if (sx < indice.scrollLeft) indice.scrollLeft = sx - 8;
+      else if (dx > indice.scrollLeft + indice.clientWidth) indice.scrollLeft = dx - indice.clientWidth + 8;
+    }
+  }
+  function aggiornaVoceIndice() {
+    const finestra = document.querySelector(".finestra-dettagli-asta");
+    if (!finestra) return;
+    // scorrimento avviato da un clic sull'indice: finché continua resta la voce toccata
+    if (Date.now() < bloccoVoceIndiceFinoA) { bloccoVoceIndiceFinoA = Math.max(bloccoVoceIndiceFinoA, Date.now() + 150); return; }
+    const voci = [...finestra.querySelectorAll(".indice-dettagli button[data-sez]")]
+      .map(b => document.getElementById(b.dataset.sez)).filter(Boolean);
+    if (!voci.length) return;
+    const intestazione = finestra.querySelector(".finestra-dettagli-header");
+    const riquadro = finestra.getBoundingClientRect();
+    const linea = (intestazione ? intestazione.getBoundingClientRect().bottom : riquadro.top) + 24;
+    const inFondo = finestra.scrollTop + finestra.clientHeight >= finestra.scrollHeight - 4;
+    let id = null;
+    if (inFondo) {
+      const scelta = sezioneSceltaIndice && document.getElementById(sezioneSceltaIndice);
+      if (scelta && scelta.getBoundingClientRect().top < riquadro.bottom) id = sezioneSceltaIndice;
+      else voci.forEach(s => { if (s.getBoundingClientRect().top < riquadro.bottom - 40) id = s.id; });
+    } else {
+      sezioneSceltaIndice = null;
+      voci.forEach(s => { if (s.getBoundingClientRect().top <= linea) id = s.id; });
+    }
+    evidenziaVoceIndice(id || voci[0].id);   // in cima: la prima sezione
   }
 
   // Scorrendo la scheda l'intestazione si riduce (solo punteggio, indirizzo,
@@ -7686,6 +7738,7 @@ ${notaHtml}
   function aggiornaIntestazioneCompatta() {
     const finestra = document.querySelector(".finestra-dettagli-asta");
     if (finestra) finestra.classList.toggle("compatta", finestra.scrollTop > 90);
+    aggiornaVoceIndice();
   }
   document.querySelector(".finestra-dettagli-asta").addEventListener("scroll", aggiornaIntestazioneCompatta, {passive: true});
 
