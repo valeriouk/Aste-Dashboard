@@ -402,8 +402,21 @@
     };
   }
 
-  function costoLavori(d, supLavori, params, override) {
-    if (override != null) return { importo: override, fonte: 'override utente', nota: null };
+  // Livello scelto da te dopo il sopralluogo (Superanalisi) → classe della tabella.
+  const CLASSE_DA_LIVELLO = { nessuna: 'A_pronto', leggera: 'B_rinfrescare', media: 'C_rimodernare', pesante: 'D_ristrutturare' };
+
+  // override: importo tuo (preventivo), vale più di tutto; il conto non gli
+  // aggiunge il +20% del prudenziale (restano solo gli imprevisti).
+  // livelloUtente: livello scelto da te; si usa solo la tabella × superficie,
+  // senza confronto con la stima del perito.
+  function costoLavori(d, supLavori, params, override, livelloUtente) {
+    if (override != null) return { importo: override, fonte: 'importo tuo', nota: null, daUtente: 'importo' };
+    if (livelloUtente && CLASSE_DA_LIVELLO[livelloUtente]) {
+      if (supLavori == null) return { importo: null, fonte: 'non determinabile', nota: null };
+      const classeTu = CLASSE_DA_LIVELLO[livelloUtente];
+      return { importo: Math.round(params.costoLavoriMq[classeTu] * supLavori),
+        fonte: `livello ${livelloUtente} scelto da te × ${supLavori} mq`, nota: null, daUtente: 'livello' };
+    }
     let classe = d.statoManutentivo;
     let nota = null;
     if (classe === 'non_valutabile') {
@@ -511,7 +524,8 @@
   function contoEconomico(prezzo, ctx, scenario) {
     const p = ctx.params;
     const imp = imposteAcquisto(prezzo, ctx.renditaTot, p);
-    const lavori = ctx.lavori.importo * p.moltiplicatoreLavori[scenario];
+    // Con un importo tuo (preventivo) niente +20% nel prudenziale: solo imprevisti.
+    const lavori = ctx.lavori.importo * (ctx.lavori.daUtente === 'importo' ? 1 : p.moltiplicatoreLavori[scenario]);
     const regolarizzazione = ctx.reg.conRicarico;
     const mesi = ctx.mesi[scenario];
     const arv = ctx.arv[scenario];
@@ -622,7 +636,8 @@
   // 8. ORCHESTRAZIONE
   // annuncio = { comune, offertaMinima, prezzoBase, valoreStima, occupazione (testo PVP),
   //              omi: {min, max} | null, arvOverride: {prudenziale, centrale, ottimistico} | null,
-  //              lavoriOverride: numero | null,
+  //              lavoriOverride: numero | null  (importo lavori tuo, es. preventivo),
+  //              livelloLavori: 'nessuna'|'leggera'|'media'|'pesante' | null (livello scelto da te),
   //              renditaOverride: numero | null  (la tua rendita catastale dal registro, se > 0),
   //              arretratiOverride: numero | null (le tue spese condominiali arretrate dal registro, anche 0) }
   // ===========================================================================
@@ -639,7 +654,8 @@
     const sup = superficieCommerciale(d, params);
     const reg = costoRegolarizzazione(d, params);
     const supLavori = d.superfici.lorda != null ? d.superfici.lorda : sup.mqPrimaRiduzione;
-    const lavori = costoLavori(d, supLavori, params, annuncio.lavoriOverride);
+    const importoTu = num(annuncio.lavoriOverride);
+    const lavori = costoLavori(d, supLavori, params, importoTu != null && importoTu >= 0 ? importoTu : null, annuncio.livelloLavori || null);
     const arv = arvScenari(sup, d, annuncio, params, qualita.etaPeriziaAnni);
     const classificazione = classificaOperazione(d, occ.stato, qualita, reg, params);
 

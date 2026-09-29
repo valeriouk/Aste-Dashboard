@@ -272,7 +272,7 @@
       cancellati, da qualunque parte (pagine, scanner, "Elimina aste scadute", modifiche a mano):</p>
     <ul>
       <li>nota e i tuoi link; preferita/scartata; visite (stato, data e ora, dettagli); risultati delle AI esterne (testo compreso);
-        correzioni di rendita, spese condominiali e valore di rivendita;</li>
+        correzioni di rendita, spese condominiali e valore di rivendita; livello e importo dei lavori scelti da te;</li>
       <li>non i dati letti dallo scanner (analisi, prezzi, storico PVP) e non le password;</li>
       <li>ogni voce dice quando, cosa è cambiato, se è stato dalle pagine, dallo scanner o a mano, e con quale operazione;</li>
       <li>le voci più vecchie di <strong>12 mesi</strong> si cancellano da sole; lo spazio occupato è di pochi MB l'anno.</li>
@@ -896,7 +896,11 @@
       (dove si aggiungono ricarichi e imprevisti). Vedi anche <a href="#analisi-classe-manutenzione">classi di manutenzione</a>.</p>
     <ul>
       <li><strong>Stato non valutabile</strong> (la perizia non basta per giudicarlo: testo e foto insufficienti, perito non entrato): nessun livello è
-        segnato con ●; compare "scegli tu il livello dopo il sopralluogo". Prima veniva segnato "Media", come se fosse un dato della perizia.</li>
+        segnato con ●; compare "scegli tu il livello dopo il sopralluogo (Superanalisi → Conto → Lavori)". Prima veniva segnato "Media", come se fosse
+        un dato della perizia.</li>
+      <li><strong>Livello o importo scelti da te</strong> nella <a href="#superanalisi-lavori">Superanalisi</a>: il ● va sul livello scelto ("● Livello
+        scelto da te dopo il sopralluogo"), oppure compare "Importo lavori tuo (preventivo): € X"; la riga "Nel conto della Superanalisi" usa la tua
+        scelta.</li>
       <li><strong>"Nel conto della Superanalisi: € X"</strong> (solo con analisi v2): la cifra dei lavori che usa il conto, calcolata con lo stesso
         motore, con come è ottenuta. Può differire dalla tabella perché la Superanalisi usa la superficie <strong>lorda</strong> se la perizia la dà, prende
         la più alta tra tabella e stima del perito +30%, e con stato non valutabile usa «pesante» per prudenza. Si aggiungono +20% nello scenario
@@ -1350,6 +1354,19 @@
       <li>Superficie: la lorda se c'è, altrimenti la commerciale (prima di togliere le parti da demolire).</li>
       <li>Ricarico del 30% sui lavori del CTU <span class="stima">STIMA</span>: la stima del perito serve a "rendere fruibile" l'immobile, non a renderlo
         vendibile a prezzo pieno.</li>
+    </ul>
+    <p><strong>La tua scelta dopo il sopralluogo</strong> (sezione "Conto dell'operazione" → "Lavori"):</p>
+    <ul>
+      <li><strong>Livello lavori</strong>: "Automatico (dalla perizia: …)" è il calcolo qui sopra; oppure Nessuna / Leggera / Media / Pesante. Con un
+        livello scelto da te il conto usa <strong>solo</strong> €/mq del livello × superficie (lorda se c'è): la stima del perito non si usa più (resta
+        indicata come informazione).</li>
+      <li><strong>Importo lavori tuo (€)</strong>, per esempio da un preventivo: vale più del livello. Il conto lo usa così com'è, <strong>senza</strong> il
+        +20% dello scenario prudenziale; restano gli imprevisti del 10%.</li>
+      <li>"Salva" (password di scrittura) la scelta nel database: vale su ogni dispositivo, anche nella
+        <a href="#gruppo">Superanalisi di gruppo</a> e nel registro (tabella dei lavori e "Nel conto della Superanalisi"). "Torna all'automatico" la
+        cancella. Sotto i campi: la cifra usata nel conto, come è ottenuta, lo stato scritto in perizia e la stima lavori del perito.</li>
+      <li>La scelta cambia solo il costo dei lavori: il <a href="#superanalisi-classe">giudizio</a> e la qualità dei dati restano quelli dei fatti della
+        perizia. Ogni modifica finisce nella <a href="#sistema-cronologia">cronologia delle modifiche</a>.</li>
     </ul>
   </section>
 

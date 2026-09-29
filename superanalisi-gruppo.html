@@ -326,6 +326,10 @@
       renditaOverride: Number(r.rendita_catastale_utente) > 0 ? Number(r.rendita_catastale_utente) : null,
       arretratiOverride: r.oneri_condominiali_utente === null || r.oneri_condominiali_utente === undefined || r.oneri_condominiali_utente === ""
         ? null : Number(r.oneri_condominiali_utente),
+      // lavori scelti da te dopo il sopralluogo (vuoti = dalla perizia)
+      livelloLavori: r.livello_lavori_utente || null,
+      lavoriOverride: r.importo_lavori_utente === null || r.importo_lavori_utente === undefined || r.importo_lavori_utente === ""
+        ? null : Number(r.importo_lavori_utente),
     };
     const esito = Underwriting.analizzaAsta(a, annuncio, {
       utileTargetPct: p.utilePct / 100, utileMinimoPrudenzialePct: p.minimoPrudenzialePct / 100,

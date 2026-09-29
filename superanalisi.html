@@ -110,6 +110,8 @@
   .riga-form { display: flex; flex-wrap: wrap; gap: 10px; align-items: flex-end; margin-top: 8px; }
   .campo { display: flex; flex-direction: column; gap: 4px; font-size: .82rem; color: var(--ink-muted); }
   .campo input[type="number"] { width: 150px; }
+  .campo select { background: var(--bg); border: 1px solid var(--border); border-radius: 8px; padding: 9px 12px;
+    font-family: var(--font-body); font-size: .95rem; color: var(--ink); max-width: 100%; }
   .etichetta-checkbox { display: flex; gap: 6px; align-items: center; font-size: .85rem; color: var(--ink); }
 
   .pulsanti-ai { display: grid; grid-template-columns: repeat(auto-fill, minmax(165px, 1fr)); gap: 8px; margin-top: 10px; }
@@ -623,6 +625,68 @@
     finally { document.querySelectorAll(".pulsante-valore-utente").forEach((b) => { b.disabled = false; }); }
   }
 
+  // ============================================================ lavori scelti da te
+  // Dopo il sopralluogo: livello (nessuna…pesante) o importo tuo (preventivo,
+  // vale più del livello). Salvati nel database (imposta_lavori_utente,
+  // sql/lavori_utente.sql nel repo privato), come il valore di rivendita:
+  // valgono anche per la Superanalisi di gruppo e per il registro.
+  const NOMI_CLASSE_STATO = { A_pronto: "pronto da abitare", B_rinfrescare: "da rinfrescare", C_rimodernare: "da rimodernare",
+    D_ristrutturare: "da ristrutturare", E_degrado: "degrado", non_valutabile: "non valutabile (testo e foto non bastano)" };
+  const LIVELLO_DA_CLASSE_STATO = { A_pronto: "nessuna", B_rinfrescare: "leggera", C_rimodernare: "media", D_ristrutturare: "pesante", E_degrado: "pesante" };
+  function bloccoLavoriUtente(r, a, esito) {
+    const classe = a && a.stato_manutentivo ? a.stato_manutentivo.classe : null;
+    const automatico = classe === "non_valutabile" ? "pesante, per prudenza" : (LIVELLO_DA_CLASSE_STATO[classe] || "dalla perizia");
+    const livelloTu = r.livello_lavori_utente || "";
+    const importoTu = r.importo_lavori_utente === null || r.importo_lavori_utente === undefined ? "" : r.importo_lavori_utente;
+    const l = esito.lavori || {};
+    // Testo del motore reso leggibile: "tabella D_ristrutturare × 62.59 mq" → "livello pesante × 63 mq".
+    const leggibile = (t) => String(t || "—")
+      .replace(/tabella (\w+)/, (m, c) => `livello ${LIVELLO_DA_CLASSE_STATO[c] || c}`)
+      .replace(/(\d+(?:\.\d+)?) mq/, (m, n) => `${Math.round(Number(n))} mq`)
+      .replace("stato non valutabile: usata la classe D (prudenziale)", "stato non valutabile: usato «pesante» per prudenza");
+    const come = l.daUtente === "importo" ? "importo tuo (niente +20% nel prudenziale, restano gli imprevisti)"
+      : l.daUtente === "livello" ? `${leggibile(l.fonte)} (la stima del perito non si usa)` : `${leggibile(l.fonte)}${l.nota ? "; " + leggibile(l.nota) : ""}`;
+    const stimaPerito = a && a.lavori_ctu && Number(a.lavori_ctu.importo_euro) > 0 ? Number(a.lavori_ctu.importo_euro) : null;
+    const opzioni = [["", `Automatico (dalla perizia: ${automatico})`], ["nessuna", "Nessuna (0 €/mq)"], ["leggera", "Leggera (150 €/mq)"],
+      ["media", "Media (350 €/mq)"], ["pesante", "Pesante (600 €/mq)"]];
+    return `<h3>Lavori</h3>
+      <div class="riga-form">
+        <label class="campo">Livello lavori (dopo il sopralluogo)
+          <select id="lavori-livello">${opzioni.map(([v, t]) => `<option value="${v}"${v === livelloTu ? " selected" : ""}>${escapeHtml(t)}</option>`).join("")}</select></label>
+        <label class="campo">Importo lavori tuo (€), es. preventivo
+          <input type="number" id="lavori-importo" min="0" step="500" value="${escapeHtml(importoTu)}" placeholder="facoltativo"></label>
+        <button class="bottone pulsante-lavori" onclick="salvaLavoriUtente()">Salva</button>
+        ${livelloTu || importoTu !== "" ? `<button class="bottone secondario pulsante-lavori" onclick="salvaLavoriUtente(true)">Torna all'automatico</button>` : ""}
+      </div>
+      <p class="nota">Nel conto: <strong>${eur(l.importo)}</strong> — ${escapeHtml(come)}. Stato in perizia: ${escapeHtml(NOMI_CLASSE_STATO[classe] || "non indicato")}${stimaPerito ? `; stima lavori del perito ${eur(stimaPerito)}` : ""}.</p>
+      <p id="messaggio-lavori" class="messaggio nascosto"></p>`;
+  }
+
+  async function salvaLavoriUtente(automatico = false) {
+    const msg = document.getElementById("messaggio-lavori");
+    const livello = automatico ? null : (document.getElementById("lavori-livello").value || null);
+    const testoImporto = automatico ? "" : document.getElementById("lavori-importo").value.trim();
+    const importo = testoImporto === "" ? null : Number(testoImporto);
+    msg.className = "messaggio";
+    if (importo !== null && !(importo >= 0)) { msg.textContent = "Inserisci un importo valido (0 o più), oppure lascialo vuoto."; msg.classList.add("errore"); return; }
+    document.querySelectorAll(".pulsante-lavori").forEach((b) => { b.disabled = true; });   // niente doppio salvataggio
+    try {
+      const esito = await chiamaRpc("imposta_lavori_utente", { password_tentativo: passwordCorrente, id_annuncio_input: Number(ID_ASTA), livello_input: livello, importo_input: importo });
+      if (esito && esito.result === "success") {
+        RIGA.livello_lavori_utente = livello;
+        RIGA.importo_lavori_utente = importo;
+        disegnaConto();
+        const nuovo = document.getElementById("messaggio-lavori");
+        nuovo.textContent = automatico || (!livello && importo === null) ? "Tornato all'automatico: lavori dalla perizia." : "Salvato: il conto usa la tua scelta.";
+        nuovo.className = "messaggio ok";
+      } else {
+        msg.textContent = (esito && esito.message) || "Salvataggio non riuscito.";
+        msg.classList.add("errore");
+      }
+    } catch (e) { msg.textContent = "Richiesta non riuscita. Controlla la connessione."; msg.classList.add("errore"); }
+    finally { document.querySelectorAll(".pulsante-lavori").forEach((b) => { b.disabled = false; }); }
+  }
+
   // ============================================================ conto dell'operazione
   function leggiParametri() {
     try { return { ...PARAMETRI_PREDEFINITI, ...(JSON.parse(leggiLocale(CHIAVE_PARAMETRI) || "{}")) }; }
@@ -656,6 +720,10 @@
       renditaOverride: Number(r.rendita_catastale_utente) > 0 ? Number(r.rendita_catastale_utente) : null,
       arretratiOverride: r.oneri_condominiali_utente === null || r.oneri_condominiali_utente === undefined || r.oneri_condominiali_utente === ""
         ? null : Number(r.oneri_condominiali_utente),
+      // lavori scelti da te dopo il sopralluogo (vuoti = dalla perizia)
+      livelloLavori: r.livello_lavori_utente || null,
+      lavoriOverride: r.importo_lavori_utente === null || r.importo_lavori_utente === undefined || r.importo_lavori_utente === ""
+        ? null : Number(r.importo_lavori_utente),
     };
     const esito = Underwriting.analizzaAsta(a, annuncio, {
       utileTargetPct: p.utilePct / 100, utileMinimoPrudenzialePct: p.minimoPrudenzialePct / 100,
@@ -695,6 +763,7 @@
           <input type="number" id="p-minimo" min="0" step="1" value="${p.minimoPrudenzialePct}" onchange="aggiornaParametri()"></label>
         <label class="etichetta-checkbox"><input type="checkbox" id="p-prima-casa" ${p.primaCasa ? "checked" : ""} onchange="aggiornaParametri()"> Acquisto come prima casa</label>
       </div>
+      ${bloccoLavoriUtente(r, a, esito)}
       <p class="verdetto"><span class="etichetta-stato stato-${escapeHtml(esito.classe)}">${escapeHtml(testo(esito.classe))}</span> ${escapeHtml(verdettoSenzaClasse(esito))}</p>
       <div class="griglia" style="margin-top:10px">
         <div class="voce"><div class="etichetta">Offerta massima</div><div class="numero-grande">${eur(esito.offertaMassima)}</div></div>

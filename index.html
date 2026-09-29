@@ -5368,6 +5368,9 @@
       oneriCondominiali: numeroSicuro(r.oneri_condominiali),
       oneriCondominialiUtente: numeroSicuro(r.oneri_condominiali_utente, null),
       livelloRistrutturazioneSuggerito: r.livello_ristrutturazione_suggerito || null,
+      // Lavori scelti da te nella Superanalisi dopo il sopralluogo (sql/lavori_utente.sql).
+      livelloLavoriUtente: ["nessuna", "leggera", "media", "pesante"].includes(r.livello_lavori_utente) ? r.livello_lavori_utente : null,
+      importoLavoriUtente: numeroSicuro(r.importo_lavori_utente, null),
       // Solo per il CSV (colonne in coda): analisi v2 completa e OMI.
       analisiV2: r.analisi_v2 && typeof r.analisi_v2 === "object" ? r.analisi_v2 : null,
       versionePrompt: r.versione_prompt || "",
@@ -7187,15 +7190,19 @@ ${notaHtml}
       const d = U.normalizza(a.analisiV2).d;
       const lorda = d.superfici.lorda != null;
       const mq = lorda ? d.superfici.lorda : U.superficieCommerciale(d, p).mqPrimaRiduzione;
-      const l = U.costoLavori(d, mq, p, null);
+      const l = U.costoLavori(d, mq, p, a.importoLavoriUtente, a.livelloLavoriUtente);
       if (l.importo == null) return null;
       const classe = d.statoManutentivo === "non_valutabile" ? "D_ristrutturare" : d.statoManutentivo;
       const daTabella = /^tabella/.test(l.fonte);
+      const superficie = `${Math.round(mq)} mq ${lorda ? "lordi" : "commerciali"}`;
       return {
-        importo: l.importo, nonValutabile: d.statoManutentivo === "non_valutabile",
-        come: daTabella ? `livello ${LIVELLO_DA_CLASSE[classe] || classe} × ${Math.round(mq)} mq ${lorda ? "lordi" : "commerciali"}`
-          : "stima del perito + 30%",
-        prudenziale: Math.round(l.importo * p.moltiplicatoreLavori.prudenziale), imprevistiPct: Math.round(p.imprevistiPct * 100),
+        importo: l.importo, nonValutabile: !l.daUtente && d.statoManutentivo === "non_valutabile",
+        come: l.daUtente === "importo" ? "importo tuo"
+          : l.daUtente === "livello" ? `livello ${a.livelloLavoriUtente} scelto da te × ${superficie}`
+          : daTabella ? `livello ${LIVELLO_DA_CLASSE[classe] || classe} × ${superficie}` : "stima del perito + 30%",
+        // con un importo tuo niente +20% nel prudenziale (come nel conto)
+        prudenziale: Math.round(l.importo * (l.daUtente === "importo" ? 1 : p.moltiplicatoreLavori.prudenziale)),
+        imprevistiPct: Math.round(p.imprevistiPct * 100),
       };
     } catch (e) { return null; }
   }
@@ -7208,15 +7215,20 @@ ${notaHtml}
     const v2 = a.analisiV2 && String(a.versionePrompt || "").startsWith("v2") ? a.analisiV2 : null;
     const nonValutabile = !!(v2 && v2.stato_manutentivo && v2.stato_manutentivo.classe === "non_valutabile");
     if (nonValutabile) r.livelloSuggerito = null;
+    const livelloTu = a.livelloLavoriUtente;
+    if (livelloTu) r.livelloSuggerito = livelloTu;
     const sa = lavoriSuperanalisi(a);
     const righe = Object.keys(COSTO_MQ_RISTRUTTURAZIONE).map(chiave =>
       [chiave, ETICHETTA_LIVELLO_RISTRUTTURAZIONE[chiave], `${COSTO_MQ_RISTRUTTURAZIONE[chiave]} €/mq`, r[chiave]]);
     const righeHtml = righe.map(([chiave, etichetta, prezzoMq, valore]) =>
-      `<tr${chiave === r.livelloSuggerito ? ' class="livello-suggerito"' : ''}><td>${etichetta}${chiave === r.livelloSuggerito ? ' <span class="pallino-suggerito" title="Livello suggerito in base allo stato descritto in perizia">●</span>' : ''}</td><td>${prezzoMq}</td><td>${formattaEuro(Math.round(valore))}</td></tr>`
+      `<tr${chiave === r.livelloSuggerito ? ' class="livello-suggerito"' : ''}><td>${etichetta}${chiave === r.livelloSuggerito ? ' <span class="pallino-suggerito" title="${livelloTu ? "Livello scelto da te nella Superanalisi" : "Livello suggerito in base allo stato descritto in perizia"}">●</span>' : ''}</td><td>${prezzoMq}</td><td>${formattaEuro(Math.round(valore))}</td></tr>`
     ).join("");
     const etichettaSuggerita = ETICHETTA_LIVELLO_RISTRUTTURAZIONE[r.livelloSuggerito];
-    const rigaSuggerimento = nonValutabile
-      ? `<p class="livello-suggerito-testo">Stato non valutabile dalla perizia (testo e foto non bastano): scegli tu il livello dopo il sopralluogo.</p>`
+    const rigaTu = a.importoLavoriUtente !== null
+      ? `<p class="livello-suggerito-testo">Importo lavori tuo (preventivo): <strong>${formattaEuro(a.importoLavoriUtente)}</strong>${livelloTu ? ` · livello scelto: ${ETICHETTA_LIVELLO_RISTRUTTURAZIONE[livelloTu]}` : ""}</p>`
+      : livelloTu ? `<p class="livello-suggerito-testo">● Livello scelto da te dopo il sopralluogo: <strong>${ETICHETTA_LIVELLO_RISTRUTTURAZIONE[livelloTu]}</strong>${nonValutabile ? " (la perizia non lo dice)" : ""}</p>` : "";
+    const rigaSuggerimento = rigaTu ? rigaTu : nonValutabile
+      ? `<p class="livello-suggerito-testo">Stato non valutabile dalla perizia (testo e foto non bastano): scegli tu il livello dopo il sopralluogo (Superanalisi → Conto → Lavori).</p>`
       : etichettaSuggerita
       ? `<p class="livello-suggerito-testo">● Livello suggerito dalla perizia: <strong>${etichettaSuggerita}</strong></p>`
       : "";
