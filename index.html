@@ -7278,10 +7278,18 @@ ${notaHtml}
   function sezioneSuperanalisiEsterne(a) {
     const voci = (a.superanalisiEsterne || []).slice().sort((x, y) => String(y.creato).localeCompare(String(x.creato)));
     if (!voci.length || !window.SuperanalisiEsterne) return "";
+    // Due pulsanti con lo stesso nome (stessa AI e stesso giudizio o
+    // posizione): si aggiunge la data, e anche l'ora se la data coincide.
+    const giorno = v => new Date(v.creato).toLocaleDateString("it-IT", {day: "2-digit", month: "2-digit"});
+    const ora = v => new Date(v.creato).toLocaleTimeString("it-IT", {hour: "2-digit", minute: "2-digit"});
+    const nomi = voci.map(v => SuperanalisiEsterne.etichetta(v, a.id));
+    const conta = (lista, x) => lista.filter(y => y === x).length;
+    const conData = nomi.map((nome, i) => conta(nomi, nome) > 1 ? `${nome} · ${giorno(voci[i])}` : nome);
+    const etichette = conData.map((nome, i) => conta(conData, nome) > 1 ? `${nome} ${ora(voci[i])}` : nome);
     return `<div class="superanalisi-esterne">
         <p class="link-utili-sottotitolo">🧠 Superanalisi esterne</p>
-        ${voci.map(v => `<a class="lotto-link" href="risultato-superanalisi.html?id=${encodeURIComponent(v.id)}" target="_blank" rel="noopener"
-          title="Salvato il ${escapeHtml(new Date(v.creato).toLocaleString("it-IT", {dateStyle: "short", timeStyle: "short"}))}">${escapeHtml(SuperanalisiEsterne.etichetta(v, a.id))}</a>`).join("")}
+        ${voci.map((v, i) => `<a class="lotto-link" href="risultato-superanalisi.html?id=${encodeURIComponent(v.id)}" target="_blank" rel="noopener"
+          title="Salvato il ${escapeHtml(new Date(v.creato).toLocaleString("it-IT", {dateStyle: "short", timeStyle: "short"}))}">${escapeHtml(etichette[i])}</a>`).join("")}
       </div>`;
   }
 
