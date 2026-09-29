@@ -1,0 +1,249 @@
+<!DOCTYPE html>
+<html lang="it">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Risultato superanalisi · Registro Opportunità</title>
+
+<link rel="manifest" href="manifest.json">
+<link rel="icon" href="favicon-32.png" sizes="32x32">
+<link rel="apple-touch-icon" href="apple-touch-icon.png">
+<meta name="theme-color" content="#1e2320">
+
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,400;9..144,500;9..144,600&family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500;600&display=swap" rel="stylesheet">
+
+<!--
+  risultato-superanalisi.html — un risultato di superanalisi fatto con un'AI
+  esterna e salvato dalla pagina di superanalisi (o di gruppo), a tutta
+  pagina, con il formato della risposta (Markdown impaginato, ripulito da
+  DOMPurify: vedi superanalisi-esterne.js). Si apre dai pulsanti
+  "🧠 Giudizio …" nei dettagli dell'asta: risultato-superanalisi.html?id=<id>.
+  Solo lettura: salvare ed eliminare si fa dalle pagine di superanalisi.
+  Serve la password di lettura del registro (sql/superanalisi_esterne.sql nel
+  repo privato).
+-->
+
+<style>
+  :root {
+    --bg: #eef1ec;
+    --surface: #ffffff;
+    --surface-2: #e3e7e0;
+    --border: #d5dad1;
+    --primary: #234c6a;
+    --primary-soft: rgba(35, 76, 106, .10);
+    --secondary: #a15c3e;
+    --ok: #3f6b4a;
+    --ok-soft: rgba(63, 107, 74, .12);
+    --danger: #8b3d2e;
+    --danger-soft: rgba(139, 61, 46, .10);
+    --secondary-soft: rgba(161, 92, 62, .10);
+    --ink: #1e2320;
+    --ink-muted: #5b615a;
+    --ink-faint: #8c9289;
+    --font-display: 'Fraunces', Georgia, serif;
+    --font-body: 'Inter', system-ui, -apple-system, sans-serif;
+    --font-mono: 'JetBrains Mono', ui-monospace, monospace;
+  }
+  * { box-sizing: border-box; }
+  html, body { margin: 0; padding: 0; }
+  body { background: var(--bg); color: var(--ink); font-family: var(--font-body); line-height: 1.5; -webkit-font-smoothing: antialiased; }
+  a { color: var(--secondary); }
+  :focus-visible { outline: 2px solid var(--primary); outline-offset: 3px; border-radius: 4px; }
+  .nascosto { display: none !important; }
+
+  .contenitore { max-width: 920px; margin: 0 auto; padding: 32px 20px 96px; }
+  .intestazione { display: flex; justify-content: space-between; align-items: flex-start; flex-wrap: wrap; gap: 12px 16px;
+    padding-bottom: 18px; margin-bottom: 22px; border-bottom: 1px solid var(--border); }
+  .eyebrow { font-family: var(--font-mono); font-size: .72rem; letter-spacing: .12em; text-transform: uppercase; color: var(--primary); margin: 0 0 8px; }
+  h1 { font-family: var(--font-display); font-size: 1.6rem; margin: 0 0 6px; }
+  .sottotitolo { color: var(--ink-muted); font-size: .9rem; margin: 0; }
+  .azioni { display: flex; gap: 14px; flex-wrap: wrap; align-items: center; }
+  .link-torna { font-size: .85rem; font-weight: 500; color: var(--ink-muted); text-decoration: none; white-space: nowrap; }
+  .link-torna:hover { color: var(--primary); }
+  .bottone { background: var(--ink); color: var(--surface); border: none; border-radius: 8px; padding: 9px 14px;
+    font-family: var(--font-body); font-size: .85rem; font-weight: 600; cursor: pointer; }
+  .bottone.secondario { background: var(--surface-2); color: var(--ink); }
+
+  .aste-collegate { display: flex; flex-wrap: wrap; gap: 6px 14px; margin: 10px 0 0; padding: 0; list-style: none; font-size: .85rem; }
+  .aste-collegate .posizione { font-family: var(--font-mono); color: var(--primary); margin-right: 4px; }
+  .etichetta-stato { display: inline-block; font-size: .8rem; font-weight: 600; border-radius: 999px; padding: 2px 10px; margin-left: 6px; vertical-align: middle; }
+  .stato-PULITA { background: var(--ok-soft); color: var(--ok); }
+  .stato-GESTIBILE { background: var(--primary-soft); color: var(--primary); }
+  .stato-COMPLESSA { background: var(--secondary-soft); color: var(--secondary); }
+  .stato-DA-SCARTARE { background: var(--danger-soft); color: var(--danger); }
+
+  .foglio { background: var(--surface); border: 1px solid var(--border); border-radius: 12px; padding: 12px 28px 24px; }
+  .nota { color: var(--ink-muted); font-size: .85rem; }
+
+  .riquadro-gate { max-width: 380px; margin: 40px auto; background: var(--surface); border: 1px solid var(--border);
+    border-radius: 12px; padding: 32px; text-align: center; }
+  .riquadro-gate h2 { font-family: var(--font-display); font-size: 1.3rem; margin: 0 0 8px; }
+  .riquadro-gate p { color: var(--ink-muted); font-size: .9rem; margin: 0 0 20px; }
+  .riquadro-gate form { display: flex; flex-direction: column; gap: 10px; }
+  input[type="password"] { background: var(--bg); border: 1px solid var(--border); border-radius: 8px; padding: 9px 12px;
+    font-family: var(--font-body); font-size: .95rem; color: var(--ink); }
+  .messaggio-errore { color: var(--danger); font-size: .85rem; margin: 6px 0 0; min-height: 1em; }
+
+  @media (max-width: 560px) {
+    .contenitore { padding: 20px 14px 72px; }
+    h1 { font-size: 1.3rem; }
+    .foglio { padding: 6px 14px 18px; border-radius: 10px; }
+  }
+  @media print {
+    body { background: #fff; }
+    .azioni, .riquadro-gate { display: none !important; }
+    .contenitore { max-width: none; padding: 0; }
+    .foglio { border: none; padding: 0; }
+  }
+</style>
+</head>
+<body>
+<div class="contenitore">
+  <p id="stato" class="nota">Caricamento…</p>
+
+  <div id="gate" class="riquadro-gate nascosto">
+    <h2>Risultato superanalisi</h2>
+    <p>Inserisci la password di lettura del registro.</p>
+    <form onsubmit="event.preventDefault(); sblocca();">
+      <input type="password" id="campo-password" autocomplete="current-password" placeholder="Password di lettura del registro">
+      <button class="bottone" type="submit">Sblocca</button>
+      <p id="errore-gate" class="messaggio-errore"></p>
+    </form>
+  </div>
+
+  <div id="pagina" class="nascosto">
+    <div class="intestazione">
+      <div>
+        <p class="eyebrow" id="eyebrow">Superanalisi esterna</p>
+        <h1 id="titolo"></h1>
+        <p class="sottotitolo" id="sottotitolo"></p>
+        <ul class="aste-collegate" id="aste-collegate"></ul>
+      </div>
+      <div class="azioni">
+        <a class="link-torna" id="link-dettaglio" href="index.html">← Dettaglio asta</a>
+        <a class="link-torna" href="index.html">← Registro</a>
+        <button type="button" class="bottone secondario" onclick="window.print()">Stampa / PDF</button>
+      </div>
+    </div>
+    <div class="foglio"><div id="testo" class="sae-testo"></div></div>
+  </div>
+</div>
+
+<script src="superanalisi-esterne.js"></script>
+<script>
+  // Stessa chiave pubblica e stessa password di lettura di index.html.
+  const SUPABASE_URL = "https://igemwrrcmsgaotoqvdzt.supabase.co";
+  const SUPABASE_ANON_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImlnZW13cnJjbXNnYW90b3F2ZHp0Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODkzMDc2MjksImV4cCI6MjEwNDg4MzYyOX0.YkUOBTOb40C-N0TkuDN0o5N7fVvI_qX2F1grUp-SVe8";
+  const CHIAVE_PASSWORD_LETTURA = "aste_password_lettura_v1";
+  const ID_RISULTATO = new URLSearchParams(location.search).get("id") || "";
+
+  function escapeHtml(t) { const d = document.createElement("div"); d.textContent = t === null || t === undefined ? "" : String(t); return d.innerHTML; }
+  function leggiLocale(k) { try { return localStorage.getItem(k); } catch (e) { return null; } }
+  function scriviLocale(k, v) { try { localStorage.setItem(k, v); } catch (e) {} }
+
+  async function chiamaRpc(nome, payload, filtri = "") {
+    const r = await fetch(`${SUPABASE_URL}/rest/v1/rpc/${nome}${filtri}`, {
+      method: "POST",
+      headers: { apikey: SUPABASE_ANON_KEY, Authorization: `Bearer ${SUPABASE_ANON_KEY}`, "Content-Type": "application/json" },
+      body: JSON.stringify(payload),
+    });
+    return r.json();
+  }
+
+  async function messaggioPasswordRifiutata() {
+    try {
+      const secondi = await chiamaRpc("blocco_password", { p_tipo: "lettura" });
+      if (typeof secondi === "number" && secondi > 0) return `Troppi tentativi errati: riprova tra ${Math.ceil(secondi / 60)} minuti.`;
+    } catch (e) {}
+    return "Password errata.";
+  }
+
+  // Legge il risultato con la password; ritorna il risultato o null se la password non va.
+  async function leggi(password) {
+    const r = await chiamaRpc("leggi_superanalisi_esterna", { password_tentativo: password, id_input: Number(ID_RISULTATO) });
+    if (r && r.ok) return r.risultato;
+    if (r && r.code === "non_trovata") throw new Error("Risultato non trovato: forse è stato eliminato.");
+    return null;
+  }
+
+  async function avvia() {
+    const stato = document.getElementById("stato");
+    if (!/^\d+$/.test(ID_RISULTATO)) { stato.textContent = "Manca il risultato: apri questa pagina dai dettagli di un'asta nel registro."; return; }
+    try {
+      // Come il manuale: senza password di lettura attiva si entra con una
+      // password vuota; altrimenti si prova solo quella ricordata (un tentativo
+      // a vuoto conterebbe come password errata nel limite dei tentativi).
+      const serve = await chiamaRpc("serve_password_lettura", {}).catch(() => true);
+      const ricordata = serve ? leggiLocale(CHIAVE_PASSWORD_LETTURA) : "";
+      const risultato = ricordata !== null ? await leggi(ricordata) : null;
+      if (risultato) { await mostra(risultato, ricordata); return; }
+      stato.classList.add("nascosto");
+      document.getElementById("gate").classList.remove("nascosto");
+      document.getElementById("campo-password").focus();
+    } catch (e) { stato.textContent = e.message || "Impossibile contattare il database."; }
+  }
+
+  async function sblocca() {
+    const password = document.getElementById("campo-password").value;
+    const errore = document.getElementById("errore-gate");
+    errore.textContent = "";
+    if (!password) return;
+    try {
+      const risultato = await leggi(password);
+      if (!risultato) { errore.textContent = await messaggioPasswordRifiutata(); return; }
+      scriviLocale(CHIAVE_PASSWORD_LETTURA, password);
+      document.getElementById("gate").classList.add("nascosto");
+      await mostra(risultato, password);
+    } catch (e) { errore.textContent = e.message || "Impossibile contattare il database. Controlla la connessione."; }
+  }
+
+  async function mostra(v, password) {
+    const E = SuperanalisiEsterne;
+    document.getElementById("gate").classList.add("nascosto");
+    const ids = (v.id_annunci || []).map(String);
+    const gruppo = v.tipo === "gruppo";
+    const quando = new Date(v.creato).toLocaleString("it-IT", { dateStyle: "long", timeStyle: "short" });
+    document.getElementById("eyebrow").textContent = gruppo ? `Superanalisi di gruppo · ${ids.length} aste` : "Superanalisi esterna";
+    document.getElementById("titolo").innerHTML = `${escapeHtml(v.ai)}${v.giudizio
+      ? `<span class="etichetta-stato stato-${escapeHtml(v.giudizio.replace(" ", "-"))}">${escapeHtml(v.giudizio)}</span>` : ""}`;
+    document.getElementById("sottotitolo").textContent = `Salvato il ${quando}`;
+    document.title = `${gruppo ? "Gruppo" : "Superanalisi"} ${v.ai} · Registro Opportunità`;
+    const linkDettaglio = document.getElementById("link-dettaglio");
+    if (ids.length === 1) linkDettaglio.href = "index.html#" + encodeURIComponent(ids[0]);
+    else linkDettaglio.classList.add("nascosto");
+
+    // Aste collegate, con l'indirizzo se leggibile (in ordine di classifica per il gruppo).
+    const ordine = gruppo && (v.classifica || []).length
+      ? [...v.classifica.map(String), ...ids.filter((id) => !v.classifica.map(String).includes(id))] : ids;
+    let indirizzi = {};
+    try {
+      const righe = await chiamaRpc("leggi_aste", { password_tentativo: password, tipo: "lettura" },
+        `?select=id_annuncio,comune__indirizzo&id_annuncio=in.(${ids.join(",")})`);
+      if (Array.isArray(righe)) righe.forEach((r) => { indirizzi[String(r.id_annuncio)] = r.comune__indirizzo; });
+    } catch (e) {}
+    const posizioni = (v.classifica || []).map(String);
+    document.getElementById("aste-collegate").innerHTML = ordine.map((id) => {
+      const pos = posizioni.indexOf(id);
+      return `<li>${pos >= 0 ? `<span class="posizione">${pos + 1}ª</span>` : ""}<a href="index.html#${encodeURIComponent(id)}">${escapeHtml(indirizzi[id] || "Asta " + id)}</a></li>`;
+    }).join("");
+
+    const testo = document.getElementById("testo");
+    try {
+      await E.caricaLettura();
+      E.aggiungiStile();
+      testo.innerHTML = E.inHtml(v.testo);
+    } catch (e) {
+      // Senza le librerie: testo semplice, a capo come nell'originale.
+      testo.style.whiteSpace = "pre-wrap";
+      testo.textContent = v.testo;
+    }
+    document.getElementById("stato").classList.add("nascosto");
+    document.getElementById("pagina").classList.remove("nascosto");
+  }
+
+  avvia();
+</script>
+</body>
+</html>

@@ -19,6 +19,7 @@
 <link href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,400..700&family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500;600&display=swap" rel="stylesheet">
 <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/leaflet.min.css">
 <script src="https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/leaflet.js"></script>
+<script src="superanalisi-esterne.js"></script>
 <style>
 
   /* ============================================================
@@ -1919,6 +1920,10 @@
   .lotto-link:hover { background: rgba(35,76,106,.20); }
   .lotto-link.secondario { background: var(--secondary-soft); color: var(--secondary); }
   .lotto-link.secondario:hover { background: rgba(161,92,62,.20); }
+  /* Risultati delle superanalisi con AI esterne (superanalisi-esterne.js):
+     nei dettagli solo pulsanti di lettura. */
+  .superanalisi-esterne { margin-top: 12px; }
+  .superanalisi-esterne .link-utili-sottotitolo { margin-top: 4px; }
 
   /* ============================================================
      STATI: caricamento / vuoto / errore
@@ -2841,6 +2846,11 @@
   // privato): stato, data_ora, dettagli, storico. Letta con i dati
   // personali (leggi_dati_personali), scritta con imposta_visita.
   let VISITE = {};
+  // id_annuncio -> [risultati di superanalisi con AI esterne, senza il
+  // testo] (sql/superanalisi_esterne.sql nel repo privato): un risultato di
+  // gruppo compare sotto ciascuna delle sue aste. Letto con i dati personali;
+  // il testo si legge in risultato-superanalisi.html.
+  let SUPERANALISI_ESTERNE = {};
   // Selezione multipla (confronto, azioni in blocco) — un Set di ID, non
   // un array: aggiunta/rimozione/controllo "è selezionato?" tutti O(1),
   // e duplicati impossibili per costruzione. Sopravvive a filtri e
@@ -4943,6 +4953,9 @@
     const promessaVisite = promessaPersonali
       .then(d => (Array.isArray(d.visite) ? d.visite : []))
       .catch(() => []);
+    const promessaSuperanalisi = promessaPersonali
+      .then(d => (Array.isArray(d.superanalisi_esterne) ? d.superanalisi_esterne : []))
+      .catch(() => []);
 
     // return qui: chi chiama avvia() può ora concatenare .then/.catch per
     // sapere DAVVERO quando il caricamento finisce (successo o fallito),
@@ -4955,8 +4968,13 @@
       conTimeoutRigetta(promessaAste, 20000),
       conTimeoutRipiego(promessaPreferiti, 8000, []),
       conTimeoutRipiego(promessaLinkUtili, 8000, []),
-      conTimeoutRipiego(promessaVisite, 8000, [])
-    ]).then(([righeAste, righePreferiti, righeLinkUtili, righeVisite]) => {
+      conTimeoutRipiego(promessaVisite, 8000, []),
+      conTimeoutRipiego(promessaSuperanalisi, 8000, [])
+    ]).then(([righeAste, righePreferiti, righeLinkUtili, righeVisite, righeSuperanalisi]) => {
+      SUPERANALISI_ESTERNE = {};
+      righeSuperanalisi.forEach(v => (v.id_annunci || []).forEach(id => {
+        (SUPERANALISI_ESTERNE[String(id)] = SUPERANALISI_ESTERNE[String(id)] || []).push(v);
+      }));
       VISITE = {};
       righeVisite.forEach(v => { if (v.id_annuncio !== null && v.id_annuncio !== undefined) VISITE[String(v.id_annuncio)] = v; });
       // stato soltanto: la nota non vive più qui, vedi il commento sulla
@@ -5080,6 +5098,7 @@
     asta.notaPreferito = annotazioni?.nota || "";
     asta.linkUtili = annotazioni?.links || [];
     asta.visita = VISITE[asta.id] || null;
+    asta.superanalisiEsterne = SUPERANALISI_ESTERNE[asta.id] || [];
     return asta;
   }
 
@@ -7247,9 +7266,23 @@ ${notaHtml}
           ${a.urlPdf ? `<a class="lotto-link secondario" href="${escapeHtml(a.urlPdf)}" target="_blank" rel="noopener">Apri documento</a>` : ""}
           ${a.id ? `<a class="lotto-link" href="superanalisi.html?id=${encodeURIComponent(a.id)}" target="_blank" rel="noopener">Superanalisi</a>` : ""}
         </div>
+        ${sezioneSuperanalisiEsterne(a)}
         ${bloccoLinkUtili(a)}
       </div>
     `;
+  }
+
+  // Pulsanti di sola lettura dei risultati salvati dalle pagine di
+  // superanalisi (i più recenti per primi): "🧠 Giudizio Claude: PULITA",
+  // "🧠 Gruppo Gemini: 2ª di 6". Salvare ed eliminare si fa solo da lì.
+  function sezioneSuperanalisiEsterne(a) {
+    const voci = (a.superanalisiEsterne || []).slice().sort((x, y) => String(y.creato).localeCompare(String(x.creato)));
+    if (!voci.length || !window.SuperanalisiEsterne) return "";
+    return `<div class="superanalisi-esterne">
+        <p class="link-utili-sottotitolo">🧠 Superanalisi esterne</p>
+        ${voci.map(v => `<a class="lotto-link" href="risultato-superanalisi.html?id=${encodeURIComponent(v.id)}" target="_blank" rel="noopener"
+          title="Salvato il ${escapeHtml(new Date(v.creato).toLocaleString("it-IT", {dateStyle: "short", timeStyle: "short"}))}">${escapeHtml(SuperanalisiEsterne.etichetta(v, a.id))}</a>`).join("")}
+      </div>`;
   }
 
   function mostraStato(idStato) {

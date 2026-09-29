@@ -17,7 +17,8 @@
 <!--
   superanalisi.html — dettaglio di un'asta preferita: dati della perizia
   (analisi v2, con pagina e citazione), valore di rivendita, conto
-  dell'operazione (underwriting.js) e seconda opinione con altre AI.
+  dell'operazione (underwriting.js) e seconda opinione con altre AI, con il
+  salvataggio del loro risultato (superanalisi-esterne.js).
   Si apre dal dettaglio dell'asta in index.html (pulsante "Superanalisi",
   per qualunque asta): superanalisi.html?id=<id annuncio>.
   Serve la password di scrittura (stesso sblocco di config.html e
@@ -151,10 +152,12 @@
   <div id="schermata-contenuto" class="nascosto">
     <p id="messaggio-caricamento" class="nota">Caricamento…</p>
     <div id="contenuto"></div>
+    <div id="sezione-risultati-esterni" class="sezione nascosto"></div>
   </div>
 </div>
 
 <script src="underwriting.js"></script>
+<script src="superanalisi-esterne.js"></script>
 <script>
   const SUPABASE_URL = "https://igemwrrcmsgaotoqvdzt.supabase.co";
   const SUPABASE_ANON_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImlnZW13cnJjbXNnYW90b3F2ZHp0Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODkzMDc2MjksImV4cCI6MjEwNDg4MzYyOX0.YkUOBTOb40C-N0TkuDN0o5N7fVvI_qX2F1grUp-SVe8";
@@ -292,6 +295,21 @@
     html.push(sezioneSecondaOpinione(r, a));
     document.getElementById("contenuto").innerHTML = html.join("");
     if (a) disegnaConto();
+    montaRisultatiEsterni();
+  }
+
+  // Sezione "Salva il risultato dell'AI" (superanalisi-esterne.js): montata
+  // una volta sola, fuori da #contenuto, così un nuovo disegna() non cancella
+  // il testo incollato.
+  function montaRisultatiEsterni() {
+    const el = document.getElementById("sezione-risultati-esterni");
+    if (el.dataset.montata) return;
+    el.dataset.montata = "1";
+    el.classList.remove("nascosto");
+    SuperanalisiEsterne.montaSalvataggio({
+      contenitore: el, tipo: "asta", idAnnunci: () => [ID_ASTA], idAstaElenco: ID_ASTA,
+      chiamaRpc, password: () => passwordCorrente,
+    });
   }
 
   function sezioneAnnuncio(r, a) {
@@ -605,7 +623,8 @@
       "2. Elenca i rischi per chi compra all'asta per ristrutturare e rivendere: occupazione e tempi di liberazione, abusi e sanabilità, formalità che restano, quota, condominio, stato dell'immobile, differenze con l'annuncio.",
       "3. Indica cosa verificare prima di fare un'offerta (documenti, sopralluogo, custode, ufficio tecnico del comune).",
       "4. Giudizio sintetico: operazione pulita, gestibile, complessa o da scartare, con il motivo.",
-      "Regole: non inventare; se un dato non è nella perizia scrivi \"non indicato\". Rispondi in italiano, in modo sintetico, con una tabella per il punto 1.");
+      "Regole: non inventare; se un dato non è nella perizia scrivi \"non indicato\". Rispondi in italiano, in modo sintetico, con una tabella per il punto 1.",
+      "La PRIMA riga della risposta deve essere solo il giudizio del punto 4, in questa forma: \"Giudizio: PULITA\" (oppure GESTIBILE, COMPLESSA, DA SCARTARE).");
     return righe.join("\n");
   }
 
@@ -625,6 +644,7 @@
     const conQ = ai.q ? ai.q + encodeURIComponent(prompt) : null;
     const url = conQ && conQ.length <= MAX_LUNGHEZZA_URL ? conQ : ai.url;
     window.open(url, "_blank", "noopener");
+    SuperanalisiEsterne.aiAperta(ai.nome);
     const msg = document.getElementById("messaggio-ai");
     msg.className = "messaggio ok";
     msg.textContent = `${ai.nome} aperto${url === conQ ? " con il prompt già scritto" : ""}${copiato ? "; prompt copiato negli appunti (incollalo se serve)" : ""}. Allega la perizia: scaricala con il pulsante qui sopra e trascinala nella chat.`;
@@ -716,7 +736,7 @@
     const prompt = costruisciPrompt(r, a);
     return `<div class="sezione"><h2>Seconda opinione</h2>
       <p class="nota">Apri un'AI alla volta: il prompt viene scritto o copiato per te; allega la perizia trascinando il PDF nella chat.
-        I risultati restano nella tua conversazione, non vengono salvati qui. I piani gratuiti hanno limiti sul numero e la dimensione dei file.</p>
+        Il risultato puoi salvarlo nella sezione «Salva il risultato dell'AI» qui sotto. I piani gratuiti hanno limiti sul numero e la dimensione dei file.</p>
       <p>${r.link_pdf ? `<a class="bottone secondario" style="text-decoration:none;display:inline-block" href="${escapeHtml(r.link_pdf)}" target="_blank" rel="noopener" download>⬇ Scarica la perizia (PDF)</a>` : "Nessun PDF della perizia nel registro."}</p>
       ${r.link_pdf && condivisioneFileSupportata() ? `<p><button class="bottone" id="pulsante-condividi" onclick="condividiPerizia()">📱 Prepara la perizia da condividere</button>
         <button class="bottone secondario nascosto" id="pulsante-salva" onclick="condividiSoloPdf()">📎 Condividi solo il PDF</button>

@@ -216,6 +216,7 @@
         <tr><td><a href="#statistiche">Statistiche</a> (<code>statistiche.html</code>)</td><td>Numeri del registro, perizie analizzate, costi Gemini stimati, visite</td><td>scrittura</td></tr>
         <tr><td><a href="#superanalisi">Superanalisi</a> (<code>superanalisi.html?id=…</code>)</td><td>Dettaglio di un'asta: perizia, valore di rivendita, conto, seconda opinione AI</td><td>scrittura</td></tr>
         <tr><td><a href="#gruppo">Superanalisi di gruppo</a></td><td>Classifica di 2-10 aste selezionate e prompt per un'AI esterna</td><td>scrittura</td></tr>
+        <tr><td><a href="#superanalisi-risultati">Risultato superanalisi</a> (<code>risultato-superanalisi.html?id=…</code>)</td><td>Un risultato di un'AI esterna salvato, a tutta pagina, solo lettura</td><td>lettura del registro</td></tr>
         <tr><td>Manuale (<code>manuale.html</code>)</td><td>Questa pagina</td><td>lettura del registro</td></tr>
       </tbody>
     </table></div>
@@ -696,6 +697,7 @@
       <li>note dell'AI e descrizione del lotto;</li>
       <li><a href="#registro-costi-trasferimento">💶 Costi di trasferimento</a> e <a href="#registro-ristrutturazione">🔨 Costi di ristrutturazione</a>;</li>
       <li>link "Apri annuncio PVP", "Apri documento" e "Superanalisi";</li>
+      <li><a href="#superanalisi-risultati">🧠 Superanalisi esterne</a>: i risultati delle AI esterne salvati, solo da leggere (se ce ne sono);</li>
       <li><a href="#registro-link-utili">🔗 Link utili</a>: foto e documenti del PVP, pagine dell'asta sui siti dei gestori, i tuoi link.</li>
     </ul>
   </section>
@@ -1297,12 +1299,34 @@
         appunti), Gemini, Mistral Le Chat, DeepSeek, Grok, Copilot (prompt negli appunti: incollalo). Apri un'AI alla volta.</li>
       <li><strong>Prompt</strong> (modificabile): chiede di leggere la perizia allegata, verificare con la pagina i dati estratti (quota, valori, superficie,
         occupazione, abusi e costi, condono, condominio, pesi), elencare i rischi per chi ristruttura e rivende, dire cosa verificare prima dell'offerta e dare
-        un giudizio sintetico. I risultati restano nella tua conversazione, non vengono salvati.</li>
+        un giudizio sintetico. Chiede anche di cominciare la risposta con la riga "Giudizio: PULITA" (o GESTIBILE, COMPLESSA, DA SCARTARE). Il risultato
+        puoi <a href="#superanalisi-risultati">salvarlo nel registro</a>.</li>
       <li><strong>⬇ Scarica la perizia (PDF)</strong>: su computer, per trascinarla nella chat.</li>
       <li><strong>Dal telefono</strong>: "📱 Prepara la perizia da condividere" la scarica (avanzamento in MB, massimo 50 MB), poi "📤 Condividi la perizia…"
         apre il menu del telefono con PDF e prompt. Due tocchi perché il menu si apre solo subito dopo un tocco. "📎 Condividi solo il PDF" serve per
         Gemini, che dal menu prende solo il testo: scegli Gemini e incolla il prompt, già negli appunti.</li>
       <li>I piani gratuiti delle AI hanno limiti sul numero e sulla dimensione dei file.</li>
+    </ul>
+  </section>
+
+  <section class="voce" id="superanalisi-risultati">
+    <h3>💾 Salvare il risultato dell'AI e rileggerlo</h3>
+    <ul>
+      <li><strong>Dove si salva</strong>: nella sezione "💾 Salva il risultato dell'AI", in fondo alla Superanalisi (e alla
+        <a href="#gruppo-seconda-opinione">Superanalisi di gruppo</a>). Nella chat usa il pulsante «Copia» sotto la risposta e incolla nel riquadro;
+        scegli l'AI usata (viene preselezionata l'ultima aperta con i pulsanti) e premi "Salva il risultato". Si possono salvare più risultati, anche della
+        stessa AI.</li>
+      <li><strong>Formato</strong>: titoli, grassetti, elenchi e tabelle restano come nella chat (il testo copiato è in Markdown e viene impaginato). Se
+        selezioni la risposta col mouse e la copi, la formattazione viene riconvertita automaticamente. Sotto il riquadro c'è l'anteprima.</li>
+      <li><strong>Giudizio</strong>: se la prima riga della risposta è "Giudizio: …", sotto il riquadro compare "Giudizio letto: …" e il pulsante nei
+        dettagli dell'asta lo mostra. Per il gruppo si legge "Classifica: ID, ID…" e ogni asta mostra la sua posizione.</li>
+      <li><strong>Dove si legge</strong>: nei dettagli dell'asta nel registro, sezione "🧠 Superanalisi esterne", un pulsante per risultato (i più recenti per
+        primi): "🧠 Giudizio Claude: PULITA", oppure "🧠 Superanalisi Gemini · 29/09" se il giudizio non c'è; per il gruppo "🧠 Gruppo Perplexity: 2ª di 6"
+        (o "Superanalisi di gruppo … (6 aste)"). Il pulsante apre il risultato a tutta pagina, con le aste collegate e "Stampa / PDF".</li>
+      <li><strong>Eliminare</strong>: solo dalla pagina di Superanalisi in cui è stato salvato ("Elimina" nell'elenco "Risultati salvati", con conferma). Dai
+        dettagli del registro si può solo leggere; non c'è modifica: per correggere si elimina e si salva di nuovo.</li>
+      <li><strong>Dati</strong>: salvati nel database, leggibili solo con la password di lettura del registro (salvare ed eliminare: password di
+        scrittura). Il registro scarica solo l'elenco; il testo si scarica quando apri il risultato. Massimo 300.000 caratteri per risultato.</li>
     </ul>
   </section>
 </section>
@@ -1345,6 +1369,9 @@
         le 2-3 migliori usa la Superanalisi singola con la perizia allegata.</li>
       <li><strong>⬇ Scarica CSV del gruppo</strong> (28 colonne: dati dell'annuncio, perizia, OMI e il nostro conto). Dal telefono: "📤 Condividi (prompt + CSV)"
         e "📎 Condividi solo il CSV" (per Gemini).</li>
+      <li>Il prompt chiede di cominciare la risposta con "Classifica: ID, ID, ID" (dalla migliore alla peggiore). Il risultato si salva come per la singola
+        asta (vedi <a href="#superanalisi-risultati">Salvare il risultato dell'AI</a>): resta collegato a tutte le aste del gruppo e nei dettagli di ciascuna
+        compare con la sua posizione. L'elenco "Risultati salvati" della pagina di gruppo mostra quelli dello stesso gruppo di aste.</li>
     </ul>
   </section>
 </section>
@@ -1979,7 +2006,7 @@
       <li>Guarda le <a href="#analisi-formalita">discordanze</a>: spesso l'AI ha già segnalato la contraddizione.</li>
       <li>Se il problema è la quota o il lotto, confronta con l'annuncio PVP (vale ciò che è in vendita).</li>
       <li>Correggi quello che puoi: rendita e spese condominiali nel registro, valore di rivendita nella Superanalisi.</li>
-      <li>Chiedi una seconda opinione con i pulsanti AI, allegando la perizia.</li>
+      <li>Chiedi una seconda opinione con i pulsanti AI, allegando la perizia, e <a href="#superanalisi-risultati">salva il risultato</a> per ritrovarlo nei dettagli.</li>
     </ol>
   </section>
 

@@ -21,8 +21,9 @@
   Per ogni asta lo stesso conto di superanalisi.html (underwriting.js, stessa
   scelta del valore di rivendita, stessi parametri salvati), poi una tabella
   dalla migliore alla peggiore e un prompt di gruppo per un'AI esterna (annunci
-  di vendita in zona, classifica). Solo letture: nessuna scrittura, nessun
-  costo Gemini. Stessa password di superanalisi.html.
+  di vendita in zona, classifica). Nessun costo Gemini; l'unica scrittura è
+  il salvataggio del risultato dell'AI esterna (superanalisi-esterne.js).
+  Stessa password di superanalisi.html.
   Le funzioni in comune con superanalisi.html sono copiate qui apposta, per
   non toccare quella pagina: se ne cambi una, controlla anche l'altra.
 -->
@@ -136,10 +137,12 @@
   <div id="schermata-contenuto" class="nascosto">
     <p id="messaggio-caricamento" class="nota">Caricamento…</p>
     <div id="contenuto"></div>
+    <div id="sezione-risultati-esterni" class="sezione nascosto"></div>
   </div>
 </div>
 
 <script src="underwriting.js"></script>
+<script src="superanalisi-esterne.js"></script>
 <script>
   const SUPABASE_URL = "https://igemwrrcmsgaotoqvdzt.supabase.co";
   const SUPABASE_ANON_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImlnZW13cnJjbXNnYW90b3F2ZHp0Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODkzMDc2MjksImV4cCI6MjEwNDg4MzYyOX0.YkUOBTOb40C-N0TkuDN0o5N7fVvI_qX2F1grUp-SVe8";
@@ -334,6 +337,20 @@
     document.getElementById("sottotitolo").textContent =
       `${RISULTATI.length} aste · utile netto richiesto ${p.utilePct}% (minimo ${p.minimoPrudenzialePct}% nel prudenziale), come in Superanalisi`;
     document.getElementById("contenuto").innerHTML = sezioneClassifica() + sezioneSecondaOpinione();
+    montaRisultatiEsterni();
+  }
+
+  // Come in superanalisi.html: "Salva il risultato dell'AI" per il gruppo,
+  // collegato a tutte le aste della classifica. Montata una volta sola.
+  function montaRisultatiEsterni() {
+    const el = document.getElementById("sezione-risultati-esterni");
+    if (el.dataset.montata) return;
+    el.dataset.montata = "1";
+    el.classList.remove("nascosto");
+    SuperanalisiEsterne.montaSalvataggio({
+      contenitore: el, tipo: "gruppo", idAnnunci: () => RISULTATI.map((v) => String(v.r.id_annuncio)),
+      chiamaRpc, password: () => passwordCorrente,
+    });
   }
 
   function rischiPrincipali(v) {
@@ -431,6 +448,7 @@
       "4. Elenca i rischi principali di ogni asta (occupazione, abusi, quota, condominio, stato, tempi).",
       "5. Tabella finale ordinata dalla migliore alla peggiore per un'operazione di ristrutturazione e rivendita (in alto le più pulite e con più margine), con colonne: posizione, ID, indirizzo, prezzo di vendita stimato (€/mq e totale), margine netto stimato, rischi principali, giudizio (conviene / da approfondire / scartare).",
       "Rispondi in italiano, in modo sintetico. Se un dato manca scrivi \"non indicato\".",
+      "La PRIMA riga della risposta deve essere solo la classifica del punto 5 con gli ID, dalla migliore alla peggiore, in questa forma: \"Classifica: ID, ID, ID\".",
     ].join("\n");
   }
 
@@ -465,6 +483,7 @@
     const conQ = ai.q ? ai.q + encodeURIComponent(prompt) : null;
     const url = conQ && conQ.length <= MAX_LUNGHEZZA_URL ? conQ : ai.url;
     window.open(url, "_blank", "noopener");
+    SuperanalisiEsterne.aiAperta(ai.nome);
     mostraMessaggio("ok", `${ai.nome} aperto${url === conQ ? " con il prompt già scritto" : ""}${copiato ? "; prompt copiato negli appunti: incollalo nella chat" : ""}.`);
   }
 
@@ -507,7 +526,7 @@
       <p class="nota">Il prompt contiene i dati di tutte le aste e chiede all'AI di cercare annunci di vendita nella zona, stimare il prezzo di
         rivendita e rifare la classifica. Le AI con ricerca sul web (Perplexity, ChatGPT con ricerca, Gemini) sono le più adatte. La lettura
         delle perizie dai link non è garantita: per le 2-3 migliori usa la Superanalisi della singola asta, con la perizia allegata.
-        I risultati restano nella tua conversazione, non vengono salvati qui.</p>
+        Il risultato puoi salvarlo nella sezione «Salva il risultato dell'AI» qui sotto: resta collegato a tutte le aste del gruppo.</p>
       <div class="pulsanti-ai">${AI.map((ai, i) => `<button class="pulsante-ai" onclick="apriAI(${i})">${escapeHtml(ai.nome)}
         <small>${ai.q ? "prompt nell'indirizzo o negli appunti" : "prompt negli appunti"}</small></button>`).join("")}</div>
       <div class="riga-pulsanti">
