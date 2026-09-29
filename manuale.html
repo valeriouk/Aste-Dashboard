@@ -353,7 +353,8 @@
   <section class="voce" id="orari-storico">
     <h3>Storico delle aste (dopo ogni giro dello scanner)</h3>
     <p>Cerca sul PVP le aste precedenti dello stesso immobile, per mostrare nel registro il <a href="#registro-tentativo">tentativo e i ribassi veri</a>.
-      Nessun costo Gemini: solo richieste al PVP.</p>
+      Nessun costo Gemini: solo richieste al PVP. Per le aste nuove lo storico viene calcolato già al momento della
+      <a href="#notifiche-elenco">notifica "NUOVA ASTA"</a> (che ne riporta la riga): a fine giro quelle aste risultano già fatte.</p>
     <ul>
       <li><strong>Quando</strong>: alla fine di ogni giro dello scanner, non in modalità "solo conteggio". Al massimo circa 15 minuti per giro: le aste
         rimaste vengono fatte al giro successivo.</li>
@@ -1704,8 +1705,11 @@
       <thead><tr><th>Messaggio</th><th>Quando arriva</th></tr></thead>
       <tbody>
         <tr><td>🏠 NUOVA ASTA IMMOBILIARE</td><td>Per ogni asta nuova analizzata (subito, dal batch o riusando un'analisi). Contiene indirizzo, zona segnalata, distanza, tipologia,
-          superficie ed €/mq, tribunale, data, disponibilità, offerta minima, prezzo base, valore di stima, margine, punteggio, occupazione, sanatoria, formalità,
-          fonte, modello, note e link.</td></tr>
+          superficie ed €/mq, tribunale, data, disponibilità, offerta minima, prezzo base, <a href="#registro-tentativo">tentativo</a>, valore di stima, margine,
+          punteggio, occupazione, sanatoria, formalità, fonte, modello, note e link. La riga del tentativo viene dallo
+          <a href="#orari-storico">storico delle aste</a>, calcolato al momento della notifica: "📉 Tentativo: 2° · −25% dal 1° (€ 81.000 → € 60.750) · 1 asta
+          deserta", "📉 Tentativo: 1° sul PVP", con "⚠️ forse un tentativo non pubblicato sul PVP" se c'è un ribasso più ampio del solito. Manca se il PVP
+          non risponde o se in quel giro sono già stati spesi 5 minuti a calcolare storici per le notifiche (lo storico arriva comunque a fine giro).</td></tr>
         <tr><td>✅ nessuna asta entro i filtri</td><td>Lo scanner non ha trovato annunci con i filtri attuali (li elenca).</td></tr>
         <tr><td>✅ tutte già note, nessuna novità</td><td>Tutte le aste trovate erano già analizzate o in un batch.</td></tr>
         <tr><td>🔢 Scanner aste — solo conteggio</td><td>Modalità <a href="#config-altri-filtri">solo conteggio</a>: numeri, nessuna spesa.</td></tr>
