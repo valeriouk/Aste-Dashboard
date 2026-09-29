@@ -267,6 +267,13 @@
      Filtri del telefono resta "Punteggio" per intero. */
   .filtro-punteggio label span[id^="valore-punteggio"] { display: inline-block; min-width: 3ch; font-variant-numeric: tabular-nums; }
   .filtro-punteggio label #valore-punteggio-minimo { text-align: right; }
+  /* "✕ Azzera filtri": compare solo con almeno un filtro attivo o una ricerca. */
+  .azzera-filtri { font: inherit; font-size: .8rem; font-weight: 600; color: var(--secondary); background: none; border: none;
+    padding: 6px 4px; cursor: pointer; white-space: nowrap; }
+  .azzera-filtri:hover { text-decoration: underline; }
+  .conteggio-filtrati .azzera-filtri { margin-left: 6px; }
+  .azzera-filtri-foglio { display: none; }
+  @media (max-width: 640px) { .azzera-filtri-foglio:not(.nascosto) { display: inline-block; min-height: 40px; } }
   .filtro-punteggio .testo-punteggio-lungo { display: none; }
   @media (max-width: 640px) {
     .filtro-punteggio .testo-punteggio-lungo { display: inline; }
@@ -786,6 +793,7 @@
       justify-content: space-between;
       align-items: center;
     }
+    .foglio-filtri-intestazione .azzera-filtri-foglio { margin-left: auto; margin-right: 10px; }
     .foglio-filtri-titolo {
       font-family: var(--font-display);
       font-weight: 500;
@@ -2354,6 +2362,7 @@
     <div class="controlli-estesi" id="controlli-estesi">
       <div class="foglio-filtri-intestazione">
         <p class="foglio-filtri-titolo">Filtri</p>
+        <button type="button" class="azzera-filtri azzera-filtri-foglio nascosto" id="azzera-filtri-foglio" onclick="azzeraFiltri()">✕ Azzera filtri</button>
         <button type="button" class="foglio-filtri-chiudi" onclick="chiudiFoglioFiltri()" aria-label="Chiudi">×</button>
       </div>
       <div class="contenitore-filtro-tipologia">
@@ -2440,6 +2449,7 @@
   <div id="stato-nessun-risultato" class="stato-pagina nascosto">
     <h2>Nessuna corrispondenza</h2>
     <p>Nessuna asta soddisfa questi criteri di ricerca — prova ad ampliarli.</p>
+    <p><button type="button" class="azzera-filtri" onclick="azzeraFiltri()">✕ Azzera filtri</button></p>
   </div>
 
   <div class="riga-conteggio-filtrati">
@@ -5013,6 +5023,7 @@
         new Date().toLocaleTimeString("it-IT", { hour: "2-digit", minute: "2-digit" });
       popolaFiltroTipologia();
       applicaFiltri();
+      if (vistaDaRipristinare === "mappa") { vistaDaRipristinare = null; cambiaVista("mappa"); }
       apriDaLinkDiretto();
     }).catch(e => {
       // Questo stesso .catch prende SIA un fallimento vero della lettura
@@ -5594,6 +5605,9 @@
     if (filtroSoloVisiteAttivo) conteggio++;
     if (Number(document.getElementById("punteggio-minimo").value) > 0
       || Number(document.getElementById("punteggio-massimo").value) < 100) conteggio++;
+    const ricercaAttiva = document.getElementById("ricerca").value.trim() !== "";
+    document.getElementById("azzera-filtri-foglio").classList.toggle("nascosto", conteggio === 0 && !ricercaAttiva);
+    filtriDaAzzerare = conteggio > 0 || ricercaAttiva;
     const badge = document.getElementById("badge-filtri-attivi");
     if (conteggio > 0) {
       badge.textContent = conteggio;
@@ -5618,6 +5632,95 @@
   // oltre il massimo (o viceversa), l'altra si ferma allo stesso valore
   // invece di lasciarle scambiare di posto, il comportamento atteso di
   // un cursore a doppio estremo.
+  // ==========================================================
+  // FILTRI RICORDATI — per la scheda del browser (sessionStorage): tornando
+  // al registro da un'altra pagina (Superanalisi, risultati AI…) i filtri, la
+  // ricerca, l'ordinamento e la vista restano come li avevi lasciati, anche
+  // se il browser ricarica la pagina. Chiudendo la scheda o l'app si riparte
+  // puliti (scelta del 29/09/2026: niente filtri dimenticati il giorno dopo).
+  // ==========================================================
+  const CHIAVE_FILTRI = "aste_filtri_registro_v1";
+  let filtriDaAzzerare = false;
+  let vistaCorrente = "griglia";
+  let vistaDaRipristinare = null;
+
+  function salvaFiltri() {
+    try {
+      sessionStorage.setItem(CHIAVE_FILTRI, JSON.stringify({
+        ricerca: document.getElementById("ricerca").value,
+        tipologie: [...categorieTipologiaAttive],
+        occupazione: filtroOccupazioneAttivo,
+        preferiti: filtroPreferitiScartatiAttivo,
+        concluse: mostraConcluse,
+        aggiornate: filtroSoloAggiornateAttivo,
+        visite: filtroSoloVisiteAttivo,
+        punteggioMinimo: Number(document.getElementById("punteggio-minimo").value),
+        punteggioMassimo: Number(document.getElementById("punteggio-massimo").value),
+        criterio: criterioOrdinamento,
+        direzione: direzioneOrdinamento,
+        vista: vistaCorrente,
+      }));
+    } catch (e) { /* storage non disponibile: i filtri valgono solo finché la pagina resta aperta */ }
+  }
+
+  // Porta a schermo (pillole, etichette, cursori) lo stato attuale dei filtri.
+  function mostraStatoFiltri() {
+    document.querySelectorAll("#gruppo-occupazione .pillola").forEach(p => p.classList.toggle("attiva", p.dataset.stato === filtroOccupazioneAttivo));
+    document.querySelectorAll("#gruppo-preferiti .pillola").forEach(p => p.classList.toggle("attiva", p.dataset.statoPref === filtroPreferitiScartatiAttivo));
+    aggiornaStatoPillolaValutatiMappa();
+    document.getElementById("pillola-concluse").classList.toggle("attiva", mostraConcluse);
+    document.getElementById("pillola-aggiornate").classList.toggle("attiva", filtroSoloAggiornateAttivo);
+    document.getElementById("pillola-visite").classList.toggle("attiva", filtroSoloVisiteAttivo);
+    const n = categorieTipologiaAttive.size;
+    const bottoneTipo = document.getElementById("bottone-filtro-tipologia");
+    bottoneTipo.innerHTML = (n > 0 ? `Tipo (${n})` : "Tipo") + ' <span class="freccia-tipologia">▾</span>';
+    bottoneTipo.classList.toggle("attiva", n > 0);
+    document.querySelectorAll('#menu-tipologia input[type="checkbox"]').forEach(c => { c.checked = categorieTipologiaAttive.has(c.value); });
+    document.getElementById("valore-punteggio-minimo").textContent = document.getElementById("punteggio-minimo").value;
+    document.getElementById("valore-punteggio-massimo").textContent = document.getElementById("punteggio-massimo").value;
+    aggiornaRiempimentoPunteggio();
+    aggiornaEtichettaOrdinamento();
+  }
+
+  function ripristinaFiltri() {
+    let f = null;
+    try { f = JSON.parse(sessionStorage.getItem(CHIAVE_FILTRI) || "null"); } catch (e) { f = null; }
+    if (!f || typeof f !== "object") return;
+    document.getElementById("ricerca").value = typeof f.ricerca === "string" ? f.ricerca : "";
+    categorieTipologiaAttive = new Set(Array.isArray(f.tipologie) ? f.tipologie : []);
+    filtroOccupazioneAttivo = f.occupazione === "libero" || f.occupazione === "occupato" ? f.occupazione : null;
+    filtroPreferitiScartatiAttivo = f.preferiti === "preferito" || f.preferiti === "scartato" ? f.preferiti : null;
+    mostraConcluse = !!f.concluse;
+    filtroSoloAggiornateAttivo = !!f.aggiornate;
+    filtroSoloVisiteAttivo = !!f.visite;
+    const min = Math.max(0, Math.min(100, Number(f.punteggioMinimo) || 0));
+    const max = Math.max(min, Math.min(100, Number.isFinite(Number(f.punteggioMassimo)) ? Number(f.punteggioMassimo) : 100));
+    document.getElementById("punteggio-minimo").value = min;
+    document.getElementById("punteggio-massimo").value = max;
+    if (f.criterio && DEFINIZIONI_ORDINAMENTO[f.criterio]) {
+      criterioOrdinamento = f.criterio;
+      direzioneOrdinamento = f.direzione === "asc" ? "asc" : "desc";
+    }
+    vistaDaRipristinare = f.vista === "mappa" ? "mappa" : null;
+    mostraStatoFiltri();
+    aggiornaBadgeFiltri();
+  }
+
+  // Toglie filtri e ricerca; ordinamento e vista restano come sono.
+  function azzeraFiltri() {
+    document.getElementById("ricerca").value = "";
+    categorieTipologiaAttive = new Set();
+    filtroOccupazioneAttivo = null;
+    filtroPreferitiScartatiAttivo = null;
+    mostraConcluse = false;
+    filtroSoloAggiornateAttivo = false;
+    filtroSoloVisiteAttivo = false;
+    document.getElementById("punteggio-minimo").value = 0;
+    document.getElementById("punteggio-massimo").value = 100;
+    mostraStatoFiltri();
+    applicaFiltri();
+  }
+
   function onCambioPunteggioMinimo() {
     const minEl = document.getElementById("punteggio-minimo");
     const maxEl = document.getElementById("punteggio-massimo");
@@ -5774,7 +5877,9 @@
     document.getElementById("stat-margine-mobile").textContent = conMarginePositivo.length;
 
     nascondiTuttiGliStati();
-    document.getElementById("conteggio-filtrati").textContent = `${elenco.length} di ${ASTE.length} aste mostrate`;
+    document.getElementById("conteggio-filtrati").innerHTML = `${elenco.length} di ${ASTE.length} aste mostrate`
+      + (filtriDaAzzerare ? ` · <button type="button" class="azzera-filtri" onclick="azzeraFiltri()">✕ Azzera filtri</button>` : "");
+    salvaFiltri();
 
     if (elenco.length === 0) {
       mostraStato("stato-nessun-risultato");
@@ -5800,6 +5905,8 @@
   // VISTA MAPPA — funzioni di rendering e cambio vista
   // ==========================================================
   function cambiaVista(vista) {
+    vistaCorrente = vista;
+    salvaFiltri();
     const griglia = document.getElementById("griglia-lotti");
     const vistaMappaEl = document.getElementById("vista-mappa");
     const bottoneGriglia = document.getElementById("pillola-vista-griglia");
@@ -7392,6 +7499,7 @@ ${notaHtml}
   }
 
   aggiornaLinkAnnullaBlocco();
+  ripristinaFiltri();
   provaSbloccoLetturaAutomatico();
   registraVisita("index");
 </script>
