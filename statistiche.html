@@ -206,7 +206,9 @@
   .costo-assunto-riga input { width: 100px; background: var(--bg); border: 1px solid var(--border); border-radius: 8px; padding: 6px 10px; font-family: var(--font-mono); font-size: .85rem; color: var(--ink); }
   /* Niente zoom automatico di iPhone toccando un campo (campi a 16 px sul telefono) */
   @media (max-width: 640px) {
-    input:not([type="checkbox"]):not([type="radio"]):not([type="range"]), select, textarea { font-size: 16px; }
+    input:not([type="checkbox"]):not([type="radio"]):not([type="range"]), select, textarea {
+      font-size: 16px !important;   /* !important: vince anche sulle regole più specifiche (es. dettagli della visita a 14,4 px) */
+    }
   }
 </style>
 </head>
