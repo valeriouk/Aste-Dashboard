@@ -272,7 +272,7 @@
       <tbody>
         <tr><td><a href="#orari-scanner">Scanner</a></td><td>Agli orari scelti in <a href="#config-pianificazione">Configurazione → Pianificazione</a> (10:00 e/o 16:00, ora italiana, nei giorni scelti; predefinito lun-ven alle 10:00). A mano con "Avvia scanner ora".</td><td>minuti (dipende dalle aste nuove)</td><td>sì, per le aste nuove</td></tr>
         <tr><td><a href="#orari-ricontrollo">Ricontrollo perizie</a></td><td>Alla fine di ogni giro dello scanner</td><td>15-30 s per asta</td><td>solo se trova una perizia nuova</td></tr>
-        <tr><td><a href="#orari-storico">Storico delle aste</a></td><td>Alla fine di ogni giro dello scanner</td><td>al massimo 15 minuti per giro (circa 3-8 s per asta); a regime di solito meno di un minuto</td><td>no</td></tr>
+        <tr><td><a href="#orari-storico">Storico delle aste</a></td><td>Alla fine di ogni giro dello scanner</td><td>al massimo 4 minuti per giro (circa 3-8 s per asta); di solito meno di un minuto</td><td>no</td></tr>
         <tr><td><a href="#omi-assegnazione">Assegnazione OMI</a></td><td>Alla fine di ogni giro dello scanner; dopo un controllo batch che ha trovato batch; dopo un'importazione OMI</td><td>secondi</td><td>no</td></tr>
         <tr><td><a href="#orari-promemoria-omi">Promemoria OMI</a></td><td>Il lunedì, dentro il giro dello scanner</td><td>—</td><td>no</td></tr>
         <tr><td><a href="#orari-batch">Controllo batch</a></td><td>Circa ogni ora, tutto il giorno; a mano con "Controlla batch ora"</td><td>meno di 1 minuto se non c'è nulla</td><td>no (i batch sono già pagati all'invio)</td></tr>
@@ -366,7 +366,7 @@
       Nessun costo Gemini: solo richieste al PVP. Per le aste nuove lo storico viene calcolato già al momento della
       <a href="#notifiche-elenco">notifica "NUOVA ASTA"</a> (che ne riporta la riga): a fine giro quelle aste risultano già fatte.</p>
     <ul>
-      <li><strong>Quando</strong>: alla fine di ogni giro dello scanner, non in modalità "solo conteggio". Al massimo circa 15 minuti per giro: le aste
+      <li><strong>Quando</strong>: alla fine di ogni giro dello scanner, non in modalità "solo conteggio". Al massimo circa 4 minuti per giro: le aste
         rimaste vengono fatte al giro successivo.</li>
       <li><strong>Quali aste</strong>: quelle con vendita da oggi in poi. Prima quelle senza storico (dalla vendita più vicina), poi le altre una volta a
         settimana, per leggere gli esiti pubblicati dopo. Dopo un errore si riprova il giorno dopo.</li>
