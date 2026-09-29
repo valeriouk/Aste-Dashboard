@@ -97,6 +97,10 @@
     .contenitore { max-width: none; padding: 0; }
     .foglio { border: none; padding: 0; }
   }
+  /* Niente zoom automatico di iPhone toccando un campo (campi a 16 px sul telefono) */
+  @media (max-width: 640px) {
+    input:not([type="checkbox"]):not([type="radio"]):not([type="range"]), select, textarea { font-size: 16px; }
+  }
 </style>
 </head>
 <body>

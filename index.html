@@ -2296,6 +2296,136 @@
   @media (prefers-reduced-motion: reduce) {
     * { animation: none !important; transition: none !important; }
   }
+  /* ============================================================
+     FASE 3 (29/09/2026) — telefono e finestra dei dettagli.
+     Regole raccolte qui, in fondo, apposta: prevalgono su quelle di
+     sopra senza doverle toccare una per una.
+  ============================================================ */
+  .testo-pillola-desktop { display: inline; }
+  .etichetta-foglio, .mostra-risultati-foglio { display: none; }
+  /* Card: badge e riga "km · vendita" a tutta larghezza sotto l'intestazione */
+  .lotto-sotto-testata { margin: -6px 0 10px; }
+  .lotto-sotto-testata .lotto-meta { margin-top: 2px; }
+  .badge-ai { display: inline-block; font-size: .72rem; font-weight: 600; padding: 3px 9px; border-radius: 5px; margin: 4px 6px 6px 0;
+    background: var(--secondary-soft); color: var(--secondary); }
+  /* Area di tocco della casella di selezione più grande della casella. */
+  .area-selezione { display: flex; align-items: center; justify-content: center; margin: -10px -6px -10px -10px; padding: 10px; cursor: pointer; flex-shrink: 0; }
+  button.lotto-link { border: none; font-family: inherit; cursor: pointer; }
+
+  /* Dettagli: badge, azioni rapide, indice delle sezioni, ★ ✕ in alto */
+  .finestra-dettagli-header { flex-wrap: wrap; row-gap: 10px; }
+  .finestra-dettagli-testata { flex: 1 1 0; min-width: 0; }
+  .riga-badge-dettagli { display: flex; flex-wrap: wrap; align-items: center; }
+  .finestra-dettagli-azioni-header { align-items: center; }
+  .finestra-dettagli-azioni-header .bottone-azione-lotto { width: 36px; height: 36px; border-radius: 50%; background: var(--surface-2); padding: 0; }
+  .indice-dettagli { flex: 1 0 100%; display: flex; gap: 6px; overflow-x: auto; scrollbar-width: none; margin: 0 -4px -6px; padding: 0 4px 2px; }
+  .indice-dettagli::-webkit-scrollbar { display: none; }
+  .indice-dettagli button { flex-shrink: 0; font: inherit; font-size: .78rem; font-weight: 500; color: var(--ink-muted); background: var(--surface-2);
+    border: none; border-radius: 999px; padding: 6px 12px; min-height: 32px; cursor: pointer; white-space: nowrap; }
+  .indice-dettagli button:hover { color: var(--ink); }
+  .azioni-rapide-dettagli { display: flex; flex-wrap: wrap; gap: 8px; margin: 0 0 16px; }
+  .azioni-rapide-dettagli .lotto-link { margin: 0; min-height: 40px; }
+  .sezione-dettagli { scroll-margin-top: 12px; }
+  .sezione-dettagli > .sezione-costi:first-child, .sezione-dettagli > div:first-child { margin-top: 18px; }
+  #sez-cifre > .lotto-margine { margin-top: 0; }
+  /* Intestazione ridotta mentre si scorre la scheda */
+  .finestra-dettagli-asta.compatta .finestra-dettagli-header { padding-top: 10px; padding-bottom: 10px; }
+  .finestra-dettagli-asta.compatta .finestra-dettagli-header .lotto-id,
+  .finestra-dettagli-asta.compatta .finestra-dettagli-header .riga-badge-dettagli,
+  .finestra-dettagli-asta.compatta .finestra-dettagli-header .lotto-meta { display: none; }
+  .finestra-dettagli-asta.compatta .finestra-dettagli-header .sigillo { width: 38px; height: 38px; font-size: .85rem; }
+  .finestra-dettagli-asta.compatta .finestra-dettagli-header .lotto-comune { margin: 0; overflow: hidden; display: -webkit-box; -webkit-line-clamp: 1; -webkit-box-orient: vertical; }
+  .finestra-dettagli-asta.compatta .finestra-dettagli-header .lotto-comune button { font-size: .95rem; }
+  .finestra-dettagli-asta.compatta .finestra-dettagli-testata { align-items: center; }
+  /* Costi di trasferimento: le schede Prima/Seconda casa servono solo sul telefono */
+  .schede-casa { display: none; }
+
+  @media (max-width: 640px) {
+    .testo-pillola-desktop { display: none; }
+    /* Card più bassa: cifre su due colonne, meno spazi */
+    .lotto { padding: 14px 14px 12px; }
+    .lotto-testata { gap: 10px; margin-bottom: 10px; }
+    .lotto-testata .sigillo { width: 46px; height: 46px; font-size: .95rem; }
+    .lotto-comune { font-size: 1.02rem; overflow-wrap: break-word; word-break: normal; }
+    .lotto-meta { overflow-wrap: break-word; word-break: normal; }
+    .lotto-cifre { grid-template-columns: 1fr 1fr; gap: 8px 12px; padding: 8px 0 10px; margin-bottom: 10px; }
+    .lotto-margine { padding-top: 10px; }
+    .lotto-margine-valore { font-size: 1.3rem; }
+    .cifra-valore { font-size: .88rem; }
+    .lotto .nota-preferito { margin-bottom: 8px; }
+    /* Aree di tocco di almeno 44 px */
+    .lotto-azioni { gap: 0; margin-right: -8px; }
+    .lotto-azioni .bottone-azione-lotto { width: 44px; height: 44px; padding: 0; }
+    .link-seleziona-tutte { min-height: 40px; padding: 0 6px; }
+    .link-utile-rimuovi, .link-utili-elenco button[aria-label] { min-width: 40px; min-height: 40px; }
+
+    /* Riga "N di M aste · Azzera" sopra, azioni sotto: niente più andate a capo storte */
+    .riga-conteggio-filtrati { flex-direction: column; align-items: stretch; gap: 2px; }
+    .azioni-conteggio-filtrati { justify-content: flex-start; }
+
+    /* Dettagli: ★ ✕ condividi stampa su una riga sotto il testo, la ✕ di
+       chiusura resta in alto a destra; indice sotto. */
+    .finestra-dettagli-testata { flex: 1 1 100%; padding-right: 42px; }
+    .finestra-dettagli-azioni-header { flex: 1 1 100%; gap: 6px; }
+    .finestra-dettagli-header .finestra-dettagli-chiudi { position: absolute; top: 8px; right: 12px; }
+    .finestra-dettagli-azioni-header .bottone-azione-lotto { width: 40px; height: 40px; }
+    .finestra-dettagli-header .finestra-dettagli-condividi,
+    .finestra-dettagli-header .finestra-dettagli-stampa { width: 40px; height: 40px; }
+    .riga-badge-dettagli { flex-wrap: nowrap; overflow-x: auto; scrollbar-width: none; }
+    .riga-badge-dettagli::-webkit-scrollbar { display: none; }
+    .riga-badge-dettagli > span { flex-shrink: 0; }
+    .finestra-dettagli-asta.compatta .finestra-dettagli-azioni-header .bottone-azione-lotto,
+    .finestra-dettagli-asta.compatta .finestra-dettagli-header .finestra-dettagli-condividi,
+    .finestra-dettagli-asta.compatta .finestra-dettagli-header .finestra-dettagli-stampa { width: 34px; height: 34px; }
+    .finestra-dettagli-asta.compatta .finestra-dettagli-testata { padding-right: 42px; }
+    .finestra-dettagli-corpo { padding: 16px 16px calc(24px + env(safe-area-inset-bottom)); }
+    /* Azioni rapide su una sola riga (scorre di lato se non ci stanno) */
+    .azioni-rapide-dettagli { flex-wrap: nowrap; gap: 6px; overflow-x: auto; scrollbar-width: none; }
+    .azioni-rapide-dettagli::-webkit-scrollbar { display: none; }
+    .azioni-rapide-dettagli .lotto-link { flex-shrink: 0; padding: 8px 10px; font-size: .82rem; }
+
+    /* Costi: una casa alla volta */
+    .schede-casa { display: flex; gap: 6px; margin: 4px 0 8px; }
+    .schede-casa button { flex: 1; font: inherit; font-size: .82rem; font-weight: 600; padding: 8px; min-height: 40px; border-radius: 8px;
+      border: 1px solid var(--border); background: var(--surface); color: var(--ink-muted); cursor: pointer; }
+    .schede-casa button.attiva { background: var(--ink); color: var(--surface); border-color: var(--ink); }
+    .tabella-costi-scenari.mostra-prima th:nth-child(4), .tabella-costi-scenari.mostra-prima td:nth-child(4),
+    .tabella-costi-scenari.mostra-prima th:nth-child(5), .tabella-costi-scenari.mostra-prima td:nth-child(5),
+    .tabella-costi-scenari.mostra-seconda th:nth-child(2), .tabella-costi-scenari.mostra-seconda td:nth-child(2),
+    .tabella-costi-scenari.mostra-seconda th:nth-child(3), .tabella-costi-scenari.mostra-seconda td:nth-child(3) { display: none; }
+
+    /* Pannello dei filtri: titolo dell'ordinamento e "Mostra N aste" */
+    .etichetta-foglio { display: block; font-size: .75rem; font-weight: 700; letter-spacing: .04em; text-transform: uppercase;
+      color: var(--ink-muted); margin: 6px 0 -2px; }
+    .mostra-risultati-foglio { display: block; width: 100%; min-height: 48px; margin-top: 8px; border: none; border-radius: 10px;
+      background: var(--ink); color: var(--surface); font: inherit; font-weight: 600; font-size: .95rem; cursor: pointer; }
+    .controlli-estesi { overscroll-behavior: contain; padding-bottom: calc(16px + env(safe-area-inset-bottom)); }
+
+    /* Barra di selezione: bassa, a tutta larghezza, "Altro" per il resto */
+    .barra-selezione { left: 8px; right: 8px; transform: none; max-width: none; bottom: calc(8px + env(safe-area-inset-bottom));
+      padding: 8px 10px; gap: 8px; flex-wrap: wrap; justify-content: space-between; }
+    .barra-selezione-conteggio { font-size: .8rem; }
+    .barra-selezione-azioni { gap: 6px; flex-wrap: nowrap; }
+    .barra-selezione button { padding: 0 10px; min-height: 40px; font-size: .8rem; }
+    .barra-selezione-secondarie { display: none; order: -1; flex: 1 0 100%; flex-wrap: wrap; border-left: none !important; padding-left: 0 !important;
+      padding-bottom: 8px; border-bottom: 1px solid rgba(255,255,255,.2); }
+    .barra-selezione.altro-aperto .barra-selezione-secondarie { display: flex; }
+    .bottone-torna-su { bottom: calc(76px + env(safe-area-inset-bottom)); }
+    #toast-preferiti { bottom: calc(24px + env(safe-area-inset-bottom)); }
+
+    /* Niente zoom automatico di iPhone toccando un campo */
+    input:not([type="checkbox"]):not([type="radio"]):not([type="range"]), select, textarea { font-size: 16px; }
+  }
+  @media (min-width: 641px) {
+    .barra-selezione-altro { display: none; }
+  }
+  @media print {
+    .indice-dettagli, .azioni-rapide-dettagli, .schede-casa { display: none !important; }
+    .tabella-costi-scenari th, .tabella-costi-scenari td { display: table-cell !important; }
+    .finestra-dettagli-asta .finestra-dettagli-header .lotto-id,
+    .finestra-dettagli-asta .finestra-dettagli-header .riga-badge-dettagli,
+    .finestra-dettagli-asta .finestra-dettagli-header .lotto-meta { display: revert !important; }
+  }
 </style>
 </head>
 <body>
@@ -2374,11 +2504,11 @@
       </div>
       <div class="gruppo-pillole" id="gruppo-occupazione">
         <button type="button" class="pillola" data-stato="libero" onclick="attivaFiltroOccupazione('libero')">Libero</button>
-        <button type="button" class="pillola" data-stato="occupato" onclick="attivaFiltroOccupazione('occupato')" title="Occupato">Occ.</button>
+        <button type="button" class="pillola" data-stato="occupato" onclick="attivaFiltroOccupazione('occupato')" title="Occupato"><span class="testo-pillola-desktop">Occ.</span><span class="testo-pillola-mobile">Occupato</span></button>
       </div>
       <div class="gruppo-pillole" id="gruppo-preferiti">
-        <button type="button" class="pillola" data-stato-pref="preferito" onclick="attivaFiltroPreferitiScartati('preferito')" title="Preferiti">★</button>
-        <button type="button" class="pillola" data-stato-pref="scartato" onclick="attivaFiltroPreferitiScartati('scartato')" title="Scartati">✕</button>
+        <button type="button" class="pillola" data-stato-pref="preferito" onclick="attivaFiltroPreferitiScartati('preferito')" title="Preferiti">★<span class="testo-pillola-mobile"> Preferite</span></button>
+        <button type="button" class="pillola" data-stato-pref="scartato" onclick="attivaFiltroPreferitiScartati('scartato')" title="Scartati">✕<span class="testo-pillola-mobile"> Scartate</span></button>
       </div>
       <div class="gruppo-pillole" id="gruppo-concluse">
         <button type="button" class="pillola" id="pillola-concluse" onclick="alternaMostraConcluse()">Concluse</button>
@@ -2397,12 +2527,14 @@
         </div>
       </div>
       <div class="contenitore-filtro-tipologia">
+        <p class="etichetta-foglio">Ordina per</p>
         <div class="gruppo-pillole">
           <button type="button" class="pillola" id="bottone-ordinamento" onclick="alternaMenuOrdinamento(event)" aria-expanded="false" aria-haspopup="true" title="Ordina per">
             <span id="etichetta-ordinamento-corrente">Punteggio</span> <span class="freccia-direzione" id="freccia-direzione-ordinamento">↓</span>
           </button>
         </div>
       </div>
+      <button type="button" class="mostra-risultati-foglio" id="mostra-risultati-foglio" onclick="chiudiFoglioFiltri()">Mostra le aste</button>
     </div>
   </div>
   <div class="sfondo-foglio-filtri nascosto" id="sfondo-foglio-filtri" onclick="chiudiFoglioFiltri()"></div>
@@ -2569,14 +2701,15 @@
        semplice che costruire/distruggere l'elemento ogni volta. -->
   <div id="barra-selezione" class="barra-selezione nascosto">
     <span class="barra-selezione-conteggio" id="barra-selezione-conteggio"></span>
-    <div class="barra-selezione-azioni">
+    <div class="barra-selezione-azioni barra-selezione-principali">
+      <button type="button" id="bottone-confronta" onclick="apriConfronto()">⇄ Confronta</button>
+      <button type="button" id="bottone-gruppo" onclick="apriSuperanalisiGruppo()">🧠 <span class="testo-pillola-desktop">Superanalisi di </span>gruppo</button>
+      <button type="button" class="barra-selezione-altro" onclick="alternaAltroSelezione()" aria-expanded="false">Altro ▾</button>
+    </div>
+    <div class="barra-selezione-azioni barra-selezione-secondarie">
       <button type="button" class="barra-selezione-preferisci" onclick="eseguiAzioneInBlocco('preferito')">★ Preferisci tutte</button>
       <button type="button" class="barra-selezione-scarta" onclick="eseguiAzioneInBlocco('scartato')">✕ Scarta tutte</button>
       <button type="button" class="barra-selezione-rimuovi" onclick="eseguiAzioneInBlocco(null)">⊖ Rimuovi flag</button>
-      <button type="button" id="bottone-confronta" onclick="apriConfronto()">⇄ Confronta</button>
-      <button type="button" onclick="apriSuperanalisiGruppo()">🧠 Superanalisi di gruppo</button>
-    </div>
-    <div class="barra-selezione-azioni">
       <button type="button" onclick="esportaCSV('selezionate')">Esporta selezionate</button>
       <button type="button" onclick="deselezionaTutto()">Deseleziona tutto</button>
     </div>
@@ -3751,11 +3884,19 @@
     aggiornaBarraSelezione();
   }
 
+  // Telefono: "Altro ▾" apre le azioni meno frequenti sopra la barra.
+  function alternaAltroSelezione() {
+    const barra = document.getElementById("barra-selezione");
+    const aperta = barra.classList.toggle("altro-aperto");
+    barra.querySelector(".barra-selezione-altro").setAttribute("aria-expanded", aperta ? "true" : "false");
+  }
+
   function aggiornaBarraSelezione() {
     const barra = document.getElementById("barra-selezione");
     const n = astaSelezionate.size;
     if (n === 0) {
       barra.classList.add("nascosto");
+      barra.classList.remove("altro-aperto");
       return;
     }
     barra.classList.remove("nascosto");
@@ -3771,6 +3912,11 @@
     const ammesso = n >= 2 && n <= 3;
     bottoneConfronta.disabled = !ammesso;
     bottoneConfronta.title = ammesso ? "" : (n < 2 ? "Seleziona almeno 2 aste per confrontarle" : "Puoi confrontare al massimo 3 aste alla volta");
+    // Superanalisi di gruppo: da 2 a 10 aste, stesso principio del confronto.
+    const bottoneGruppo = document.getElementById("bottone-gruppo");
+    const gruppoAmmesso = n >= 2 && n <= 10;
+    bottoneGruppo.disabled = !gruppoAmmesso;
+    bottoneGruppo.title = gruppoAmmesso ? "" : (n < 2 ? "Seleziona almeno 2 aste" : "Al massimo 10 aste");
   }
 
   // Aggiorna SOLO le checkbox già presenti nel DOM in questo momento
@@ -5187,6 +5333,32 @@
   // dall'elenco di Abitazioni, e viceversa: mai nascosto per errore da un
   // filtro che comunque lo riguarda. Un Set toglie da solo eventuali
   // duplicati (capita che PVP ripeta lo stesso codice più volte).
+  // Nomi leggibili dei codici PVP, solo per mostrarli (ricerca e CSV usano
+  // ancora i codici). Codice sconosciuto: minuscolo senza trattini bassi.
+  const NOMI_TIPOLOGIA = {
+    ABITAZIONE_TIPO_CIV: "Abitazione civile", ABITAZIONE_TIPO_ECO: "Abitazione economica",
+    ABITAZIONE_TIPO_POP: "Abitazione popolare", ABITAZIONE_TIPO_UPOP: "Abitazione ultrapopolare",
+    ABITAZIONE_TIPO_RUR: "Abitazione rurale", ABITAZIONE_IN_VILLINI: "Villino", APPARTAMENTO: "Appartamento",
+    GARAGE_AUTORIMESSA: "Garage", POSTO_AUTO: "Posto auto", TETTOIE_CHIUSE_APERTE: "Tettoia",
+    NEGOZIO: "Negozio", NEGOZI_BOTTEGHE: "Negozio", UFFICIO: "Ufficio", UFFICI_E_STUDI: "Ufficio o studio",
+    LABORATORI_ARTI: "Laboratorio", LABORATORIO_ARTIGIANO: "Laboratorio artigiano", ISTITUTO_CREDITO_CAMBIO: "Istituto di credito",
+    TERRENO: "Terreno", DEPOSITO: "Deposito", MAGAZZINO: "Magazzino", MAGAZZINI_E_DEPOSITO: "Magazzino o deposito",
+    CANTINA: "Cantina", STALLE_SCUDERIE_RIMESSE: "Rimessa", FABBRICATI_COSTRUITI_PER_ESIGENZE_IND: "Fabbricato industriale",
+    FABBRICATO: "Fabbricato", FABBRICATO_IN_COSTR: "Fabbricato in costruzione", FABBRICATI_COMMERCIALI: "Fabbricato commerciale",
+    COMPENDIO_PIGNORATO: "Compendio pignorato", LASTRICO_SOLARE: "Lastrico solare", PORZIONE_DI_IMMOBILE: "Porzione di immobile",
+  };
+  function etichettaTipologia(tipologiaGrezza) {
+    const voci = (tipologiaGrezza || "").split(",").map(t => t.trim()).filter(t => t && t !== "N/D");
+    if (!voci.length) return "N/D";
+    const nomi = voci.map(t => NOMI_TIPOLOGIA[t] || (t.charAt(0) + t.slice(1).toLowerCase()).replace(/_/g, " "));
+    return [...new Set(nomi)].join(" + ");
+  }
+  const NOMI_DISPONIBILITA = {LIBER: "Libero", OCCUP: "Occupato"};
+  function etichettaDisponibilita(grezza) {
+    const voci = (grezza || "").split(",").map(t => t.trim()).filter(Boolean);
+    return voci.length ? [...new Set(voci.map(t => NOMI_DISPONIBILITA[t] || t))].join(", ") : "N/D";
+  }
+
   function categorieDiAsta(tipologiaGrezza) {
     const token = (tipologiaGrezza || "").split(",").map(t => t.trim()).filter(Boolean);
     if (token.length === 0) return ["Altro"];
@@ -5571,6 +5743,7 @@
     // transizione, comparendo di scatto invece che in dissolvenza).
     requestAnimationFrame(() => document.getElementById("sfondo-foglio-filtri").classList.add("visibile"));
     document.body.style.overflow = "hidden"; // la pagina sotto non scorre mentre il foglio è aperto
+    document.documentElement.style.overflow = "hidden";
   }
 
   function foglioFiltriAperto() {
@@ -5585,6 +5758,7 @@
     document.getElementById("controlli-estesi").classList.remove("aperto");
     document.getElementById("sfondo-foglio-filtri").classList.remove("visibile");
     document.body.style.overflow = "";
+    document.documentElement.style.overflow = "";
     setTimeout(() => document.getElementById("sfondo-foglio-filtri").classList.add("nascosto"), 250); // dopo la transizione, non durante
   }
 
@@ -5771,7 +5945,7 @@
       // quello servirebbe un'infrastruttura diversa (embedding),
       // volutamente non questa.
       const passaRicerca = !ricerca || [
-        a.comune, a.descrizione, a.note, a.notaPreferito, a.tipologia,
+        a.comune, a.descrizione, a.note, a.notaPreferito, a.tipologia, etichettaTipologia(a.tipologia),
         a.statoOccupazione, a.formalitaPregiudizievoli, a.abusiEdilizi,
         formattaData(a.dataVendita), a.testoTentativoRicerca
       ].some(campo => campo && campo.toLowerCase().includes(ricerca));
@@ -5877,6 +6051,7 @@
     document.getElementById("stat-margine-mobile").textContent = conMarginePositivo.length;
 
     nascondiTuttiGliStati();
+    document.getElementById("mostra-risultati-foglio").textContent = elenco.length === 1 ? "Mostra 1 asta" : `Mostra ${elenco.length} aste`;
     document.getElementById("conteggio-filtrati").innerHTML = `${elenco.length} di ${ASTE.length} aste mostrate`
       + (filtriDaAzzerare ? ` · <button type="button" class="azzera-filtri" onclick="azzeraFiltri()">✕ Azzera filtri</button>` : "");
     salvaFiltri();
@@ -6259,23 +6434,26 @@
     return `
       <article class="lotto${conclusa ? ' conclusa' : ''}${a.scartato ? ' scartato' : ''}" id="lotto-${a.id}" onclick="apriDettagliAsta('${a.id}')" tabindex="0" aria-label="Vedi dettagli di ${escapeHtml(a.comune)}" onkeydown="if(event.key==='Enter'){apriDettagliAsta('${a.id}')}">
         <div class="lotto-testata">
-          <input type="checkbox" class="checkbox-selezione" aria-label="Seleziona per confronto o azioni multiple" ${astaSelezionate.has(a.id) ? "checked" : ""} onclick="event.stopPropagation()" onkeydown="event.stopPropagation()" onchange="onCambiaSelezione('${a.id}', this.checked)">
+          <label class="area-selezione" onclick="event.stopPropagation()"><input type="checkbox" class="checkbox-selezione" aria-label="Seleziona per confronto o azioni multiple" ${astaSelezionate.has(a.id) ? "checked" : ""} onkeydown="event.stopPropagation()" onchange="onCambiaSelezione('${a.id}', this.checked)"></label>
           <div class="sigillo ${livello}">${contenutoSigillo}</div>
           <div>
-            <p class="lotto-id">${a.lotto ? "Lotto " + escapeHtml(a.lotto) + " · " : ""}${conPuntiDiRottura(a.tipologia)}</p>
+            <p class="lotto-id">${a.lotto ? "Lotto " + escapeHtml(a.lotto) + " · " : ""}${escapeHtml(etichettaTipologia(a.tipologia))}</p>
             <p class="lotto-comune">${escapeHtml(a.comune)}</p>
-            ${eNuova(a.dataInserimento) ? `<span class="badge-nuova" title="Trovata nelle ultime 24 ore">✨ Nuova</span>` : ""}
-            ${eAggiornata(a) ? `<span class="badge-aggiornata" title="Perizia ricontrollata e rianalizzata nelle ultime 24 ore">📄 Aggiornata</span>` : ""}
-            ${badgeVisita(a)}
-            ${conclusa ? `<span class="badge-conclusa">🏁 Conclusa</span>` : ""}
-            ${a.zonaSegnalata ? `<span class="badge-zona">🚩 ${escapeHtml(a.zonaSegnalata)}</span>` : ""}
-            ${badgeTentativo(a.storico)}
-            <p class="lotto-meta">${escapeHtml(distanzaTesto)} · vendita ${formattaData(a.dataVendita)}</p>
           </div>
           <div class="lotto-azioni">
             <button type="button" class="bottone-azione-lotto${a.preferito ? ' preferito-attivo' : ''}" title="Preferito" onclick="onClickStella(event, '${a.id}')">${iconaStella}</button>
             <button type="button" class="bottone-azione-lotto${a.scartato ? ' scartato-attivo' : ''}" title="Non interessa" onclick="onClickScarta(event, '${a.id}')">${iconaScarta}</button>
           </div>
+        </div>
+        <div class="lotto-sotto-testata">
+          ${eNuova(a.dataInserimento) ? `<span class="badge-nuova" title="Trovata nelle ultime 24 ore">✨ Nuova</span>` : ""}
+          ${eAggiornata(a) ? `<span class="badge-aggiornata" title="Perizia ricontrollata e rianalizzata nelle ultime 24 ore">📄 Aggiornata</span>` : ""}
+          ${badgeVisita(a)}
+          ${conclusa ? `<span class="badge-conclusa">🏁 Conclusa</span>` : ""}
+          ${a.zonaSegnalata ? `<span class="badge-zona">🚩 ${escapeHtml(a.zonaSegnalata)}</span>` : ""}
+          ${badgeTentativo(a.storico)}
+          ${(a.superanalisiEsterne || []).length ? `<span class="badge-ai" title="Risultati di superanalisi con AI esterne salvati: aprili dalla scheda">🧠 ${(a.superanalisiEsterne || []).length}</span>` : ""}
+          <p class="lotto-meta">${escapeHtml(distanzaTesto)} · vendita ${formattaData(a.dataVendita)}</p>
         </div>
 ${notaHtml}
         <div class="lotto-margine">
@@ -6331,6 +6509,7 @@ ${notaHtml}
     document.getElementById("overlay-dettagli-asta").classList.add("aperto");
     document.body.style.overflow = "hidden"; // la pagina sotto non scorre mentre la finestra è aperta
     document.querySelector(".finestra-dettagli-asta").scrollTop = 0;   // ogni asta si apre dall'inizio
+    aggiornaIntestazioneCompatta();
     // Un passo nella cronologia (#ID): il tasto Indietro del telefono chiude
     // la scheda invece di uscire dal registro. Passando da un'asta all'altra
     // (frecce) o dal confronto il passo si sostituisce, non si accumula.
@@ -6607,7 +6786,8 @@ ${notaHtml}
     }
 
     document.addEventListener("touchstart", evento => {
-      if (staCaricando || window.scrollY > 0 || qualchePannelloAperto()) { yIniziale = null; return; }
+      if (staCaricando || window.scrollY > 0 || qualchePannelloAperto()
+          || (evento.target.closest && evento.target.closest(".leaflet-container, .barra-selezione"))) { yIniziale = null; return; }
       yIniziale = evento.touches[0].clientY;
       distanzaAttuale = 0;
     }, { passive: true });
@@ -6784,7 +6964,11 @@ ${notaHtml}
         </div>` : ""}
         <p class="sezione-costi-nota">${NOTA_FONTE_RENDITA[c.renditaUsata.fonte](formattaEuro(Math.round(c.renditaUsata.valore)))}</p>
         <div class="tabella-scroll">
-          <table class="tabella-costi tabella-costi-scenari">
+          <div class="schede-casa">
+            <button type="button" class="attiva" onclick="mostraCasaCosti(this, 'prima')">Prima casa</button>
+            <button type="button" onclick="mostraCasaCosti(this, 'seconda')">Seconda casa</button>
+          </div>
+          <table class="tabella-costi tabella-costi-scenari mostra-prima">
             <thead><tr>
               <th></th>
               <th>Prima casa<br><small>prezzo-valore${asterisco}</small></th>
@@ -7345,12 +7529,73 @@ ${notaHtml}
           </div>
         </div>`;
 
+    // Fase 3 (29/09/2026): intestazione compatta con ★ ✕, azioni rapide in
+    // cima (PVP, perizia, foto, superanalisi), indice delle sezioni che resta
+    // sotto l'intestazione, e sezioni nell'ordine di chi decide: cifre,
+    // rischi, visita, storico, dettagli, costi, lavori, mappa, risultati AI,
+    // link e foto, descrizione. Nessun contenuto tolto, solo spostato.
+    const documentoEtichetta = /^perizia/i.test(a.fonteDocumento || "") ? "Perizia" : "Documento";
+    const nRisultatiAi = (a.superanalisiEsterne || []).length;
+    const sezioni = [
+      ["sez-cifre", "Cifre", `
+        <div class="lotto-margine">
+          <p class="cifra-etichetta">Margine stimato</p>
+          <p class="lotto-margine-valore">${a.margine !== null ? formattaEuro(a.margine) : "—"}</p>
+        </div>
+        <div class="lotto-cifre">
+          <div>
+            <p class="cifra-etichetta">Offerta minima</p>
+            <p class="cifra-valore">${formattaEuro(a.offertaMinima)}</p>
+          </div>
+          <div>
+            <p class="cifra-etichetta">Valore stima</p>
+            <p class="cifra-valore">${a.valoreStima > 0 ? formattaEuro(a.valoreStima) : "—"}</p>
+          </div>
+          <div class="cifra-larga">
+            <p class="cifra-etichetta">Stato occupazione</p>
+            <p class="cifra-valore">${escapeHtml(a.statoOccupazione)}</p>
+          </div>
+        </div>`],
+      ["sez-rischi", "Rischi", a.note ? `<div class="sezione-costi">
+          <h3 class="sezione-costi-titolo">⚠️ Rischi e note dell'AI</h3>
+          <div class="lotto-note">${escapeHtml(a.note)}</div>
+        </div>` : ""],
+      ["sez-visita", "Visita", sezioneVisita(a)],
+      ["sez-storico", "Storico", sezioneStoricoAste(a)],
+      ["sez-dettagli", "Dettagli", `<div class="sezione-costi">
+          <h3 class="sezione-costi-titolo">📋 Dettagli</h3>
+          <div class="dettaglio-riga"><span>Tribunale</span><span>${escapeHtml(a.tribunale)}</span></div>
+          <div class="dettaglio-riga"><span>Disponibilità (PVP)</span><span>${escapeHtml(etichettaDisponibilita(a.disponibilita))}</span></div>
+          <div class="dettaglio-riga"><span>Prezzo base</span><span>${formattaEuro(a.prezzoBase)}</span></div>
+          <div class="dettaglio-riga"><span>Rilancio minimo</span><span>${formattaEuro(a.rilancioMinimo)}</span></div>
+          ${rigaSuperficie}
+          <div class="dettaglio-riga"><span>Spese sanatoria</span><span>${formattaEuro(a.speseSanatoria)}</span></div>
+          <div class="dettaglio-riga"><span>Abusi edilizi</span><span>${escapeHtml(a.abusiEdilizi)}</span></div>
+          <div class="dettaglio-riga${formalitaConAvviso ? ' avviso' : ''}"><span>Formalità pregiudizievoli</span><span>${escapeHtml(formalitaTesto)}</span></div>
+          <div class="dettaglio-riga"><span>Fonte analisi</span><span>${escapeHtml(a.fonteDocumento || "nessuna")}</span></div>
+          <div class="dettaglio-riga"><span>Modello AI</span><span>${escapeHtml(a.modelloUsato || "N/D")}</span></div>
+          <div class="dettaglio-riga"><span>ID Annuncio</span><span>${escapeHtml(a.id)}</span></div>
+        </div>`],
+      ["sez-costi", "Costi", bloccoCostiTrasferimento(a)],
+      ["sez-lavori", "Lavori", bloccoCostiRistrutturazione(a)],
+      ["sez-mappa", "Mappa", a.lat !== null && a.lon !== null ? `<div class="sezione-costi sezione-mappa-dettagli">
+          <h3 class="sezione-costi-titolo">📍 Posizione</h3>
+          <div id="mappa-dettagli" class="mappa-dettagli"></div>
+        </div>` : ""],
+      ["sez-ai", "AI", sezioneSuperanalisiEsterne(a)],
+      ["sez-link", "Link e foto", bloccoLinkUtili(a)],
+      ["sez-descrizione", "Descrizione", a.descrizione ? `<div class="sezione-costi">
+          <h3 class="sezione-costi-titolo">📝 Descrizione del lotto</h3>
+          <div class="lotto-note">${escapeHtml(a.descrizione)}</div>
+        </div>` : ""],
+    ].filter(([, , html]) => html && html.trim());
+
     return `
       <div class="finestra-dettagli-header">
         <div class="finestra-dettagli-testata">
           <div class="sigillo ${livello}">${contenutoSigillo}</div>
           <div>
-            <p class="lotto-id">${a.lotto ? "Lotto " + escapeHtml(a.lotto) + " · " : ""}${conPuntiDiRottura(a.tipologia)}</p>
+            <p class="lotto-id">${a.lotto ? "Lotto " + escapeHtml(a.lotto) + " · " : ""}${escapeHtml(etichettaTipologia(a.tipologia))}</p>
             <div class="contenitore-indirizzo">
               <p class="lotto-comune"><button type="button" class="indirizzo-cliccabile" id="bottone-indirizzo-dettagli" onclick="apriMenuIndirizzo(this)" aria-expanded="false" title="Apri in Google Maps o Street View">📍 ${escapeHtml(a.comune)}</button></p>
               <div class="menu-condividi menu-indirizzo nascosto" id="menu-indirizzo-dettagli">
@@ -7361,16 +7606,20 @@ ${notaHtml}
                   : `<p class="nota-menu">Street View non disponibile: l'annuncio non ha le coordinate.</p>`}
               </div>
             </div>
-            ${eNuova(a.dataInserimento) ? `<span class="badge-nuova" title="Trovata nelle ultime 24 ore">✨ Nuova</span>` : ""}
-            ${eAggiornata(a) ? `<span class="badge-aggiornata" title="Perizia ricontrollata e rianalizzata nelle ultime 24 ore">📄 Aggiornata</span>` : ""}
-            ${badgeVisita(a)}
-            ${conclusa ? `<span class="badge-conclusa">🏁 Conclusa</span>` : ""}
-            ${a.zonaSegnalata ? `<span class="badge-zona">🚩 ${escapeHtml(a.zonaSegnalata)}</span>` : ""}
-            ${badgeTentativo(a.storico)}
+            <div class="riga-badge-dettagli">
+              ${eNuova(a.dataInserimento) ? `<span class="badge-nuova" title="Trovata nelle ultime 24 ore">✨ Nuova</span>` : ""}
+              ${eAggiornata(a) ? `<span class="badge-aggiornata" title="Perizia ricontrollata e rianalizzata nelle ultime 24 ore">📄 Aggiornata</span>` : ""}
+              ${badgeVisita(a)}
+              ${conclusa ? `<span class="badge-conclusa">🏁 Conclusa</span>` : ""}
+              ${a.zonaSegnalata ? `<span class="badge-zona">🚩 ${escapeHtml(a.zonaSegnalata)}</span>` : ""}
+              ${badgeTentativo(a.storico)}
+            </div>
             <p class="lotto-meta">${escapeHtml(distanzaTesto)} · vendita ${formattaData(a.dataVendita)}</p>
           </div>
         </div>
         <div class="finestra-dettagli-azioni-header">
+          <button type="button" class="bottone-azione-lotto${a.preferito ? ' preferito-attivo' : ''}" title="Preferito" aria-label="Preferito" onclick="onClickStella(event, '${a.id}')">${iconaStella}</button>
+          <button type="button" class="bottone-azione-lotto${a.scartato ? ' scartato-attivo' : ''}" title="Non interessa" aria-label="Non interessa" onclick="onClickScarta(event, '${a.id}')">${iconaScarta}</button>
           <div class="contenitore-condividi">
             <button type="button" class="finestra-dettagli-condividi" id="bottone-condividi-dettagli" onclick="condividiAsta(this, '${a.id}')" aria-label="Condividi" aria-expanded="false" title="Condividi">
               <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="18" cy="5" r="3"/><circle cx="6" cy="12" r="3"/><circle cx="18" cy="19" r="3"/><line x1="8.6" y1="10.5" x2="15.4" y2="6.5"/><line x1="8.6" y1="13.5" x2="15.4" y2="17.5"/></svg>
@@ -7389,64 +7638,52 @@ ${notaHtml}
           </button>
           <button type="button" class="finestra-dettagli-chiudi" onclick="chiudiDettagliAsta()" aria-label="Chiudi">×</button>
         </div>
+        <nav class="indice-dettagli" aria-label="Sezioni della scheda">
+          ${sezioni.filter(([id]) => id !== "sez-descrizione").map(([id, titolo]) => `<button type="button" onclick="vaiASezioneDettagli('${id}')">${titolo}</button>`).join("")}
+        </nav>
       </div>
       <div class="finestra-dettagli-corpo">
         <p class="solo-stampa">Scansione Aste Giudiziarie — scheda generata il ${formattaDataOraCorrente()}${a.urlAsta ? ` — ${escapeHtml(a.urlAsta)}` : ""}</p>
-        <div class="lotto-azioni" style="margin:0 0 18px">
-          <button type="button" class="bottone-azione-lotto${a.preferito ? ' preferito-attivo' : ''}" title="Preferito" onclick="onClickStella(event, '${a.id}')">${iconaStella}</button>
-          <button type="button" class="bottone-azione-lotto${a.scartato ? ' scartato-attivo' : ''}" title="Non interessa" onclick="onClickScarta(event, '${a.id}')">${iconaScarta}</button>
+        <div class="azioni-rapide-dettagli">
+          ${a.urlAsta ? `<a class="lotto-link" href="${escapeHtml(urlSicuro(a.urlAsta))}" target="_blank" rel="noopener">PVP</a>` : ""}
+          ${a.urlPdf ? `<a class="lotto-link secondario" href="${escapeHtml(urlSicuro(a.urlPdf))}" target="_blank" rel="noopener">${documentoEtichetta}</a>` : ""}
+          ${a.urlAsta ? `<button type="button" class="lotto-link" onclick="vaiASezioneDettagli('sez-link')">📷 Foto</button>` : ""}
+          ${a.id ? `<a class="lotto-link" href="superanalisi.html?id=${encodeURIComponent(a.id)}">Superanalisi</a>` : ""}
+          ${nRisultatiAi ? `<button type="button" class="lotto-link" onclick="vaiASezioneDettagli('sez-ai')" title="Risultati delle superanalisi con AI esterne">🧠 ${nRisultatiAi}</button>` : ""}
         </div>
         ${notaHtml}
-        ${sezioneVisita(a)}
-        <div class="lotto-margine">
-          <p class="cifra-etichetta">Margine stimato</p>
-          <p class="lotto-margine-valore">${a.margine !== null ? formattaEuro(a.margine) : "—"}</p>
-        </div>
-        <div class="lotto-cifre">
-          <div>
-            <p class="cifra-etichetta">Offerta minima</p>
-            <p class="cifra-valore">${formattaEuro(a.offertaMinima)}</p>
-          </div>
-          <div>
-            <p class="cifra-etichetta">Valore stima</p>
-            <p class="cifra-valore">${a.valoreStima > 0 ? formattaEuro(a.valoreStima) : "—"}</p>
-          </div>
-          <div class="cifra-larga">
-            <p class="cifra-etichetta">Stato occupazione</p>
-            <p class="cifra-valore">${escapeHtml(a.statoOccupazione)}</p>
-          </div>
-        </div>
-        <div style="margin-top:18px">
-          <div class="dettaglio-riga"><span>Tribunale</span><span>${escapeHtml(a.tribunale)}</span></div>
-          <div class="dettaglio-riga"><span>Disponibilità (PVP)</span><span>${escapeHtml(a.disponibilita)}</span></div>
-          <div class="dettaglio-riga"><span>Prezzo base</span><span>${formattaEuro(a.prezzoBase)}</span></div>
-          <div class="dettaglio-riga"><span>Rilancio minimo</span><span>${formattaEuro(a.rilancioMinimo)}</span></div>
-          ${rigaSuperficie}
-          <div class="dettaglio-riga"><span>Spese sanatoria</span><span>${formattaEuro(a.speseSanatoria)}</span></div>
-          <div class="dettaglio-riga"><span>Abusi edilizi</span><span>${escapeHtml(a.abusiEdilizi)}</span></div>
-          <div class="dettaglio-riga${formalitaConAvviso ? ' avviso' : ''}"><span>Formalità pregiudizievoli</span><span>${escapeHtml(formalitaTesto)}</span></div>
-          <div class="dettaglio-riga"><span>Fonte analisi</span><span>${escapeHtml(a.fonteDocumento || "nessuna")}</span></div>
-          <div class="dettaglio-riga"><span>Modello AI</span><span>${escapeHtml(a.modelloUsato || "N/D")}</span></div>
-          <div class="dettaglio-riga"><span>ID Annuncio</span><span>${escapeHtml(a.id)}</span></div>
-        </div>
-        ${sezioneStoricoAste(a)}
-        ${a.lat !== null && a.lon !== null ? `<div class="sezione-costi sezione-mappa-dettagli">
-          <h3 class="sezione-costi-titolo">📍 Posizione</h3>
-          <div id="mappa-dettagli" class="mappa-dettagli"></div>
-        </div>` : ""}
-        ${a.note ? `<div class="lotto-note">${escapeHtml(a.note)}</div>` : ""}
-        ${a.descrizione ? `<div class="lotto-note">${escapeHtml(a.descrizione)}</div>` : ""}
-        ${bloccoCostiTrasferimento(a)}
-        ${bloccoCostiRistrutturazione(a)}
-        <div style="margin-top:12px">
-          ${a.urlAsta ? `<a class="lotto-link" href="${escapeHtml(urlSicuro(a.urlAsta))}" target="_blank" rel="noopener">Apri annuncio PVP</a>` : ""}
-          ${a.urlPdf ? `<a class="lotto-link secondario" href="${escapeHtml(urlSicuro(a.urlPdf))}" target="_blank" rel="noopener">Apri documento</a>` : ""}
-          ${a.id ? `<a class="lotto-link" href="superanalisi.html?id=${encodeURIComponent(a.id)}">Superanalisi</a>` : ""}
-        </div>
-        ${sezioneSuperanalisiEsterne(a)}
-        ${bloccoLinkUtili(a)}
+        ${sezioni.map(([id, , html]) => `<div class="sezione-dettagli" id="${id}">${html}</div>`).join("")}
       </div>
     `;
+  }
+
+  // Indice della scheda: porta la sezione subito sotto l'intestazione fissa.
+  function vaiASezioneDettagli(id) {
+    const finestra = document.querySelector(".finestra-dettagli-asta");
+    const sezione = document.getElementById(id);
+    if (!finestra || !sezione) return;
+    const intestazione = finestra.querySelector(".finestra-dettagli-header");
+    const alto = finestra.scrollTop + sezione.getBoundingClientRect().top - finestra.getBoundingClientRect().top
+      - (intestazione ? intestazione.offsetHeight : 0) - 8;
+    finestra.scrollTo({top: Math.max(0, alto), behavior: "smooth"});
+  }
+
+  // Scorrendo la scheda l'intestazione si riduce (solo punteggio, indirizzo,
+  // ★ ✕ e indice); tornando in cima riappare intera.
+  function aggiornaIntestazioneCompatta() {
+    const finestra = document.querySelector(".finestra-dettagli-asta");
+    if (finestra) finestra.classList.toggle("compatta", finestra.scrollTop > 90);
+  }
+  document.querySelector(".finestra-dettagli-asta").addEventListener("scroll", aggiornaIntestazioneCompatta, {passive: true});
+
+  // Costi di trasferimento sul telefono: schede Prima casa | Seconda casa
+  // (le 4 colonne affiancate non ci stanno). Da PC la tabella resta intera.
+  function mostraCasaCosti(bottone, casa) {
+    const blocco = bottone.closest(".sezione-costi");
+    blocco.querySelectorAll(".schede-casa button").forEach(b => b.classList.toggle("attiva", b === bottone));
+    const tabella = blocco.querySelector(".tabella-costi-scenari");
+    tabella.classList.toggle("mostra-prima", casa === "prima");
+    tabella.classList.toggle("mostra-seconda", casa === "seconda");
   }
 
   // Pulsanti di sola lettura dei risultati salvati dalle pagine di

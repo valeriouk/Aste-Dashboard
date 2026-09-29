@@ -109,6 +109,10 @@
   textarea { width: 100%; min-height: 200px; font-family: var(--font-mono); font-size: .76rem; border: 1px solid var(--border);
     border-radius: 8px; padding: 10px; background: var(--bg); color: var(--ink); }
   @media (max-width: 560px) { .contenitore { padding: 24px 14px 72px; } h1 { font-size: 1.45rem; } }
+  /* Niente zoom automatico di iPhone toccando un campo (campi a 16 px sul telefono) */
+  @media (max-width: 640px) {
+    input:not([type="checkbox"]):not([type="radio"]):not([type="range"]), select, textarea { font-size: 16px; }
+  }
 </style>
 </head>
 <body>
