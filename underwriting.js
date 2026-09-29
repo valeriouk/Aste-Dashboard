@@ -604,16 +604,9 @@
     return { classe, motivi: [...scarta, ...complessa, ...gestibile] };
   }
 
-  // Numero di tentativo stimato ipotizzando ribassi costanti del 25%.
-  function stimaTentativo(valoreStima, prezzoBase) {
-    if (!valoreStima || !prezzoBase || prezzoBase > valoreStima * 1.001) return null;
-    const n = Math.log(prezzoBase / valoreStima) / Math.log(0.75);
-    const r = Math.round(n);
-    if (Math.abs(n - r) > 0.05) {
-      return { tentativo: null, nota: 'ribassi non compatibili con −25% costante: verificare lo storico sul PVP' };
-    }
-    return { tentativo: r + 1, ribassoTotalePct: Math.round((1 - prezzoBase / valoreStima) * 100), nota: 'ipotesi: ribassi costanti del 25%' };
-  }
+  // (29/09/2026) Tolta la stima del numero di tentativo dal ribasso sulla
+  // perizia: nessuna pagina la mostrava e ora c'è lo storico vero delle aste
+  // dal PVP (colonna storico_aste, storico_aste.py nel repo privato).
 
   // Per non rompere la dashboard attuale: punteggio 0–100 calcolato, non generato dall'AI.
   function punteggioCompatibile(classe, headroom, livelloQualita) {
@@ -669,7 +662,6 @@
       regolarizzazione: reg,
       lavori,
       arv,
-      tentativo: stimaTentativo(annuncio.valoreStima, annuncio.prezzoBase),
       inZonaTarget,
       scenariAlMinimo: null,
       maxBid: null,
@@ -763,7 +755,6 @@
     contoEconomico,
     maxBid,
     classificaOperazione,
-    stimaTentativo,
     analizzaAsta,
   };
 });
