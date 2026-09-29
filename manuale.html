@@ -361,7 +361,9 @@
       <li><strong>Come riconosce l'immobile</strong>: dai dettagli PVP legge procedura (numero, anno, tribunale), lotto e dati catastali; cerca tutte le
         aste della stessa procedura e tiene quelle con data precedente che hanno almeno un immobile catastale (foglio, particella, subalterno) in comune.
         Se i dati catastali mancano usa il numero di lotto; se la procedura ha un solo lotto a ogni data le abbina tutte. Con dati catastali diversi
-        l'asta non viene abbinata, anche con lo stesso numero di lotto.</li>
+        l'asta non viene abbinata, anche con lo stesso numero di lotto. Senza dati catastali l'abbinamento viene scartato se cambiano sia la categoria
+        del lotto sia il tipo di bene (per esempio un'abitazione e poi un garage con lo stesso "lotto unico"), oppure se il prezzo base del tentativo
+        dopo è sotto il 30% o sopra il 130% di questo (lotti rinumerati tra un anno e l'altro).</li>
       <li><strong>Esito</strong>: quello pubblicato dal PVP (deserta, aggiudicata, sospesa), che però manca per circa metà delle aste passate.</li>
       <li><strong>Limiti</strong>: le aste mai pubblicate sul PVP (per esempio prima del 2018) non si vedono; il registro segnala quando un ribasso è più
         ampio del solito o il primo tentativo trovato parte già molto sotto la stima. Se il PVP non risponde lo storico già calcolato resta com'è, e dopo
