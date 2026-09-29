@@ -2339,6 +2339,19 @@
   .finestra-dettagli-asta.compatta .finestra-dettagli-testata { align-items: center; }
   /* Costi di trasferimento: le schede Prima/Seconda casa servono solo sul telefono */
   .schede-casa { display: none; }
+  /* Nomi lunghi di allegati e siti dei gestori (spesso URL senza spazi):
+     vanno a capo invece di uscire dalla scheda ed essere tagliati. */
+  .allegati-elenco .lotto-link, .link-utili-elenco .lotto-link { display: inline-block; max-width: 100%; overflow-wrap: anywhere; }
+  /* PC: scheda dei dettagli più larga (era 640 px; "espandi" porta a 1000 px)
+     e indice delle sezioni su più righe, perché con il mouse una riga che
+     scorre di lato senza barra non si può scorrere. */
+  @media (min-width: 641px) {
+    .finestra-dettagli-asta { max-width: 780px; }
+    .finestra-dettagli-asta.espansa { max-width: 1000px; }
+  }
+  @media (min-width: 641px) and (hover: hover) and (pointer: fine) {
+    .indice-dettagli { flex-wrap: wrap; overflow-x: visible; }
+  }
 
   @media (max-width: 640px) {
     .testo-pillola-desktop { display: none; }
