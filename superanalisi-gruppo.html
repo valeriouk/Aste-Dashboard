@@ -112,6 +112,7 @@
 </style>
 </head>
 <body>
+<script src="menu.js"></script>
 <div class="contenitore">
   <div class="intestazione">
     <div>
@@ -119,7 +120,7 @@
       <h1>Classifica delle aste selezionate</h1>
       <p class="sottotitolo" id="sottotitolo"></p>
     </div>
-    <a class="link-torna" href="index.html">← Registro</a>
+    <a class="link-torna" href="index.html" onclick="return MenuPagine.torna(event, 'index.html')">← Registro</a>
   </div>
 
   <p id="stato-verifica-automatica" class="nota">Verifica dell'accesso…</p>
@@ -366,7 +367,8 @@
       const ar = e && e.arv;
       return `<tr>
         <td class="num">${i + 1}</td>
-        <td class="sx"><a href="superanalisi.html?id=${encodeURIComponent(r.id_annuncio)}" target="_blank" rel="noopener">${escapeHtml(r.comune__indirizzo || r.id_annuncio)}</a>
+        <td class="sx"><a href="superanalisi.html?id=${encodeURIComponent(r.id_annuncio)}">${escapeHtml(r.comune__indirizzo || r.id_annuncio)}</a>
+          <a class="piccolo" href="index.html#${encodeURIComponent(r.id_annuncio)}">scheda nel registro</a>
           <span class="piccolo">${escapeHtml([r.tribunale, r.n__lotto ? `lotto ${r.n__lotto}` : "", testo(r.tipologia).toLowerCase()].filter(Boolean).join(" · "))}</span></td>
         <td class="num">${eur(r.offerta_minima)}</td>
         <td class="num">${ar ? eur(ar.centrale) : "—"}<span class="piccolo">${escapeHtml(v.fonte ? v.fonte.etichetta : "")}</span></td>

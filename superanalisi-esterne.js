@@ -254,7 +254,7 @@
           voci = voci.filter((v) => v.tipo === 'gruppo' && (v.id_annunci || []).map(String).sort().join(',') === chiave);
         }
         elenco.innerHTML = voci.length ? voci.slice().reverse().map((v) => `<li>
-            <a href="risultato-superanalisi.html?id=${v.id}" target="_blank" rel="noopener">${escape(gruppo
+            <a href="risultato-superanalisi.html?id=${v.id}">${escape(gruppo
               ? `🧠 ${v.ai}${(v.classifica || []).length ? ` · classifica: ${v.classifica.join(', ')}` : ''}`
               : etichetta(v, o.idAstaElenco))}</a>
             <span class="sae-data">${escape(dataOra(v.creato))}${v.tipo === 'gruppo' && !gruppo ? ` · gruppo di ${(v.id_annunci || []).length} aste` : ''}</span>

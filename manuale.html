@@ -145,6 +145,7 @@
 </style>
 </head>
 <body>
+<script src="menu.js"></script>
 
 <div id="gate" class="gate">
   <div class="riquadro-gate">
@@ -220,6 +221,23 @@
         <tr><td>Manuale (<code>manuale.html</code>)</td><td>Questa pagina</td><td>lettura del registro</td></tr>
       </tbody>
     </table></div>
+  </section>
+
+  <section class="voce" id="sistema-navigazione">
+    <h3>Muoversi tra le pagine: menu, tasto Indietro, stessa scheda</h3>
+    <ul>
+      <li><strong>Menu in cima a ogni pagina</strong>: "Registro · Statistiche · Configurazione · Manuale", con la pagina attuale evidenziata. Scorre via
+        con la pagina.</li>
+      <li><strong>Tasto Indietro</strong> (del telefono o del browser): nel registro chiude la finestra dei dettagli, il confronto o il pannello dei filtri,
+        invece di uscire dal registro. Passando da un'asta all'altra con le frecce non si accumulano passi: un solo Indietro chiude la scheda. Anche la ✕
+        e il tocco fuori chiudono allo stesso modo.</li>
+      <li><strong>Stessa scheda</strong>: Superanalisi, Superanalisi di gruppo e i risultati delle AI si aprono nella stessa scheda del registro.
+        "← Dettaglio asta" e "← Registro" tornano indietro: il registro ricompare com'era (se il browser l'ha tolto dalla memoria lo ricarica e riapre la
+        scheda dell'asta). In una nuova scheda si aprono solo le pagine esterne: PVP, perizia, Google Maps, siti dei gestori, chat delle AI.</li>
+      <li><strong>Link diretto a un'asta</strong> (<code>index.html#ID</code>, per esempio da Telegram o da un link condiviso): apre la scheda; Indietro porta al
+        registro.</li>
+      <li><strong>Esc</strong> (computer) chiude dettagli, confronto e pannello dei filtri.</li>
+    </ul>
   </section>
 
   <section class="voce" id="sistema-password">
@@ -1104,7 +1122,8 @@
     <p>La pagina di approfondimento di <strong>una</strong> asta: tutti i dati estratti dalla perizia con pagina e citazione, il valore di rivendita, il
       <strong>conto dell'operazione</strong> di acquisto-ristrutturazione-rivendita e la seconda opinione di altre AI. Si apre dal pulsante
       "Superanalisi" nella finestra dei dettagli di <strong>qualunque asta</strong> (preferita o no). Serve la password di scrittura. In alto: "← Dettaglio asta"
-      (riapre la scheda nel registro) e "← Registro". Nessuna scrittura nel database tranne il tuo valore di rivendita; nessun costo Gemini.</p>
+      (torna alla scheda nel registro) e "← Registro"; si apre nella <a href="#sistema-navigazione">stessa scheda</a>. Nel database scrive solo il tuo
+      valore di rivendita e i <a href="#superanalisi-risultati">risultati delle AI</a> che salvi; nessun costo Gemini.</p>
     <p>Se l'asta è stata analizzata con il vecchio prompt v1 compare "Analisi v2 non ancora disponibile": si vedono solo annuncio e seconda opinione.</p>
   </section>
 
@@ -1341,9 +1360,10 @@
       <li><strong>Giudizio</strong>: se la prima riga della risposta è "Giudizio: …", sotto il riquadro compare "Giudizio letto: …" e il pulsante nei
         dettagli dell'asta lo mostra. Per il gruppo si legge "Classifica: ID, ID…" e ogni asta mostra la sua posizione.</li>
       <li><strong>Dove si legge</strong>: nei dettagli dell'asta nel registro, sezione "🧠 Superanalisi esterne", un pulsante per risultato (i più recenti per
-        primi): "🧠 Giudizio Claude: PULITA", oppure "🧠 Superanalisi Gemini · 29/09" se il giudizio non c'è; per il gruppo "🧠 Gruppo Perplexity: 2ª di 6"
+        primi, si aprono nella stessa scheda): "🧠 Giudizio Claude: PULITA", oppure "🧠 Superanalisi Gemini · 29/09" se il giudizio non c'è; per il gruppo "🧠 Gruppo Perplexity: 2ª di 6"
         (o "Superanalisi di gruppo … (6 aste)"). Se due pulsanti avrebbero lo stesso nome (stessa AI e stesso giudizio o posizione) si aggiunge la data
-        ("· 29/09"), e anche l'ora se sono dello stesso giorno. Il pulsante apre il risultato a tutta pagina, con le aste collegate e "Stampa / PDF".</li>
+        ("· 29/09"), e anche l'ora se sono dello stesso giorno. Il pulsante apre il risultato a tutta pagina, con le aste collegate, "Stampa / PDF", "← Superanalisi" (la pagina dove l'hai salvato e puoi
+        eliminarlo) e "← Dettaglio asta".</li>
       <li><strong>Eliminare</strong>: solo dalla pagina di Superanalisi in cui è stato salvato ("Elimina" nell'elenco "Risultati salvati", con conferma). Dai
         dettagli del registro si può solo leggere; non c'è modifica: per correggere si elimina e si salva di nuovo.</li>
       <li><strong>Dati</strong>: salvati nel database, leggibili solo con la password di lettura del registro (salvare ed eliminare: password di
@@ -1358,7 +1378,9 @@
   <section class="voce" id="gruppo-cose">
     <h3>Cos'è e come si apre</h3>
     <p>Classifica da 2 a 10 aste insieme. Nel registro selezionale (casella della card) e premi "🧠 Superanalisi di gruppo" nella barra in basso; qualunque
-      asta, anche non preferita. Oltre 10 si usano le prime 10. Stessa password della Superanalisi. Solo letture, nessun costo Gemini.</p>
+      asta, anche non preferita. Oltre 10 si usano le prime 10. Stessa password della Superanalisi. Si apre nella stessa scheda: "← Registro" torna al
+      registro con la selezione intatta. Nel database scrive solo i <a href="#superanalisi-risultati">risultati delle AI</a> che salvi; nessun costo Gemini.
+      Nella classifica, sotto ogni indirizzo (che apre la sua Superanalisi) c'è "scheda nel registro".</p>
     <p>Per ogni asta fa <strong>lo stesso conto</strong> della <a href="#superanalisi-conto">Superanalisi</a> (stessa fonte di rivendita, stesso tuo valore,
       stessi parametri utile % e minimo %). I parametri si cambiano dalla Superanalisi di un'asta.</p>
   </section>

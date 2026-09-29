@@ -100,6 +100,7 @@
 </style>
 </head>
 <body>
+<script src="menu.js"></script>
 <div class="contenitore">
   <p id="stato" class="nota">Caricamento…</p>
 
@@ -122,7 +123,9 @@
         <ul class="aste-collegate" id="aste-collegate"></ul>
       </div>
       <div class="azioni">
-        <a class="link-torna" id="link-dettaglio" href="index.html">← Dettaglio asta</a>
+        <a class="link-torna nascosto" id="link-superanalisi" href="superanalisi.html"
+           onclick="return MenuPagine.torna(event, 'superanalisi.html') && MenuPagine.torna(event, 'superanalisi-gruppo.html')">← Superanalisi</a>
+        <a class="link-torna" id="link-dettaglio" href="index.html" onclick="return MenuPagine.torna(event, 'index.html')">← Dettaglio asta</a>
         <a class="link-torna" href="index.html">← Registro</a>
         <button type="button" class="bottone secondario" onclick="window.print()">Stampa / PDF</button>
       </div>
@@ -211,6 +214,11 @@
       ? `<span class="etichetta-stato stato-${escapeHtml(v.giudizio.replace(" ", "-"))}">${escapeHtml(v.giudizio)}</span>` : ""}`;
     document.getElementById("sottotitolo").textContent = `Salvato il ${quando}`;
     document.title = `${gruppo ? "Gruppo" : "Superanalisi"} ${v.ai} · Registro Opportunità`;
+    // "← Superanalisi": la pagina dove il risultato è stato salvato (e si può eliminare).
+    const linkSuperanalisi = document.getElementById("link-superanalisi");
+    linkSuperanalisi.href = gruppo ? `superanalisi-gruppo.html?ids=${ids.map(encodeURIComponent).join(",")}`
+      : `superanalisi.html?id=${encodeURIComponent(ids[0])}`;
+    linkSuperanalisi.classList.remove("nascosto");
     const linkDettaglio = document.getElementById("link-dettaglio");
     if (ids.length === 1) linkDettaglio.href = "index.html#" + encodeURIComponent(ids[0]);
     else linkDettaglio.classList.add("nascosto");

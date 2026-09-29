@@ -1547,6 +1547,9 @@
     margin: 0 0 10px;
     line-height: 1.3;
   }
+  .confronto-comune button { font: inherit; color: inherit; background: none; border: none; padding: 4px 2px; cursor: pointer;
+    text-decoration: underline dotted; text-underline-offset: 3px; }
+  .confronto-comune button:hover { color: var(--primary); }
   .confronto-azioni {
     display: flex;
     justify-content: center;
@@ -2288,6 +2291,7 @@
 </style>
 </head>
 <body>
+<script src="menu.js"></script>
 
 <div class="contenitore">
 
@@ -2296,7 +2300,7 @@
       <p class="eyebrow">Scansione Aste Giudiziarie</p>
       <h1><a href="index.html" title="Ricarica il registro" style="color:inherit;text-decoration:none;">Registro Opportunità</a></h1>
       <p class="sottotitolo">Aste residenziali filtrate per prezzo, distanza e margine potenziale stimato.</p>
-      <p class="versione-pagina">v2.22 ·<a href="config.html">Configurazione</a> · <a href="manuale.html">Manuale</a> · aggiornato <strong id="testo-aggiornato">—</strong></p>
+      <p class="versione-pagina">v2.22 · aggiornato <strong id="testo-aggiornato">—</strong></p>
     </div>
     <div class="statistiche-compatte">
       <div class="stat-compatta">
@@ -3920,7 +3924,8 @@
       mostraToast("Seleziona da 2 a 10 aste per la superanalisi di gruppo.");
       return;
     }
-    window.open(`superanalisi-gruppo.html?ids=${ids.map(encodeURIComponent).join(",")}`, "_blank", "noopener");
+    // stessa scheda: "← Registro" della pagina di gruppo torna qui con la selezione intatta
+    location.href = `superanalisi-gruppo.html?ids=${ids.map(encodeURIComponent).join(",")}`;
   }
 
   // Azione in blocco — preferito o scartato per tutte le aste
@@ -5546,6 +5551,7 @@
   // (vedi CSS), le funzioni semplicemente non hanno nulla da mostrare.
   // ==========================================================
   function apriFoglioFiltri() {
+    if (!foglioFiltriAperto()) history.pushState({pannello: "filtri"}, "");
     document.getElementById("controlli-estesi").classList.add("aperto");
     document.getElementById("sfondo-foglio-filtri").classList.remove("nascosto");
     // Un frame di margine prima di aggiungere .visibile: serve perché la
@@ -5556,7 +5562,15 @@
     document.body.style.overflow = "hidden"; // la pagina sotto non scorre mentre il foglio è aperto
   }
 
-  function chiudiFoglioFiltri() {
+  function foglioFiltriAperto() {
+    return document.getElementById("controlli-estesi").classList.contains("aperto");
+  }
+
+  // daCronologia: chiusura arrivata dal tasto Indietro (vedi "popstate" più
+  // sotto); altrimenti (✕, tocco fuori) si torna indietro di un passo, così
+  // la cronologia resta pulita.
+  function chiudiFoglioFiltri(daCronologia) {
+    if (!daCronologia && history.state && history.state.pannello === "filtri") { history.back(); return; }
     document.getElementById("controlli-estesi").classList.remove("aperto");
     document.getElementById("sfondo-foglio-filtri").classList.remove("visibile");
     document.body.style.overflow = "";
@@ -6187,7 +6201,7 @@ ${notaHtml}
   // navigazione. In ogni altro caso (click su una card, dal popup
   // mappa, dalla nota di un toast) è un'apertura fresca, e la sequenza
   // va ricatturata da capo sull'elenco filtrato attuale.
-  function apriDettagliAsta(id, mantieniSequenzaNavigazione) {
+  function apriDettagliAsta(id, mantieniSequenzaNavigazione, daCronologia) {
     // Già aperta proprio su questa asta: non ridisegnare da zero. Un
     // Invio o un clic ridondanti (es. il fuoco rimasto sulla card sotto
     // il modale) non devono cancellare una nota o dei costi non ancora
@@ -6209,6 +6223,16 @@ ${notaHtml}
     // colpo come prima.
     document.getElementById("overlay-dettagli-asta").classList.add("aperto");
     document.body.style.overflow = "hidden"; // la pagina sotto non scorre mentre la finestra è aperta
+    document.querySelector(".finestra-dettagli-asta").scrollTop = 0;   // ogni asta si apre dall'inizio
+    // Un passo nella cronologia (#ID): il tasto Indietro del telefono chiude
+    // la scheda invece di uscire dal registro. Passando da un'asta all'altra
+    // (frecce) o dal confronto il passo si sostituisce, non si accumula.
+    if (!daCronologia) {
+      const statoPannello = history.state && history.state.pannello;
+      const passo = [{pannello: "dettagli", id}, "", "#" + encodeURIComponent(id)];
+      if (statoPannello === "dettagli" || statoPannello === "confronto") history.replaceState(...passo);
+      else history.pushState(...passo);
+    }
     // Sposta qui il fuoco — sia alla prima apertura sia ad ogni
     // navigazione con le frecce — così un Invio successivo lo trova
     // dentro la finestra, non sulla card di sfondo che potrebbe averla
@@ -6246,11 +6270,31 @@ ${notaHtml}
     }, 0);
   }
 
-  function chiudiDettagliAsta() {
+  function chiudiDettagliAsta(daCronologia) {
+    if (!daCronologia && history.state && history.state.pannello === "dettagli") { history.back(); return; }
     idAstaModaleDettagli = null;
     rimuoviMappaDettagli();
     document.getElementById("overlay-dettagli-asta").classList.remove("aperto");
     document.body.style.overflow = "";
+    // indirizzo pulito: un aggiornamento non riapre una scheda già chiusa
+    if (location.hash) history.replaceState(history.state, "", location.pathname + location.search);
+  }
+
+  // Tasto Indietro (e Avanti) del browser o del telefono: chiude la scheda,
+  // il confronto o i filtri aperti se il passo raggiunto non è il loro.
+  window.addEventListener("popstate", (evento) => {
+    const stato = evento.state || {};
+    if (idAstaModaleDettagli !== null && stato.pannello !== "dettagli") chiudiDettagliAsta(true);
+    if (idAsteConfrontoAperto !== null && stato.pannello !== "confronto") chiudiConfronto(true);
+    if (foglioFiltriAperto() && stato.pannello !== "filtri") chiudiFoglioFiltri(true);
+    if (stato.pannello === "dettagli" && stato.id && ASTE.some(a => a.id === stato.id)) apriDettagliAsta(stato.id, false, true);
+  });
+
+  // Dal confronto: chiude il confronto e apre la scheda al suo posto (stesso
+  // passo nella cronologia, vedi apriDettagliAsta).
+  function apriDettagliDaConfronto(id) {
+    chiudiConfronto(true);
+    apriDettagliAsta(id);
   }
 
   // Righe mostrate nel confronto, in ordine — una entry per riga, non
@@ -6284,7 +6328,7 @@ ${notaHtml}
       return `
         <div class="confronto-intestazione">
           <div class="sigillo ${livello}" style="width:44px;height:44px;font-size:1rem;">${contenutoSigillo}</div>
-          <p class="confronto-comune">${escapeHtml(a.comune)}</p>
+          <p class="confronto-comune"><button type="button" onclick="apriDettagliDaConfronto('${a.id}')" title="Apri la scheda">${escapeHtml(a.comune)}</button></p>
           <div class="confronto-azioni">
             <button type="button" class="bottone-azione-lotto${a.preferito ? ' preferito-attivo' : ''}" title="Preferito" onclick="onClickStella(event, '${a.id}')">${iconaStella}</button>
             <button type="button" class="bottone-azione-lotto${a.scartato ? ' scartato-attivo' : ''}" title="Non interessa" onclick="onClickScarta(event, '${a.id}')">${iconaScarta}</button>
@@ -6314,13 +6358,15 @@ ${notaHtml}
     const aste = ids.map(id => ASTE.find(a => a.id === id)).filter(Boolean);
     if (aste.length < 2) return; // una delle selezionate non esiste più nei dati correnti
 
+    if (idAsteConfrontoAperto === null) history.pushState({pannello: "confronto"}, "");
     idAsteConfrontoAperto = aste.map(a => a.id);
     document.getElementById("finestra-confronto-contenuto").innerHTML = contenutoConfronto(aste);
     document.getElementById("overlay-confronto").classList.add("aperto");
     document.body.style.overflow = "hidden";
   }
 
-  function chiudiConfronto() {
+  function chiudiConfronto(daCronologia) {
+    if (!daCronologia && history.state && history.state.pannello === "confronto") { history.back(); return; }
     idAsteConfrontoAperto = null;
     document.getElementById("overlay-confronto").classList.remove("aperto");
     document.body.style.overflow = "";
@@ -6507,6 +6553,8 @@ ${notaHtml}
     if (!document.getElementById("overlay-attesa-blocco").classList.contains("nascosto")) return;
     if (evento.key === "Escape" && !document.getElementById("overlay-conferma-blocco").classList.contains("nascosto")) { chiudiConfermaBlocco(); return; }
     if (evento.key === "Escape" && idAstaModaleDettagli !== null) { chiudiDettagliAsta(); return; }
+    if (evento.key === "Escape" && idAsteConfrontoAperto !== null) { chiudiConfronto(); return; }
+    if (evento.key === "Escape" && foglioFiltriAperto()) { chiudiFoglioFiltri(); return; }
 
     if (idAstaModaleDettagli === null) return;
     const bersaglio = evento.target;
@@ -7147,6 +7195,9 @@ ${notaHtml}
   function apriDaLinkDiretto() {
     const id = decodeURIComponent(location.hash.slice(1));
     if (!id) return;
+    // Il registro diventa il passo di partenza e la scheda un passo sopra:
+    // Indietro chiude la scheda invece di uscire dal sito.
+    if (id !== idAstaModaleDettagli) history.replaceState(null, "", location.pathname + location.search);
     if (ASTE.some(a => a.id === id)) apriDettagliAsta(id);
   }
 
@@ -7283,7 +7334,7 @@ ${notaHtml}
         <div style="margin-top:12px">
           ${a.urlAsta ? `<a class="lotto-link" href="${escapeHtml(urlSicuro(a.urlAsta))}" target="_blank" rel="noopener">Apri annuncio PVP</a>` : ""}
           ${a.urlPdf ? `<a class="lotto-link secondario" href="${escapeHtml(urlSicuro(a.urlPdf))}" target="_blank" rel="noopener">Apri documento</a>` : ""}
-          ${a.id ? `<a class="lotto-link" href="superanalisi.html?id=${encodeURIComponent(a.id)}" target="_blank" rel="noopener">Superanalisi</a>` : ""}
+          ${a.id ? `<a class="lotto-link" href="superanalisi.html?id=${encodeURIComponent(a.id)}">Superanalisi</a>` : ""}
         </div>
         ${sezioneSuperanalisiEsterne(a)}
         ${bloccoLinkUtili(a)}
@@ -7307,7 +7358,7 @@ ${notaHtml}
     const etichette = conData.map((nome, i) => conta(conData, nome) > 1 ? `${nome} ${ora(voci[i])}` : nome);
     return `<div class="superanalisi-esterne">
         <p class="link-utili-sottotitolo">🧠 Superanalisi esterne</p>
-        ${voci.map((v, i) => `<a class="lotto-link" href="risultato-superanalisi.html?id=${encodeURIComponent(v.id)}" target="_blank" rel="noopener"
+        ${voci.map((v, i) => `<a class="lotto-link" href="risultato-superanalisi.html?id=${encodeURIComponent(v.id)}"
           title="Salvato il ${escapeHtml(new Date(v.creato).toLocaleString("it-IT", {dateStyle: "short", timeStyle: "short"}))}">${escapeHtml(etichette[i])}</a>`).join("")}
       </div>`;
   }
