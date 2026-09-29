@@ -173,7 +173,7 @@
     document.head.appendChild(s);
   }
 
-  const escape = (t) => { const d = document.createElement('div'); d.textContent = t === null || t === undefined ? '' : String(t); return d.innerHTML; };
+  const escape = (t) => { const d = document.createElement('div'); d.textContent = t === null || t === undefined ? '' : String(t); return d.innerHTML.replace(/"/g, '&quot;').replace(/'/g, '&#39;'); };
   const dataOra = (iso) => { const d = new Date(iso); return isNaN(d) ? '' : d.toLocaleString('it-IT', { dateStyle: 'short', timeStyle: 'short' }); };
 
   /**
@@ -265,11 +265,20 @@
       }
     }
     q('.sae-elenco').addEventListener('click', async (ev) => {
-      const id = ev.target.getAttribute && ev.target.getAttribute('data-elimina');
-      if (!id || !confirm('Eliminare questo risultato? Non si può annullare.')) return;
-      const r = await o.chiamaRpc('elimina_superanalisi_esterna', { password_tentativo: o.password(), id_input: Number(id) });
-      if (r && r.result === 'success') { mostra('ok', 'Risultato eliminato.'); aggiornaElenco(); }
-      else mostra('errore', (r && r.message) || 'Eliminazione non riuscita.');
+      const bottone = ev.target.closest && ev.target.closest('[data-elimina]');
+      const id = bottone && bottone.getAttribute('data-elimina');
+      if (!id || bottone.disabled || !confirm('Eliminare questo risultato? Non si può annullare.')) return;
+      bottone.disabled = true;
+      bottone.textContent = 'Eliminazione…';
+      try {
+        const r = await o.chiamaRpc('elimina_superanalisi_esterna', { password_tentativo: o.password(), id_input: Number(id) });
+        if (r && r.result === 'success') { mostra('ok', 'Risultato eliminato.'); aggiornaElenco(); return; }
+        mostra('errore', (r && r.message) || 'Eliminazione non riuscita.');
+      } catch (e) {
+        mostra('errore', `Eliminazione non riuscita (${e.message}).`);
+      }
+      bottone.disabled = false;
+      bottone.textContent = 'Elimina';
     });
 
     q('.sae-salva').addEventListener('click', async () => {

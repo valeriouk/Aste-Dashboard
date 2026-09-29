@@ -488,9 +488,9 @@
   <div id="schermata-password" class="riquadro-gate nascosto">
     <h2>Accesso protetto</h2>
     <p>Inserisci la password per modificare la configurazione.</p>
-    <form onsubmit="return false;">
-      <input type="password" id="campo-password" placeholder="Password" autocomplete="current-password" onkeydown="if(event.key==='Enter') sblocca()">
-      <button class="bottone-primario" onclick="sblocca()">Sblocca</button>
+    <form onsubmit="event.preventDefault(); sblocca();">
+      <input type="password" id="campo-password" placeholder="Password" autocomplete="current-password">
+      <button type="submit" class="bottone-primario">Sblocca</button>
     </form>
     <p id="errore-gate" class="messaggio-errore nascosto"></p>
   </div>
@@ -576,9 +576,10 @@
 
       <section class="blocco-semplice">
         <h2>Manutenzione</h2>
-        <p class="nota-campo">Elimina dal registro tutte le aste con data vendita già passata. Operazione irreversibile — lo storico di quelle aste va perso, chiede conferma prima di procedere.</p>
-        <button type="button" class="bottone-secondario" id="bottone-elimina-scadute" onclick="eliminaAsteScadute()" style="background:var(--danger-soft);color:var(--danger)">🗑 Elimina aste scadute</button>
+        <p class="nota-campo">Elimina dal registro le aste con data vendita già passata. Prima mostra quante sono e quante hanno visite, note/link o risultati AI, e ti fa scegliere se tenere quelle. Operazione irreversibile.</p>
+        <button type="button" class="bottone-secondario" id="bottone-elimina-scadute" onclick="eliminaAsteScadute()" style="background:var(--danger-soft);color:var(--danger)">🗑 Elimina aste scadute…</button>
         <p id="messaggio-elimina-scadute"></p>
+        <div id="scelta-elimina-scadute" class="nascosto" style="display:flex;flex-wrap:wrap;gap:8px;margin-top:6px"></div>
       </section>
 
       <section class="blocco-semplice">
@@ -885,7 +886,8 @@
   function escapeHtml(testo) {
     const d = document.createElement("div");
     d.textContent = testo === null || testo === undefined ? "" : String(testo);
-    return d.innerHTML;
+    // anche le virgolette: il testo finisce pure dentro attributi (href, title)
+    return d.innerHTML.replace(/"/g, "&quot;").replace(/'/g, "&#39;");
   }
 
   async function chiamaRpc(nomeFunzione, payload) {
@@ -927,7 +929,7 @@
       erroreEl.classList.remove("nascosto");
       return;
     }
-    if (risultato) {
+    if (risultato === true) {
       passwordCorrente = password;
       salvaPasswordRicordata(password);
       document.getElementById("schermata-password").classList.add("nascosto");
@@ -945,7 +947,7 @@
     if (!passwordRicordata) { mostraGateManuale(); return; }
     try {
       const risultato = await chiamaRpc("verifica_password", {password_tentativo: passwordRicordata});
-      if (risultato) {
+      if (risultato === true) {
         passwordCorrente = passwordRicordata;
         document.getElementById("stato-verifica-automatica").classList.add("nascosto");
         document.getElementById("schermata-config").classList.remove("nascosto");
@@ -1541,6 +1543,11 @@
     const msgEl = document.getElementById(`messaggio-salva-${nomeCard}`);
     msgEl.textContent = "Salvataggio in corso…";
     msgEl.className = "messaggio-salvataggio-card messaggio-attesa";
+    // Copia dei valori in memoria: se il salvataggio fallisce si torna a
+    // questi, altrimenti il salvataggio di un'altra card (imposta_configurazione
+    // invia tutto) spedirebbe anche i valori non salvati di questa.
+    const copia = JSON.parse(JSON.stringify({configAttuale, pianificazioneAttuale, ricercaPeriziaAttuale}));
+    const ripristina = () => ({configAttuale, pianificazioneAttuale, ricercaPeriziaAttuale} = copia);
 
     if (nomeCard === "area") {
       const punto = segnaposto.getLatLng();
@@ -1658,10 +1665,12 @@
         funzioniRiepilogo[nomeCard]();
         setTimeout(() => chiudiModale(nomeCard), 700);
       } else {
+        ripristina();
         msgEl.textContent = risultato.message || "Errore sconosciuto durante il salvataggio.";
         msgEl.className = "messaggio-salvataggio-card messaggio-errore";
       }
     } catch (e) {
+      ripristina();
       msgEl.textContent = "Richiesta non riuscita. Controlla la connessione e riprova.";
       msgEl.className = "messaggio-salvataggio-card messaggio-errore";
     }
@@ -1694,6 +1703,7 @@
     clearTimeout(timeoutConfermaAvvio);
     confermaAvvioInCorso = false;
     bottone.textContent = "▶ Avvia scanner ora";
+    bottone.disabled = true;   // niente doppio avvio mentre la richiesta è in corso
     messaggioEl.textContent = "Avvio in corso…";
     messaggioEl.className = "messaggio-attesa";
     try {
@@ -1708,6 +1718,8 @@
     } catch (e) {
       messaggioEl.textContent = "Richiesta non riuscita. Controlla la connessione e riprova.";
       messaggioEl.className = "messaggio-errore";
+    } finally {
+      bottone.disabled = false;
     }
   }
 
@@ -1724,6 +1736,7 @@
     clearTimeout(timeoutConfermaVerificaBatch);
     confermaVerificaBatchInCorso = false;
     bottone.textContent = "🔄 Controlla batch ora";
+    bottone.disabled = true;   // niente doppio avvio mentre la richiesta è in corso
     messaggioEl.textContent = "Avvio in corso…";
     messaggioEl.className = "messaggio-attesa";
     try {
@@ -1738,6 +1751,8 @@
     } catch (e) {
       messaggioEl.textContent = "Richiesta non riuscita. Controlla la connessione e riprova.";
       messaggioEl.className = "messaggio-errore";
+    } finally {
+      bottone.disabled = false;
     }
   }
 
@@ -1754,6 +1769,7 @@
     clearTimeout(timeoutConfermaControllaPreferiti);
     confermaControllaPreferitiInCorso = false;
     bottone.textContent = "⭐ Controlla preferiti ora";
+    bottone.disabled = true;   // niente doppio avvio mentre la richiesta è in corso
     messaggioEl.textContent = "Avvio in corso…";
     messaggioEl.className = "messaggio-attesa";
     try {
@@ -1768,36 +1784,78 @@
     } catch (e) {
       messaggioEl.textContent = "Richiesta non riuscita. Controlla la connessione e riprova.";
       messaggioEl.className = "messaggio-errore";
+    } finally {
+      bottone.disabled = false;
     }
   }
 
-  let confermaEliminazioneInCorso = false, timeoutConfermaEliminazione = null;
+  // Eliminazione delle aste scadute in due passi (29/09/2026): prima conta
+  // quante sono e quante hanno dati tuoi (visite, note o link, risultati AI),
+  // poi fa scegliere se eliminarle tutte o tenere quelle (sql/sicurezza_e_tentativi.sql).
   async function eliminaAsteScadute() {
     const bottone = document.getElementById("bottone-elimina-scadute");
     const messaggioEl = document.getElementById("messaggio-elimina-scadute");
-    if (!confermaEliminazioneInCorso) {
-      confermaEliminazioneInCorso = true;
-      bottone.textContent = "Confermi l'eliminazione?";
-      timeoutConfermaEliminazione = setTimeout(() => { confermaEliminazioneInCorso = false; bottone.textContent = "🗑 Elimina aste scadute"; }, 4000);
-      return;
+    const sceltaEl = document.getElementById("scelta-elimina-scadute");
+    if (bottone.disabled) return;
+    bottone.disabled = true;
+    sceltaEl.classList.add("nascosto");
+    messaggioEl.textContent = "Conto le aste scadute…";
+    messaggioEl.className = "messaggio-attesa";
+    try {
+      const conteggio = await chiamaRpc("conta_aste_scadute", {password_tentativo: passwordCorrente});
+      if (!conteggio || conteggio.result !== "success") {
+        messaggioEl.textContent = (conteggio && conteggio.message) || "Conteggio non riuscito (funzione conta_aste_scadute presente sul database?).";
+        messaggioEl.className = "messaggio-errore";
+        return;
+      }
+      const totale = Number(conteggio.totale) || 0, conDati = Number(conteggio.con_dati_utente) || 0;
+      if (!totale) {
+        messaggioEl.textContent = "Nessuna asta scaduta da eliminare.";
+        messaggioEl.className = "messaggio-ok";
+        return;
+      }
+      messaggioEl.textContent = `Aste scadute: ${totale}` + (conDati ? `, di cui ${conDati} con visite, note/link o risultati AI.` : ", nessuna con visite, note/link o risultati AI.")
+        + " L'eliminazione non si può annullare.";
+      messaggioEl.className = "messaggio-attesa";
+      sceltaEl.innerHTML = `
+        <button type="button" class="bottone-secondario" onclick="eseguiEliminazioneScadute(false)" style="background:var(--danger-soft);color:var(--danger)">Elimina tutte (${totale})</button>
+        ${conDati ? `<button type="button" class="bottone-secondario" onclick="eseguiEliminazioneScadute(true)">Tieni le ${conDati} con i miei dati (elimina ${totale - conDati})</button>` : ""}
+        <button type="button" class="bottone-secondario" onclick="annullaEliminazioneScadute()">Annulla</button>`;
+      sceltaEl.classList.remove("nascosto");
+    } catch (e) {
+      messaggioEl.textContent = "Richiesta non riuscita. Controlla la connessione e riprova.";
+      messaggioEl.className = "messaggio-errore";
+    } finally {
+      bottone.disabled = false;
     }
-    clearTimeout(timeoutConfermaEliminazione);
-    confermaEliminazioneInCorso = false;
-    bottone.textContent = "🗑 Elimina aste scadute";
+  }
+
+  function annullaEliminazioneScadute() {
+    document.getElementById("scelta-elimina-scadute").classList.add("nascosto");
+    document.getElementById("messaggio-elimina-scadute").textContent = "";
+  }
+
+  async function eseguiEliminazioneScadute(tieniDatiUtente) {
+    const messaggioEl = document.getElementById("messaggio-elimina-scadute");
+    const sceltaEl = document.getElementById("scelta-elimina-scadute");
+    sceltaEl.querySelectorAll("button").forEach((b) => { b.disabled = true; });
     messaggioEl.textContent = "Eliminazione in corso…";
     messaggioEl.className = "messaggio-attesa";
     try {
-      const risultato = await chiamaRpc("elimina_aste_scadute", {password_tentativo: passwordCorrente});
-      if (risultato.result === "success") {
-        messaggioEl.textContent = `Eliminate ${risultato.righe_eliminate} aste scadute dal database.`;
+      const risultato = await chiamaRpc("elimina_aste_scadute", {password_tentativo: passwordCorrente, tieni_dati_utente: tieniDatiUtente});
+      if (risultato && risultato.result === "success") {
+        messaggioEl.textContent = `Eliminate ${risultato.righe_eliminate} aste scadute dal database` + (tieniDatiUtente ? " (tenute quelle con i tuoi dati)." : ".");
         messaggioEl.className = "messaggio-ok";
+        sceltaEl.classList.add("nascosto");
       } else {
-        messaggioEl.textContent = risultato.message || "Errore sconosciuto durante l'eliminazione.";
+        messaggioEl.textContent = (risultato && risultato.message) || "Errore sconosciuto durante l'eliminazione.";
         messaggioEl.className = "messaggio-errore";
       }
     } catch (e) {
       messaggioEl.textContent = "Richiesta non riuscita. Controlla la connessione e riprova.";
       messaggioEl.className = "messaggio-errore";
+    } finally {
+      sceltaEl.querySelectorAll("button").forEach((b) => { b.disabled = false; });
     }
   }
 
@@ -1821,6 +1879,8 @@
       messaggioEl.className = "messaggio-errore";
       return;
     }
+    const bottone = document.querySelector('#bottone-cambia-password');
+    bottone.disabled = true;
     messaggioEl.textContent = "Cambio in corso…";
     messaggioEl.className = "messaggio-attesa";
     try {
@@ -1840,6 +1900,8 @@
     } catch (e) {
       messaggioEl.textContent = "Richiesta non riuscita. Controlla la connessione e riprova.";
       messaggioEl.className = "messaggio-errore";
+    } finally {
+      bottone.disabled = false;
     }
   }
 
@@ -1879,6 +1941,8 @@
       messaggioEl.className = "messaggio-errore";
       return;
     }
+    const bottone = document.querySelector('[onclick="salvaPasswordLettura()"]');
+    bottone.disabled = true;
     messaggioEl.textContent = "Salvataggio in corso…";
     messaggioEl.className = "messaggio-attesa";
     try {
@@ -1895,6 +1959,8 @@
     } catch (e) {
       messaggioEl.textContent = "Richiesta non riuscita. Controlla la connessione e riprova.";
       messaggioEl.className = "messaggio-errore";
+    } finally {
+      bottone.disabled = false;
     }
   }
 

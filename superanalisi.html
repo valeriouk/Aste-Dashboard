@@ -181,7 +181,10 @@
   let promptModificato = false;   // true se hai scritto nel riquadro del prompt
 
   // ============================================================ utilità
-  function escapeHtml(t) { const d = document.createElement("div"); d.textContent = t === null || t === undefined ? "" : String(t); return d.innerHTML; }
+  // Link dal database: solo http(s), niente "javascript:" dentro un href.
+  function urlSicuro(u) { const t = String(u || "").trim(); return /^https?:\/\//i.test(t) ? t : "#"; }
+  // Anche le virgolette: il testo finisce pure dentro attributi (href, title).
+  function escapeHtml(t) { const d = document.createElement("div"); d.textContent = t === null || t === undefined ? "" : String(t); return d.innerHTML.replace(/"/g, "&quot;").replace(/'/g, "&#39;"); }
   const vuoto = (v) => v === null || v === undefined || v === "" || (Array.isArray(v) && !v.length);
   function eur(v) { const n = Number(v); return vuoto(v) || !Number.isFinite(n) ? "—" : "€ " + Math.round(n).toLocaleString("it-IT"); }
   function mq(v) { const n = Number(v); return vuoto(v) || !Number.isFinite(n) ? "—" : n.toLocaleString("it-IT") + " mq"; }
@@ -291,7 +294,7 @@
         ricontrollo. Nel frattempo puoi usare la seconda opinione qui sotto.</p></div>`);
     } else {
       html.push(sezionePerizia(a));
-      html.push(sezioneValoreRivendita(r, a));
+      html.push(`<div id="blocco-valore-rivendita">${sezioneValoreRivendita(r, a)}</div>`);
       html.push(`<div id="sezione-conto"></div>`);
     }
     html.push(sezioneSecondaOpinione(r, a));
@@ -324,8 +327,8 @@
       ${voce("Documento analizzato", testo(r.fonte_documento))}
       ${voce("Analisi", a ? `${r.versione_prompt} · ${testo(m.modello || r.modello_ai_usato)}` : "v1")}
     </div>
-    <p class="nota">${r.link_asta ? `<a href="${escapeHtml(r.link_asta)}" target="_blank" rel="noopener">Annuncio PVP</a>` : ""}
-      ${r.link_pdf ? ` · <a href="${escapeHtml(r.link_pdf)}" target="_blank" rel="noopener">Perizia (PDF)</a>` : ""}
+    <p class="nota">${r.link_asta ? `<a href="${escapeHtml(urlSicuro(r.link_asta))}" target="_blank" rel="noopener">Annuncio PVP</a>` : ""}
+      ${r.link_pdf ? ` · <a href="${escapeHtml(urlSicuro(r.link_pdf))}" target="_blank" rel="noopener">Perizia (PDF)</a>` : ""}
       ${r.descrizione_lotto ? `<br>${escapeHtml(r.descrizione_lotto)}` : ""}</p></div>`;
   }
 
@@ -471,8 +474,8 @@
         <label class="campo">Il tuo valore di rivendita (€)
           <input type="number" id="campo-valore-utente" min="0" step="1000" value="${Number.isFinite(utente) && utente > 0 ? utente : ""}" placeholder="es. 120000">
         </label>
-        <button class="bottone" onclick="salvaValoreUtente()">Salva</button>
-        <button class="bottone secondario" onclick="salvaValoreUtente(true)">Cancella (torna al calcolato)</button>
+        <button class="bottone pulsante-valore-utente" onclick="salvaValoreUtente()">Salva</button>
+        <button class="bottone secondario pulsante-valore-utente" onclick="salvaValoreUtente(true)">Cancella (torna al calcolato)</button>
       </div>
       <p id="messaggio-valore-utente" class="messaggio nascosto"></p>
     </div>`;
@@ -484,11 +487,17 @@
     const valore = cancella ? null : Number(campo.value);
     msg.className = "messaggio";
     if (!cancella && !(valore > 0)) { msg.textContent = "Inserisci un valore maggiore di zero, oppure usa Cancella."; msg.classList.add("errore"); return; }
+    const pulsanti = document.querySelectorAll(".pulsante-valore-utente");
+    pulsanti.forEach((b) => { b.disabled = true; });   // niente doppio salvataggio
     try {
       const esito = await chiamaRpc("imposta_valore_rivendita", { password_tentativo: passwordCorrente, id_annuncio_input: Number(ID_ASTA), valore_input: valore });
       if (esito && esito.result === "success") {
         RIGA.valore_rivendita_utente = valore;
-        disegna();
+        // Solo questa sezione e il conto (che aggiorna il prompt se non l'hai
+        // modificato): ridisegnare la pagina intera perdeva il prompt scritto
+        // a mano e la perizia già preparata per la condivisione.
+        document.getElementById("blocco-valore-rivendita").innerHTML = sezioneValoreRivendita(RIGA, analisiV2(RIGA));
+        disegnaConto();
         const nuovo = document.getElementById("messaggio-valore-utente");
         nuovo.textContent = cancella ? "Cancellato: torna il valore calcolato." : "Salvato.";
         nuovo.className = "messaggio ok";
@@ -497,6 +506,7 @@
         msg.classList.add("errore");
       }
     } catch (e) { msg.textContent = "Richiesta non riuscita. Controlla la connessione."; msg.classList.add("errore"); }
+    finally { document.querySelectorAll(".pulsante-valore-utente").forEach((b) => { b.disabled = false; }); }
   }
 
   // ============================================================ conto dell'operazione
@@ -786,7 +796,7 @@
     return `<div class="sezione"><h2>Seconda opinione</h2>
       <p class="nota">Apri un'AI alla volta: il prompt viene scritto o copiato per te; allega la perizia trascinando il PDF nella chat.
         Il risultato puoi salvarlo nella sezione «Salva il risultato dell'AI» qui sotto. I piani gratuiti hanno limiti sul numero e la dimensione dei file.</p>
-      <p>${r.link_pdf ? `<a class="bottone secondario" style="text-decoration:none;display:inline-block" href="${escapeHtml(r.link_pdf)}" target="_blank" rel="noopener" download>⬇ Scarica la perizia (PDF)</a>` : "Nessun PDF della perizia nel registro."}</p>
+      <p>${r.link_pdf ? `<a class="bottone secondario" style="text-decoration:none;display:inline-block" href="${escapeHtml(urlSicuro(r.link_pdf))}" target="_blank" rel="noopener" download>⬇ Scarica la perizia (PDF)</a>` : "Nessun PDF della perizia nel registro."}</p>
       ${r.link_pdf && condivisioneFileSupportata() ? `<p><button class="bottone" id="pulsante-condividi" onclick="condividiPerizia()">📱 Prepara la perizia da condividere</button>
         <button class="bottone secondario nascosto" id="pulsante-salva" onclick="condividiSoloPdf()">📎 Condividi solo il PDF</button>
         <span id="avanzamento-pdf" class="nota"></span></p>

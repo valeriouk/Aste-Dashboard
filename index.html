@@ -2728,7 +2728,7 @@
     if (ricordata) {
       try {
         const valida = await chiamaRpc("verifica_password_lettura", {password_tentativo: ricordata});
-        if (valida) {
+        if (valida === true) {
           passwordLetturaCorrente = ricordata;
           avvia();
           return;
@@ -2759,7 +2759,7 @@
       return;
     }
 
-    if (valida) {
+    if (valida === true) {
       passwordLetturaCorrente = password;
       salvaPasswordLetturaRicordata(password);
       document.getElementById("overlay-gate-lettura").classList.add("nascosto");
@@ -2802,6 +2802,10 @@
         body: JSON.stringify(payload),
         signal: controller.signal
       });
+      if (!risposta.ok) {
+        const errore = await risposta.json().catch(() => ({}));
+        throw new Error(errore.message || `HTTP ${risposta.status}`);
+      }
       return await risposta.json();
     } finally {
       clearTimeout(scaduto);
@@ -3363,7 +3367,15 @@
   function escapeHtml(testo) {
     const d = document.createElement("div");
     d.textContent = testo === null || testo === undefined ? "" : String(testo);
-    return d.innerHTML;
+    // anche le virgolette: il testo finisce pure dentro attributi (href, aria-label)
+    return d.innerHTML.replace(/"/g, "&quot;").replace(/'/g, "&#39;");
+  }
+
+  // Link che vengono dal database o scritti dall'utente: solo http(s),
+  // niente "javascript:" o altri schemi dentro un href.
+  function urlSicuro(url) {
+    const testo = String(url || "").trim();
+    return /^https?:\/\//i.test(testo) ? testo : "#";
   }
 
   // Come escapeHtml, ma per il testo DENTRO un attributo tra doppi apici
@@ -3500,7 +3512,7 @@
       return;
     }
 
-    if (risultato) {
+    if (risultato === true) {
       passwordCorrente = password;
       salvaPasswordRicordata(password);
       document.getElementById("overlay-password").classList.add("nascosto");
@@ -5912,7 +5924,7 @@
           <button type="button" class="bottone-azione-lotto${a.scartato ? ' scartato-attivo' : ''}" title="Non interessa" onclick="event.stopPropagation(); onClickScarta(event, '${a.id}')">${iconaScarta}</button>
           <button type="button" class="popup-lotto-link-scheda" onclick="event.stopPropagation(); apriDettagliAsta('${a.id}')">Vedi scheda completa</button>
         </div>
-        ${a.urlAsta ? `<a href="${escapeHtml(a.urlAsta)}" target="_blank" rel="noopener">Apri annuncio PVP</a>` : ""}
+        ${a.urlAsta ? `<a href="${escapeHtml(urlSicuro(a.urlAsta))}" target="_blank" rel="noopener">Apri annuncio PVP</a>` : ""}
       </div>
     `;
   }
@@ -6700,11 +6712,11 @@ ${notaHtml}
     if (voce.stato === "caricamento") return `<p class="allegati-nota">Caricamento allegati dal PVP…</p>`;
     if (voce.stato === "errore") {
       return `<p class="allegati-nota">Allegati non disponibili (${escapeHtml(voce.messaggio || "errore")}).
-        ${a.urlAsta ? `<a class="lotto-link" href="${escapeHtml(a.urlAsta)}" target="_blank" rel="noopener">Apri l'annuncio PVP</a>` : ""}
+        ${a.urlAsta ? `<a class="lotto-link" href="${escapeHtml(urlSicuro(a.urlAsta))}" target="_blank" rel="noopener">Apri l'annuncio PVP</a>` : ""}
         <button type="button" onclick="caricaAllegatiPvp('${a.id}', true)">Riprova</button></p>`;
     }
     const mb = (b) => b ? ` · ${(b / 1048576).toLocaleString("it-IT", {maximumFractionDigits: 1})} MB` : "";
-    const rigaAllegato = (x) => `<span><a class="lotto-link" href="${escapeHtml(x.url)}" target="_blank" rel="noopener">${escapeHtml(x.nome)}</a>
+    const rigaAllegato = (x) => `<span><a class="lotto-link" href="${escapeHtml(urlSicuro(x.url))}" target="_blank" rel="noopener">${escapeHtml(x.nome)}</a>
       <span class="allegato-info">${escapeHtml(x.tipo || "")}${mb(x.byte)}</span></span>`;
     const gruppo = (titolo, righe) => righe.length ? `<div class="allegati-gruppo"><p class="allegati-gruppo-titolo">${titolo}</p>
       <div class="allegati-elenco">${righe.join("")}</div></div>` : "";
@@ -6714,7 +6726,7 @@ ${notaHtml}
     if (!foto.length && !documenti.length && !gestori.length) return `<p class="allegati-nota">Nessun allegato né sito del gestore sul PVP.</p>`;
     return gruppo("📷 Foto", foto.map(rigaAllegato))
       + gruppo("📄 Documenti PVP", documenti.map(rigaAllegato))
-      + gruppo("🏛️ L'asta sui siti dei gestori", gestori.map(g => `<span><a class="lotto-link" href="${escapeHtml(g.url)}" target="_blank" rel="noopener">${escapeHtml(g.nome)}</a>
+      + gruppo("🏛️ L'asta sui siti dei gestori", gestori.map(g => `<span><a class="lotto-link" href="${escapeHtml(urlSicuro(g.url))}" target="_blank" rel="noopener">${escapeHtml(g.nome)}</a>
           ${g.gestore_vendita ? `<span class="allegato-info">gestore della vendita</span>` : ""}</span>`));
   }
 
@@ -6723,11 +6735,14 @@ ${notaHtml}
     ALLEGATI_PVP[id] = {stato: "caricamento"};
     aggiornaAllegatiPvp(id);
     try {
+      const controller = new AbortController();
+      const scaduto = setTimeout(() => controller.abort(), 30000);
       const r = await fetch(URL_FUNZIONE_ALLEGATI, {
         method: "POST",
         headers: {apikey: SUPABASE_ANON_KEY, Authorization: `Bearer ${SUPABASE_ANON_KEY}`, "Content-Type": "application/json"},
         body: JSON.stringify({password_tentativo: passwordLetturaCorrente || leggiPasswordLetturaRicordata() || "", id_annuncio: id}),
-      });
+        signal: controller.signal,
+      }).finally(() => clearTimeout(scaduto));
       const d = await r.json().catch(() => ({}));
       ALLEGATI_PVP[id] = d.ok ? {stato: "ok", allegati: d.allegati || [], gestori: d.gestori || []}
         : {stato: "errore", messaggio: d.messaggio || `HTTP ${r.status}`};
@@ -6749,7 +6764,7 @@ ${notaHtml}
     const righeLink = link.map((l, i) => `
       <span class="link-utile-riga">
         <button type="button" class="link-utile-rimuovi" onclick="rimuoviLinkUtile('${a.id}', ${i})" aria-label="Rimuovi link" title="Rimuovi link">×</button>
-        <a class="lotto-link" href="${escapeHtml(l.url)}" target="_blank" rel="noopener">${escapeHtml(l.etichetta || dominioDaUrl(l.url))}</a>
+        <a class="lotto-link" href="${escapeHtml(urlSicuro(l.url))}" target="_blank" rel="noopener">${escapeHtml(l.etichetta || dominioDaUrl(l.url))}</a>
       </span>`).join("");
     const puoAggiungerne = link.length < 6;
     return `
@@ -6997,9 +7012,11 @@ ${notaHtml}
     richiediPasswordSeServe(() => eseguiAzioneVisita(id, azione));
   }
 
+  const VISITE_IN_SALVATAGGIO = new Set();   // id con un'azione in corso: niente doppio tocco
   async function eseguiAzioneVisita(id, azione, dataOra = null, dettagli = null) {
     const asta = ASTE.find(a => a.id === id);
-    if (!asta) return;
+    if (!asta || VISITE_IN_SALVATAGGIO.has(id)) return;
+    VISITE_IN_SALVATAGGIO.add(id);
     try {
       const risultato = await accodaScritturaProtetta("imposta_visita", {
         password_tentativo: passwordCorrente, id_annuncio_input: Number(id), azione,
@@ -7014,6 +7031,8 @@ ${notaHtml}
       console.error("imposta_visita fallita:", e);
       gestisceErroreAzionePassword(e);
       mostraToast(`${indirizzoTroncato(asta.comune)} — non sono riuscita a salvare la visita: ${dettaglioErrore(e)}`);
+    } finally {
+      VISITE_IN_SALVATAGGIO.delete(id);
     }
   }
 
@@ -7262,8 +7281,8 @@ ${notaHtml}
         ${bloccoCostiTrasferimento(a)}
         ${bloccoCostiRistrutturazione(a)}
         <div style="margin-top:12px">
-          ${a.urlAsta ? `<a class="lotto-link" href="${escapeHtml(a.urlAsta)}" target="_blank" rel="noopener">Apri annuncio PVP</a>` : ""}
-          ${a.urlPdf ? `<a class="lotto-link secondario" href="${escapeHtml(a.urlPdf)}" target="_blank" rel="noopener">Apri documento</a>` : ""}
+          ${a.urlAsta ? `<a class="lotto-link" href="${escapeHtml(urlSicuro(a.urlAsta))}" target="_blank" rel="noopener">Apri annuncio PVP</a>` : ""}
+          ${a.urlPdf ? `<a class="lotto-link secondario" href="${escapeHtml(urlSicuro(a.urlPdf))}" target="_blank" rel="noopener">Apri documento</a>` : ""}
           ${a.id ? `<a class="lotto-link" href="superanalisi.html?id=${encodeURIComponent(a.id)}" target="_blank" rel="noopener">Superanalisi</a>` : ""}
         </div>
         ${sezioneSuperanalisiEsterne(a)}
@@ -7284,7 +7303,7 @@ ${notaHtml}
     const ora = v => new Date(v.creato).toLocaleTimeString("it-IT", {hour: "2-digit", minute: "2-digit"});
     const nomi = voci.map(v => SuperanalisiEsterne.etichetta(v, a.id));
     const conta = (lista, x) => lista.filter(y => y === x).length;
-    const conData = nomi.map((nome, i) => conta(nomi, nome) > 1 ? `${nome} · ${giorno(voci[i])}` : nome);
+    const conData = nomi.map((nome, i) => conta(nomi, nome) > 1 && !nome.endsWith(giorno(voci[i])) ? `${nome} · ${giorno(voci[i])}` : nome);
     const etichette = conData.map((nome, i) => conta(conData, nome) > 1 ? `${nome} ${ora(voci[i])}` : nome);
     return `<div class="superanalisi-esterne">
         <p class="link-utili-sottotitolo">🧠 Superanalisi esterne</p>

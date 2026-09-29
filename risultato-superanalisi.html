@@ -139,7 +139,8 @@
   const CHIAVE_PASSWORD_LETTURA = "aste_password_lettura_v1";
   const ID_RISULTATO = new URLSearchParams(location.search).get("id") || "";
 
-  function escapeHtml(t) { const d = document.createElement("div"); d.textContent = t === null || t === undefined ? "" : String(t); return d.innerHTML; }
+  // Anche le virgolette: il testo finisce pure dentro attributi (href, title).
+  function escapeHtml(t) { const d = document.createElement("div"); d.textContent = t === null || t === undefined ? "" : String(t); return d.innerHTML.replace(/"/g, "&quot;").replace(/'/g, "&#39;"); }
   function leggiLocale(k) { try { return localStorage.getItem(k); } catch (e) { return null; } }
   function scriviLocale(k, v) { try { localStorage.setItem(k, v); } catch (e) {} }
 

@@ -229,9 +229,9 @@
   <div id="schermata-password" class="riquadro-gate nascosto">
     <h2>Accesso protetto</h2>
     <p>Stessa password della configurazione.</p>
-    <form onsubmit="return false;">
-      <input type="password" id="campo-password" placeholder="Password" autocomplete="current-password" onkeydown="if(event.key==='Enter') sblocca()">
-      <button class="bottone-primario" onclick="sblocca()">Sblocca</button>
+    <form onsubmit="event.preventDefault(); sblocca();">
+      <input type="password" id="campo-password" placeholder="Password" autocomplete="current-password">
+      <button type="submit" class="bottone-primario">Sblocca</button>
     </form>
     <p id="errore-gate" class="messaggio-errore nascosto"></p>
   </div>
@@ -373,7 +373,8 @@
   function escapeHtml(testo) {
     const d = document.createElement("div");
     d.textContent = testo === null || testo === undefined ? "" : String(testo);
-    return d.innerHTML;
+    // anche le virgolette: il testo finisce pure dentro attributi (title)
+    return d.innerHTML.replace(/"/g, "&quot;").replace(/'/g, "&#39;");
   }
 
   async function chiamaRpc(nomeFunzione, payload) {
@@ -418,7 +419,7 @@
       erroreEl.classList.remove("nascosto");
       return;
     }
-    if (risultato) {
+    if (risultato === true) {
       passwordCorrente = password;
       salvaPasswordRicordata(password);
       mostraContenuto();
@@ -433,7 +434,7 @@
     if (!passwordRicordata) { mostraGateManuale(); return; }
     try {
       const risultato = await chiamaRpc("verifica_password", {password_tentativo: passwordRicordata});
-      if (risultato) {
+      if (risultato === true) {
         passwordCorrente = passwordRicordata;
         mostraContenuto();
         return;
@@ -649,6 +650,9 @@
       return;
     }
 
+    const bottone = document.querySelector('[onclick="aggiungiRicarica()"]');
+    if (bottone.disabled) return;
+    bottone.disabled = true;   // un doppio tocco inserirebbe due righe
     try {
       const risultato = await chiamaRpc("aggiungi_ricarica_gemini", {
         password_tentativo: passwordCorrente,
@@ -656,8 +660,8 @@
         importo_input: importo,
         nota_input: nota || null,
       });
-      if (risultato.result !== "success") {
-        msgEl.textContent = risultato.message || "Errore durante il salvataggio.";
+      if (!risultato || risultato.result !== "success") {
+        msgEl.textContent = (risultato && risultato.message) || "Errore durante il salvataggio.";
         msgEl.classList.add("messaggio-errore");
         return;
       }
@@ -672,6 +676,8 @@
     } catch (e) {
       msgEl.textContent = "Impossibile contattare Supabase.";
       msgEl.classList.add("messaggio-errore");
+    } finally {
+      bottone.disabled = false;
     }
   }
 
