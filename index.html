@@ -539,20 +539,6 @@
   }
   .separatore-azioni-conteggio { color: var(--border); font-size: .78rem; }
 
-  .bottone-toggle-tutti {
-    background: var(--surface);
-    border: 1px solid var(--border);
-    color: var(--ink-muted);
-    font-family: var(--font-body);
-    font-size: .85rem;
-    font-weight: 500;
-    padding: 11px 12px;
-    border-radius: 8px;
-    cursor: pointer;
-    white-space: nowrap;
-  }
-  .bottone-toggle-tutti:hover { color: var(--primary); border-color: var(--primary); }
-
   /* ============================================================
      GRIGLIA CARTELLE / LOTTI
   ============================================================ */
@@ -1437,7 +1423,7 @@
   .finestra-dettagli-asta {
     background: var(--surface);
     border-radius: 16px;
-    max-width: 640px;
+    max-width: 830px;
     width: 100%;
     max-height: 85vh;
     overflow-y: auto;
@@ -1590,7 +1576,7 @@
      apre la trova comoda di solito la vuole così per più di una card di
      fila, non solo per quella che l'ha fatta scoprire. */
   .finestra-dettagli-asta.espansa {
-    max-width: 900px;
+    max-width: 1000px;
     max-height: 92vh;
   }
   .finestra-dettagli-header {
@@ -2356,7 +2342,7 @@
   /* Niente "scroll anchoring": quando l'intestazione si riduce (-84 px su PC)
      Chrome spostava da solo lo scorrimento, si tornava sotto la soglia e
      l'intestazione si riallargava, in un ciclo continuo (sfarfallio sotto
-     l'indice, 30/09/2026). */
+     l'indice, 29/09/2026). */
   .finestra-dettagli-asta { overflow-anchor: none; }
   .finestra-dettagli-asta.compatta .finestra-dettagli-header { padding-top: 10px; padding-bottom: 10px; }
   .finestra-dettagli-asta.compatta .finestra-dettagli-header .lotto-id,
@@ -2797,13 +2783,13 @@
   const SUPABASE_URL = "https://igemwrrcmsgaotoqvdzt.supabase.co";
   const SUPABASE_ANON_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImlnZW13cnJjbXNnYW90b3F2ZHp0Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODkzMDc2MjksImV4cCI6MjEwNDg4MzYyOX0.YkUOBTOb40C-N0TkuDN0o5N7fVvI_qX2F1grUp-SVe8";
 
-  // Non più un hash: le funzioni sul database (prepara_database.sql,
-  // Sezione 6) confrontano la password in chiaro — niente più
-  // crypto.subtle.digest lato browser. A differenza di config.html, qui
-  // NON blocca l'intera pagina: la lettura resta sempre aperta, la
-  // password viene chiesta solo alla PRIMA azione di scrittura (stella,
-  // scarto o nota) in questa sessione — vedi richiediPasswordSeServe più
-  // sotto. Stesso principio di sempre, MAI una vera protezione lato
+  // La password viaggia così com'è: la confrontano le funzioni del
+  // database con quella salvata cifrata (verifica_password,
+  // sql/sicurezza_e_tentativi.sql nel repo privato). La lettura del
+  // registro chiede la password di lettura, se è attiva (vedi
+  // provaSbloccoLetturaAutomatico); quella di scrittura viene chiesta solo
+  // alla PRIMA azione di scrittura (stella, scarto, nota…) in questa
+  // sessione — vedi richiediPasswordSeServe più sotto. Stesso principio di sempre, MAI una vera protezione lato
   // client — la password ferma solo chi ci arriva per sbaglio, non chi
   // guarda il codice sorgente o chiama la funzione direttamente (per
   // quello serve comunque conoscerla: la verifica reale è nella funzione
@@ -4444,9 +4430,10 @@
     );
   }
 
-  // Annulla l'ULTIMO blocco: rimette lo stato e le note com'erano, usando
-  // le stesse tre funzioni del database di sempre (imposta_stato_preferito,
-  // rimuovi_flag_preferito, salva_nota_preferito). Tocca SOLO le aste che
+  // Annulla l'ULTIMO blocco: rimette lo stato com'era, con le stesse
+  // funzioni del database di sempre (imposta_stato_preferito,
+  // rimuovi_flag_preferito); le note non c'entrano, le azioni in blocco non
+  // le toccano. Tocca SOLO le aste che
   // sono ancora come le ha lasciate il blocco (stessa stato, nessuna nota
   // scritta dopo): se nel frattempo ne hai cambiata una, resta come l'hai
   // messa tu. Quelle che falliscono restano annullabili con un secondo clic.
@@ -4552,7 +4539,7 @@
     // Il toast (con l'offerta di aggiungere una nota) compare QUI, nello
     // stesso istante in cui la card sparisce — non dopo la conferma del
     // server più sotto. Prima compariva solo a chiamata riuscita: con la
-    // latenza tipica di una WebApp Apps Script (anche solo mezzo
+    // latenza di una scrittura sul database (anche solo mezzo
     // secondo, a volte di più) l'attenzione si era già spostata altrove
     // quando il toast arrivava, sembrando che non fosse mai comparso —
     // segnalato per davvero. La card sparisce già in modo ottimistico
@@ -5119,7 +5106,7 @@
     return oneriCondominialiACarico(a).aCarico;
   }
 
-  // Spese condominiali arretrate a carico di chi compra (30/09/2026): la tua
+  // Spese condominiali arretrate a carico di chi compra (29/09/2026): la tua
   // correzione vale così com'è; altrimenti l'arretrato della perizia, ma al
   // massimo 2 annualità di spese ordinarie (art. 63 disp. att. c.c.: chi
   // subentra risponde dell'anno in corso e del precedente). Stessa regola di
@@ -5192,7 +5179,7 @@
   // ==========================================================
   // Rigetta (fallisce) dopo ms millisecondi se la promessa originale non
   // si è ancora risolta — per le letture che DEVONO considerarsi un vero
-  // errore se non arrivano in tempo (il CSV principale), non un "va bene
+  // errore se non arrivano in tempo (le aste, leggi_aste), non un "va bene
   // comunque, prosegui senza".
   function conTimeoutRigetta(promessa, ms) {
     return Promise.race([
@@ -5203,7 +5190,7 @@
 
   // Si risolve con un valore di ripiego dopo ms millisecondi se la
   // promessa originale non si è ancora risolta — per le letture
-  // OPZIONALI (il CSV dei preferiti), dove un ritardo eccessivo deve
+  // OPZIONALI (i dati personali, leggi_dati_personali), dove un ritardo eccessivo deve
   // degradare in modo controllato invece di bloccare tutta la pagina.
   // Prima mancava questo limite: se quella lettura si bloccava (invece
   // di fallire pulita con un errore di rete), la pagina restava ferma su
@@ -7065,12 +7052,11 @@ ${notaHtml}
       // preferita o scartata: la bolla della nota è sempre nel DOM ora
       // (vedi notaHtml in cartellaLotto/contenutoFinestraDettagli, non più
       // condizionato da preferito/scartato).
-      // Flusso pensato: S (o X) per segnare l'asta, poi Invio per
-      // scrivere subito una nota senza staccare le mani dalla tastiera
-      // per cercare il pulsante, poi Invio di nuovo DENTRO la textarea
-      // per salvarla (vedi l'onkeydown sulla textarea stessa, gestito
-      // separatamente da questa funzione — qui non arriva perché il
-      // controllo su INPUT/TEXTAREA più sopra fa uscire prima).
+      // Flusso pensato: S (o X) per segnare l'asta, poi Invio: nota vuota →
+      // editor subito, nota scritta → lettura (toccaNota; si modifica da
+      // "✏️ Modifica"). Dentro la textarea Invio salva su PC (tastoNota,
+      // gestito a parte — qui non arriva perché il controllo su
+      // INPUT/TEXTAREA più sopra fa uscire prima).
       const asta = ASTE.find(a => a.id === idAstaModaleDettagli);
       if (!asta) return;
       const bolla = document.querySelector("#finestra-dettagli-contenuto .nota-preferito-bolla");

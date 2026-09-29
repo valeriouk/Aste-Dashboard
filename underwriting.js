@@ -695,7 +695,7 @@
     if (reg.nonDeterminato) avvisi.push('Costi di regolarizzazione incompleti: MAX_BID sovrastimato');
     if (arv.affidabilita === 'bassa') avvisi.push(`ARV a bassa affidabilità (${arv.fonte})`);
 
-    // Correzioni fatte nei dettagli del registro (30/09/2026): hanno la
+    // Correzioni fatte nei dettagli del registro (29/09/2026): hanno la
     // precedenza sui dati della perizia, come nei costi del registro. Tolte
     // lì, tornano i dati della perizia.
     const renditaTu = num(annuncio.renditaOverride);

@@ -198,7 +198,7 @@
         (allegati PVP, siti delle vendite, astegiudiziarie); se non c'è, si ripiega sull'avviso di vendita.</li>
       <li><strong>Analisi della perizia</strong> con Gemini: estrae i fatti (superfici, quota, occupazione, abusi, valori del CTU…) con
         pagina e citazione. Vedi il capitolo <a href="#analisi">Analisi della perizia</a>.</li>
-      <li><strong>Calcoli e scrittura nel database</strong>: margine stimato, €/mq, livello di ristrutturazione, punteggio; l'asta compare nel
+      <li><strong>Calcoli e scrittura nel database</strong>: margine lordo, €/mq, livello di ristrutturazione, punteggio; l'asta compare nel
         registro e arriva una <a href="#notifiche">notifica Telegram</a>.</li>
       <li><strong>Dopo il giro</strong>: <a href="#orari-ricontrollo">ricontrollo delle perizie</a> per le aste ancora senza perizia,
         <a href="#orari-storico">storico delle aste</a> dal PVP, <a href="#omi-assegnazione">assegnazione dei valori OMI</a>, e il lunedì il <a href="#orari-promemoria-omi">promemoria OMI</a>.</li>
@@ -268,7 +268,7 @@
 
   <section class="voce" id="sistema-cronologia">
     <h3>Cronologia delle modifiche: i tuoi dati si possono recuperare</h3>
-    <p>Dal 30/09/2026 il database conserva la versione <strong>precedente</strong> dei dati che inserisci a mano ogni volta che vengono cambiati o
+    <p>Dal 29/09/2026 il database conserva la versione <strong>precedente</strong> dei dati che inserisci a mano ogni volta che vengono cambiati o
       cancellati, da qualunque parte (pagine, scanner, "Elimina aste scadute", modifiche a mano):</p>
     <ul>
       <li>nota e i tuoi link; preferita/scartata; visite (stato, data e ora, dettagli); risultati delle AI esterne (testo compreso);
@@ -684,7 +684,7 @@
   <section class="voce" id="registro-margine">
     <h3>Margine lordo (registro)</h3>
     <div class="formula">margine lordo = valore di stima − offerta minima − spese di sanatoria</div>
-    <p>Fino al 30/09/2026 si chiamava "Margine stimato"; è lo stesso numero. Si chiama "lordo" per non confonderlo con il "Margine sull'offerta minima"
+    <p>Fino al 29/09/2026 si chiamava "Margine stimato"; è lo stesso numero. Si chiama "lordo" per non confonderlo con il "Margine sull'offerta minima"
       della <a href="#superanalisi-offerta-massima">Superanalisi</a>, che è un'altra cosa (offerta massima − offerta minima, dopo tutti i costi): i due
       possono avere segno opposto. Nei dettagli, sotto il numero, "Conto completo in Superanalisi →" apre il conto dell'asta. Stesso nome nei messaggi
       Telegram, nel confronto, nella mappa e in Statistiche ("Margine lordo medio"); nel CSV la colonna resta "Margine stimato", per non cambiare i
@@ -823,7 +823,7 @@
       <li>Costi uguali nei quattro scenari (prima tabella): <a href="#registro-delegato">compenso del delegato</a> + cassa 4% + IVA 22%;
         <strong>tecnico per la sanatoria 1.500 €</strong> se ci sono spese di sanatoria (&gt; 0; prima si chiamava "Pratica edilizia (CILA/SCIA)");
         <strong>sanatoria abusi</strong> (le spese stimate); <strong>spese condominiali arretrate</strong> a tuo carico.</li>
-      <li><strong>Spese condominiali arretrate</strong> (dal 30/09/2026): se le hai corrette vale il tuo numero; altrimenti l'arretrato della perizia,
+      <li><strong>Spese condominiali arretrate</strong> (dal 29/09/2026): se le hai corrette vale il tuo numero; altrimenti l'arretrato della perizia,
         ma <strong>al massimo 2 annualità</strong> di spese ordinarie quando la perizia le indica (art. 63 disp. att. c.c.: chi compra risponde in solido
         solo dell'anno in corso e del precedente). In quel caso la riga diventa "…(a tuo carico, max 2 anni)" e una nota sotto dice l'arretrato totale in
         perizia e le spese annue. È un'approssimazione: va confermata con il delegato o l'amministratore. Stessa regola del conto della Superanalisi.</li>
@@ -858,7 +858,7 @@
       (anche Invio) salvano un tuo valore che ha la precedenza. Campo vuoto = torna al valore automatico. Per le spese condominiali anche uno 0 conta.
       Numeri negativi rifiutati ("Inserisci un numero valido, non negativo."). Dopo un salvataggio che cambia qualcosa compare per 3 secondi "Annulla",
       che rimette le correzioni di prima. La rendita la trovi nella visura catastale.</p>
-    <p><strong>Anche in Superanalisi</strong> (dal 30/09/2026): la tua rendita e le tue spese condominiali arretrate sostituiscono quelle lette dalla
+    <p><strong>Anche in Superanalisi</strong> (dal 29/09/2026): la tua rendita e le tue spese condominiali arretrate sostituiscono quelle lette dalla
       perizia nel conto (imposte e arretrati), anche nella Superanalisi di gruppo; negli "Avvisi" del conto compare "usata la tua correzione". Svuotando
       i campi nel registro il conto torna ai dati della perizia. Le tue spese condominiali si usano così come le scrivi (senza il limite delle due
       annualità che il conto applica a quelle della perizia).</p>
@@ -1186,7 +1186,7 @@
 
   <section class="voce" id="stat-liste">
     <h3>Liste a barre: tipologia, tribunale, zone, punteggio, ristrutturazione</h3>
-    <p>Ogni lista mostra le prime 8 voci (il resto in "+ altri N"). Per tipologia; per tribunale; zone segnalate (nascosta se non ce ne sono); distribuzione
+    <p>Ogni lista mostra le prime 8 voci (il resto in "+ altri N"); le liste nel tempo (perizie, visite) ne mostrano 14. Per tipologia; per tribunale; zone segnalate (nascosta se non ce ne sono); distribuzione
       del punteggio in fasce (non valutata ≤ 1, 1-20, 21-40, 41-60, 61-80, 81-100); livello di ristrutturazione suggerito. Gli abusi edilizi non sono
       contati perché sono un testo, non una categoria.</p>
   </section>
@@ -1880,7 +1880,6 @@
           vengono riprovate al giro successivo. Se dice "annullamento non riuscito", il batch potrebbe essere addebitato senza che i risultati vengano letti.</td></tr>
         <tr><td>📄 Perizia trovata al ricontrollo</td><td>Il <a href="#orari-ricontrollo">ricontrollo</a> ha trovato la perizia e aggiornato l'analisi.</td></tr>
         <tr><td>🔁 Ricontrollo perizie</td><td>Riepilogo del ricontrollo: controllate, trovate, aggiornate, solo fonte, in batch, errori.</td></tr>
-        <tr><td>🧠 Rianalisi v2</td><td>Riepilogo di una rianalisi straordinaria (quando si ripassano molte aste con un prompt nuovo).</td></tr>
         <tr><td>🗺️ Nuove quotazioni OMI</td><td>Il lunedì, se è uscito un semestre OMI non ancora caricato.</td></tr>
         <tr><td>📅 Visita tra 3 giorni / 📅 Visita domani</td><td>Promemoria dell'appuntamento confermato (dalle 9:00), con dettagli, indirizzo, asta e link.</td></tr>
         <tr><td>🚨🚨 VISITA OGGI ALLE hh:mm</td><td>Il giorno della visita dalle 7:00, fissato in cima alla chat.</td></tr>

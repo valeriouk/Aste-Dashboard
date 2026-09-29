@@ -15,7 +15,7 @@
 <link href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,400;9..144,500;9..144,600&family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500;600&display=swap" rel="stylesheet">
 
 <!--
-  superanalisi.html — dettaglio di un'asta preferita: dati della perizia
+  superanalisi.html — dettaglio di un'asta (qualunque): dati della perizia
   (analisi v2, con pagina e citazione), valore di rivendita, conto
   dell'operazione (underwriting.js) e seconda opinione con altre AI, con il
   salvataggio del loro risultato (superanalisi-esterne.js).
@@ -87,17 +87,16 @@
   .griglia { display: grid; grid-template-columns: repeat(auto-fill, minmax(190px, 1fr)); gap: 10px 18px; }
   .voce .etichetta { font-size: .74rem; color: var(--ink-faint); text-transform: uppercase; letter-spacing: .04em; }
   .voce .valore { font-size: .95rem; font-weight: 500; }
-  .mono { font-family: var(--font-mono); }
   .citazione { font-size: .82rem; color: var(--ink-muted); border-left: 3px solid var(--border); padding: 2px 0 2px 10px; margin: 4px 0 8px; }
   .pagina { font-family: var(--font-mono); font-size: .75rem; color: var(--primary); background: var(--primary-soft); border-radius: 4px; padding: 0 5px; margin-left: 4px; }
   .elenco { margin: 4px 0; padding-left: 18px; }
   .elenco li { margin: 3px 0; font-size: .9rem; }
 
   .etichetta-stato { display: inline-block; font-size: .78rem; font-weight: 600; border-radius: 999px; padding: 2px 10px; }
-  .stato-PULITA, .stato-ok { background: var(--ok-soft); color: var(--ok); }
+  .stato-PULITA { background: var(--ok-soft); color: var(--ok); }
   .stato-GESTIBILE { background: var(--primary-soft); color: var(--primary); }
   .stato-COMPLESSA { background: var(--secondary-soft); color: var(--secondary); }
-  .stato-DA_SCARTARE, .stato-errore { background: var(--danger-soft); color: var(--danger); }
+  .stato-DA_SCARTARE { background: var(--danger-soft); color: var(--danger); }
   .verdetto { font-size: 1.02rem; font-weight: 600; margin: 8px 0 4px; }
   .numero-grande { font-family: var(--font-mono); font-size: 1.5rem; font-weight: 600; }
 
@@ -120,7 +119,7 @@
   .pulsante-ai:hover { border-color: var(--primary); }
   textarea { width: 100%; min-height: 160px; font-family: var(--font-mono); font-size: .78rem; border: 1px solid var(--border);
     border-radius: 8px; padding: 10px; background: var(--bg); color: var(--ink); }
-  /* Riepilogo in cima e indice delle sezioni (fase 4, 30/09/2026) */
+  /* Riepilogo in cima e indice delle sezioni (fase 4, 29/09/2026) */
   .riepilogo .verdetto { margin-top: 0; }
   .riepilogo .griglia { margin-top: 12px; grid-template-columns: repeat(auto-fill, minmax(140px, 1fr)); }
   .riepilogo .numero-grande { font-size: 1.25rem; }
@@ -331,6 +330,16 @@
   }
 
   // ============================================================ riepilogo e indice
+  // Il verdetto calcolato comincia con la classe ("PULITA — offerta massima…"),
+  // che la pagina mostra già nell'etichetta colorata accanto: qui la si toglie
+  // per non leggerla due volte. Il testo intero resta nel prompt per le AI.
+  function verdettoSenzaClasse(esito) {
+    const v = String((esito && esito.verdetto) || "");
+    for (const inizio of [`${esito.classe} — `, esito.classe === "DA_SCARTARE" ? "SCARTARE — " : null]) {
+      if (inizio && v.startsWith(inizio)) return v.slice(inizio.length);
+    }
+    return v;
+  }
   // Margine sull'offerta minima: se negativo l'obiettivo di utile non si
   // raggiunge nemmeno all'offerta minima (stesso numero, detto in chiaro).
   function testoMargine(h) {
@@ -352,7 +361,7 @@
     }
     const m = testoMargine(esito.headroom);
     return `<div class="sezione riepilogo"><h2>Riepilogo</h2>
-      <p class="verdetto"><span class="etichetta-stato stato-${escapeHtml(esito.classe)}">${escapeHtml(testo(esito.classe))}</span> ${escapeHtml(esito.verdetto || "")}</p>
+      <p class="verdetto"><span class="etichetta-stato stato-${escapeHtml(esito.classe)}">${escapeHtml(testo(esito.classe))}</span> ${escapeHtml(verdettoSenzaClasse(esito))}</p>
       <div class="griglia">
         <div class="voce"><div class="etichetta">Offerta minima</div><div class="numero-grande">${eur(r.offerta_minima)}</div></div>
         <div class="voce"><div class="etichetta">Offerta massima</div><div class="numero-grande">${eur(esito.offertaMassima)}</div></div>
@@ -686,7 +695,7 @@
           <input type="number" id="p-minimo" min="0" step="1" value="${p.minimoPrudenzialePct}" onchange="aggiornaParametri()"></label>
         <label class="etichetta-checkbox"><input type="checkbox" id="p-prima-casa" ${p.primaCasa ? "checked" : ""} onchange="aggiornaParametri()"> Acquisto come prima casa</label>
       </div>
-      <p class="verdetto"><span class="etichetta-stato stato-${escapeHtml(esito.classe)}">${escapeHtml(testo(esito.classe))}</span> ${escapeHtml(esito.verdetto || "")}</p>
+      <p class="verdetto"><span class="etichetta-stato stato-${escapeHtml(esito.classe)}">${escapeHtml(testo(esito.classe))}</span> ${escapeHtml(verdettoSenzaClasse(esito))}</p>
       <div class="griglia" style="margin-top:10px">
         <div class="voce"><div class="etichetta">Offerta massima</div><div class="numero-grande">${eur(esito.offertaMassima)}</div></div>
         <div class="voce"><div class="etichetta">${escapeHtml(margine.etichetta)}</div><div class="numero-grande ${margine.classe}">${escapeHtml(margine.valore)}</div></div>
