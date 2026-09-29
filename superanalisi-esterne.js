@@ -267,7 +267,7 @@
     q('.sae-elenco').addEventListener('click', async (ev) => {
       const bottone = ev.target.closest && ev.target.closest('[data-elimina]');
       const id = bottone && bottone.getAttribute('data-elimina');
-      if (!id || bottone.disabled || !confirm('Eliminare questo risultato? Non si può annullare.')) return;
+      if (!id || bottone.disabled || !confirm('Eliminare questo risultato? Dalla pagina non si può annullare: resta nella cronologia del database per 12 mesi (recupero su richiesta).')) return;
       bottone.disabled = true;
       bottone.textContent = 'Eliminazione…';
       try {

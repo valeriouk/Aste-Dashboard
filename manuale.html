@@ -266,6 +266,21 @@
       database). Per questo nel manuale non ci sono password, chiavi, indirizzi dei servizi né dati delle aste.</p>
   </section>
 
+  <section class="voce" id="sistema-cronologia">
+    <h3>Cronologia delle modifiche: i tuoi dati si possono recuperare</h3>
+    <p>Dal 30/09/2026 il database conserva la versione <strong>precedente</strong> dei dati che inserisci a mano ogni volta che vengono cambiati o
+      cancellati, da qualunque parte (pagine, scanner, "Elimina aste scadute", modifiche a mano):</p>
+    <ul>
+      <li>nota e i tuoi link; preferita/scartata; visite (stato, data e ora, dettagli); risultati delle AI esterne (testo compreso);
+        correzioni di rendita, spese condominiali e valore di rivendita;</li>
+      <li>non i dati letti dallo scanner (analisi, prezzi, storico PVP) e non le password;</li>
+      <li>ogni voce dice quando, cosa è cambiato, se è stato dalle pagine, dallo scanner o a mano, e con quale operazione;</li>
+      <li>le voci più vecchie di <strong>12 mesi</strong> si cancellano da sole; lo spazio occupato è di pochi MB l'anno.</li>
+    </ul>
+    <p>Per ora la cronologia si consulta e si ripristina solo dal database, su richiesta (non dalle pagine). Nelle pagine, subito dopo un salvataggio o
+      una rimozione di nota, link o correzioni dei costi, c'è anche il più rapido "Annulla" per 10 secondi.</p>
+  </section>
+
   <section class="voce" id="sistema-costi">
     <h3>Costi: Gemini e minuti GitHub</h3>
     <ul>
@@ -824,7 +839,8 @@
       prezzo base perché la rendita è fissa, mentre il prezzo base scende a ogni tentativo.</p>
     <p><strong>Correzioni</strong>: nella finestra dei dettagli i campi "Rendita catastale (€)" e "Spese condominiali arretrate (€)" + "Salva e ricalcola"
       (anche Invio) salvano un tuo valore che ha la precedenza. Campo vuoto = torna al valore automatico. Per le spese condominiali anche uno 0 conta.
-      Numeri negativi rifiutati ("Inserisci un numero valido, non negativo."). La rendita la trovi nella visura catastale.</p>
+      Numeri negativi rifiutati ("Inserisci un numero valido, non negativo."). Dopo un salvataggio che cambia qualcosa compare per 10 secondi "Annulla",
+      che rimette le correzioni di prima. La rendita la trovi nella visura catastale.</p>
   </section>
 
   <section class="voce" id="registro-delegato">
@@ -870,7 +886,7 @@
         di foto); "gestore della vendita" segna il sito dove si fa l'offerta. I nomi lunghi vanno a capo, senza bisogno di allargare la scheda. I siti di pubblicità generici, che non portano all'asta, non sono mostrati.</li>
       <li><strong>✏️ I tuoi link</strong>: fino a <strong>6 link</strong> aggiunti da te (annunci simili, pagine del tribunale, mappe…), indipendenti da stella e
         nota. "+ Aggiungi link": indirizzo (deve iniziare con http:// o https://) ed etichetta facoltativa; senza etichetta si vede il dominio. La "×" lo
-        rimuove. Serve la password di scrittura. Questi sì restano salvati.</li>
+        rimuove; poi per 10 secondi compare "Annulla", che rimette i link di prima. Serve la password di scrittura. Questi sì restano salvati.</li>
     </ul>
     <p>I link aprono file e pagine direttamente dal PVP e dai siti dei gestori, in una nuova scheda. Se il PVP non risponde compare "Allegati non
       disponibili" con il link all'annuncio e "Riprova". Le foto che stanno solo sui siti dei gestori non sono elencate una per una: si vedono aprendo
@@ -1099,7 +1115,8 @@
     <h3>Manutenzione: "🗑 Elimina aste scadute"</h3>
     <p>Cancella dal registro le aste con data di vendita già passata. Prima mostra quante sono e quante hanno <strong>dati tuoi</strong> (una visita, una
       nota o dei link, un risultato di superanalisi esterna, anche di gruppo), poi fa scegliere: "Elimina tutte (N)", "Tieni le M con i miei dati
-      (elimina le altre)" o "Annulla". <strong>Irreversibile</strong>: lo storico delle aste eliminate va perso. Il loro numero resta conteggiato in
+      (elimina le altre)" o "Annulla". <strong>Irreversibile dalle pagine</strong>: lo storico delle aste eliminate va perso; i tuoi dati cancellati
+      (note, link, visite, risultati AI, correzioni) restano per 12 mesi nella <a href="#sistema-cronologia">cronologia delle modifiche</a>. Il loro numero resta conteggiato in
       Statistiche ("Aste storiche"). Stelle e scarti da soli non contano come dati tuoi.</p>
   </section>
 
@@ -1421,7 +1438,8 @@
         (o "Superanalisi di gruppo … (6 aste)"). Se due pulsanti avrebbero lo stesso nome (stessa AI e stesso giudizio o posizione) si aggiunge la data
         ("· 29/09"), e anche l'ora se sono dello stesso giorno. Il pulsante apre il risultato a tutta pagina, con le aste collegate, "Stampa / PDF", "← Superanalisi" (la pagina dove l'hai salvato e puoi
         eliminarlo) e "← Dettaglio asta".</li>
-      <li><strong>Eliminare</strong>: solo dalla pagina di Superanalisi in cui è stato salvato ("Elimina" nell'elenco "Risultati salvati", con conferma). Dai
+      <li><strong>Eliminare</strong>: solo dalla pagina di Superanalisi in cui è stato salvato ("Elimina" nell'elenco "Risultati salvati", con conferma; dalla pagina non si annulla, ma il testo resta 12 mesi nella
+        <a href="#sistema-cronologia">cronologia delle modifiche</a>). Dai
         dettagli del registro si può solo leggere; non c'è modifica: per correggere si elimina e si salva di nuovo.</li>
       <li><strong>Dati</strong>: salvati nel database, leggibili solo con la password di lettura del registro (salvare ed eliminare: password di
         scrittura). Il registro scarica solo l'elenco; il testo si scarica quando apri il risultato. Massimo 300.000 caratteri per risultato.</li>

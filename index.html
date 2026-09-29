@@ -4775,7 +4775,7 @@
     salvaDatiUtenteCosti(id);
   }
 
-  async function eseguiSalvaDatiUtenteCosti(id, renditaValore, oneriValore, campoInput) {
+  async function eseguiSalvaDatiUtenteCosti(id, renditaValore, oneriValore, campoInput, daAnnulla = false) {
     const asta = ASTE.find(a => a.id === id);
     if (!asta) return;
     const renditaPrecedente = asta.renditaCatastaleUtente;
@@ -4791,6 +4791,14 @@
         rendita_catastale_input: renditaValore, oneri_condominiali_input: oneriValore
       });
       if (risultato.result !== "success") throw new Error(risultato.message || "");
+      // "Annulla" per 10 secondi rimette le correzioni di prima (solo se è cambiato qualcosa).
+      const uguale = (a, b) => (a === null || a === undefined || a === "" ? null : Number(a)) === (b === null || b === undefined || b === "" ? null : Number(b));
+      if (daAnnulla) {
+        mostraToast(`${indirizzoTroncato(asta.comune)} — correzioni ripristinate.`);
+      } else if (!uguale(renditaPrecedente, renditaValore) || !uguale(oneriPrecedenti, oneriValore)) {
+        mostraToast(`${indirizzoTroncato(asta.comune)} — correzione salvata.`,
+          {etichetta: "Annulla", callback: () => richiediPasswordSeServe(() => eseguiSalvaDatiUtenteCosti(id, renditaPrecedente ?? null, oneriPrecedenti ?? null, null, true))}, 10000);
+      }
     } catch (e) {
       console.error("aggiorna_dati_utente_asta fallita:", e);
       gestisceErroreAzionePassword(e);
@@ -7292,12 +7300,14 @@ ${notaHtml}
     const asta = ASTE.find(a => a.id === id);
     if (!asta) return;
     const nuovi = (asta.linkUtili || []).filter((_, i) => i !== indice);
-    richiediPasswordSeServe(() => eseguiSalvaLinkUtili(id, nuovi));
+    richiediPasswordSeServe(() => eseguiSalvaLinkUtili(id, nuovi, "link rimosso"));
   }
 
   // Stesso schema di eseguiSalvaNota: aggiornamento ottimistico, rollback
   // al valore precedente se la scrittura fallisce, toast sull'errore.
-  async function eseguiSalvaLinkUtili(id, nuoviLink) {
+  // messaggio: se indicato (rimozione con la ×), dopo il salvataggio compare
+  // con "Annulla" per 10 secondi, che rimette i link di prima.
+  async function eseguiSalvaLinkUtili(id, nuoviLink, messaggio = null, daAnnulla = false) {
     const asta = ASTE.find(a => a.id === id);
     if (!asta) return;
     const precedente = asta.linkUtili || [];
@@ -7308,6 +7318,12 @@ ${notaHtml}
     try {
       const risultato = await accodaScritturaProtetta("imposta_link_utili", {password_tentativo: passwordCorrente, id_annuncio_input: id, links_input: nuoviLink});
       if (risultato.result !== "success") throw new Error(risultato.message || "");
+      if (daAnnulla) {
+        mostraToast(`${indirizzoTroncato(asta.comune)} — link ripristinati.`);
+      } else if (messaggio) {
+        mostraToast(`${indirizzoTroncato(asta.comune)} — ${messaggio}.`,
+          {etichetta: "Annulla", callback: () => richiediPasswordSeServe(() => eseguiSalvaLinkUtili(id, precedente, null, true))}, 10000);
+      }
     } catch (e) {
       console.error("imposta_link_utili fallita:", e);
       gestisceErroreAzionePassword(e);
