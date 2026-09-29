@@ -2,13 +2,13 @@
 <html lang="it">
 <head>
 <meta charset="UTF-8">
-<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
 <title>Configurazione · Registro Opportunità</title>
 
 <link rel="manifest" href="manifest.json">
 <link rel="icon" href="favicon-32.png" sizes="32x32">
 <link rel="apple-touch-icon" href="apple-touch-icon.png">
-<meta name="theme-color" content="#1e2320">
+<meta name="theme-color" content="#ffffff">
 <meta name="apple-mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-status-bar-style" content="default">
 <meta name="apple-mobile-web-app-title" content="Registro Opp.">
@@ -471,9 +471,11 @@
     }
   }
 </style>
+<link rel="stylesheet" href="grafica-app.css">
 </head>
 <body>
 <script src="menu.js"></script>
+<script src="feedback.js"></script>
 
 <div class="contenitore">
 
@@ -581,6 +583,17 @@
         <p class="nota-campo">Riporta tutte le sette card qui sopra — area, prezzo, tipologia, altri filtri, modelli, pianificazione (lun-ven alle 10:00) e ricerca della perizia (estesa, con ricontrollo ogni 2 giorni, massimo 15 aste per giro) — ai valori predefiniti. La scelta del prompt (v1/v2) resta com'è. Salva subito, come ogni altra modifica in questa pagina.</p>
         <p id="messaggio-ripristina-predefiniti" class="messaggio-salvataggio-card"></p>
       </div>
+
+      <section class="blocco-semplice">
+        <h2>Suoni e vibrazione</h2>
+        <p class="nota-campo">Valgono solo per <strong>questo dispositivo</strong> (salvati nel browser): puoi averli sul telefono e non sul PC.
+          Tocco leggero aprendo i dettagli e su "Annulla"; suono acuto sulla stella, grave sullo scarto; doppio tocco e suono di conferma quando salvi
+          note, link, correzioni, visite, lavori e risultati AI; vibrazione più lunga e suono basso sugli errori. Su iPhone la vibrazione funziona da
+          iOS 18 e solo durante un tocco (non dopo un salvataggio); i suoni seguono il volume del telefono.</p>
+        <label class="etichetta-checkbox"><input type="checkbox" id="campo-vibrazione" onchange="salvaFeedbackDispositivo()"> Vibrazione</label>
+        <label class="etichetta-checkbox"><input type="checkbox" id="campo-suoni" onchange="salvaFeedbackDispositivo()"> Suoni</label>
+        <button type="button" class="bottone-secondario" onclick="window.Feedback && Feedback.prova()" style="margin-top:10px">Prova</button>
+      </section>
 
       <section class="blocco-semplice">
         <h2>Manutenzione</h2>
@@ -1199,6 +1212,24 @@
       statoEl.textContent = "Impossibile leggere la configurazione attuale: controlla la connessione e ricarica la pagina.";
     }
   }
+
+  // Suoni e vibrazione: preferenza del dispositivo (feedback.js), nessuna scrittura nel database.
+  function mostraFeedbackDispositivo() {
+    if (!window.Feedback) return;
+    const v = Feedback.leggi();
+    document.getElementById("campo-vibrazione").checked = !!v.vibrazione;
+    document.getElementById("campo-suoni").checked = !!v.suoni;
+  }
+  function salvaFeedbackDispositivo() {
+    if (!window.Feedback) return;
+    Feedback.imposta({
+      vibrazione: document.getElementById("campo-vibrazione").checked,
+      suoni: document.getElementById("campo-suoni").checked,
+    });
+    Feedback.prova();
+  }
+  document.addEventListener("DOMContentLoaded", mostraFeedbackDispositivo);
+  if (document.readyState !== "loading") mostraFeedbackDispositivo();
 
   function formattaEuro(numero) {
     // interi con il punto delle migliaia sempre ("1.500"); decimali come prima

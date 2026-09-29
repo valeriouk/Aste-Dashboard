@@ -1,0 +1,37 @@
+/*
+  grafica-app.css — aspetto "da app" comune alle pagine (29/09/2026).
+  Solo aspetto, nessuna funzione: bordi di sicurezza dell'iPhone, niente
+  riquadro grigio al tocco, pulsanti che si "abbassano" quando li tocchi,
+  riquadri sollevati con ombra morbida, superfici a vetro (sfocate) su ciò
+  che resta sopra il contenuto. Caricato in fondo all'<head> di ogni pagina,
+  dopo il suo <style>: a parità di regola vince questo. Il registro
+  (index.html) ha le stesse regole nel suo stile, adattate alle sue card.
+  I selettori di una pagina che non esistono in un'altra non hanno effetto.
+*/
+html { -webkit-tap-highlight-color: transparent; }
+body { padding-left: env(safe-area-inset-left); padding-right: env(safe-area-inset-right); }
+button, .bottone, .pulsante-ai, .link-torna { -webkit-user-select: none; user-select: none; -webkit-touch-callout: none; }
+
+/* Riquadri sollevati: angoli più arrotondati, bordo leggero, ombra su due livelli */
+.sezione, .card-riepilogo, .blocco-semplice, .scheda-statistica, .riquadro-gate, .foglio {
+  border-radius: 14px;
+  border-color: rgba(213, 218, 209, .7);
+  box-shadow: 0 1px 2px rgba(30, 35, 32, .05), 0 6px 18px -6px rgba(30, 35, 32, .12);
+}
+
+/* Tocco: il pulsante si abbassa un attimo (solo schermi touch) */
+@media (pointer: coarse) {
+  button, .bottone, .pulsante-ai { transition: transform .1s ease; }
+  button:active, .bottone:active, .pulsante-ai:active { transform: scale(.96); }
+}
+
+/* Vetro */
+@supports ((-webkit-backdrop-filter: blur(1px)) or (backdrop-filter: blur(1px))) {
+  .indice-pagina { background: rgba(238, 241, 236, .78);
+    -webkit-backdrop-filter: saturate(180%) blur(14px); backdrop-filter: saturate(180%) blur(14px); }
+  .overlay-modale { -webkit-backdrop-filter: blur(3px); backdrop-filter: blur(3px); }
+}
+
+@media print {
+  .sezione, .card-riepilogo, .blocco-semplice, .scheda-statistica, .foglio { box-shadow: none !important; }
+}

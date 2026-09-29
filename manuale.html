@@ -2,13 +2,13 @@
 <html lang="it">
 <head>
 <meta charset="UTF-8">
-<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
 <title>Manuale · Registro Opportunità</title>
 
 <link rel="manifest" href="manifest.json">
 <link rel="icon" href="favicon-32.png" sizes="32x32">
 <link rel="apple-touch-icon" href="apple-touch-icon.png">
-<meta name="theme-color" content="#1e2320">
+<meta name="theme-color" content="#ffffff">
 
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
@@ -143,6 +143,7 @@
     .voce { break-inside: avoid; }
   }
 </style>
+<link rel="stylesheet" href="grafica-app.css">
 </head>
 <body>
 <script src="menu.js"></script>
@@ -279,6 +280,20 @@
     </ul>
     <p>Per ora la cronologia si consulta e si ripristina solo dal database, su richiesta (non dalle pagine). Nelle pagine, subito dopo un salvataggio o
       una rimozione di nota, link o correzioni dei costi, c'è anche il più rapido "Annulla" per 3 secondi.</p>
+  </section>
+
+  <section class="voce" id="sistema-aspetto-app">
+    <h3>Aspetto "da app", suoni e vibrazione</h3>
+    <ul>
+      <li><strong>Sul telefono</strong> (aperto dalla schermata Home come app): la pagina usa tutto lo schermo rispettando i bordi dell'iPhone; niente
+        riquadro grigio quando tocchi; card e pulsanti si "abbassano" un attimo al tocco.</li>
+      <li><strong>Vetro</strong>: l'intestazione dei dettagli, la barra "Cerca / Filtri", la barra di selezione, il pannello dei filtri e l'indice della
+        Superanalisi sono semitrasparenti e sfocati: il contenuto che scorre sotto si intravede. Dietro una finestra aperta lo sfondo è sfocato.</li>
+      <li><strong>Riquadri sollevati</strong>: card e riquadri hanno angoli più arrotondati e un'ombra morbida.</li>
+      <li><strong>Caricamento</strong>: mentre il registro legge il database compaiono sagome di card con un luccichio; poi la griglia compare con una breve
+        dissolvenza. Con "Riduci movimento" attivo sul telefono niente animazioni.</li>
+      <li><strong>Suoni e vibrazione</strong>: si accendono e spengono da <a href="#config-suoni">Configurazione</a>, per ogni dispositivo.</li>
+    </ul>
   </section>
 
   <section class="voce" id="sistema-costi">
@@ -1161,6 +1176,26 @@
       (elimina le altre)" o "Annulla". <strong>Irreversibile dalle pagine</strong>: lo storico delle aste eliminate va perso; i tuoi dati cancellati
       (note, link, visite, risultati AI, correzioni) restano per 12 mesi nella <a href="#sistema-cronologia">cronologia delle modifiche</a>. Il loro numero resta conteggiato in
       Statistiche ("Aste storiche"). Stelle e scarti da soli non contano come dati tuoi.</p>
+  </section>
+
+  <section class="voce" id="config-suoni">
+    <h3>Suoni e vibrazione</h3>
+    <p>Due interruttori, <strong>Vibrazione</strong> (di partenza accesa) e <strong>Suoni</strong> (di partenza spenti), e "Prova". Valgono solo per il
+      dispositivo su cui li imposti (salvati nel browser, non nel database): puoi averli sul telefono e non sul PC.</p>
+    <div class="tabella-scroll"><table>
+      <thead><tr><th>Azione</th><th>Vibrazione</th><th>Suono</th></tr></thead>
+      <tbody>
+        <tr><td>Apertura dei dettagli, "Annulla", togliere ★ o ✕</td><td>tocco leggero</td><td>—</td></tr>
+        <tr><td>★ preferita</td><td>tocco</td><td>breve, acuto</td></tr>
+        <tr><td>✕ scartata</td><td>tocco</td><td>breve, grave</td></tr>
+        <tr><td>Salvataggio riuscito (nota, link, correzioni, visita, valore di rivendita, lavori, risultato AI)</td><td>doppio tocco</td><td>due note di conferma</td></tr>
+        <tr><td>Errore di salvataggio</td><td>più lunga</td><td>basso</td></tr>
+      </tbody>
+    </table></div>
+    <p><strong>iPhone</strong>: Safari non permette alle pagine web di far vibrare il telefono. Da iOS 18 si usa il "tic" di sistema degli interruttori,
+      che funziona solo durante un tocco vero: su stella, scarto, apertura dei dettagli e "Annulla" sì, dopo un salvataggio (che aspetta la risposta
+      del database) di solito no. È un comportamento non ufficiale: può smettere con un aggiornamento di iOS. I suoni seguono il volume del telefono.
+      Su Android la vibrazione funziona sempre.</p>
   </section>
 
   <section class="voce" id="config-password">

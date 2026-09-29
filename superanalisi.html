@@ -2,13 +2,13 @@
 <html lang="it">
 <head>
 <meta charset="UTF-8">
-<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
 <title>Superanalisi · Registro Opportunità</title>
 
 <link rel="manifest" href="manifest.json">
 <link rel="icon" href="favicon-32.png" sizes="32x32">
 <link rel="apple-touch-icon" href="apple-touch-icon.png">
-<meta name="theme-color" content="#1e2320">
+<meta name="theme-color" content="#ffffff">
 
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
@@ -147,6 +147,7 @@
     }
   }
 </style>
+<link rel="stylesheet" href="grafica-app.css">
 </head>
 <body>
 <script src="menu.js"></script>
@@ -185,6 +186,7 @@
 
 <script src="underwriting.js"></script>
 <script src="superanalisi-esterne.js"></script>
+<script src="feedback.js"></script>
 <script>
   const SUPABASE_URL = "https://igemwrrcmsgaotoqvdzt.supabase.co";
   const SUPABASE_ANON_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImlnZW13cnJjbXNnYW90b3F2ZHp0Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODkzMDc2MjksImV4cCI6MjEwNDg4MzYyOX0.YkUOBTOb40C-N0TkuDN0o5N7fVvI_qX2F1grUp-SVe8";
@@ -611,6 +613,7 @@
       const esito = await chiamaRpc("imposta_valore_rivendita", { password_tentativo: passwordCorrente, id_annuncio_input: Number(ID_ASTA), valore_input: valore });
       if (esito && esito.result === "success") {
         RIGA.valore_rivendita_utente = valore;
+        window.Feedback && Feedback.salvato();
         // Solo questa sezione e il conto (che aggiorna il prompt se non l'hai
         // modificato): ridisegnare la pagina intera perdeva il prompt scritto
         // a mano e la perizia già preparata per la condivisione.
@@ -675,6 +678,7 @@
     try {
       const esito = await chiamaRpc("imposta_lavori_utente", { password_tentativo: passwordCorrente, id_annuncio_input: Number(ID_ASTA), livello_input: livello, importo_input: importo });
       if (esito && esito.result === "success") {
+        window.Feedback && Feedback.salvato();
         RIGA.livello_lavori_utente = livello;
         RIGA.importo_lavori_utente = importo;
         disegnaConto();

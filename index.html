@@ -2,14 +2,14 @@
 <html lang="it">
 <head>
 <meta charset="UTF-8">
-<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
 <title>Registro Opportunità · Aste Immobiliari</title>
 
 <!-- PWA — installabilità minima: manifest, icone, meta per iOS -->
 <link rel="manifest" href="manifest.json">
 <link rel="icon" href="favicon-32.png" sizes="32x32">
 <link rel="apple-touch-icon" href="apple-touch-icon.png">
-<meta name="theme-color" content="#1e2320">
+<meta name="theme-color" content="#ffffff">
 <meta name="apple-mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-status-bar-style" content="default">
 <meta name="apple-mobile-web-app-title" content="Registro Opp.">
@@ -2456,11 +2456,74 @@
     .finestra-dettagli-asta .finestra-dettagli-header .riga-badge-dettagli,
     .finestra-dettagli-asta .finestra-dettagli-header .lotto-meta { display: revert !important; }
   }
+  /* ============================================================
+     GRAFICA "DA APP" (29/09/2026) — solo aspetto, nessuna funzione:
+     bordi di sicurezza dell'iPhone, niente riquadro grigio al tocco,
+     card sollevate che "si abbassano" quando le tocchi, superfici a vetro
+     (sfocate) su ciò che resta sopra il contenuto, sagome di caricamento.
+  ============================================================ */
+  html { -webkit-tap-highlight-color: transparent; }
+  body { padding-left: env(safe-area-inset-left); padding-right: env(safe-area-inset-right); }
+  button, .pillola, .lotto-link, .bottone-azione-lotto { -webkit-user-select: none; user-select: none; -webkit-touch-callout: none; }
+
+  .lotto { border-radius: 14px; border-color: rgba(213, 218, 209, .7);
+    box-shadow: 0 1px 2px rgba(30, 35, 32, .05), 0 6px 18px -6px rgba(30, 35, 32, .12);
+    transition: transform .12s ease, box-shadow .12s ease; }
+  .lotto .sigillo { box-shadow: 0 3px 8px -3px rgba(30, 35, 32, .35); }
+
+  /* Tocco: la card o il pulsante si abbassa un attimo (solo schermi touch) */
+  @media (pointer: coarse) {
+    .pillola, .lotto-link, .bottone-azione-lotto, .indice-dettagli button, .schede-casa button, .barra-selezione button,
+    .nota-preferito-azioni button, .nota-preferito-bolla, .link-utile-bolla, .costi-input-salva, .bottone-apri-filtri, .mostra-risultati-foglio {
+      transition: transform .1s ease; }
+    .lotto:active { transform: scale(.985); box-shadow: 0 1px 2px rgba(30, 35, 32, .05), 0 2px 8px -4px rgba(30, 35, 32, .12); }
+    .pillola:active, .lotto-link:active, .bottone-azione-lotto:active, .indice-dettagli button:active, .schede-casa button:active,
+    .barra-selezione button:active, .nota-preferito-azioni button:active, .nota-preferito-bolla:active, .link-utile-bolla:active,
+    .costi-input-salva:active, .bottone-apri-filtri:active, .mostra-risultati-foglio:active { transform: scale(.96); }
+  }
+
+  /* Vetro: ciò che resta sopra il contenuto lo lascia intravedere, sfocato */
+  @supports ((-webkit-backdrop-filter: blur(1px)) or (backdrop-filter: blur(1px))) {
+    .finestra-dettagli-header { background: rgba(255, 255, 255, .8);
+      -webkit-backdrop-filter: saturate(180%) blur(16px); backdrop-filter: saturate(180%) blur(16px); }
+    /* Sulla barra "Cerca / Filtri" la sfocatura sta in uno strato dietro
+       (::before): messa sulla barra stessa, il pannello dei filtri del
+       telefono (position: fixed, dentro la barra) si posizionerebbe
+       rispetto alla barra invece che allo schermo. */
+    .controlli { background: transparent; }
+    .controlli::before { content: ""; position: absolute; inset: 0; z-index: -1; border-radius: inherit; pointer-events: none;
+      background: rgba(227, 231, 224, .78);
+      -webkit-backdrop-filter: saturate(180%) blur(14px); backdrop-filter: saturate(180%) blur(14px); }
+    .barra-selezione { background: rgba(30, 35, 32, .86);
+      -webkit-backdrop-filter: saturate(160%) blur(16px); backdrop-filter: saturate(160%) blur(16px); }
+    .overlay-dettagli-asta.aperto { -webkit-backdrop-filter: blur(3px); backdrop-filter: blur(3px); }
+    @media (max-width: 640px) {
+      .controlli-estesi { background: rgba(255, 255, 255, .9);
+        -webkit-backdrop-filter: saturate(180%) blur(18px); backdrop-filter: saturate(180%) blur(18px); }
+    }
+  }
+
+  /* Sagome di caricamento e comparsa morbida della griglia (una volta, sul contenitore) */
+  .scheletro-griglia { display: grid; grid-template-columns: repeat(auto-fill, minmax(300px, 1fr)); gap: 16px; margin-top: 18px; text-align: left; }
+  .scheletro-card { background: var(--surface); border-radius: 14px; padding: 18px; display: flex; flex-direction: column; gap: 10px;
+    box-shadow: 0 1px 2px rgba(30, 35, 32, .05), 0 6px 18px -6px rgba(30, 35, 32, .12); }
+  .sch { display: block; border-radius: 8px; background: linear-gradient(90deg, #e9ece6 0%, #f4f6f2 50%, #e9ece6 100%);
+    background-size: 200% 100%; animation: luccichio 1.3s ease-in-out infinite; }
+  .sch-sigillo { width: 46px; height: 46px; border-radius: 50%; }
+  .sch-riga { height: 12px; width: 55%; }
+  .sch-riga.lunga { width: 80%; height: 16px; }
+  .sch-blocco { height: 64px; width: 100%; margin-top: 6px; }
+  @keyframes luccichio { 0% { background-position: 100% 0; } 100% { background-position: -100% 0; } }
+  .comparsa { animation: comparsa .35s ease both; }
+  @keyframes comparsa { from { opacity: 0; transform: translateY(6px); } to { opacity: 1; transform: none; } }
+  @media (prefers-reduced-motion: reduce) { .sch, .comparsa { animation: none; } }
+  @media (max-width: 640px) { .scheletro-griglia { grid-template-columns: 1fr; } }
 </style>
 </head>
 <body>
 <script src="menu.js"></script>
 <script src="underwriting.js"></script>
+<script src="feedback.js"></script>
 
 <div class="contenitore">
 
@@ -2591,6 +2654,7 @@
   <div id="stato-caricamento" class="stato-pagina">
     <h2>Apertura del registro…</h2>
     <p>Lettura del database in corso.</p>
+    <div class="scheletro-griglia" aria-hidden="true"><div class="scheletro-card"><span class="sch sch-sigillo"></span><span class="sch sch-riga lunga"></span><span class="sch sch-riga"></span><span class="sch sch-blocco"></span></div><div class="scheletro-card"><span class="sch sch-sigillo"></span><span class="sch sch-riga lunga"></span><span class="sch sch-riga"></span><span class="sch sch-blocco"></span></div><div class="scheletro-card"><span class="sch sch-sigillo"></span><span class="sch sch-riga lunga"></span><span class="sch sch-riga"></span><span class="sch sch-blocco"></span></div></div>
   </div>
 
   <div id="stato-non-configurato" class="stato-pagina nascosto">
@@ -3876,6 +3940,7 @@
       + (azione ? ` <button type="button" class="toast-azione">${escapeHtml(azione.etichetta)}</button>` : "");
     if (azione) {
       toast.querySelector(".toast-azione").onclick = () => {
+        window.Feedback && Feedback.tocco();
         toast.classList.remove("visibile");
         azione.callback();
       };
@@ -3897,8 +3962,10 @@
     const asta = ASTE.find(a => a.id === id);
     if (!asta) return;
     if (asta.preferito) {
+      window.Feedback && Feedback.tocco();
       richiediPasswordSeServe(() => eseguiRimuoviFlag(id));
     } else {
+      window.Feedback && Feedback.preferito();
       richiediPasswordSeServe(() => eseguiImpostaStato(id, "preferito"));
     }
   }
@@ -3908,8 +3975,10 @@
     const asta = ASTE.find(a => a.id === id);
     if (!asta) return;
     if (asta.scartato) {
+      window.Feedback && Feedback.tocco();
       richiediPasswordSeServe(() => eseguiRimuoviFlag(id));
     } else {
+      window.Feedback && Feedback.scartato();
       richiediPasswordSeServe(() => eseguiImpostaStato(id, "scartato"));
     }
   }
@@ -4567,6 +4636,7 @@
       if (risultato.result !== "success") throw new Error(risultato.message || "");
     } catch (e) {
       console.error("imposta_stato_preferito fallita:", e);
+      window.Feedback && Feedback.errore();
       gestisceErroreAzionePassword(e);
       Object.assign(asta, precedente);
       if (precedente.preferito) PREFERITI[id] = {stato: "preferito"};
@@ -4594,6 +4664,7 @@
       if (risultato.result !== "success") throw new Error(risultato.message || "");
     } catch (e) {
       console.error("rimuovi_flag_preferito fallita:", e);
+      window.Feedback && Feedback.errore();
       gestisceErroreAzionePassword(e);
       Object.assign(asta, precedente);
       if (precedente.preferito) PREFERITI[id] = {stato: "preferito"};
@@ -4728,6 +4799,7 @@
     try {
       const risultato = await accodaScritturaProtetta("salva_nota_asta", {password_tentativo: passwordCorrente, id_annuncio_input: id, nota_input: testo});
       if (risultato.result !== "success") throw new Error(risultato.message || "");
+      window.Feedback && Feedback.salvato();
       // Rete di sicurezza: per 3 secondi "Annulla" rimette il testo di prima.
       if (daAnnulla) {
         mostraToast(`${indirizzoTroncato(asta.comune)} — nota ripristinata.`);
@@ -4737,6 +4809,7 @@
       }
     } catch (e) {
       console.error("salva_nota_asta fallita:", e);
+      window.Feedback && Feedback.errore();
       gestisceErroreAzionePassword(e);
       asta.notaPreferito = precedente;
       LINK_UTILI[id] = {...(LINK_UTILI[id] || {}), nota: precedente};
@@ -4805,6 +4878,7 @@
         rendita_catastale_input: renditaValore, oneri_condominiali_input: oneriValore
       });
       if (risultato.result !== "success") throw new Error(risultato.message || "");
+      window.Feedback && Feedback.salvato();
       // "Annulla" per 3 secondi rimette le correzioni di prima (solo se è cambiato qualcosa).
       const uguale = (a, b) => (a === null || a === undefined || a === "" ? null : Number(a)) === (b === null || b === undefined || b === "" ? null : Number(b));
       if (daAnnulla) {
@@ -4815,6 +4889,7 @@
       }
     } catch (e) {
       console.error("aggiorna_dati_utente_asta fallita:", e);
+      window.Feedback && Feedback.errore();
       gestisceErroreAzionePassword(e);
       asta.renditaCatastaleUtente = renditaPrecedente;
       asta.oneriCondominialiUtente = oneriPrecedenti;
@@ -5352,6 +5427,9 @@
         new Date().toLocaleTimeString("it-IT", { hour: "2-digit", minute: "2-digit" });
       popolaFiltroTipologia();
       applicaFiltri();
+      // comparsa morbida della griglia (sul contenitore, non sulle singole card: sono virtualizzate)
+      const griglia = document.getElementById("griglia-lotti");
+      griglia.classList.remove("comparsa"); void griglia.offsetWidth; griglia.classList.add("comparsa");
       if (vistaDaRipristinare === "mappa") { vistaDaRipristinare = null; cambiaVista("mappa"); }
       apriDaLinkDiretto();
     }).catch(e => {
@@ -6730,6 +6808,7 @@ ${notaHtml}
     bloccoVoceIndiceFinoA = 0;
     aggiornaIntestazioneCompatta();
     preparaDescrizioneLotto();
+    window.Feedback && Feedback.tocco();
     aggiornaAstaDalDatabase(id);   // modifiche fatte altrove (Superanalisi…), in silenzio
     // Un passo nella cronologia (#ID): il tasto Indietro del telefono chiude
     // la scheda invece di uscire dal registro. Passando da un'asta all'altra
@@ -7480,6 +7559,7 @@ ${notaHtml}
     try {
       const risultato = await accodaScritturaProtetta("imposta_link_utili", {password_tentativo: passwordCorrente, id_annuncio_input: id, links_input: nuoviLink});
       if (risultato.result !== "success") throw new Error(risultato.message || "");
+      window.Feedback && Feedback.salvato();
       if (daAnnulla) {
         mostraToast(`${indirizzoTroncato(asta.comune)} — link ripristinati.`);
       } else if (messaggio) {
@@ -7488,6 +7568,7 @@ ${notaHtml}
       }
     } catch (e) {
       console.error("imposta_link_utili fallita:", e);
+      window.Feedback && Feedback.errore();
       gestisceErroreAzionePassword(e);
       asta.linkUtili = precedente;
       LINK_UTILI[id] = {...(LINK_UTILI[id] || {}), links: precedente};
@@ -7657,12 +7738,14 @@ ${notaHtml}
         data_ora_input: dataOra, dettagli_input: dettagli,
       });
       if (risultato.result !== "success") throw new Error(risultato.message || "");
+      window.Feedback && Feedback.salvato();
       if (risultato.visita) VISITE[id] = risultato.visita; else delete VISITE[id];
       asta.visita = VISITE[id] || null;
       applicaFiltri();
       aggiornaFinestraSeApertaSu(id);
     } catch (e) {
       console.error("imposta_visita fallita:", e);
+      window.Feedback && Feedback.errore();
       gestisceErroreAzionePassword(e);
       mostraToast(`${indirizzoTroncato(asta.comune)} — non sono riuscita a salvare la visita: ${dettaglioErrore(e)}`);
     } finally {

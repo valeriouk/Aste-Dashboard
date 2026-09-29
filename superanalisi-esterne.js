@@ -298,6 +298,7 @@
         });
         if (r && r.result === 'success') {
           mostra('ok', 'Risultato salvato: lo trovi nei dettagli dell\'asta nel registro.');
+          if (window.Feedback) window.Feedback.salvato();
           area.value = ''; aggiornaAnteprima(); aggiornaElenco();
         } else mostra('errore', (r && r.message) || 'Salvataggio non riuscito.');
       } catch (e) { mostra('errore', `Salvataggio non riuscito (${e.message}).`); }
