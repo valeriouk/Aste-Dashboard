@@ -120,6 +120,24 @@
   .pulsante-ai:hover { border-color: var(--primary); }
   textarea { width: 100%; min-height: 160px; font-family: var(--font-mono); font-size: .78rem; border: 1px solid var(--border);
     border-radius: 8px; padding: 10px; background: var(--bg); color: var(--ink); }
+  /* Riepilogo in cima e indice delle sezioni (fase 4, 30/09/2026) */
+  .riepilogo .verdetto { margin-top: 0; }
+  .riepilogo .griglia { margin-top: 12px; grid-template-columns: repeat(auto-fill, minmax(140px, 1fr)); }
+  .riepilogo .numero-grande { font-size: 1.25rem; }
+  .negativo { color: var(--danger); }
+  .indice-pagina { position: sticky; top: 0; z-index: 5; display: flex; flex-wrap: wrap; gap: 6px; padding: 8px 0 10px; margin-bottom: 10px;
+    background: var(--bg); }
+  .indice-pagina button { font: inherit; font-size: .78rem; font-weight: 500; color: var(--ink-muted); background: var(--surface-2);
+    border: none; border-radius: 999px; padding: 6px 12px; min-height: 32px; cursor: pointer; white-space: nowrap; }
+  .indice-pagina button:hover { color: var(--ink); }
+  .indice-pagina button.attiva { background: var(--ink); color: var(--surface); }
+  .sezione-pagina { scroll-margin-top: 60px; }
+  @media (max-width: 640px) {
+    .indice-pagina { flex-wrap: nowrap; overflow-x: auto; scrollbar-width: none; margin: 0 -14px 10px; padding: 8px 14px 10px; }
+    .indice-pagina::-webkit-scrollbar { display: none; }
+    .indice-pagina button { flex-shrink: 0; }
+  }
+  @media print { .indice-pagina { display: none !important; } }
   @media (max-width: 560px) { .contenitore { padding: 24px 14px 72px; } h1 { font-size: 1.45rem; } }
   /* Niente zoom automatico di iPhone toccando un campo (campi a 16 px sul telefono) */
   @media (max-width: 640px) {
@@ -156,8 +174,9 @@
 
   <div id="schermata-contenuto" class="nascosto">
     <p id="messaggio-caricamento" class="nota">Caricamento…</p>
+    <nav class="indice-pagina nascosto" id="indice-pagina" aria-label="Sezioni della pagina"></nav>
     <div id="contenuto"></div>
-    <div id="sezione-risultati-esterni" class="sezione nascosto"></div>
+    <div id="sezione-risultati-esterni" class="sezione sezione-pagina nascosto"></div>
   </div>
 </div>
 
@@ -291,22 +310,102 @@
     document.getElementById("sottotitolo").textContent =
       [r.tribunale, r.n__lotto ? `lotto ${r.n__lotto}` : "", r.tipologia ? String(r.tipologia).replace(/_/g, " ").toLowerCase() : ""]
         .filter(Boolean).join(" · ");
-    const html = [sezioneAnnuncio(r, a)];
+    const html = [`<div id="sa-riepilogo" class="sezione-pagina">${sezioneRiepilogo(r, null)}</div>`,
+      `<div id="sa-annuncio" class="sezione-pagina">${sezioneAnnuncio(r, a)}</div>`];
     if (!a) {
       html.push(`<div class="sezione"><h2>Analisi v2 non ancora disponibile</h2>
         <p class="nota">Questa asta è stata analizzata con il prompt precedente (v1), che non estrae i dettagli con pagina e
         citazione. Per averla serve una rianalisi con la v2 (il ricontrollo automatico riguarda solo le aste senza perizia) o un nuovo
         ricontrollo. Nel frattempo puoi usare la seconda opinione qui sotto.</p></div>`);
     } else {
-      html.push(sezionePerizia(a));
-      html.push(`<div id="blocco-valore-rivendita">${sezioneValoreRivendita(r, a)}</div>`);
-      html.push(`<div id="sezione-conto"></div>`);
+      html.push(`<div id="sa-perizia" class="sezione-pagina">${sezionePerizia(a)}</div>`);
+      html.push(`<div id="blocco-valore-rivendita" class="sezione-pagina">${sezioneValoreRivendita(r, a)}</div>`);
+      html.push(`<div id="sezione-conto" class="sezione-pagina"></div>`);
     }
-    html.push(sezioneSecondaOpinione(r, a));
+    html.push(`<div id="sa-seconda" class="sezione-pagina">${sezioneSecondaOpinione(r, a)}</div>`);
     document.getElementById("contenuto").innerHTML = html.join("");
     if (a) disegnaConto();
     montaRisultatiEsterni();
+    disegnaIndicePagina();
   }
+
+  // ============================================================ riepilogo e indice
+  // Margine sull'offerta minima: se negativo l'obiettivo di utile non si
+  // raggiunge nemmeno all'offerta minima (stesso numero, detto in chiaro).
+  function testoMargine(h) {
+    if (h == null) return { etichetta: "Margine sull'offerta minima", valore: "—", classe: "" };
+    if (h < 0) return { etichetta: "Obiettivo non raggiungibile all'offerta minima", valore: `mancano ${eur(-h)}`, classe: "negativo" };
+    return { etichetta: "Margine sull'offerta minima", valore: eur(h), classe: "" };
+  }
+
+  // In cima: le cifre per decidere, prese dal conto (se c'è l'analisi v2).
+  function sezioneRiepilogo(r, esito) {
+    const dataVendita = r.data_vendita ? new Date(r.data_vendita).toLocaleDateString("it-IT") : "—";
+    if (!esito) {
+      return `<div class="sezione riepilogo"><h2>Riepilogo</h2>
+        ${analisiV2(r) ? "" : `<p class="nota">Giudizio e offerta massima non disponibili: serve l'analisi v2 della perizia.</p>`}
+        <div class="griglia">
+          <div class="voce"><div class="etichetta">Offerta minima</div><div class="numero-grande">${eur(r.offerta_minima)}</div></div>
+          <div class="voce"><div class="etichetta">Data vendita</div><div class="numero-grande">${escapeHtml(dataVendita)}</div></div>
+        </div></div>`;
+    }
+    const m = testoMargine(esito.headroom);
+    return `<div class="sezione riepilogo"><h2>Riepilogo</h2>
+      <p class="verdetto"><span class="etichetta-stato stato-${escapeHtml(esito.classe)}">${escapeHtml(testo(esito.classe))}</span> ${escapeHtml(esito.verdetto || "")}</p>
+      <div class="griglia">
+        <div class="voce"><div class="etichetta">Offerta minima</div><div class="numero-grande">${eur(r.offerta_minima)}</div></div>
+        <div class="voce"><div class="etichetta">Offerta massima</div><div class="numero-grande">${eur(esito.offertaMassima)}</div></div>
+        <div class="voce"><div class="etichetta">${escapeHtml(m.etichetta)}</div><div class="numero-grande ${m.classe}">${escapeHtml(m.valore)}</div></div>
+        <div class="voce"><div class="etichetta">Qualità dei dati</div><div class="numero-grande">${escapeHtml(esito.qualita.livello)}</div></div>
+        <div class="voce"><div class="etichetta">Data vendita</div><div class="numero-grande">${escapeHtml(dataVendita)}</div></div>
+      </div>
+      <p class="nota"><a href="#sezione-conto" onclick="event.preventDefault(); vaiASezionePagina('sezione-conto')">Vedi il conto completo ↓</a></p>
+    </div>`;
+  }
+
+  const VOCI_INDICE = [["sa-riepilogo", "Riepilogo"], ["sa-annuncio", "Annuncio"], ["sa-perizia", "Perizia"],
+    ["blocco-valore-rivendita", "Rivendita"], ["sezione-conto", "Conto"], ["sa-seconda", "Seconda opinione"],
+    ["sezione-risultati-esterni", "Risultati salvati"]];
+  function disegnaIndicePagina() {
+    const nav = document.getElementById("indice-pagina");
+    const voci = VOCI_INDICE.filter(([id]) => { const el = document.getElementById(id); return el && !el.classList.contains("nascosto"); });
+    nav.innerHTML = voci.map(([id, t]) => `<button type="button" data-sez="${id}" onclick="vaiASezionePagina('${id}')">${t}</button>`).join("");
+    nav.classList.toggle("nascosto", voci.length < 2);
+    aggiornaVoceIndicePagina();
+  }
+  let bloccoIndicePaginaFinoA = 0;
+  function vaiASezionePagina(id) {
+    const el = document.getElementById(id);
+    if (!el) return;
+    bloccoIndicePaginaFinoA = Date.now() + 900;
+    evidenziaVoceIndicePagina(id);
+    const alto = window.scrollY + el.getBoundingClientRect().top - document.getElementById("indice-pagina").offsetHeight - 8;
+    window.scrollTo({ top: Math.max(0, alto), behavior: "smooth" });
+  }
+  function evidenziaVoceIndicePagina(id) {
+    const nav = document.getElementById("indice-pagina");
+    let attiva = null;
+    nav.querySelectorAll("button[data-sez]").forEach((b) => { b.classList.toggle("attiva", b.dataset.sez === id); if (b.dataset.sez === id) attiva = b; });
+    if (attiva && nav.scrollWidth > nav.clientWidth) {
+      const sx = attiva.offsetLeft - nav.offsetLeft, dx = sx + attiva.offsetWidth;
+      if (sx < nav.scrollLeft) nav.scrollLeft = sx - 8;
+      else if (dx > nav.scrollLeft + nav.clientWidth) nav.scrollLeft = dx - nav.clientWidth + 8;
+    }
+  }
+  // Voce evidenziata = sezione che si sta guardando (in fondo alla pagina l'ultima visibile).
+  function aggiornaVoceIndicePagina() {
+    const nav = document.getElementById("indice-pagina");
+    if (!nav || nav.classList.contains("nascosto")) return;
+    if (Date.now() < bloccoIndicePaginaFinoA) { bloccoIndicePaginaFinoA = Math.max(bloccoIndicePaginaFinoA, Date.now() + 150); return; }
+    const sezioni = [...nav.querySelectorAll("button[data-sez]")].map((b) => document.getElementById(b.dataset.sez)).filter(Boolean);
+    if (!sezioni.length) return;
+    const linea = nav.getBoundingClientRect().bottom + 24;
+    const inFondo = window.innerHeight + window.scrollY >= document.documentElement.scrollHeight - 4;
+    let id = null;
+    sezioni.forEach((s) => { if (inFondo ? s.getBoundingClientRect().top < window.innerHeight - 40 : s.getBoundingClientRect().top <= linea) id = s.id; });
+    evidenziaVoceIndicePagina(id || sezioni[0].id);
+  }
+  window.addEventListener("scroll", aggiornaVoceIndicePagina, { passive: true });
 
   // Sezione "Salva il risultato dell'AI" (superanalisi-esterne.js): montata
   // una volta sola, fuori da #contenuto, così un nuovo disegna() non cancella
@@ -535,7 +634,7 @@
     const el = document.getElementById("sezione-conto");
     if (!el) return;
     if (!window.Underwriting) {
-      el.innerHTML = `<div class="sezione"><h2>Conto dell'operazione</h2><p class="messaggio errore">Motore di calcolo (underwriting.js) non caricato.</p></div>`;
+      el.innerHTML = `<div class="sezione"><h2>Conto dell'operazione</h2><p class="messaggio errore">Calcolo non disponibile: ricarica la pagina.</p></div>`;
       return;
     }
     const r = RIGA, a = analisiV2(r), p = leggiParametri(), f = fonteRivendita(r, a);
@@ -552,6 +651,9 @@
     if (esito.arv && f.tipo === "omi") esito.arv.fonte = `${f.etichetta} × ${esito.superficie.mq} mq (Agenzia Entrate - OMI)`;
     ESITO_CONTO = esito;
     aggiornaPrompt();
+    const riepilogo = document.getElementById("sa-riepilogo");
+    if (riepilogo) riepilogo.innerHTML = sezioneRiepilogo(r, esito);
+    const margine = testoMargine(esito.headroom);
 
     const scenari = ["prudenziale", "centrale", "ottimistico"];
     const alMinimo = esito.scenariAlMinimo;
@@ -582,7 +684,7 @@
       <p class="verdetto"><span class="etichetta-stato stato-${escapeHtml(esito.classe)}">${escapeHtml(testo(esito.classe))}</span> ${escapeHtml(esito.verdetto || "")}</p>
       <div class="griglia" style="margin-top:10px">
         <div class="voce"><div class="etichetta">Offerta massima</div><div class="numero-grande">${eur(esito.offertaMassima)}</div></div>
-        <div class="voce"><div class="etichetta">Margine sull'offerta minima</div><div class="numero-grande">${esito.headroom == null ? "—" : eur(esito.headroom)}</div></div>
+        <div class="voce"><div class="etichetta">${escapeHtml(margine.etichetta)}</div><div class="numero-grande ${margine.classe}">${escapeHtml(margine.valore)}</div></div>
         <div class="voce"><div class="etichetta">Qualità dei dati</div><div class="numero-grande">${escapeHtml(esito.qualita.livello)}</div></div>
       </div>
       ${esito.arv ? `<p class="nota">Valore di rivendita: ${escapeHtml(esito.arv.fonte)} (affidabilità ${escapeHtml(esito.arv.affidabilita)}).
@@ -592,7 +694,7 @@
       ${esito.motivi.length ? `<h3>Cosa pesa sulla classe</h3><ul class="elenco">${esito.motivi.map((m) => `<li>${escapeHtml(m)}</li>`).join("")}</ul>` : ""}
       ${esito.qualita.motivi.length ? `<h3>Qualità dei dati (${escapeHtml(esito.qualita.livello)})</h3><ul class="elenco">${esito.qualita.motivi.map((m) => `<li>${escapeHtml(m)}</li>`).join("")}</ul>` : ""}
       ${esito.avvisi.length ? `<h3>Avvisi</h3><ul class="elenco">${esito.avvisi.map((m) => `<li>${escapeHtml(m)}</li>`).join("")}</ul>` : ""}
-      <p class="nota">Stime con parametri dichiarati in underwriting.js (imposte, spese, tempi, costi di vendita, imposta del 26% sulla
+      <p class="nota">Stime con parametri fissi del sistema, descritti nel manuale (imposte, spese, tempi, costi di vendita, imposta del 26% sulla
         plusvalenza): servono a confrontare le aste, non sostituiscono il parere di un tecnico o di un commercialista. Le imposte usano
         le stesse regole delle stime del registro, con tre prudenze in più: prezzo-valore solo se conviene, niente prezzo-valore senza
         rendita, tecnico sempre conteggiato.</p>

@@ -198,7 +198,7 @@
                  : 'Se la risposta comincia con «Giudizio: …», il pulsante nei dettagli dell\'asta mostra il giudizio.'}
         Il risultato si legge dai dettagli dell'asta nel registro; si elimina solo da qui.</p>
       <div class="sae-form">
-        <label class="campo">AI usata <select class="sae-ai">${AI_NOTE.map((n) => `<option>${escape(n)}</option>`).join('')}</select></label>
+        <label class="campo">AI usata <select class="sae-ai"><option value="">— scegli —</option>${AI_NOTE.map((n) => `<option>${escape(n)}</option>`).join('')}</select></label>
         <textarea class="sae-testo-incollato" placeholder="Incolla qui la risposta dell'AI"></textarea>
         <p class="nota sae-rilevato"></p>
         <div class="sae-anteprima sae-testo nascosto"></div>
@@ -284,6 +284,8 @@
     q('.sae-salva').addEventListener('click', async () => {
       const testo = area.value.trim();
       if (!testo) { mostra('errore', 'Incolla prima la risposta dell\'AI.'); return; }
+      // Nessuna AI preselezionata: va scelta, altrimenti il risultato finirebbe sotto il nome sbagliato.
+      if (!selezione.value) { mostra('errore', 'Scegli prima quale AI hai usato.'); selezione.focus(); return; }
       const ids = o.idAnnunci().map(Number);
       const bottone = q('.sae-salva');
       bottone.disabled = true;

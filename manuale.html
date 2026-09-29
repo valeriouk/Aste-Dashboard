@@ -278,7 +278,7 @@
       <li>le voci più vecchie di <strong>12 mesi</strong> si cancellano da sole; lo spazio occupato è di pochi MB l'anno.</li>
     </ul>
     <p>Per ora la cronologia si consulta e si ripristina solo dal database, su richiesta (non dalle pagine). Nelle pagine, subito dopo un salvataggio o
-      una rimozione di nota, link o correzioni dei costi, c'è anche il più rapido "Annulla" per 10 secondi.</p>
+      una rimozione di nota, link o correzioni dei costi, c'è anche il più rapido "Annulla" per 3 secondi.</p>
   </section>
 
   <section class="voce" id="sistema-costi">
@@ -718,7 +718,7 @@
         non si salva per sbaglio. Se il testo non è cambiato non viene scritto niente.</li>
       <li><strong>Annulla / Esc</strong>: se hai cambiato il testo chiede "Scartare le modifiche?" (secondo tocco entro 4 secondi), poi rimette il testo salvato.</li>
       <li><strong>"Elimina"</strong> chiede conferma (secondo clic entro 4 secondi).</li>
-      <li><strong>Dopo ogni salvataggio o eliminazione</strong> compare un messaggio con <strong>"Annulla"</strong> per 10 secondi: rimette il testo di prima.</li>
+      <li><strong>Dopo ogni salvataggio o eliminazione</strong> compare un messaggio con <strong>"Annulla"</strong> per 3 secondi: rimette il testo di prima.</li>
       <li><strong>Chiudendo la scheda con una nota scritta e non salvata</strong> il testo non si perde: riaprendo la stessa asta ritrovi l'editor con la
         bozza (finché la pagina resta aperta).</li>
     </ul>
@@ -839,7 +839,7 @@
       prezzo base perché la rendita è fissa, mentre il prezzo base scende a ogni tentativo.</p>
     <p><strong>Correzioni</strong>: nella finestra dei dettagli i campi "Rendita catastale (€)" e "Spese condominiali arretrate (€)" + "Salva e ricalcola"
       (anche Invio) salvano un tuo valore che ha la precedenza. Campo vuoto = torna al valore automatico. Per le spese condominiali anche uno 0 conta.
-      Numeri negativi rifiutati ("Inserisci un numero valido, non negativo."). Dopo un salvataggio che cambia qualcosa compare per 10 secondi "Annulla",
+      Numeri negativi rifiutati ("Inserisci un numero valido, non negativo."). Dopo un salvataggio che cambia qualcosa compare per 3 secondi "Annulla",
       che rimette le correzioni di prima. La rendita la trovi nella visura catastale.</p>
   </section>
 
@@ -886,7 +886,7 @@
         di foto); "gestore della vendita" segna il sito dove si fa l'offerta. I nomi lunghi vanno a capo, senza bisogno di allargare la scheda. I siti di pubblicità generici, che non portano all'asta, non sono mostrati.</li>
       <li><strong>✏️ I tuoi link</strong>: fino a <strong>6 link</strong> aggiunti da te (annunci simili, pagine del tribunale, mappe…), indipendenti da stella e
         nota. "+ Aggiungi link": indirizzo (deve iniziare con http:// o https://) ed etichetta facoltativa; senza etichetta si vede il dominio. La "×" lo
-        rimuove; poi per 10 secondi compare "Annulla", che rimette i link di prima. Serve la password di scrittura. Questi sì restano salvati.</li>
+        rimuove; poi per 3 secondi compare "Annulla", che rimette i link di prima. Serve la password di scrittura. Questi sì restano salvati.</li>
     </ul>
     <p>I link aprono file e pagine direttamente dal PVP e dai siti dei gestori, in una nuova scheda. Se il PVP non risponde compare "Allegati non
       disponibili" con il link all'annuncio e "Riprova". Le foto che stanno solo sui siti dei gestori non sono elencate una per una: si vedono aprendo
@@ -1199,6 +1199,13 @@
       (torna alla scheda nel registro) e "← Registro"; si apre nella <a href="#sistema-navigazione">stessa scheda</a>. Nel database scrive solo il tuo
       valore di rivendita e i <a href="#superanalisi-risultati">risultati delle AI</a> che salvi; nessun costo Gemini.</p>
     <p>Se l'asta è stata analizzata con il vecchio prompt v1 compare "Analisi v2 non ancora disponibile": si vedono solo annuncio e seconda opinione.</p>
+    <ul>
+      <li><strong>Riepilogo in cima</strong>: giudizio (<a href="#superanalisi-classe">classe</a>) con il verdetto, offerta minima, offerta massima,
+        margine sull'offerta minima (o "Obiettivo non raggiungibile… mancano € X", in rosso), qualità dei dati e data di vendita; "Vedi il conto completo ↓"
+        porta al conto. Senza analisi v2 mostra solo offerta minima e data di vendita.</li>
+      <li><strong>Indice delle sezioni</strong> (resta in alto mentre scorri): Riepilogo · Annuncio · Perizia · Rivendita · Conto · Seconda opinione ·
+        Risultati salvati. La voce della sezione che stai guardando è evidenziata; sul telefono l'indice scorre di lato.</li>
+    </ul>
   </section>
 
   <section class="voce" id="superanalisi-annuncio">
@@ -1337,7 +1344,8 @@
         (ricerca binaria) tra 0 e l'ARV.</li>
       <li>"Vincolo": quale dei due limiti comanda (scenario centrale o prudenziale), oppure "target irraggiungibile" se nemmeno a prezzo zero si arriva all'obiettivo.</li>
       <li><strong>Margine sull'offerta minima</strong> (headroom) = offerta massima − offerta minima: se positivo, quanto puoi rilanciare sopra il minimo;
-        se negativo, all'offerta minima non raggiungi l'obiettivo.</li>
+        se negativo, all'offerta minima non raggiungi l'obiettivo: la pagina lo scrive come "<strong>Obiettivo non raggiungibile all'offerta minima:
+        mancano € X</strong>" (in rosso), dove X è lo stesso numero senza il segno meno.</li>
       <li>"Offerta massima per scenario": lo stesso calcolo con l'obiettivo percentuale in ciascuno scenario.</li>
     </ul>
   </section>
@@ -1427,7 +1435,8 @@
     <ul>
       <li><strong>Dove si salva</strong>: nella sezione "💾 Salva il risultato dell'AI", in fondo alla Superanalisi (e alla
         <a href="#gruppo-seconda-opinione">Superanalisi di gruppo</a>). Nella chat usa il pulsante «Copia» sotto la risposta e incolla nel riquadro;
-        scegli l'AI usata (viene preselezionata l'ultima aperta con i pulsanti) e premi "Salva il risultato". Si possono salvare più risultati, anche della
+        scegli l'AI usata (viene preselezionata l'ultima aperta con i pulsanti; altrimenti il campo parte da "— scegli —" e "Salva" chiede di sceglierla,
+        così un risultato non finisce sotto il nome sbagliato) e premi "Salva il risultato". Si possono salvare più risultati, anche della
         stessa AI.</li>
       <li><strong>Formato</strong>: titoli, grassetti, elenchi e tabelle restano come nella chat (il testo copiato è in Markdown e viene impaginato). Se
         selezioni la risposta col mouse e la copi, la formattazione viene riconvertita automaticamente. Sotto il riquadro c'è l'anteprima.</li>
@@ -1475,6 +1484,7 @@
     <h3>Colonne della classifica</h3>
     <p># (posizione), Asta (link alla sua Superanalisi; sotto tribunale, lotto, tipologia), Offerta minima, Rivendita (centrale) con la fonte, Utile netto %
       centrale, Utile netto % prudenziale, Offerta massima, Giudizio, Rischi principali (primi 3 motivi o avvisi), Dati (<a href="#superanalisi-qualita">qualità A-D</a>).</p>
+    <p>Sul telefono la tabella diventa una scheda per asta, nello stesso ordine e con gli stessi dati (ogni riga con il suo nome); su PC resta la tabella.</p>
   </section>
 
   <section class="voce" id="gruppo-seconda-opinione">

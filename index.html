@@ -4714,12 +4714,12 @@
     try {
       const risultato = await accodaScritturaProtetta("salva_nota_asta", {password_tentativo: passwordCorrente, id_annuncio_input: id, nota_input: testo});
       if (risultato.result !== "success") throw new Error(risultato.message || "");
-      // Rete di sicurezza: per 10 secondi "Annulla" rimette il testo di prima.
+      // Rete di sicurezza: per 3 secondi "Annulla" rimette il testo di prima.
       if (daAnnulla) {
         mostraToast(`${indirizzoTroncato(asta.comune)} — nota ripristinata.`);
       } else if ((precedente || "") !== testo) {
         mostraToast(`${indirizzoTroncato(asta.comune)} — nota ${testo ? "salvata" : "eliminata"}.`,
-          {etichetta: "Annulla", callback: () => richiediPasswordSeServe(() => eseguiSalvaNota(id, precedente || "", true))}, 10000);
+          {etichetta: "Annulla", callback: () => richiediPasswordSeServe(() => eseguiSalvaNota(id, precedente || "", true))}, 3000);
       }
     } catch (e) {
       console.error("salva_nota_asta fallita:", e);
@@ -4791,13 +4791,13 @@
         rendita_catastale_input: renditaValore, oneri_condominiali_input: oneriValore
       });
       if (risultato.result !== "success") throw new Error(risultato.message || "");
-      // "Annulla" per 10 secondi rimette le correzioni di prima (solo se è cambiato qualcosa).
+      // "Annulla" per 3 secondi rimette le correzioni di prima (solo se è cambiato qualcosa).
       const uguale = (a, b) => (a === null || a === undefined || a === "" ? null : Number(a)) === (b === null || b === undefined || b === "" ? null : Number(b));
       if (daAnnulla) {
         mostraToast(`${indirizzoTroncato(asta.comune)} — correzioni ripristinate.`);
       } else if (!uguale(renditaPrecedente, renditaValore) || !uguale(oneriPrecedenti, oneriValore)) {
         mostraToast(`${indirizzoTroncato(asta.comune)} — correzione salvata.`,
-          {etichetta: "Annulla", callback: () => richiediPasswordSeServe(() => eseguiSalvaDatiUtenteCosti(id, renditaPrecedente ?? null, oneriPrecedenti ?? null, null, true))}, 10000);
+          {etichetta: "Annulla", callback: () => richiediPasswordSeServe(() => eseguiSalvaDatiUtenteCosti(id, renditaPrecedente ?? null, oneriPrecedenti ?? null, null, true))}, 3000);
       }
     } catch (e) {
       console.error("aggiorna_dati_utente_asta fallita:", e);
@@ -7306,7 +7306,7 @@ ${notaHtml}
   // Stesso schema di eseguiSalvaNota: aggiornamento ottimistico, rollback
   // al valore precedente se la scrittura fallisce, toast sull'errore.
   // messaggio: se indicato (rimozione con la ×), dopo il salvataggio compare
-  // con "Annulla" per 10 secondi, che rimette i link di prima.
+  // con "Annulla" per 3 secondi, che rimette i link di prima.
   async function eseguiSalvaLinkUtili(id, nuoviLink, messaggio = null, daAnnulla = false) {
     const asta = ASTE.find(a => a.id === id);
     if (!asta) return;
@@ -7322,7 +7322,7 @@ ${notaHtml}
         mostraToast(`${indirizzoTroncato(asta.comune)} — link ripristinati.`);
       } else if (messaggio) {
         mostraToast(`${indirizzoTroncato(asta.comune)} — ${messaggio}.`,
-          {etichetta: "Annulla", callback: () => richiediPasswordSeServe(() => eseguiSalvaLinkUtili(id, precedente, null, true))}, 10000);
+          {etichetta: "Annulla", callback: () => richiediPasswordSeServe(() => eseguiSalvaLinkUtili(id, precedente, null, true))}, 3000);
       }
     } catch (e) {
       console.error("imposta_link_utili fallita:", e);

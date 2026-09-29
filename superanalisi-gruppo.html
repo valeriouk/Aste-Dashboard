@@ -109,6 +109,25 @@
   textarea { width: 100%; min-height: 200px; font-family: var(--font-mono); font-size: .76rem; border: 1px solid var(--border);
     border-radius: 8px; padding: 10px; background: var(--bg); color: var(--ink); }
   @media (max-width: 560px) { .contenitore { padding: 24px 14px 72px; } h1 { font-size: 1.45rem; } }
+  /* Telefono: la classifica diventa una scheda per asta (stessi dati, stesso
+     ordine); su PC resta la tabella. Etichette da data-etichetta. */
+  @media (max-width: 640px) {
+    .classifica thead { display: none; }
+    .classifica, .classifica tbody, .classifica tr, .classifica td { display: block; width: 100%; }
+    .classifica tr { border: 1px solid var(--border); border-radius: 10px; padding: 10px 12px; margin-bottom: 10px; }
+    .classifica td { border: none; padding: 3px 0; text-align: left; display: flex; justify-content: space-between; align-items: baseline; gap: 12px; }
+    .classifica td::before { content: attr(data-etichetta); flex-shrink: 0; font-family: var(--font-body); font-size: .72rem; color: var(--ink-faint);
+      text-transform: uppercase; letter-spacing: .04em; }
+    .classifica td.num { text-align: right; }
+    .classifica td { flex-wrap: wrap; }
+    .classifica td.num .piccolo { flex-basis: 100%; text-align: right; white-space: normal; }
+    .classifica td.cella-asta, .classifica td.cella-rischi { display: block; }
+    .classifica td.cella-asta::before { content: none; }
+    .classifica td.cella-asta a:first-child { font-weight: 600; }
+    .classifica td.cella-rischi::before { display: block; margin-bottom: 2px; }
+    .classifica td ul { min-width: 0; }
+    .classifica td.cella-posizione { font-family: var(--font-display); font-size: 1rem; }
+  }
   /* Niente zoom automatico di iPhone toccando un campo (campi a 16 px sul telefono) */
   @media (max-width: 640px) {
     input:not([type="checkbox"]):not([type="radio"]):not([type="range"]), select, textarea { font-size: 16px; }
@@ -370,29 +389,29 @@
       const r = v.r, e = v.esito;
       const ar = e && e.arv;
       return `<tr>
-        <td class="num">${i + 1}</td>
-        <td class="sx"><a href="superanalisi.html?id=${encodeURIComponent(r.id_annuncio)}">${escapeHtml(r.comune__indirizzo || r.id_annuncio)}</a>
+        <td class="num cella-posizione" data-etichetta="Posizione">${i + 1}</td>
+        <td class="sx cella-asta"><a href="superanalisi.html?id=${encodeURIComponent(r.id_annuncio)}">${escapeHtml(r.comune__indirizzo || r.id_annuncio)}</a>
           <a class="piccolo" href="index.html#${encodeURIComponent(r.id_annuncio)}">scheda nel registro</a>
           <span class="piccolo">${escapeHtml([r.tribunale, r.n__lotto ? `lotto ${r.n__lotto}` : "", testo(r.tipologia).toLowerCase()].filter(Boolean).join(" · "))}</span></td>
-        <td class="num">${eur(r.offerta_minima)}</td>
-        <td class="num">${ar ? eur(ar.centrale) : "—"}<span class="piccolo">${escapeHtml(v.fonte ? v.fonte.etichetta : "")}</span></td>
-        <td class="num">${pct(v.rendimento.centrale)}</td>
-        <td class="num">${pct(v.rendimento.prudenziale)}</td>
-        <td class="num">${e ? eur(e.offertaMassima) : "—"}</td>
-        <td class="sx"><span class="etichetta-stato stato-${escapeHtml(v.classe)}">${escapeHtml(testo(v.classe))}</span></td>
-        <td class="sx"><ul>${rischiPrincipali(v).map((m) => `<li>${escapeHtml(m)}</li>`).join("")}</ul></td>
-        <td class="num">${e ? escapeHtml(e.qualita.livello) : "—"}</td>
+        <td class="num" data-etichetta="Offerta minima">${eur(r.offerta_minima)}</td>
+        <td class="num" data-etichetta="Rivendita (centrale)">${ar ? eur(ar.centrale) : "—"}<span class="piccolo">${escapeHtml(v.fonte ? v.fonte.etichetta : "")}</span></td>
+        <td class="num" data-etichetta="Utile netto centrale">${pct(v.rendimento.centrale)}</td>
+        <td class="num" data-etichetta="Utile netto prudenziale">${pct(v.rendimento.prudenziale)}</td>
+        <td class="num" data-etichetta="Offerta massima">${e ? eur(e.offertaMassima) : "—"}</td>
+        <td class="sx" data-etichetta="Giudizio"><span class="etichetta-stato stato-${escapeHtml(v.classe)}">${escapeHtml(testo(v.classe))}</span></td>
+        <td class="sx cella-rischi" data-etichetta="Rischi principali"><ul>${rischiPrincipali(v).map((m) => `<li>${escapeHtml(m)}</li>`).join("")}</ul></td>
+        <td class="num" data-etichetta="Qualità dei dati">${e ? escapeHtml(e.qualita.livello) : "—"}</td>
       </tr>`;
     }).join("");
     return `<div class="sezione"><h2>Classifica</h2>
-      <div class="tabella-scroll"><table>
+      <div class="tabella-scroll"><table class="classifica">
         <thead><tr><th>#</th><th class="sx">Asta</th><th>Offerta minima</th><th>Rivendita (centrale)</th>
           <th>Utile netto % centrale</th><th>Utile netto % prudenziale</th><th>Offerta massima</th><th class="sx">Giudizio</th>
           <th class="sx">Rischi principali</th><th>Dati</th></tr></thead>
         <tbody>${righe}</tbody></table></div>
       <p class="nota">Ordine: prima le aste con utile netto positivo nello scenario centrale (all'offerta minima), poi quelle in perdita,
         poi quelle da scartare, infine le non calcolabili (es. quote parziali); dentro ogni gruppo prima il giudizio (pulita, gestibile,
-        complessa), poi l'utile netto sul capitale. Stesso conto della Superanalisi di ogni asta (underwriting.js); valori OMI: Agenzia Entrate - OMI.
+        complessa), poi l'utile netto sul capitale. Stesso conto della Superanalisi di ogni asta; valori OMI: Agenzia Entrate - OMI.
         "Dati" è la qualità dei dati (A migliore). Sono stime per confrontare le aste, non sostituiscono un sopralluogo o il parere di un tecnico.</p>
     </div>`;
   }
