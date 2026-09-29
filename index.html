@@ -5111,10 +5111,24 @@
   }
 
   function oneriCondominialiEffettivi(a) {
+    return oneriCondominialiACarico(a).aCarico;
+  }
+
+  // Spese condominiali arretrate a carico di chi compra (30/09/2026): la tua
+  // correzione vale così com'è; altrimenti l'arretrato della perizia, ma al
+  // massimo 2 annualità di spese ordinarie (art. 63 disp. att. c.c.: chi
+  // subentra risponde dell'anno in corso e del precedente). Stessa regola di
+  // arretratiACarico() in underwriting.js; senza spese annue in perizia resta
+  // tutto l'arretrato.
+  function oneriCondominialiACarico(a) {
     if (a.oneriCondominialiUtente !== null && a.oneriCondominialiUtente !== undefined) {
-      return a.oneriCondominialiUtente;
+      return { aCarico: a.oneriCondominialiUtente, perizia: a.oneriCondominiali || 0, speseAnnue: null, fonte: "utente" };
     }
-    return a.oneriCondominiali || 0;
+    const perizia = a.oneriCondominiali || 0;
+    const v2 = a.analisiV2 && String(a.versionePrompt || "").startsWith("v2") ? a.analisiV2 : null;
+    const speseAnnue = v2 && v2.condominio ? numeroSicuro(v2.condominio.spese_ordinarie_annue_euro, null) : null;
+    if (speseAnnue === null || perizia <= 2 * speseAnnue) return { aCarico: perizia, perizia, speseAnnue, fonte: "perizia" };
+    return { aCarico: 2 * speseAnnue, perizia, speseAnnue, fonte: "tetto" };
   }
 
   function compensoDelegato(prezzoBase) {
@@ -7079,6 +7093,7 @@ ${notaHtml}
   function bloccoCostiTrasferimento(a) {
     const c = calcolaCostiTrasferimento(a);
     const s = c.scenari;
+    const oneri = oneriCondominialiACarico(a);
     const euroSemplice = v => v === null ? "—" : formattaEuro(Math.round(v));
     // le colonne prezzo-valore dipendono dalla rendita: se è una stima, lo si dice
     const asterisco = (c.renditaUsata.fonte === "stimata" || c.renditaUsata.fonte === "assunta") ? "*" : "";
@@ -7099,14 +7114,23 @@ ${notaHtml}
       ["Compenso delegato", c.delegato?.base],
       ["Cassa professionale (4%)", c.delegato?.cassa],
       ["IVA (22%)", c.delegato?.iva],
-      ["Pratica edilizia (CILA/SCIA)", c.praticaEdilizia],
+      ["Tecnico per la sanatoria (stima)", c.praticaEdilizia],
       ["Sanatoria abusi", c.sanatoria],
-      ["Spese condominiali arretrate", c.oneriCondominiali],
+      [oneri.fonte === "tetto" ? "Spese condominiali arretrate (a tuo carico, max 2 anni)" : "Spese condominiali arretrate", c.oneriCondominiali],
     ].filter(([, v]) => v !== undefined);
 
     const righeComuniHtml = righeComuni.map(([etichetta, valore]) =>
       `<tr><td>${etichetta}</td><td>${euroSemplice(valore)}</td></tr>`
     ).join("");
+
+    const tecnicoSuperanalisi = window.Underwriting ? Underwriting.PARAMETRI_DEFAULT.tecnicoPratiche : null;
+    const notaCostiComuni = [
+      oneri.fonte === "tetto" ? `Spese condominiali: in perizia gli arretrati sono ${formattaEuro(Math.round(oneri.perizia))}, ma chi compra risponde
+        in solido solo dell'anno in corso e del precedente (art. 63 disp. att. c.c.): nel totale al massimo 2 annualità di spese ordinarie
+        (${formattaEuro(Math.round(oneri.speseAnnue))} l'anno). Da confermare con il delegato o l'amministratore.` : "",
+      tecnicoSuperanalisi ? `Il tecnico qui è solo per la sanatoria; nel conto della Superanalisi c'è sempre un tecnico da
+        ${formattaEuro(tecnicoSuperanalisi)} (lavori, APE, pratiche).` : "",
+    ].filter(Boolean).map(t => `<p class="sezione-costi-nota">${t}</p>`).join("");
 
     const nessunDelegato = !c.delegato ? `<p class="sezione-costi-nota avviso">Prezzo base oltre € 500.000 — il compenso del delegato in questa fascia non è stato verificato, il totale non è mostrato.</p>` : "";
 
@@ -7119,6 +7143,7 @@ ${notaHtml}
             <tbody>${righeComuniHtml}</tbody>
           </table>
         </div>` : ""}
+        ${notaCostiComuni}
         <p class="sezione-costi-nota">${NOTA_FONTE_RENDITA[c.renditaUsata.fonte](formattaEuro(Math.round(c.renditaUsata.valore)))}</p>
         <div class="tabella-scroll">
           <div class="schede-casa">
@@ -7157,18 +7182,57 @@ ${notaHtml}
 
   const ETICHETTA_LIVELLO_RISTRUTTURAZIONE = { nessuna: "Nessuna", leggera: "Leggera", media: "Media", pesante: "Pesante" };
 
+  // Classe dello stato manutentivo (analisi v2) → nome del livello, come
+  // _LIVELLO_V1 nello scanner.
+  const LIVELLO_DA_CLASSE = { A_pronto: "nessuna", B_rinfrescare: "leggera", C_rimodernare: "media", D_ristrutturare: "pesante", E_degrado: "pesante" };
+
+  // Lavori come li conta la Superanalisi (stesso motore, underwriting.js):
+  // superficie lorda se c'è, livello dallo stato (non valutabile → pesante),
+  // il più alto tra tabella e stima del perito +30%. Null senza analisi v2.
+  function lavoriSuperanalisi(a) {
+    if (!a.analisiV2 || !String(a.versionePrompt || "").startsWith("v2") || !window.Underwriting) return null;
+    try {
+      const U = Underwriting, p = U.PARAMETRI_DEFAULT;
+      const d = U.normalizza(a.analisiV2).d;
+      const lorda = d.superfici.lorda != null;
+      const mq = lorda ? d.superfici.lorda : U.superficieCommerciale(d, p).mqPrimaRiduzione;
+      const l = U.costoLavori(d, mq, p, null);
+      if (l.importo == null) return null;
+      const classe = d.statoManutentivo === "non_valutabile" ? "D_ristrutturare" : d.statoManutentivo;
+      const daTabella = /^tabella/.test(l.fonte);
+      return {
+        importo: l.importo, nonValutabile: d.statoManutentivo === "non_valutabile",
+        come: daTabella ? `livello ${LIVELLO_DA_CLASSE[classe] || classe} × ${Math.round(mq)} mq ${lorda ? "lordi" : "commerciali"}`
+          : "stima del perito + 30%",
+        prudenziale: Math.round(l.importo * p.moltiplicatoreLavori.prudenziale), imprevistiPct: Math.round(p.imprevistiPct * 100),
+      };
+    } catch (e) { return null; }
+  }
+
   function bloccoCostiRistrutturazione(a) {
     const r = calcolaCostiRistrutturazione(a);
     if (!r.mq) return "";
+    // Stato non valutabile (la perizia non basta per giudicarlo): nessun
+    // livello suggerito, lo sceglie chi ha visto l'immobile.
+    const v2 = a.analisiV2 && String(a.versionePrompt || "").startsWith("v2") ? a.analisiV2 : null;
+    const nonValutabile = !!(v2 && v2.stato_manutentivo && v2.stato_manutentivo.classe === "non_valutabile");
+    if (nonValutabile) r.livelloSuggerito = null;
+    const sa = lavoriSuperanalisi(a);
     const righe = Object.keys(COSTO_MQ_RISTRUTTURAZIONE).map(chiave =>
       [chiave, ETICHETTA_LIVELLO_RISTRUTTURAZIONE[chiave], `${COSTO_MQ_RISTRUTTURAZIONE[chiave]} €/mq`, r[chiave]]);
     const righeHtml = righe.map(([chiave, etichetta, prezzoMq, valore]) =>
       `<tr${chiave === r.livelloSuggerito ? ' class="livello-suggerito"' : ''}><td>${etichetta}${chiave === r.livelloSuggerito ? ' <span class="pallino-suggerito" title="Livello suggerito in base allo stato descritto in perizia">●</span>' : ''}</td><td>${prezzoMq}</td><td>${formattaEuro(Math.round(valore))}</td></tr>`
     ).join("");
     const etichettaSuggerita = ETICHETTA_LIVELLO_RISTRUTTURAZIONE[r.livelloSuggerito];
-    const rigaSuggerimento = etichettaSuggerita
+    const rigaSuggerimento = nonValutabile
+      ? `<p class="livello-suggerito-testo">Stato non valutabile dalla perizia (testo e foto non bastano): scegli tu il livello dopo il sopralluogo.</p>`
+      : etichettaSuggerita
       ? `<p class="livello-suggerito-testo">● Livello suggerito dalla perizia: <strong>${etichettaSuggerita}</strong></p>`
       : "";
+    const rigaSuperanalisi = sa ? `<p class="sezione-costi-nota">Nel conto della Superanalisi: <strong>${formattaEuro(sa.importo)}</strong>
+        (${escapeHtml(sa.come)}${sa.nonValutabile ? "; stato non valutabile: usato «pesante» per prudenza" : ""}; nello scenario prudenziale
+        ${formattaEuro(sa.prudenziale)}, più imprevisti ${sa.imprevistiPct}%).
+        ${a.id ? `<a href="superanalisi.html?id=${encodeURIComponent(a.id)}">Apri la Superanalisi →</a>` : ""}</p>` : "";
 
     return `
       <div class="sezione-costi">
@@ -7180,6 +7244,7 @@ ${notaHtml}
             <tbody>${righeHtml}</tbody>
           </table>
         </div>
+        ${rigaSuperanalisi}
       </div>`;
   }
 
