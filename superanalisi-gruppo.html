@@ -322,6 +322,10 @@
       comune: r.comune__indirizzo, offertaMinima: Number(r.offerta_minima) || null, prezzoBase: Number(r.prezzo_base) || null,
       valoreStima: Number(r.valore_stima_perito) || null, occupazione: r["disponibilità_pvp"] || null,
       omi: f.omi || null, arvOverride: f.arvOverride || null,
+      // le tue correzioni dai dettagli del registro (vuote = dati della perizia)
+      renditaOverride: Number(r.rendita_catastale_utente) > 0 ? Number(r.rendita_catastale_utente) : null,
+      arretratiOverride: r.oneri_condominiali_utente === null || r.oneri_condominiali_utente === undefined || r.oneri_condominiali_utente === ""
+        ? null : Number(r.oneri_condominiali_utente),
     };
     const esito = Underwriting.analizzaAsta(a, annuncio, {
       utileTargetPct: p.utilePct / 100, utileMinimoPrudenzialePct: p.minimoPrudenzialePct / 100,

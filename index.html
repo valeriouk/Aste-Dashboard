@@ -2330,6 +2330,15 @@
     border: none; border-radius: 999px; padding: 6px 12px; min-height: 32px; cursor: pointer; white-space: nowrap; }
   .indice-dettagli button:hover { color: var(--ink); }
   .indice-dettagli button.attiva { background: var(--ink); color: var(--surface); }
+  /* Giudizio della Superanalisi nelle card e nei dettagli (stessi colori della Superanalisi) */
+  .badge-giudizio { display: inline-block; font-size: .72rem; font-weight: 600; padding: 3px 9px; border-radius: 999px; margin: 4px 6px 6px 0;
+    white-space: nowrap; }
+  .giudizio-PULITA { background: rgba(63, 107, 74, .12); color: #3f6b4a; }
+  .giudizio-GESTIBILE { background: var(--primary-soft); color: var(--primary); }
+  .giudizio-COMPLESSA { background: var(--secondary-soft); color: var(--secondary); }
+  .giudizio-DA_SCARTARE { background: var(--danger-soft); color: var(--danger); }
+  .nota-margine { font-size: .74rem; color: var(--ink-faint); margin: 2px 0 0; }
+  .nota-margine a { color: var(--secondary); }
   /* Descrizione del lotto: prime 4 righe, "Mostra tutto" solo se è più lunga */
   .descrizione-lotto:not(.aperta) { display: -webkit-box; -webkit-line-clamp: 4; -webkit-box-orient: vertical; overflow: hidden; }
   .mostra-descrizione { font: inherit; font-size: .8rem; font-weight: 600; color: var(--secondary); background: none; border: none;
@@ -2357,11 +2366,11 @@
   /* Nomi lunghi di allegati e siti dei gestori (spesso URL senza spazi):
      vanno a capo invece di uscire dalla scheda ed essere tagliati. */
   .allegati-elenco .lotto-link, .link-utili-elenco .lotto-link { display: inline-block; max-width: 100%; overflow-wrap: anywhere; }
-  /* PC: scheda dei dettagli più larga (era 640 px; "espandi" porta a 1000 px)
+  /* PC: scheda dei dettagli più larga (era 640 px, poi 780; 830 = indice su una riga; "espandi" porta a 1000 px)
      e indice delle sezioni su più righe, perché con il mouse una riga che
      scorre di lato senza barra non si può scorrere. */
   @media (min-width: 641px) {
-    .finestra-dettagli-asta { max-width: 780px; }
+    .finestra-dettagli-asta { max-width: 830px; }
     .finestra-dettagli-asta.espansa { max-width: 1000px; }
   }
   @media (min-width: 641px) and (hover: hover) and (pointer: fine) {
@@ -2458,6 +2467,7 @@
 </head>
 <body>
 <script src="menu.js"></script>
+<script src="underwriting.js"></script>
 
 <div class="contenitore">
 
@@ -5459,6 +5469,25 @@
     const nomi = voci.map(t => NOMI_TIPOLOGIA[t] || (t.charAt(0) + t.slice(1).toLowerCase()).replace(/_/g, " "));
     return [...new Set(nomi)].join(" + ");
   }
+  // Giudizio della Superanalisi (PULITA…DA SCARTARE) calcolato qui con lo
+  // stesso motore (underwriting.js, giudizioRapido): regole fisse sui fatti
+  // della perizia, diverso dal punteggio del sigillo, che è il voto dell'AI.
+  // Solo con l'analisi v2, come la Superanalisi. Calcolato una volta per asta.
+  const NOMI_GIUDIZIO = {PULITA: "Pulita", GESTIBILE: "Gestibile", COMPLESSA: "Complessa", DA_SCARTARE: "Da scartare"};
+  function giudizioSuperanalisi(a) {
+    if (a._giudizio !== undefined) return a._giudizio;
+    a._giudizio = null;
+    if (a.analisiV2 && String(a.versionePrompt || "").startsWith("v2") && window.Underwriting && Underwriting.giudizioRapido) {
+      try { a._giudizio = Underwriting.giudizioRapido(a.analisiV2, {occupazione: a.disponibilita, comune: a.comune}); } catch (e) { a._giudizio = null; }
+    }
+    return a._giudizio;
+  }
+  function badgeGiudizio(a) {
+    const g = giudizioSuperanalisi(a);
+    if (!g || !NOMI_GIUDIZIO[g.classe]) return "";
+    const perche = g.motivi && g.motivi.length ? ": " + g.motivi.slice(0, 3).join("; ") : "";
+    return `<span class="badge-giudizio giudizio-${g.classe}" title="Giudizio della Superanalisi (regole fisse sulla perizia)${escapeAttributo(perche)}">⚖️ ${NOMI_GIUDIZIO[g.classe]}</span>`;
+  }
   const NOMI_DISPONIBILITA = {LIBER: "Libero", OCCUP: "Occupato"};
   function etichettaDisponibilita(grezza) {
     const voci = (grezza || "").split(",").map(t => t.trim()).filter(Boolean);
@@ -6319,7 +6348,7 @@
         <strong>${escapeHtml(a.comune)}</strong>
         ${notaPosizione}
         <div>Offerta minima: ${formattaEuro(a.offertaMinima)}</div>
-        <div>Margine stimato: ${margine}</div>
+        <div>Margine lordo: ${margine}</div>
         <div>Punteggio: ${a.punteggio > 0 ? a.punteggio + "/100" : "—"}</div>
         <div class="popup-lotto-azioni">
           <button type="button" class="bottone-azione-lotto${a.preferito ? ' preferito-attivo' : ''}" title="Preferito" onclick="event.stopPropagation(); onClickStella(event, '${a.id}')">${iconaStella}</button>
@@ -6564,13 +6593,14 @@
           ${badgeVisita(a)}
           ${conclusa ? `<span class="badge-conclusa">🏁 Conclusa</span>` : ""}
           ${a.zonaSegnalata ? `<span class="badge-zona">🚩 ${escapeHtml(a.zonaSegnalata)}</span>` : ""}
+          ${badgeGiudizio(a)}
           ${badgeTentativo(a.storico)}
           ${(a.superanalisiEsterne || []).length ? `<span class="badge-ai" title="Risultati di superanalisi con AI esterne salvati: aprili dalla scheda">🧠 ${(a.superanalisiEsterne || []).length}</span>` : ""}
           <p class="lotto-meta">${escapeHtml(distanzaTesto)} · vendita ${formattaData(a.dataVendita)}</p>
         </div>
 ${notaHtml}
         <div class="lotto-margine">
-          <p class="cifra-etichetta">Margine stimato</p>
+          <p class="cifra-etichetta" title="Valore del perito − offerta minima − sanatoria: prima di imposte, lavori, tempi e vendita. Il conto completo è in Superanalisi.">Margine lordo</p>
           <p class="lotto-margine-valore">${a.margine !== null ? formattaEuro(a.margine) : "—"}</p>
         </div>
 
@@ -6714,7 +6744,8 @@ ${notaHtml}
   // da UNA asta qualsiasi, applicata poi a ciascuna delle 2-3 aste
   // selezionate per costruire la griglia (vedi contenutoConfronto).
   const RIGHE_CONFRONTO = [
-    {etichetta: "Margine stimato", formatta: a => a.margine !== null ? formattaEuro(a.margine) : "—"},
+    {etichetta: "Margine lordo", formatta: a => a.margine !== null ? formattaEuro(a.margine) : "—"},
+    {etichetta: "Giudizio Superanalisi", formatta: a => { const g = giudizioSuperanalisi(a); return g && NOMI_GIUDIZIO[g.classe] ? NOMI_GIUDIZIO[g.classe] : "—"; }},
     {etichetta: "Offerta minima", formatta: a => formattaEuro(a.offertaMinima)},
     {etichetta: "Valore stima", formatta: a => a.valoreStima > 0 ? formattaEuro(a.valoreStima) : "—"},
     {etichetta: "Superficie", formatta: a => a.superficieMq !== null ? `${a.superficieMq.toFixed(0)} mq` : "—"},
@@ -7680,8 +7711,10 @@ ${notaHtml}
     const sezioni = [
       ["sez-cifre", "Cifre", `
         <div class="lotto-margine">
-          <p class="cifra-etichetta">Margine stimato</p>
+          <p class="cifra-etichetta">Margine lordo</p>
           <p class="lotto-margine-valore">${a.margine !== null ? formattaEuro(a.margine) : "—"}</p>
+          <p class="nota-margine">Valore del perito − offerta minima − sanatoria, prima di imposte, lavori e tempi.
+            ${a.id ? `<a href="superanalisi.html?id=${encodeURIComponent(a.id)}">Conto completo in Superanalisi →</a>` : ""}</p>
         </div>
         <div class="lotto-cifre">
           <div>
@@ -7754,6 +7787,7 @@ ${notaHtml}
               ${badgeVisita(a)}
               ${conclusa ? `<span class="badge-conclusa">🏁 Conclusa</span>` : ""}
               ${a.zonaSegnalata ? `<span class="badge-zona">🚩 ${escapeHtml(a.zonaSegnalata)}</span>` : ""}
+              ${badgeGiudizio(a)}
               ${badgeTentativo(a.storico)}
             </div>
             <p class="lotto-meta">${escapeHtml(distanzaTesto)} · vendita ${formattaData(a.dataVendita)}</p>

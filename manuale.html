@@ -506,7 +506,7 @@
       <li>Gli importi in euro hanno sempre il punto delle migliaia, anche a 4 cifre ("€ 1.500"), in tutte le pagine; il CSV resta con i numeri senza punti.</li>
       <li><strong>Aste nel registro</strong>: "N attive di TOT" (attive = vendita oggi o futura, o senza data); con "Concluse" attivo, "N concluse di TOT".</li>
       <li><strong>Punteggio più alto</strong>: il massimo <a href="#analisi-score">punteggio</a> tra tutte le aste, "NN/100".</li>
-      <li><strong>Margine positivo</strong>: il <em>numero</em> di aste con <a href="#registro-margine">margine stimato</a> maggiore di zero (non il
+      <li><strong>Margine positivo</strong>: il <em>numero</em> di aste con <a href="#registro-margine">margine lordo</a> maggiore di zero (non il
         margine massimo: un margine sballato, per esempio di una perizia condivisa tra più lotti, falsava il massimo).</li>
       <li>Questi tre numeri sono calcolati su <strong>tutte</strong> le aste, ignorando i filtri. Sotto la barra: "N di TOT aste mostrate" (con i filtri).</li>
     </ul>
@@ -576,7 +576,7 @@
       <thead><tr><th>Criterio</th><th>Ordina per</th><th>Direzione iniziale</th></tr></thead>
       <tbody>
         <tr><td>Punteggio (predefinito)</td><td>punteggio</td><td>alto → basso</td></tr>
-        <tr><td>Margine</td><td>margine stimato (mancante = in fondo)</td><td>alto → basso</td></tr>
+        <tr><td>Margine</td><td>margine lordo (mancante = in fondo)</td><td>alto → basso</td></tr>
         <tr><td>Offerta</td><td>offerta minima</td><td>bassa → alta</td></tr>
         <tr><td>Data</td><td>giorni tra vendita e oggi (in valore assoluto): la più imminente; tra le concluse la più recente</td><td>vicina → lontana</td></tr>
         <tr><td>Distanza</td><td>km dal punto di riferimento (mancante = in fondo)</td><td>vicina → lontana</td></tr>
@@ -619,7 +619,7 @@
         a tutta larghezza, i <a href="#registro-badge">badge</a> e "X km · vendita GG/MM/AAAA".</li>
       <li><strong>Stella</strong> (preferito) e <strong>cerchio con X</strong> (non interessa): vedi <a href="#registro-stella-scarto">qui</a>.</li>
       <li><strong>Nota personale</strong>: vedi <a href="#registro-nota">qui</a>.</li>
-      <li>Cifre: <a href="#registro-margine">Margine stimato</a>, Offerta minima, Valore stima (valore del perito), Superficie ed
+      <li>Cifre: <a href="#registro-margine">Margine lordo</a>, Offerta minima, Valore stima (valore del perito), Superficie ed
         <a href="#registro-euro-mq">€/mq (offerta)</a> se la superficie è nota, Stato occupazione. Sul telefono la card è più bassa: le cifre stanno su
         due colonne, senza toglierne nessuna.</li>
       <li>Una card <strong>scartata</strong> è sbiadita e va in fondo; una <strong>selezionata</strong> ha bordo blu.</li>
@@ -654,6 +654,11 @@
       <li><strong>🕓 / ✉️ / 📅 / ✅ visita</strong>: stato della visita all'immobile; il badge con la data diventa ambra dai 5 giorni prima e rosso il giorno
         stesso. Vedi <a href="#registro-visite">Gestione delle visite</a>.</li>
       <li><strong>🧠 N</strong>: ci sono N <a href="#superanalisi-risultati">risultati delle AI esterne</a> salvati per l'asta.</li>
+      <li><strong>⚖️ Pulita / Gestibile / Complessa / Da scartare</strong> (verde, blu, terracotta, rosso): il
+        <a href="#superanalisi-classe">giudizio della Superanalisi</a>, calcolato nel registro con lo stesso motore e le stesse regole fisse sui fatti
+        della perizia (stessa classe che vedi aprendo la Superanalisi). Passandoci sopra col mouse si leggono i primi motivi. Compare anche in alto nei
+        dettagli e come riga "Giudizio Superanalisi" nel confronto. Solo per le aste con analisi v2. È <strong>diverso dal punteggio del sigillo</strong>,
+        che è il voto dell'AI sulla perizia: i due possono non coincidere (es. 82 e "Complessa").</li>
     </ul>
   </section>
 
@@ -677,8 +682,13 @@
   </section>
 
   <section class="voce" id="registro-margine">
-    <h3>Margine stimato (registro)</h3>
-    <div class="formula">margine stimato = valore di stima − offerta minima − spese di sanatoria</div>
+    <h3>Margine lordo (registro)</h3>
+    <div class="formula">margine lordo = valore di stima − offerta minima − spese di sanatoria</div>
+    <p>Fino al 30/09/2026 si chiamava "Margine stimato"; è lo stesso numero. Si chiama "lordo" per non confonderlo con il "Margine sull'offerta minima"
+      della <a href="#superanalisi-offerta-massima">Superanalisi</a>, che è un'altra cosa (offerta massima − offerta minima, dopo tutti i costi): i due
+      possono avere segno opposto. Nei dettagli, sotto il numero, "Conto completo in Superanalisi →" apre il conto dell'asta. Stesso nome nei messaggi
+      Telegram, nel confronto, nella mappa e in Statistiche ("Margine lordo medio"); nel CSV la colonna resta "Margine stimato", per non cambiare i
+      fogli che lo usano.</p>
     <p>È calcolato dallo scanner al momento dell'analisi e salvato; la pagina lo mostra così com'è. È un indicatore <strong>grezzo</strong> per
       confrontare le aste: <strong>non</strong> sottrae imposte, ristrutturazione, spese condominiali, compenso del delegato, rilanci. Non tiene conto
       delle correzioni che fai a rendita e spese condominiali. Vuoto se il valore di stima manca. Il conto completo è nella
@@ -772,7 +782,7 @@
       ai <a href="#registro-link-utili">link e foto</a>), "Superanalisi" e "🧠 N" (porta ai risultati delle AI, se ce ne sono). Poi la nota personale.</p>
     <p><strong>Sezioni</strong>, nell'ordine in cui servono per decidere:</p>
     <ul>
-      <li>Cifre: Margine stimato, Offerta minima, Valore stima, Stato occupazione;</li>
+      <li>Cifre: Margine lordo (con "Conto completo in Superanalisi →"), Offerta minima, Valore stima, Stato occupazione;</li>
       <li>📝 Descrizione del lotto (che cosa compri: piano, vani, pertinenze, stato): le prime 4 righe, con "Mostra tutto" se è più lunga ("Mostra
         meno" la richiude; in stampa è sempre intera);</li>
       <li>⚠️ Rischi e note dell'AI;</li>
@@ -841,6 +851,10 @@
       (anche Invio) salvano un tuo valore che ha la precedenza. Campo vuoto = torna al valore automatico. Per le spese condominiali anche uno 0 conta.
       Numeri negativi rifiutati ("Inserisci un numero valido, non negativo."). Dopo un salvataggio che cambia qualcosa compare per 3 secondi "Annulla",
       che rimette le correzioni di prima. La rendita la trovi nella visura catastale.</p>
+    <p><strong>Anche in Superanalisi</strong> (dal 30/09/2026): la tua rendita e le tue spese condominiali arretrate sostituiscono quelle lette dalla
+      perizia nel conto (imposte e arretrati), anche nella Superanalisi di gruppo; negli "Avvisi" del conto compare "usata la tua correzione". Svuotando
+      i campi nel registro il conto torna ai dati della perizia. Le tue spese condominiali si usano così come le scrivi (senza il limite delle due
+      annualità che il conto applica a quelle della perizia).</p>
   </section>
 
   <section class="voce" id="registro-delegato">
@@ -899,7 +913,7 @@
       <li><strong>Condividi</strong>: menu di condivisione del telefono, oppure "Copia link", "Invia email", "Invia su WhatsApp". Il link apre direttamente
         la scheda dell'asta (<code>index.html#ID</code>, chi lo apre deve avere l'accesso al registro).</li>
       <li><strong>Stampa</strong>: stampa o salva in PDF la sola scheda, con data e link PVP; include il tentativo e lo storico delle aste e tutte e quattro le colonne dei costi, esclude pulsanti, indice delle sezioni e mappa.</li>
-      <li><strong>Espandi</strong> (computer): la scheda passa da 780 a 1000 px di larghezza (se lo schermo lo permette); la scelta resta passando da
+      <li><strong>Espandi</strong> (computer): la scheda passa da 830 a 1000 px di larghezza (se lo schermo lo permette); la scelta resta passando da
         un'asta all'altra.</li>
     </ul>
   </section>
@@ -950,7 +964,7 @@
 
   <section class="voce" id="registro-confronta">
     <h3>⇄ Confronta (2 o 3 aste)</h3>
-    <p>Affianca 2 o 3 aste selezionate: punteggio, indirizzo, stella/scarto e le righe Margine stimato, Offerta minima, Valore stima, Superficie, €/mq
+    <p>Affianca 2 o 3 aste selezionate: punteggio, indirizzo, stella/scarto e le righe Margine lordo, Giudizio Superanalisi, Offerta minima, Valore stima, Superficie, €/mq
       (offerta), Stato occupazione, Distanza, Vendita, Tentativo (storico PVP). Con 1 o più di 3 aste il pulsante è disattivato.</p>
   </section>
 
@@ -1148,7 +1162,7 @@
         <tr><td>Aste storiche (incluse le eliminate)</td><td>presenti + cancellate con "Elimina aste scadute"</td></tr>
         <tr><td>Da riprovare</td><td>aste senza un'analisi riuscita (punteggio vuoto o ≤ 1); in rosso se più di 0</td></tr>
         <tr><td>Punteggio medio</td><td>media del punteggio delle aste analizzate (punteggio &gt; 1)</td></tr>
-        <tr><td>Margine medio stimato</td><td>media del <a href="#registro-margine">margine stimato</a> delle aste analizzate</td></tr>
+        <tr><td>Margine lordo medio</td><td>media del <a href="#registro-margine">margine lordo</a> delle aste analizzate</td></tr>
         <tr><td>Batch Gemini in sospeso</td><td>batch inviati e non ancora raccolti dal controllo batch</td></tr>
       </tbody>
     </table></div>
@@ -1716,6 +1730,8 @@
     <p>Quanto l'operazione "compra all'asta, ristruttura, rivendi" sembra <strong>pulita e con margine</strong>, secondo l'AI, dopo aver estratto i fatti.
       Considera: valore del CTU rispetto a prezzo base e offerta minima, occupazione e contratti, difformità e costi, condono, pesi non cancellabili, quota,
       stato manutentivo, discordanze e rischi.</p>
+    <p>È un <strong>voto dell'AI</strong>, non il conto: per questo nelle card compare anche il
+      <a href="#registro-badge">giudizio della Superanalisi</a> (⚖️), calcolato con regole fisse. Se i due non vanno d'accordo, apri la Superanalisi.</p>
     <ul>
       <li><strong>Alto</strong>: ampio margine, libero, nessun problema rilevante. <strong>Basso</strong>: abusi non sanabili, occupanti con titolo, quota
         parziale, costi occulti.</li>

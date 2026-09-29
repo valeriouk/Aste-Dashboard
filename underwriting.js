@@ -622,7 +622,9 @@
   // 8. ORCHESTRAZIONE
   // annuncio = { comune, offertaMinima, prezzoBase, valoreStima, occupazione (testo PVP),
   //              omi: {min, max} | null, arvOverride: {prudenziale, centrale, ottimistico} | null,
-  //              lavoriOverride: numero | null }
+  //              lavoriOverride: numero | null,
+  //              renditaOverride: numero | null  (la tua rendita catastale dal registro, se > 0),
+  //              arretratiOverride: numero | null (le tue spese condominiali arretrate dal registro, anche 0) }
   // ===========================================================================
   function analizzaAsta(estrazioneGemini, annuncio, parametriUtente) {
     const params = merge(PARAMETRI_DEFAULT, parametriUtente || {});
@@ -693,7 +695,16 @@
     if (reg.nonDeterminato) avvisi.push('Costi di regolarizzazione incompleti: MAX_BID sovrastimato');
     if (arv.affidabilita === 'bassa') avvisi.push(`ARV a bassa affidabilità (${arv.fonte})`);
 
-    const ctx = { params, arv, lavori, reg, mesi, arretrati: arretratiACarico(d), renditaTot: renditaTotale(d) };
+    // Correzioni fatte nei dettagli del registro (30/09/2026): hanno la
+    // precedenza sui dati della perizia, come nei costi del registro. Tolte
+    // lì, tornano i dati della perizia.
+    const renditaTu = num(annuncio.renditaOverride);
+    const arretratiTu = num(annuncio.arretratiOverride);
+    const renditaTot = renditaTu != null && renditaTu > 0 ? renditaTu : renditaTotale(d);
+    const arretrati = arretratiTu != null && arretratiTu >= 0 ? arretratiTu : arretratiACarico(d);
+    if (renditaTu != null && renditaTu > 0) avvisi.push(`Rendita catastale: usata la tua correzione (€ ${r2(renditaTu).toLocaleString('it-IT')}) al posto di quella della perizia`);
+    if (arretratiTu != null && arretratiTu >= 0) avvisi.push(`Spese condominiali arretrate: usata la tua correzione (€ ${String(Math.round(arretratiTu)).replace(/\B(?=(\d{3})+(?!\d))/g, '.')}) al posto di quelle della perizia`);
+    const ctx = { params, arv, lavori, reg, mesi, arretrati, renditaTot };
     const offerta = annuncio.offertaMinima;
 
     esito.scenariAlMinimo = {};
@@ -744,8 +755,24 @@
     return esito;
   }
 
+  // Solo il giudizio (classe PULITA…DA_SCARTARE), senza il conto: stesso
+  // percorso di analizzaAsta (normalizza → occupazione → qualità →
+  // regolarizzazione → classificaOperazione), quindi la stessa classe della
+  // Superanalisi. Leggero: il registro lo calcola per ogni card.
+  function giudizioRapido(estrazioneGemini, annuncio, parametriUtente) {
+    const params = merge(PARAMETRI_DEFAULT, parametriUtente || {});
+    const oggi = params.dataRiferimento ? data(params.dataRiferimento) : new Date();
+    const { d } = normalizza(estrazioneGemini);
+    const occ = occupazioneEffettiva(d, annuncio || {});
+    const qualita = qualitaDati(d, oggi);
+    const reg = costoRegolarizzazione(d, params);
+    const c = classificaOperazione(d, occ.stato, qualita, reg, params);
+    return { classe: c.classe, motivi: c.motivi, qualita: qualita.livello };
+  }
+
   return {
     PARAMETRI_DEFAULT,
+    giudizioRapido,
     normalizza,
     qualitaDati,
     superficieCommerciale,
