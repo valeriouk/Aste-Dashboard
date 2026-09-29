@@ -2102,6 +2102,12 @@
   .nota-preferito-bolla:hover { border-color: var(--ink-faint); color: var(--ink-muted); }
   .nota-preferito-editor { display: none; }
   .nota-preferito-editor.aperto { display: block; }
+  /* Nota in lettura: testo intero, scorrevole se lungo; si modifica solo
+     da "✏️ Modifica", mai toccando il testo. */
+  .nota-preferito-lettura { display: none; }
+  .nota-preferito-lettura.aperto { display: block; }
+  .nota-preferito-lettura-testo { white-space: pre-wrap; overflow-wrap: anywhere; max-height: 45vh; overflow-y: auto; overscroll-behavior: contain;
+    background: var(--surface-2); border: 1px solid var(--border); border-radius: 8px; padding: 10px 12px; font-size: .85rem; color: var(--ink); }
   .nota-preferito-editor textarea {
     width: 100%;
     min-height: 64px;
@@ -3566,8 +3572,8 @@
 
   function mostraTooltipNota(bottone) {
     // Niente finestrella su chi naviga a tocco: lì non esiste un vero
-    // passaggio del mouse, e il tocco stesso apre già l'editor con la
-    // nota per intero — questa finestrella non le serve.
+    // passaggio del mouse, e il tocco stesso mostra già la nota per intero
+    // (in sola lettura, vedi toccaNota) — questa finestrella non le serve.
     if (!window.matchMedia("(hover: hover)").matches) return;
     const testo = bottone.dataset.tooltip;
     if (!testo) return;
@@ -4600,10 +4606,66 @@
   function apriEditorNota(bottone) {
     const contenitore = bottone.closest(".nota-preferito");
     contenitore.querySelector(".nota-preferito-bolla").classList.add("nascosto");
+    contenitore.querySelector(".nota-preferito-lettura")?.classList.remove("aperto");
     const editor = contenitore.querySelector(".nota-preferito-editor");
     editor.classList.add("aperto");
-    editor.querySelector("textarea")?.focus();
+    const area = editor.querySelector("textarea");
+    if (area) { area.focus(); area.setSelectionRange(area.value.length, area.value.length); }
   }
+
+  // Tocco sulla nota: se è vuota apre l'editor ("+ Aggiungi una nota"); se ha
+  // un testo lo mostra per intero in sola lettura. Si modifica solo con
+  // "✏️ Modifica": così leggere una nota non rischia di cambiarla.
+  function toccaNota(bolla) {
+    if (!bolla.classList.contains("compilata")) { apriEditorNota(bolla); return; }
+    nascondiTooltipNota();
+    const contenitore = bolla.closest(".nota-preferito");
+    const lettura = contenitore.querySelector(".nota-preferito-lettura");
+    if (!lettura) { apriEditorNota(bolla); return; }
+    bolla.classList.add("nascosto");
+    lettura.classList.add("aperto");
+  }
+
+  function chiudiLetturaNota(bottone) {
+    const contenitore = bottone.closest(".nota-preferito");
+    contenitore.querySelector(".nota-preferito-lettura").classList.remove("aperto");
+    contenitore.querySelector(".nota-preferito-bolla").classList.remove("nascosto");
+  }
+
+  // Invio salva solo su PC (mouse e tastiera); sul telefono va a capo e si
+  // salva col pulsante. Esc = Annulla (con conferma se il testo è cambiato).
+  function tastoNota(evento, area, id) {
+    if (evento.key === "Escape") {
+      evento.preventDefault();
+      annullaEditorNota(area.closest(".nota-preferito").querySelector(".nota-preferito-editor .nota-preferito-annulla"), id);
+      return;
+    }
+    if (evento.key === "Enter" && !evento.shiftKey && window.matchMedia("(hover: hover) and (pointer: fine)").matches) {
+      evento.preventDefault();
+      salvaNotaDaEditor(area, id);
+    }
+  }
+
+  // Annulla: se il testo è cambiato chiede "Scartare le modifiche?" (secondo
+  // tocco entro 4 secondi); poi rimette il testo salvato e chiude l'editor.
+  function annullaEditorNota(bottone, id) {
+    const contenitore = bottone.closest(".nota-preferito");
+    const area = contenitore.querySelector("textarea");
+    const asta = ASTE.find(a => a.id === id);
+    const salvata = (asta && asta.notaPreferito) || "";
+    const chiudi = () => {
+      if (area) area.value = salvata;
+      delete BOZZE_NOTE[id];
+      chiudiEditorNota(bottone);
+    };
+    if (!area || area.value.trim() === salvata.trim()) { chiudi(); return; }
+    richiedeDoppioTocco(`annulla-nota-${id}`, bottone, "Annulla", "Scartare le modifiche?", chiudi);
+  }
+
+  // Testo scritto e non salvato quando si chiude la scheda: resta qui (solo
+  // in memoria, finché la pagina è aperta) e riappare nell'editor riaprendo
+  // la stessa asta.
+  const BOZZE_NOTE = {};
 
   function chiudiEditorNota(bottone) {
     const contenitore = bottone.closest(".nota-preferito");
@@ -4614,6 +4676,9 @@
   function salvaNotaDaEditor(bottone, id) {
     const contenitore = bottone.closest(".nota-preferito");
     const testo = contenitore.querySelector("textarea")?.value.trim() || "";
+    const asta = ASTE.find(a => a.id === id);
+    // testo uguale a quello salvato: niente scrittura, si chiude e basta
+    if (asta && testo === (asta.notaPreferito || "").trim()) { delete BOZZE_NOTE[id]; chiudiEditorNota(bottone); return; }
     richiediPasswordSeServe(() => eseguiSalvaNota(id, testo));
   }
 
@@ -4636,10 +4701,11 @@
   // più in PREFERITI/salva_nota_preferito. Stesso identico schema di
   // eseguiSalvaLinkUtili: aggiornamento ottimistico, {...spread} per non
   // toccare l'altro campo (links) della stessa riga, rollback su errore.
-  async function eseguiSalvaNota(id, testo) {
+  async function eseguiSalvaNota(id, testo, daAnnulla = false) {
     const asta = ASTE.find(a => a.id === id);
     if (!asta) return;
     const precedente = asta.notaPreferito;
+    delete BOZZE_NOTE[id];
 
     asta.notaPreferito = testo;
     LINK_UTILI[id] = {...(LINK_UTILI[id] || {}), nota: testo};
@@ -4648,6 +4714,13 @@
     try {
       const risultato = await accodaScritturaProtetta("salva_nota_asta", {password_tentativo: passwordCorrente, id_annuncio_input: id, nota_input: testo});
       if (risultato.result !== "success") throw new Error(risultato.message || "");
+      // Rete di sicurezza: per 10 secondi "Annulla" rimette il testo di prima.
+      if (daAnnulla) {
+        mostraToast(`${indirizzoTroncato(asta.comune)} — nota ripristinata.`);
+      } else if ((precedente || "") !== testo) {
+        mostraToast(`${indirizzoTroncato(asta.comune)} — nota ${testo ? "salvata" : "eliminata"}.`,
+          {etichetta: "Annulla", callback: () => richiediPasswordSeServe(() => eseguiSalvaNota(id, precedente || "", true))}, 10000);
+      }
     } catch (e) {
       console.error("salva_nota_asta fallita:", e);
       gestisceErroreAzionePassword(e);
@@ -6444,13 +6517,20 @@
     // sulla dichiarazione di LINK_UTILI).
     const notaHtml = `
         <div class="nota-preferito" onclick="event.stopPropagation()" onkeydown="event.stopPropagation()">
-          <button type="button" class="nota-preferito-bolla${a.notaPreferito ? ' compilata' : ''}" onclick="apriEditorNota(this)"${a.notaPreferito ? ` data-tooltip="${escapeAttributo(a.notaPreferito)}" onmouseenter="mostraTooltipNota(this)" onmouseleave="nascondiTooltipNota()"` : ""}>${a.notaPreferito ? escapeHtml(a.notaPreferito) : '+ Aggiungi una nota'}</button>
+          <button type="button" class="nota-preferito-bolla${a.notaPreferito ? ' compilata' : ''}" onclick="toccaNota(this)"${a.notaPreferito ? ` data-tooltip="${escapeAttributo(a.notaPreferito)}" onmouseenter="mostraTooltipNota(this)" onmouseleave="nascondiTooltipNota()"` : ""}>${a.notaPreferito ? escapeHtml(a.notaPreferito) : '+ Aggiungi una nota'}</button>
+          ${a.notaPreferito ? `<div class="nota-preferito-lettura">
+            <div class="nota-preferito-lettura-testo">${escapeHtml(a.notaPreferito)}</div>
+            <div class="nota-preferito-azioni">
+              <button type="button" class="nota-preferito-salva" onclick="apriEditorNota(this)">✏️ Modifica</button>
+              <button type="button" class="nota-preferito-annulla" onclick="chiudiLetturaNota(this)">Chiudi</button>
+            </div>
+          </div>` : ""}
           <div class="nota-preferito-editor">
-            <textarea placeholder="Es. interessante, valuta meglio i costi di ristrutturazione..." onkeydown="if(event.key==='Enter' && !event.shiftKey){ event.preventDefault(); salvaNotaDaEditor(this, '${a.id}'); }">${escapeHtml(a.notaPreferito)}</textarea>
+            <textarea placeholder="Es. interessante, valuta meglio i costi di ristrutturazione..." onkeydown="tastoNota(event, this, '${a.id}')">${escapeHtml(a.notaPreferito)}</textarea>
             <div class="nota-preferito-azioni">
               <button type="button" class="nota-preferito-salva" onclick="salvaNotaDaEditor(this, '${a.id}')">Salva</button>
               ${a.notaPreferito ? `<button type="button" class="nota-preferito-elimina" onclick="eliminaNotaDaEditor(this, '${a.id}')">Elimina</button>` : ""}
-              <button type="button" class="nota-preferito-annulla" onclick="chiudiEditorNota(this)">Annulla</button>
+              <button type="button" class="nota-preferito-annulla" onclick="annullaEditorNota(this, '${a.id}')">Annulla</button>
             </div>
           </div>
         </div>`;
@@ -6525,6 +6605,9 @@ ${notaHtml}
     if (descrizioneApertaId !== id) descrizioneApertaId = null;
     document.getElementById("finestra-dettagli-contenuto").innerHTML = contenutoFinestraDettagli(asta);
     inizializzaMappaDettagli(asta);
+    if (BOZZE_NOTE[id] !== undefined) {
+      ripristinaModificheInSospeso(document.getElementById("finestra-dettagli-contenuto"), {nota: {testo: BOZZE_NOTE[id], inFocus: false}});
+    }
     // "aperto", non più "nascosto" da togliere — vedi il CSS di
     // .overlay-dettagli-asta: parte invisibile di suo (visibility:hidden),
     // e la classe "aperto" fa scattare la transizione verso lo stato
@@ -6580,12 +6663,18 @@ ${notaHtml}
     // textarea prende il fuoco per ultima, e lo tiene.
     setTimeout(() => {
       const bolla = document.querySelector("#finestra-dettagli-contenuto .nota-preferito-bolla");
-      if (bolla) apriEditorNota(bolla);
+      if (bolla) toccaNota(bolla);
     }, 0);
   }
 
   function chiudiDettagliAsta(daCronologia) {
     if (!daCronologia && history.state && history.state.pannello === "dettagli") { history.back(); return; }
+    const areaNotaAperta = document.querySelector("#finestra-dettagli-contenuto .nota-preferito-editor.aperto textarea");
+    const astaChiusa = ASTE.find(a => a.id === idAstaModaleDettagli);
+    if (areaNotaAperta && astaChiusa && areaNotaAperta.value.trim() !== (astaChiusa.notaPreferito || "").trim()) {
+      BOZZE_NOTE[astaChiusa.id] = areaNotaAperta.value;
+      mostraToast(`${indirizzoTroncato(astaChiusa.comune)} — nota non salvata: la ritrovi riaprendo la scheda.`, null, 6000);
+    }
     idAstaModaleDettagli = null;
     rimuoviMappaDettagli();
     document.getElementById("overlay-dettagli-asta").classList.remove("aperto");
@@ -6926,7 +7015,7 @@ ${notaHtml}
       const asta = ASTE.find(a => a.id === idAstaModaleDettagli);
       if (!asta) return;
       const bolla = document.querySelector("#finestra-dettagli-contenuto .nota-preferito-bolla");
-      if (bolla) { evento.preventDefault(); apriEditorNota(bolla); }
+      if (bolla) { evento.preventDefault(); toccaNota(bolla); }
     }
   }
 
@@ -7546,13 +7635,20 @@ ${notaHtml}
     // sulla dichiarazione di LINK_UTILI).
     const notaHtml = `
         <div class="nota-preferito" onclick="event.stopPropagation()" onkeydown="event.stopPropagation()">
-          <button type="button" class="nota-preferito-bolla${a.notaPreferito ? ' compilata' : ''}" onclick="apriEditorNota(this)"${a.notaPreferito ? ` data-tooltip="${escapeAttributo(a.notaPreferito)}" onmouseenter="mostraTooltipNota(this)" onmouseleave="nascondiTooltipNota()"` : ""}>${a.notaPreferito ? escapeHtml(a.notaPreferito) : '+ Aggiungi una nota'}</button>
+          <button type="button" class="nota-preferito-bolla${a.notaPreferito ? ' compilata' : ''}" onclick="toccaNota(this)"${a.notaPreferito ? ` data-tooltip="${escapeAttributo(a.notaPreferito)}" onmouseenter="mostraTooltipNota(this)" onmouseleave="nascondiTooltipNota()"` : ""}>${a.notaPreferito ? escapeHtml(a.notaPreferito) : '+ Aggiungi una nota'}</button>
+          ${a.notaPreferito ? `<div class="nota-preferito-lettura">
+            <div class="nota-preferito-lettura-testo">${escapeHtml(a.notaPreferito)}</div>
+            <div class="nota-preferito-azioni">
+              <button type="button" class="nota-preferito-salva" onclick="apriEditorNota(this)">✏️ Modifica</button>
+              <button type="button" class="nota-preferito-annulla" onclick="chiudiLetturaNota(this)">Chiudi</button>
+            </div>
+          </div>` : ""}
           <div class="nota-preferito-editor">
-            <textarea placeholder="Es. interessante, valuta meglio i costi di ristrutturazione..." onkeydown="if(event.key==='Enter' && !event.shiftKey){ event.preventDefault(); salvaNotaDaEditor(this, '${a.id}'); }">${escapeHtml(a.notaPreferito)}</textarea>
+            <textarea placeholder="Es. interessante, valuta meglio i costi di ristrutturazione..." onkeydown="tastoNota(event, this, '${a.id}')">${escapeHtml(a.notaPreferito)}</textarea>
             <div class="nota-preferito-azioni">
               <button type="button" class="nota-preferito-salva" onclick="salvaNotaDaEditor(this, '${a.id}')">Salva</button>
               ${a.notaPreferito ? `<button type="button" class="nota-preferito-elimina" onclick="eliminaNotaDaEditor(this, '${a.id}')">Elimina</button>` : ""}
-              <button type="button" class="nota-preferito-annulla" onclick="chiudiEditorNota(this)">Annulla</button>
+              <button type="button" class="nota-preferito-annulla" onclick="annullaEditorNota(this, '${a.id}')">Annulla</button>
             </div>
           </div>
         </div>`;

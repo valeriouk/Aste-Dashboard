@@ -693,9 +693,20 @@
 
   <section class="voce" id="registro-nota">
     <h3>Nota personale</h3>
-    <p>Ogni asta può avere una nota, indipendente da stella e scarto. "+ Aggiungi una nota" apre l'editor: <strong>Invio salva</strong>,
-      Maiusc+Invio va a capo; "Elimina" chiede conferma (secondo clic entro 4 secondi). La nota è cercabile, compare nel CSV e nei promemoria dei
-      preferiti. Le azioni in blocco non la toccano.</p>
+    <p>Ogni asta può avere una nota, indipendente da stella e scarto. La nota è cercabile, compare nel CSV e nei promemoria dei preferiti. Le azioni
+      in blocco non la toccano.</p>
+    <ul>
+      <li><strong>Nota vuota</strong>: "+ Aggiungi una nota" apre subito l'editor.</li>
+      <li><strong>Nota scritta</strong>: toccandola si <strong>legge</strong> per intero (riquadro scorrevole se è lunga), senza poterla cambiare. Si
+        modifica solo con <strong>"✏️ Modifica"</strong>; "Chiudi" la richiude. Su PC resta anche l'anteprima passando col mouse.</li>
+      <li><strong>Salvare</strong>: pulsante "Salva". Su PC anche <strong>Invio</strong> (Maiusc+Invio va a capo); sul telefono Invio va sempre a capo, così
+        non si salva per sbaglio. Se il testo non è cambiato non viene scritto niente.</li>
+      <li><strong>Annulla / Esc</strong>: se hai cambiato il testo chiede "Scartare le modifiche?" (secondo tocco entro 4 secondi), poi rimette il testo salvato.</li>
+      <li><strong>"Elimina"</strong> chiede conferma (secondo clic entro 4 secondi).</li>
+      <li><strong>Dopo ogni salvataggio o eliminazione</strong> compare un messaggio con <strong>"Annulla"</strong> per 10 secondi: rimette il testo di prima.</li>
+      <li><strong>Chiudendo la scheda con una nota scritta e non salvata</strong> il testo non si perde: riaprendo la stessa asta ritrovi l'editor con la
+        bozza (finché la pagina resta aperta).</li>
+    </ul>
   </section>
 
   <section class="voce" id="registro-visite">
@@ -881,7 +892,8 @@
     <h3>Scorciatoie da tastiera e gesti</h3>
     <ul>
       <li>Nella finestra dei dettagli: <strong>← / →</strong> asta precedente o successiva (nell'ordine dell'elenco al momento dell'apertura; ai bordi si
-        ferma), <strong>S</strong> stella, <strong>X</strong> scarto, <strong>Invio</strong> nota, <strong>Esc</strong> chiude.</li>
+        ferma), <strong>S</strong> stella, <strong>X</strong> scarto, <strong>Invio</strong> nota (apre l'editor se è vuota, altrimenti la mostra in lettura),
+        <strong>Esc</strong> chiude.</li>
       <li>Su telefono: la finestra si chiude trascinandola in giù; il registro si ricarica trascinando la pagina in giù dall'alto; il pulsante "Filtri" apre
         un pannello con tutti i filtri (il numero indica quanti tipi di filtro sono attivi), con il titolo "Ordina per" sopra l'ordinamento e in fondo
         "Mostra N aste", che chiude il pannello e dice quante aste passano i filtri scelti. Sul telefono i campi di testo sono abbastanza grandi da non far
