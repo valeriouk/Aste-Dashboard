@@ -1032,6 +1032,11 @@
     <p>Avvia subito un giro completo dello scanner con i filtri attuali, anche se la pianificazione è in pausa o non è l'orario: ricerca su PVP, analisi
       Gemini (subito o in batch, secondo le impostazioni), notifiche, poi ricontrollo perizie, storico delle aste e OMI. <strong>Consuma Gemini</strong> per le aste nuove
       e minuti GitHub. Messaggi: "Avvio in corso…", "Scanner avviato." (con eventuale link "Apri esecuzione"), oppure l'errore.</p>
+    <p>Vale anche per "Controlla batch ora" e "Controlla preferiti ora": dopo l'avvio la pagina aspetta fino a circa 20 secondi che GitHub mostri
+      l'esecuzione. Se compare: "Avviato — esecuzione confermata su GitHub" con "Apri esecuzione". Se GitHub è lento a mostrarla (succede): "Avvio
+      accettato da GitHub; l'esecuzione non è ancora comparsa nell'elenco… Controlla tra un minuto", con il link all'elenco delle esecuzioni: non è un
+      errore, di solito il giro è partito. Se un'esecuzione dello stesso tipo è già in corso o in coda, non ne parte un'altra: "Un'esecuzione è già in
+      corso — attendi che finisca".</p>
   </section>
 
   <section class="voce" id="config-controlla-batch">
