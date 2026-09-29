@@ -2324,6 +2324,14 @@
     border: none; border-radius: 999px; padding: 6px 12px; min-height: 32px; cursor: pointer; white-space: nowrap; }
   .indice-dettagli button:hover { color: var(--ink); }
   .indice-dettagli button.attiva { background: var(--ink); color: var(--surface); }
+  /* Descrizione del lotto: prime 4 righe, "Mostra tutto" solo se è più lunga */
+  .descrizione-lotto:not(.aperta) { display: -webkit-box; -webkit-line-clamp: 4; -webkit-box-orient: vertical; overflow: hidden; }
+  .mostra-descrizione { font: inherit; font-size: .8rem; font-weight: 600; color: var(--secondary); background: none; border: none;
+    padding: 8px 0 0; cursor: pointer; }
+  @media print {
+    .descrizione-lotto { display: block !important; -webkit-line-clamp: none !important; overflow: visible !important; }
+    .mostra-descrizione { display: none !important; }
+  }
   .azioni-rapide-dettagli { display: flex; flex-wrap: wrap; gap: 8px; margin: 0 0 16px; }
   .azioni-rapide-dettagli .lotto-link { margin: 0; min-height: 40px; }
   .sezione-dettagli { scroll-margin-top: 12px; }
@@ -3798,6 +3806,7 @@
         contenitore.innerHTML = contenutoFinestraDettagli(asta);
         ripristinaModificheInSospeso(contenitore, inSospeso);
         inizializzaMappaDettagli(asta, vistaMappa);
+        preparaDescrizioneLotto();
         aggiornaVoceIndice();
       }
     }
@@ -6513,6 +6522,7 @@ ${notaHtml}
       sequenzaNavigazioneDettagli = ultimoElencoFiltrato.map(a => a.id);
     }
     idAstaModaleDettagli = id;
+    if (descrizioneApertaId !== id) descrizioneApertaId = null;
     document.getElementById("finestra-dettagli-contenuto").innerHTML = contenutoFinestraDettagli(asta);
     inizializzaMappaDettagli(asta);
     // "aperto", non più "nascosto" da togliere — vedi il CSS di
@@ -6527,6 +6537,7 @@ ${notaHtml}
     sezioneSceltaIndice = null;
     bloccoVoceIndiceFinoA = 0;
     aggiornaIntestazioneCompatta();
+    preparaDescrizioneLotto();
     // Un passo nella cronologia (#ID): il tasto Indietro del telefono chiude
     // la scheda invece di uscire dal registro. Passando da un'asta all'altra
     // (frecce) o dal confronto il passo si sostituisce, non si accumula.
@@ -7573,6 +7584,11 @@ ${notaHtml}
             <p class="cifra-valore">${escapeHtml(a.statoOccupazione)}</p>
           </div>
         </div>`],
+      ["sez-descrizione", "Descrizione", a.descrizione ? `<div class="sezione-costi">
+          <h3 class="sezione-costi-titolo">📝 Descrizione del lotto</h3>
+          <div class="lotto-note descrizione-lotto${descrizioneApertaId === a.id ? " aperta" : ""}">${escapeHtml(a.descrizione)}</div>
+          <button type="button" class="mostra-descrizione nascosto" onclick="alternaDescrizioneLotto(this)">${descrizioneApertaId === a.id ? "Mostra meno" : "Mostra tutto"}</button>
+        </div>` : ""],
       ["sez-rischi", "Rischi", a.note ? `<div class="sezione-costi">
           <h3 class="sezione-costi-titolo">⚠️ Rischi e note dell'AI</h3>
           <div class="lotto-note">${escapeHtml(a.note)}</div>
@@ -7601,10 +7617,6 @@ ${notaHtml}
         </div>` : ""],
       ["sez-ai", "AI", sezioneSuperanalisiEsterne(a)],
       ["sez-link", "Link e foto", bloccoLinkUtili(a)],
-      ["sez-descrizione", "Descrizione", a.descrizione ? `<div class="sezione-costi">
-          <h3 class="sezione-costi-titolo">📝 Descrizione del lotto</h3>
-          <div class="lotto-note">${escapeHtml(a.descrizione)}</div>
-        </div>` : ""],
     ].filter(([, , html]) => html && html.trim());
 
     return `
@@ -7656,7 +7668,7 @@ ${notaHtml}
           <button type="button" class="finestra-dettagli-chiudi" onclick="chiudiDettagliAsta()" aria-label="Chiudi">×</button>
         </div>
         <nav class="indice-dettagli" aria-label="Sezioni della scheda">
-          ${sezioni.filter(([id]) => id !== "sez-descrizione").map(([id, titolo]) => `<button type="button" data-sez="${id}" onclick="vaiASezioneDettagli('${id}')">${titolo}</button>`).join("")}
+          ${sezioni.map(([id, titolo]) => `<button type="button" data-sez="${id}" onclick="vaiASezioneDettagli('${id}')">${titolo}</button>`).join("")}
         </nav>
       </div>
       <div class="finestra-dettagli-corpo">
@@ -7686,6 +7698,23 @@ ${notaHtml}
     bloccoVoceIndiceFinoA = Date.now() + 900;   // niente lampeggi sulle voci attraversate
     evidenziaVoceIndice(id);
     finestra.scrollTo({top: Math.max(0, alto), behavior: "smooth"});
+  }
+
+  // Descrizione del lotto: "Mostra tutto" compare solo se il testo supera le
+  // 4 righe; aperta resta aperta anche se la scheda si ridisegna (salvataggi).
+  let descrizioneApertaId = null;
+  function preparaDescrizioneLotto() {
+    const testo = document.querySelector(".finestra-dettagli-asta .descrizione-lotto");
+    if (!testo) return;
+    const bottone = testo.parentElement.querySelector(".mostra-descrizione");
+    const lunga = testo.classList.contains("aperta") || testo.scrollHeight > testo.clientHeight + 2;
+    bottone.classList.toggle("nascosto", !lunga);
+  }
+  function alternaDescrizioneLotto(bottone) {
+    const testo = bottone.parentElement.querySelector(".descrizione-lotto");
+    const aperta = testo.classList.toggle("aperta");
+    bottone.textContent = aperta ? "Mostra meno" : "Mostra tutto";
+    descrizioneApertaId = aperta ? idAstaModaleDettagli : null;
   }
 
   // Voce dell'indice evidenziata = sezione che si sta guardando: quella la
