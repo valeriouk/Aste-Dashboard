@@ -3643,8 +3643,17 @@
   // stessa.
   let codaScrittureProtette = Promise.resolve();
 
+  // Contano le scritture in corso e quelle fatte: aggiornaAstaDalDatabase
+  // scarta una lettura arrivata mentre salvavi qualcosa (non deve rimettere
+  // il valore di prima sopra quello appena scritto).
+  let scrittureInCorso = 0;
+  let versioneScritture = 0;
   function accodaScritturaProtetta(nomeFunzione, payload) {
+    scrittureInCorso++;
+    versioneScritture++;
     const richiesta = codaScrittureProtette.then(() => chiamaRpc(nomeFunzione, payload));
+    const fine = () => { scrittureInCorso--; };
+    richiesta.then(fine, fine);
     // .catch(()=>{}) SOLO per non interrompere la coda per le richieste
     // successive se questa fallisce — l'errore vero arriva comunque a
     // chi ha chiamato accodaScritturaProtetta tramite "richiesta" stessa,
@@ -5203,6 +5212,75 @@
     ]);
   }
 
+  // Mette i dati personali (letti con leggi_dati_personali) nelle mappe
+  // usate da applicaStatoPreferito. Usata all'avvio e da aggiornaAstaDalDatabase.
+  function impostaDatiPersonali(righePreferiti, righeLinkUtili, righeVisite, righeSuperanalisi) {
+    SUPERANALISI_ESTERNE = {};
+    righeSuperanalisi.forEach(v => (v.id_annunci || []).forEach(id => {
+      (SUPERANALISI_ESTERNE[String(id)] = SUPERANALISI_ESTERNE[String(id)] || []).push(v);
+    }));
+    VISITE = {};
+    righeVisite.forEach(v => { if (v.id_annuncio !== null && v.id_annuncio !== undefined) VISITE[String(v.id_annuncio)] = v; });
+    // stato soltanto: la nota non vive più qui, vedi il commento sulla
+    // dichiarazione di LINK_UTILI più sopra.
+    PREFERITI = {};
+    righePreferiti.forEach(r => {
+      const id = r.id_annuncio;
+      if (id !== null && id !== undefined) PREFERITI[String(id)] = {stato: r.stato || ""};
+    });
+    // nota E link insieme, stessa riga della tabella — indipendenti da
+    // PREFERITI, disponibili per QUALSIASI asta.
+    LINK_UTILI = {};
+    righeLinkUtili.forEach(r => {
+      const id = r.id_annuncio;
+      if (id !== null && id !== undefined) LINK_UTILI[String(id)] = {links: Array.isArray(r.links) ? r.links : [], nota: r.nota || ""};
+    });
+  }
+
+  // Aprendo i dettagli (e tornando al registro da un'altra pagina, per
+  // esempio dalla Superanalisi) rilegge dal database quell'asta e i dati
+  // personali: le modifiche fatte altrove (lavori, valore di rivendita,
+  // risultati AI, visite…) compaiono senza ricaricare il registro. In
+  // silenzio: se la lettura non riesce resta la versione già mostrata. La
+  // scheda si ridisegna solo se qualcosa è davvero cambiato.
+  async function aggiornaAstaDalDatabase(id) {
+    if (!id || !SUPABASE_URL || SUPABASE_URL.indexOf("INCOLLA_QUI") > -1) return;
+    const versione = versioneScritture;
+    const password = passwordLetturaCorrente || leggiPasswordLetturaRicordata() || "";
+    const leggi = (funzione, corpo, filtri = "") =>
+      fetch(`${SUPABASE_URL}/rest/v1/rpc/${funzione}${filtri}`, {
+        method: "POST",
+        headers: {"apikey": SUPABASE_ANON_KEY, "Authorization": `Bearer ${SUPABASE_ANON_KEY}`, "Content-Type": "application/json"},
+        body: JSON.stringify(corpo),
+      }).then(r => { if (!r.ok) throw new Error(`HTTP ${r.status}`); return r.json(); });
+    try {
+      const [righe, personali] = await Promise.all([
+        leggi("leggi_aste", {password_tentativo: password, tipo: "lettura"}, `?select=*&id_annuncio=eq.${encodeURIComponent(id)}`),
+        leggi("leggi_dati_personali", {password_tentativo: password}),
+      ]);
+      // una scrittura partita nel frattempo vince sulla lettura
+      if (scrittureInCorso > 0 || versione !== versioneScritture) return;
+      if (!Array.isArray(righe) || !righe.length || !personali || !personali.ok) return;
+      const asta = ASTE.find(a => a.id === id);
+      if (!asta) return;
+      const firma = () => JSON.stringify({...asta, _giudizio: undefined});
+      const prima = firma();
+      impostaDatiPersonali(personali.preferiti || [], personali.link_utili || [], personali.visite || [], personali.superanalisi_esterne || []);
+      Object.assign(asta, normalizzaRiga(righe[0]));
+      asta._giudizio = undefined;   // giudizio della Superanalisi da ricalcolare
+      applicaStatoPreferito(asta);
+      if (firma() !== prima) aggiornaCardSingola(id);
+    } catch (e) {
+      /* rete o password: resta la versione già mostrata */
+    }
+  }
+
+  // Ritorno con il tasto Indietro: il browser rimostra il registro com'era
+  // (con i dati di prima): si aggiorna la scheda aperta.
+  window.addEventListener("pageshow", (evento) => {
+    if (evento.persisted && idAstaModaleDettagli !== null) aggiornaAstaDalDatabase(idAstaModaleDettagli);
+  });
+
   function avvia() {
     if (!SUPABASE_URL || SUPABASE_URL.indexOf("INCOLLA_QUI") > -1) {
       mostraStato("stato-non-configurato");
@@ -5266,26 +5344,7 @@
       conTimeoutRipiego(promessaVisite, 8000, []),
       conTimeoutRipiego(promessaSuperanalisi, 8000, [])
     ]).then(([righeAste, righePreferiti, righeLinkUtili, righeVisite, righeSuperanalisi]) => {
-      SUPERANALISI_ESTERNE = {};
-      righeSuperanalisi.forEach(v => (v.id_annunci || []).forEach(id => {
-        (SUPERANALISI_ESTERNE[String(id)] = SUPERANALISI_ESTERNE[String(id)] || []).push(v);
-      }));
-      VISITE = {};
-      righeVisite.forEach(v => { if (v.id_annuncio !== null && v.id_annuncio !== undefined) VISITE[String(v.id_annuncio)] = v; });
-      // stato soltanto: la nota non vive più qui, vedi il commento sulla
-      // dichiarazione di LINK_UTILI più sopra.
-      PREFERITI = {};
-      righePreferiti.forEach(r => {
-        const id = r.id_annuncio;
-        if (id !== null && id !== undefined) PREFERITI[String(id)] = {stato: r.stato || ""};
-      });
-      // nota E link insieme, stessa riga della tabella — indipendenti da
-      // PREFERITI, disponibili per QUALSIASI asta.
-      LINK_UTILI = {};
-      righeLinkUtili.forEach(r => {
-        const id = r.id_annuncio;
-        if (id !== null && id !== undefined) LINK_UTILI[String(id)] = {links: Array.isArray(r.links) ? r.links : [], nota: r.nota || ""};
-      });
+      impostaDatiPersonali(righePreferiti, righeLinkUtili, righeVisite, righeSuperanalisi);
       ASTE = righeAste.map(normalizzaRiga).map(applicaStatoPreferito);
       document.getElementById("testo-aggiornato").textContent =
         new Date().toLocaleTimeString("it-IT", { hour: "2-digit", minute: "2-digit" });
@@ -6669,6 +6728,7 @@ ${notaHtml}
     bloccoVoceIndiceFinoA = 0;
     aggiornaIntestazioneCompatta();
     preparaDescrizioneLotto();
+    aggiornaAstaDalDatabase(id);   // modifiche fatte altrove (Superanalisi…), in silenzio
     // Un passo nella cronologia (#ID): il tasto Indietro del telefono chiude
     // la scheda invece di uscire dal registro. Passando da un'asta all'altra
     // (frecce) o dal confronto il passo si sostituisce, non si accumula.
