@@ -1,6 +1,6 @@
 /**
- * menu.js — menu uguale in tutte le pagine (Registro · Statistiche ·
- * Configurazione · Manuale) e ritorno alla pagina precedente.
+ * menu.js — menu uguale in tutte le pagine (Registro · Configurazione ·
+ * Statistiche · Manuale) e ritorno alla pagina precedente.
  *
  * Va incluso come PRIMO elemento del <body>: aggiunge in cima una barra
  * sottile (che scorre via con la pagina) ed evidenzia la pagina attuale.
@@ -17,8 +17,8 @@
 
   const VOCI = [
     { pagina: 'index.html', testo: 'Registro' },
-    { pagina: 'statistiche.html', testo: 'Statistiche' },
     { pagina: 'config.html', testo: 'Configurazione' },
+    { pagina: 'statistiche.html', testo: 'Statistiche' },
     { pagina: 'manuale.html', testo: 'Manuale' },
   ];
 
