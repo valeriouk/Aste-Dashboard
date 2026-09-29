@@ -32,6 +32,13 @@ button, .bottone, .pulsante-ai, .link-torna { -webkit-user-select: none; user-se
   .overlay-modale { -webkit-backdrop-filter: blur(3px); backdrop-filter: blur(3px); }
 }
 
+/* Transizioni tra le pagine: la pagina nuova entra con una breve dissolvenza
+   (Safari iOS 18.2+, Chrome recente; altrove il cambio di pagina di sempre).
+   Serve la stessa regola in tutte e due le pagine: è anche nel registro. */
+@view-transition { navigation: auto; }
+::view-transition-old(root), ::view-transition-new(root) { animation-duration: .22s; }
+@media (prefers-reduced-motion: reduce) { @view-transition { navigation: none; } }
+
 @media print {
   .sezione, .card-riepilogo, .blocco-semplice, .scheda-statistica, .foglio { box-shadow: none !important; }
 }
