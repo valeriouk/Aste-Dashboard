@@ -318,6 +318,7 @@
     margin-bottom: 6px;
   }
   .campo-form input[type="text"],
+  .campo-form input[type="password"],
   .campo-form input[type="number"],
   .campo-form input[type="time"],
   .campo-form select {
@@ -513,12 +514,6 @@
         <span id="messaggio-azioni-principali"></span>
       </div>
 
-      <div class="barra-ripristino">
-        <button type="button" class="bottone-secondario" id="bottone-ripristina-predefiniti" onclick="confermaRipristinaPredefiniti()">↺ Ripristina tutti i valori predefiniti</button>
-        <p class="nota-campo">Riporta tutte le sette card qui sotto — area, prezzo, tipologia, altri filtri, modelli, pianificazione (lun-ven alle 10:00) e ricerca della perizia (estesa, con ricontrollo ogni 2 giorni, massimo 15 aste per giro) — ai valori predefiniti. La scelta del prompt (v1/v2) resta com'è. Salva subito, come ogni altra modifica in questa pagina.</p>
-        <p id="messaggio-ripristina-predefiniti" class="messaggio-salvataggio-card"></p>
-      </div>
-
       <div class="elenco-card">
         <div class="card-riepilogo">
           <div class="card-riepilogo-testo">
@@ -579,6 +574,12 @@
 
       </div>
 
+      <div class="barra-ripristino">
+        <button type="button" class="bottone-secondario" id="bottone-ripristina-predefiniti" onclick="confermaRipristinaPredefiniti()">↺ Ripristina tutti i valori predefiniti</button>
+        <p class="nota-campo">Riporta tutte le sette card qui sopra — area, prezzo, tipologia, altri filtri, modelli, pianificazione (lun-ven alle 10:00) e ricerca della perizia (estesa, con ricontrollo ogni 2 giorni, massimo 15 aste per giro) — ai valori predefiniti. La scelta del prompt (v1/v2) resta com'è. Salva subito, come ogni altra modifica in questa pagina.</p>
+        <p id="messaggio-ripristina-predefiniti" class="messaggio-salvataggio-card"></p>
+      </div>
+
       <section class="blocco-semplice">
         <h2>Manutenzione</h2>
         <p class="nota-campo">Elimina dal registro le aste con data vendita già passata. Prima mostra quante sono e quante hanno visite, note/link o risultati AI, e ti fa scegliere se tenere quelle. Operazione irreversibile.</p>
@@ -589,7 +590,7 @@
 
       <section class="blocco-semplice">
         <h2>Cambia password</h2>
-        <p class="nota-campo">Un'unica password protegge sia questa pagina sia preferiti/scarti/note su index.html — cambiarla qui vale per entrambe, subito.</p>
+        <p class="nota-campo">La password di scrittura protegge questa pagina, Statistiche, Superanalisi e ogni modifica nel registro (stelle, scarti, note, link, visite): cambiarla qui vale ovunque, subito.</p>
         <form onsubmit="return false;">
           <div class="campo-form">
             <label for="campo-password-attuale">Password attuale</label>
@@ -609,13 +610,13 @@
       </section>
 
       <section class="blocco-semplice">
-        <h2>Password di lettura per index.html</h2>
-        <p class="nota-campo">Password SEPARATA da quella sopra — se attiva, serve per aprire il registro (index.html) stesso, non solo per stella/scarto/nota. Facoltativa: se disattivata, index.html resta apribile da chiunque abbia il link.</p>
+        <h2>Password di lettura del registro</h2>
+        <p class="nota-campo">Password SEPARATA da quella sopra — se attiva, serve per aprire il registro e leggerne i dati, non solo per stella/scarto/nota. Facoltativa: se disattivata, il registro resta apribile da chiunque abbia il link.</p>
         <form onsubmit="return false;">
           <div class="campo-form">
             <label class="etichetta-checkbox">
               <input type="checkbox" id="campo-attiva-password-lettura" onchange="alternaCampoPasswordLettura()">
-              Richiedi una password per aprire index.html
+              Richiedi una password per aprire il registro
             </label>
           </div>
           <div class="campo-form" id="blocco-nuova-password-lettura">
@@ -930,7 +931,7 @@
     try {
       risultato = await chiamaRpc("verifica_password", {password_tentativo: password});
     } catch (e) {
-      erroreEl.textContent = "Impossibile contattare Supabase. Controlla SUPABASE_URL in cima a questo file.";
+      erroreEl.textContent = "Impossibile contattare il database: controlla la connessione e riprova.";
       erroreEl.classList.remove("nascosto");
       return;
     }
@@ -1193,7 +1194,7 @@
       renderizzaTuttiIRiepiloghi();
       caricaStatoEsecuzioniPianificazione();
     } catch (e) {
-      statoEl.textContent = "Impossibile leggere la configurazione attuale. Controlla SUPABASE_URL in cima a questo file.";
+      statoEl.textContent = "Impossibile leggere la configurazione attuale: controlla la connessione e ricarica la pagina.";
     }
   }
 
@@ -1896,7 +1897,7 @@
         document.getElementById("campo-password-attuale").value = "";
         document.getElementById("campo-password-nuova").value = "";
         document.getElementById("campo-password-conferma").value = "";
-        messaggioEl.textContent = "Password cambiata — vale da subito, anche per preferiti/scarti/note su index.html.";
+        messaggioEl.textContent = "Password cambiata — vale da subito ovunque (registro, Superanalisi, Statistiche).";
         messaggioEl.className = "messaggio-ok";
       } else {
         messaggioEl.textContent = risultato.message || "Errore sconosciuto durante il cambio password.";
@@ -1955,7 +1956,7 @@
       if (risultato.result === "success") {
         passwordLetturaEraAttiva = attivaOra;
         document.getElementById("campo-nuova-password-lettura").value = "";
-        messaggioEl.textContent = attivaOra ? "Password di lettura attivata/aggiornata." : "Password di lettura disattivata — index.html torna apribile da chiunque abbia il link.";
+        messaggioEl.textContent = attivaOra ? "Password di lettura attivata/aggiornata." : "Password di lettura disattivata — il registro torna apribile da chiunque abbia il link.";
         messaggioEl.className = "messaggio-ok";
       } else {
         messaggioEl.textContent = risultato.message || "Errore sconosciuto durante il salvataggio.";

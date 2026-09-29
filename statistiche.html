@@ -307,7 +307,7 @@
           <label for="costo-medio-perizia">Costo medio assunto a perizia (€)</label>
           <input type="number" id="costo-medio-perizia" step="0.001" min="0" value="0.01" onchange="alCambioCostoAssunto()">
         </div>
-        <p class="sezione-nota">Stima, non un dato reale: Gemini fattura a token e questa pagina non registra i token di ogni chiamata (per scelta, per non toccare app.py). Regola questo numero se controlli il consumo reale su Google AI Studio e trovi una media diversa — resta solo su questo browser, non viene salvato su Supabase.</p>
+        <p class="sezione-nota">Stima, non un dato reale: Gemini fattura a token e il sistema non registra i token di ogni chiamata. Se controlli il consumo reale su Google AI Studio e trovi una media diversa, correggi questo numero: resta solo su questo browser, non viene salvato nel database.</p>
 
         <div style="margin-top:22px; padding-top:18px; border-top:1px solid var(--border);">
           <div class="riga-form-due">
@@ -340,7 +340,7 @@
 
       <div class="sezione">
         <h2 class="sezione-titolo">Visite</h2>
-        <h3 style="font-family:var(--font-body);font-size:.85rem;font-weight:600;color:var(--ink-muted);margin:0 0 8px;">Registro (index.html)</h3>
+        <h3 style="font-family:var(--font-body);font-size:.85rem;font-weight:600;color:var(--ink-muted);margin:0 0 8px;">Registro</h3>
         <div id="barre-visite-index"></div>
         <h3 style="font-family:var(--font-body);font-size:.85rem;font-weight:600;color:var(--ink-muted);margin:16px 0 8px;">Configurazione (config.html)</h3>
         <div id="barre-visite-config"></div>
@@ -420,7 +420,7 @@
     try {
       risultato = await chiamaRpc("verifica_password", {password_tentativo: password});
     } catch (e) {
-      erroreEl.textContent = "Impossibile contattare Supabase.";
+      erroreEl.textContent = "Impossibile contattare il database: controlla la connessione e riprova.";
       erroreEl.classList.remove("nascosto");
       return;
     }
@@ -679,7 +679,7 @@
       ULTIME_RICARICHE = Array.isArray(ricaricheAggiornate) ? ricaricheAggiornate : [];
       renderizzaRicariche();
     } catch (e) {
-      msgEl.textContent = "Impossibile contattare Supabase.";
+      msgEl.textContent = "Impossibile contattare il database: controlla la connessione e riprova.";
       msgEl.classList.add("messaggio-errore");
     } finally {
       bottone.disabled = false;
