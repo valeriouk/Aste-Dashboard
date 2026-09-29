@@ -1199,7 +1199,10 @@
   }
 
   function formattaEuro(numero) {
-    return new Intl.NumberFormat("it-IT").format(numero);
+    // interi con il punto delle migliaia sempre ("1.500"); decimali come prima
+    const n = Number(numero);
+    if (!Number.isInteger(n)) return new Intl.NumberFormat("it-IT").format(numero);
+    return (n < 0 ? "-" : "") + String(Math.abs(Math.round(n))).replace(/\B(?=(\d{3})+(?!\d))/g, ".");
   }
 
   async function renderizzaRiepilogoArea() {

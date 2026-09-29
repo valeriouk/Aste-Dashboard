@@ -723,7 +723,8 @@
       ['A', 'B'].includes(qualita.livello) && inZonaTarget !== false && arv.affidabilita !== 'bassa';
     esito.punteggio = punteggioCompatibile(esito.classe, h, qualita.livello);
 
-    const eur = (x) => `€${Math.round(x).toLocaleString('it-IT')}`;
+    // punto delle migliaia sempre, anche a 4 cifre ("€ 1.500"), come nelle pagine
+    const eur = (x) => { const n = Math.round(x); return `€ ${n < 0 ? '-' : ''}${String(Math.abs(n)).replace(/\B(?=(\d{3})+(?!\d))/g, '.')}`; };
     const tgt = params.utileTargetPct != null
       ? `${Math.round(params.utileTargetPct * 100)}% ${params.targetNetto ? 'netto' : 'lordo'} sul capitale`
       : `${eur(params.utileTarget)} ${params.targetNetto ? 'netti' : 'lordi'}`;

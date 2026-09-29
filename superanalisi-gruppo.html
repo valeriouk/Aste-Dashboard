@@ -192,7 +192,8 @@
   // Anche le virgolette: il testo finisce pure dentro attributi (href, title).
   function escapeHtml(t) { const d = document.createElement("div"); d.textContent = t === null || t === undefined ? "" : String(t); return d.innerHTML.replace(/"/g, "&quot;").replace(/'/g, "&#39;"); }
   const vuoto = (v) => v === null || v === undefined || v === "" || (Array.isArray(v) && !v.length);
-  function eur(v) { const n = Number(v); return vuoto(v) || !Number.isFinite(n) ? "—" : "€ " + Math.round(n).toLocaleString("it-IT"); }
+  // punto delle migliaia sempre, anche a 4 cifre ("€ 1.500", non "€ 1500")
+  function eur(v) { const n = Number(v); return vuoto(v) || !Number.isFinite(n) ? "—" : "€ " + (Math.round(n) < 0 ? "-" : "") + String(Math.abs(Math.round(n))).replace(/\B(?=(\d{3})+(?!\d))/g, "."); }
   function testo(v) { return vuoto(v) ? "—" : String(v).replace(/_/g, " "); }
   const pct = (x) => x == null || !Number.isFinite(x) ? "—" : `${Math.round(x * 100)}%`;
 

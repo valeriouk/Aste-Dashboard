@@ -2466,7 +2466,7 @@
       <p class="eyebrow">Scansione Aste Giudiziarie</p>
       <h1><a href="index.html" title="Ricarica il registro" style="color:inherit;text-decoration:none;">Registro Opportunità</a></h1>
       <p class="sottotitolo">Aste residenziali filtrate per prezzo, distanza e margine potenziale stimato.</p>
-      <p class="versione-pagina">v2.22 · aggiornato <strong id="testo-aggiornato">—</strong></p>
+      <p class="versione-pagina">v2.22 · letto alle <strong id="testo-aggiornato">—</strong></p>
     </div>
     <div class="statistiche-compatte">
       <div class="stat-compatta">
@@ -3536,7 +3536,8 @@
 
   function formattaEuro(n) {
     if (n === null || n === undefined || isNaN(n)) return "—";
-    return "€ " + n.toLocaleString("it-IT", { minimumFractionDigits: 0, maximumFractionDigits: 0 });
+    // punto delle migliaia sempre, anche a 4 cifre ("€ 1.500", non "€ 1500")
+    return "€ " + (Math.round(n) < 0 ? "-" : "") + String(Math.abs(Math.round(n))).replace(/\B(?=(\d{3})+(?!\d))/g, ".");
   }
 
   function escapeHtml(testo) {

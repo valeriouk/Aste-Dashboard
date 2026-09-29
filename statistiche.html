@@ -524,7 +524,7 @@
     daRiprovareEl.textContent = s.da_riprovare ?? "—";
     daRiprovareEl.classList.toggle("attenzione", (s.da_riprovare || 0) > 0);
     document.getElementById("num-punteggio-medio").textContent = s.punteggio_medio != null ? s.punteggio_medio : "—";
-    document.getElementById("num-margine-medio").textContent = s.margine_medio != null ? `€ ${Number(s.margine_medio).toLocaleString("it-IT")}` : "—";
+    document.getElementById("num-margine-medio").textContent = s.margine_medio != null ? `€ ${((n) => (Math.round(n) < 0 ? "-" : "") + String(Math.abs(Math.round(n))).replace(/\B(?=(\d{3})+(?!\d))/g, "."))(Number(s.margine_medio))}` : "—";
 
     listaBarre("barre-tipologia", s.per_tipologia, "tipologia", "n");
     listaBarre("barre-tribunale", s.per_tribunale, "tribunale", "n");
