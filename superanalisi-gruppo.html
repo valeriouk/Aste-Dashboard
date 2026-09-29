@@ -432,23 +432,37 @@
     };
   }
 
+  // Prompt rivisto il 29/09/2026 (come quello di superanalisi.html): dati
+  // incoerenti da segnalare, giudizi definiti, risposta con titoli fissi e
+  // prima riga "Classifica: ID, …" letta da superanalisi-esterne.js.
   function costruisciPrompt() {
     const blocchi = RISULTATI.map((v, i) => {
       const d = datiAsta(v);
       return [`ASTA ${i + 1}`, ...Object.entries(d).filter(([, x]) => !vuoto(x)).map(([k, x]) => `- ${k}: ${x}`)].join("\n");
     });
     return [
-      `Sono un investitore che compra immobili alle aste giudiziarie italiane per ristrutturarli e rivenderli. Ti do ${RISULTATI.length} aste già preselezionate, con i dati estratti in automatico dalle perizie (possono contenere errori) e un nostro conto indicativo.`,
+      `Sei un consulente esperto di aste giudiziarie immobiliari italiane. Compro all'asta per ristrutturare e rivendere. Ti do ${RISULTATI.length} aste già preselezionate, con i dati estratti in automatico dalle perizie (possono contenere errori) e il nostro conto indicativo (\"Nostra rivendita centrale\", \"Nostro utile netto %\", \"Nostra offerta massima\", \"Nostro giudizio\").`,
       "",
       ...blocchi.flatMap((b) => [b, ""]),
-      "Compiti:",
-      "1. Per ogni asta cerca annunci di vendita attuali nella stessa zona (stessa tipologia, superficie simile) su portali come immobiliare.it, idealista.it, casa.it, e indica 2-3 annunci con link e €/mq. Da questi stima un prezzo di vendita realistico dopo la ristrutturazione. Se non trovi annunci, scrivi \"non trovati\" e usa l'OMI indicato: non inventare annunci o link.",
-      "2. Se riesci ad aprire il link della perizia, controlla i dati principali (quota, superficie, occupazione, abusi e costi, valore del CTU) e segnala quelli errati. Dichiara per quali aste hai letto davvero la perizia.",
-      "3. Stima i costi (acquisto all'offerta minima, imposte, lavori, regolarizzazione, arretrati, vendita) e il margine netto.",
-      "4. Elenca i rischi principali di ogni asta (occupazione, abusi, quota, condominio, stato, tempi).",
-      "5. Tabella finale ordinata dalla migliore alla peggiore per un'operazione di ristrutturazione e rivendita (in alto le più pulite e con più margine), con colonne: posizione, ID, indirizzo, prezzo di vendita stimato (€/mq e totale), margine netto stimato, rischi principali, giudizio (conviene / da approfondire / scartare).",
-      "Rispondi in italiano, in modo sintetico. Se un dato manca scrivi \"non indicato\".",
-      "La PRIMA riga della risposta deve essere solo la classifica del punto 5 con gli ID, dalla migliore alla peggiore, in questa forma: \"Classifica: ID, ID, ID\".",
+      "COMPITI",
+      "1. Per ogni asta cerca 2-3 annunci di vendita attuali nella stessa zona (stessa tipologia, superficie simile) su portali come immobiliare.it, idealista.it, casa.it, con link ed €/mq, e stima un prezzo di vendita realistico dopo la ristrutturazione. Se non trovi annunci scrivi \"non trovati\" e usa l'OMI indicato. Non inventare annunci o link.",
+      "2. Se riesci ad aprire il link della perizia, controlla i dati principali (quota, superficie, occupazione, abusi e costi, valore del CTU). Dichiara per quali aste hai letto davvero la perizia.",
+      "3. Segnala i dati che sembrano incoerenti: per esempio un valore di stima riferito a più lotti o all'intero edificio, una superficie non plausibile, un prezzo base molto lontano dal valore.",
+      "4. Stima i costi (acquisto all'offerta minima, imposte, lavori, regolarizzazione, arretrati, vendita) e il margine netto, e confrontali con il nostro conto.",
+      "5. Rischi principali di ogni asta (occupazione e titolo dell'occupante, abusi, quota, pesi che restano, condominio, stato, tempi).",
+      "6. Classifica dalla migliore alla peggiore per un'operazione di ristrutturazione e rivendita: in alto le più pulite e con più margine. Giudizio per ciascuna:",
+      "   - conviene: margine netto positivo anche con stime prudenti e rischi gestibili;",
+      "   - da approfondire: margine incerto o un rischio da verificare prima dell'offerta;",
+      "   - scartare: margine negativo o un rischio che blocca l'operazione (abusi non sanabili, locazione opponibile, pesi che restano, quota non liberabile).",
+      "",
+      "FORMATO DELLA RISPOSTA",
+      "- Prima riga, da sola: \"Classifica: ID, ID, ID\" (dalla migliore alla peggiore).",
+      "- Poi le sezioni con questi titoli:",
+      "  ## Classifica (tabella: posizione | ID | indirizzo | prezzo di vendita stimato (€/mq e totale) | margine netto stimato | rischi principali | giudizio)",
+      "  ## Asta per asta (poche righe ciascuna: annunci trovati, differenze col nostro conto, rischi)",
+      "  ## Dati incoerenti",
+      "  ## Fonti (annunci consultati, perizie lette davvero)",
+      "- Italiano, sintetico. Se un dato manca scrivi \"non indicato\".",
     ].join("\n");
   }
 

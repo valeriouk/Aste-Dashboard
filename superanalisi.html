@@ -177,6 +177,8 @@
 
   let passwordCorrente = null;
   let RIGA = null;
+  let ESITO_CONTO = null;         // ultimo conto di disegnaConto, per il prompt
+  let promptModificato = false;   // true se hai scritto nel riquadro del prompt
 
   // ============================================================ utilità
   function escapeHtml(t) { const d = document.createElement("div"); d.textContent = t === null || t === undefined ? "" : String(t); return d.innerHTML; }
@@ -533,6 +535,8 @@
     });
     if (esito.arv && f.tipo === "citata") esito.arv.fonte = `${f.etichetta}: ${annuncio.omi.min}–${annuncio.omi.max} €/mq × ${esito.superficie.mq} mq`;
     if (esito.arv && f.tipo === "omi") esito.arv.fonte = `${f.etichetta} × ${esito.superficie.mq} mq (Agenzia Entrate - OMI)`;
+    ESITO_CONTO = esito;
+    aggiornaPrompt();
 
     const scenari = ["prudenziale", "centrale", "ottimistico"];
     const alMinimo = esito.scenariAlMinimo;
@@ -596,19 +600,25 @@
   ];
   const MAX_LUNGHEZZA_URL = 6000;
 
+  // Prompt rivisto il 29/09/2026: stop se la perizia non è allegata, il
+  // nostro conto (ESITO_CONTO, da disegnaConto), rischi tipici delle aste,
+  // classi definite come in underwriting.js (classificaOperazione) e
+  // risposta con titoli fissi, per confrontare i risultati salvati.
   function costruisciPrompt(r, a) {
     const n = (v) => vuoto(v) ? "non indicato" : v;
     const righe = [
-      "Ti allego la perizia di stima (CTU) di un'asta giudiziaria immobiliare italiana. Leggila per intero, comprese tabelle e fotografie.",
+      "Sei un consulente esperto di aste giudiziarie immobiliari italiane. Compro all'asta per ristrutturare e rivendere. Ti allego la perizia di stima (CTU): leggila per intero, comprese tabelle, allegati e fotografie.",
       "",
-      `Annuncio PVP: ${n(r.comune__indirizzo)}; ${n(r.tribunale)}; lotto ${n(r.n__lotto)}; prezzo base ${eur(r.prezzo_base)}; offerta minima ${eur(r.offerta_minima)}; vendita il ${r.data_vendita ? new Date(r.data_vendita).toLocaleDateString("it-IT") : "non indicata"}.`,
+      "PRIMA DI TUTTO: se la perizia non è allegata o non riesci a leggerla (file mancante, scansione illeggibile), non fare nessuna analisi: scrivi solo \"Allega la perizia\" e fermati.",
+      "",
+      `ANNUNCIO PVP: ${n(r.comune__indirizzo)}; ${n(r.tribunale)}; lotto ${n(r.n__lotto)}; prezzo base ${eur(r.prezzo_base)}; offerta minima ${eur(r.offerta_minima)}; vendita il ${r.data_vendita ? new Date(r.data_vendita).toLocaleDateString("it-IT") : "non indicata"}.`,
     ];
     if (!vuoto(r.descrizione_lotto)) righe.push(`Descrizione: ${String(r.descrizione_lotto).slice(0, 400)}`);
     if (a) {
       const P = a.perizia || {}, I = a.identificazione || {}, S = a.superfici || {}, U = a.urbanistica || {}, O = a.occupazione || {};
       const V = a.valutazione_ctu || {}, C = a.condominio || {}, M = a.stato_manutentivo || {}, F = a.formalita || {};
       const diff = (U.difformita || []).filter((x) => x && typeof x === "object");
-      righe.push("", "Un sistema automatico ha estratto questi dati dalla perizia (da verificare):",
+      righe.push("", "DATI ESTRATTI IN AUTOMATICO DALLA PERIZIA (da verificare):",
         `- Lotto/beni considerati: ${n(P.lotti_usati)}; quota in vendita: ${n(I.quota_in_vendita)}`,
         `- Valore di mercato CTU: ${eur(V.valore_mercato_euro)}; valore finale: ${eur(V.valore_finale_euro)}`,
         `- Superficie commerciale: ${mq(S.commerciale_ctu_mq)}`,
@@ -618,14 +628,53 @@
         `- Arretrati condominiali: ${eur(C.arretrati_euro)}; stato manutentivo: ${n(M.classe)}`,
         `- Pesi non cancellabili: ${(F.non_cancellabili || []).length ? F.non_cancellabili.join("; ") : "nessuno indicato"}`);
     }
-    righe.push("", "Compiti:",
-      "1. Verifica ciascun dato indicando la pagina della perizia; segnala quelli errati o incompleti con il valore corretto.",
-      "2. Elenca i rischi per chi compra all'asta per ristrutturare e rivendere: occupazione e tempi di liberazione, abusi e sanabilità, formalità che restano, quota, condominio, stato dell'immobile, differenze con l'annuncio.",
-      "3. Indica cosa verificare prima di fare un'offerta (documenti, sopralluogo, custode, ufficio tecnico del comune).",
-      "4. Giudizio sintetico: operazione pulita, gestibile, complessa o da scartare, con il motivo.",
-      "Regole: non inventare; se un dato non è nella perizia scrivi \"non indicato\". Rispondi in italiano, in modo sintetico, con una tabella per il punto 1.",
-      "La PRIMA riga della risposta deve essere solo il giudizio del punto 4, in questa forma: \"Giudizio: PULITA\" (oppure GESTIBILE, COMPLESSA, DA SCARTARE).");
+    const e = ESITO_CONTO;
+    if (e) {
+      const c = e.scenariAlMinimo && e.scenariAlMinimo.centrale;
+      righe.push("", "IL NOSTRO CONTO (stime automatiche, da verificare):");
+      if (e.arv) righe.push(`- Valore di rivendita dopo i lavori: prudenziale ${eur(e.arv.prudenziale)}, centrale ${eur(e.arv.centrale)}, ottimistico ${eur(e.arv.ottimistico)} (fonte: ${e.arv.fonte})`);
+      righe.push(`- Superficie usata: ${mq(e.superficie && e.superficie.mq)}${e.superficie && e.superficie.fonte ? ` (${e.superficie.fonte})` : ""}; lavori: ${eur(e.lavori && e.lavori.importo)}${e.lavori && e.lavori.fonte ? ` (${e.lavori.fonte})` : ""}; regolarizzazione: ${e.regolarizzazione && e.regolarizzazione.nonDeterminato ? "non determinata" : eur(e.regolarizzazione && e.regolarizzazione.conRicarico)}`);
+      if (c) righe.push(`- All'offerta minima, scenario centrale: costo totale ${eur(c.totale)}, utile netto ${eur(c.utileNettoStimato)}${c.capitale ? ` (${Math.round(c.utileNettoStimato / c.capitale * 100)}% del capitale)` : ""}, ${c.mesi} mesi`);
+      righe.push(`- Offerta massima per il nostro obiettivo di utile: ${eur(e.offertaMassima)}`);
+      righe.push(`- Nostra classe: ${testo(e.classe)}${e.motivi && e.motivi.length ? ` (${e.motivi.slice(0, 4).join("; ")})` : ""}`);
+      if (e.verdetto) righe.push(`- Nostro verdetto: ${e.verdetto}`);
+    }
+    righe.push("", "COMPITI",
+      "1. Verifica ciascun dato estratto, con la pagina della perizia.",
+      "2. Rischi per chi compra all'asta, in particolare:",
+      "   - occupazione: chi occupa e con quale titolo; se un contratto ha data certa anteriore al pignoramento (opponibile); se l'ordine di liberazione è già emesso; tempi realistici;",
+      "   - abusi e difformità: sanabili o no, costi e tempi; conformità catastale;",
+      "   - pesi che restano dopo il decreto di trasferimento (usufrutto, diritto di abitazione, servitù, domande giudiziali, vincoli);",
+      "   - quota in vendita e comproprietari;",
+      "   - condominio: arretrati (l'acquirente risponde di quelli dell'anno in corso e del precedente), lavori straordinari deliberati;",
+      "   - stato dell'immobile e degli impianti, agibilità, APE;",
+      "   - differenze tra perizia e annuncio.",
+      "3. Conto: dimmi se valore di rivendita, costo dei lavori e offerta massima sono realistici e quali valori useresti tu. Se puoi cercare sul web, indica 2-3 annunci di vendita attuali nella zona (stessa tipologia, superficie simile) con link ed €/mq; altrimenti scrivi \"ricerca non disponibile\". Non inventare annunci o link. Concludi con: \"Conviene all'offerta minima: sì / no; offerta massima che faresti: [€]\".",
+      "4. Cosa verificare prima dell'offerta (documenti, sopralluogo, custode, ufficio tecnico del comune, amministratore di condominio).",
+      "5. Giudizio, con queste definizioni:",
+      "   - PULITA: libera o occupata dal debitore, conforme o con piccole regolarizzazioni, nessun peso che resta all'acquirente;",
+      "   - GESTIBILE: problemi con costi e tempi prevedibili (liberazione a cura del custode, opere da ripristinare, regolarizzazione costosa ma definita, ristrutturazione completa, lavori condominiali deliberati);",
+      "   - COMPLESSA: esito incerto (occupata da terzi, condono o sanatoria pendente, sanabilità o costo non determinati, difformità su parti comuni, quota parziale, degrado, perizia di oltre 7 anni);",
+      "   - DA SCARTARE: abusi non sanabili, locazione opponibile, pesi che restano all'acquirente, documentazione insufficiente.",
+      "6. Pagine lette: quante pagine ha la perizia, quali hai letto, quali parti erano illeggibili.",
+      "",
+      "FORMATO DELLA RISPOSTA",
+      "- Prima riga, da sola: \"Giudizio: PULITA\" (oppure GESTIBILE, COMPLESSA, DA SCARTARE).",
+      "- Poi le sezioni con questi titoli:",
+      "  ## Dati verificati (tabella: Dato | Nostro valore | Valore in perizia | Pagina | Esito)",
+      "  ## Rischi",
+      "  ## Conto",
+      "  ## Cosa verificare",
+      "  ## Pagine lette",
+      "- Italiano, sintetico. Non inventare: se un dato non è nella perizia scrivi \"non indicato\".");
     return righe.join("\n");
+  }
+
+  // Il prompt si rifà quando cambia il conto (parametri, valore di
+  // rivendita), ma non se l'hai già modificato a mano nel riquadro.
+  function aggiornaPrompt() {
+    const t = document.getElementById("testo-prompt");
+    if (t && !promptModificato) t.value = costruisciPrompt(RIGA, analisiV2(RIGA));
   }
 
   async function copiaNegliAppunti(testoDaCopiare) {
@@ -747,7 +796,7 @@
         <small>${ai.q ? "prompt già scritto" : "prompt negli appunti"}</small></button>`).join("")}</div>
       <p id="messaggio-ai" class="messaggio nascosto"></p>
       <h3>Prompt</h3>
-      <textarea id="testo-prompt">${escapeHtml(prompt)}</textarea>
+      <textarea id="testo-prompt" oninput="promptModificato = true">${escapeHtml(prompt)}</textarea>
     </div>`;
   }
 

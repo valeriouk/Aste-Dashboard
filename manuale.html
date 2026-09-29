@@ -1297,10 +1297,15 @@
     <ul>
       <li><strong>8 pulsanti</strong>: ChatGPT, Claude, Perplexity (prompt già scritto nell'indirizzo, se non troppo lungo: oltre 6.000 caratteri solo negli
         appunti), Gemini, Mistral Le Chat, DeepSeek, Grok, Copilot (prompt negli appunti: incollalo). Apri un'AI alla volta.</li>
-      <li><strong>Prompt</strong> (modificabile): chiede di leggere la perizia allegata, verificare con la pagina i dati estratti (quota, valori, superficie,
-        occupazione, abusi e costi, condono, condominio, pesi), elencare i rischi per chi ristruttura e rivende, dire cosa verificare prima dell'offerta e dare
-        un giudizio sintetico. Chiede anche di cominciare la risposta con la riga "Giudizio: PULITA" (o GESTIBILE, COMPLESSA, DA SCARTARE). Il risultato
-        puoi <a href="#superanalisi-risultati">salvarlo nel registro</a>.</li>
+      <li><strong>Prompt</strong> (modificabile): contiene annuncio, dati estratti dalla perizia e <strong>il nostro conto</strong> (valore di rivendita
+        nei tre scenari con la fonte, superficie, lavori, regolarizzazione, utile all'offerta minima, offerta massima, classe e verdetto). Chiede all'AI di:
+        fermarsi e scrivere solo "Allega la perizia" se la perizia non è allegata o leggibile; verificare i dati con la pagina; elencare i rischi tipici delle
+        aste (titolo dell'occupante e opponibilità, ordine di liberazione, abusi e conformità catastale, pesi che restano dopo il decreto, quota, arretrati
+        condominiali dell'anno in corso e del precedente, impianti, agibilità, APE, differenze con l'annuncio); dire se il nostro conto è realistico, con
+        2-3 annunci in zona se può cercare sul web, e se conviene all'offerta minima; dire cosa verificare; dare il giudizio con le stesse definizioni
+        delle nostre <a href="#superanalisi-classe">classi</a>; dichiarare le pagine lette. La risposta comincia con "Giudizio: …" e ha sempre gli
+        stessi titoli (Dati verificati, Rischi, Conto, Cosa verificare, Pagine lette). Il blocco del conto si aggiorna quando cambi parametri o valore di
+        rivendita, a meno che tu non abbia già scritto nel riquadro. Il risultato puoi <a href="#superanalisi-risultati">salvarlo nel registro</a>.</li>
       <li><strong>⬇ Scarica la perizia (PDF)</strong>: su computer, per trascinarla nella chat.</li>
       <li><strong>Dal telefono</strong>: "📱 Prepara la perizia da condividere" la scarica (avanzamento in MB, massimo 50 MB), poi "📤 Condividi la perizia…"
         apre il menu del telefono con PDF e prompt. Due tocchi perché il menu si apre solo subito dopo un tocco. "📎 Condividi solo il PDF" serve per
@@ -1362,9 +1367,11 @@
   <section class="voce" id="gruppo-seconda-opinione">
     <h3>Seconda opinione di gruppo, CSV e condivisione</h3>
     <ul>
-      <li>Il <strong>prompt di gruppo</strong> contiene i dati di tutte le aste e chiede all'AI di: cercare 2-3 annunci di vendita attuali nella zona
-        (immobiliare.it, idealista.it, casa.it) con link ed €/mq e stimare il prezzo di vendita dopo i lavori (senza inventare annunci); aprire le perizie se
-        può e dire quali ha letto davvero; stimare costi e margine; elencare i rischi; fare una tabella dalla migliore alla peggiore.</li>
+      <li>Il <strong>prompt di gruppo</strong> contiene i dati di tutte le aste, con il nostro conto, e chiede all'AI di: cercare 2-3 annunci di vendita
+        attuali nella zona (immobiliare.it, idealista.it, casa.it) con link ed €/mq e stimare il prezzo di vendita dopo i lavori (senza inventare annunci);
+        aprire le perizie se può e dire quali ha letto davvero; segnalare i dati incoerenti (per esempio un valore di stima riferito a più lotti o a tutto
+        l'edificio); stimare costi e margine e confrontarli con il nostro conto; elencare i rischi; fare la classifica con un giudizio (conviene, da
+        approfondire, scartare, ciascuno definito nel prompt). La risposta ha sempre gli stessi titoli (Classifica, Asta per asta, Dati incoerenti, Fonti).</li>
       <li>Le AI più adatte sono quelle che cercano sul web (Perplexity, ChatGPT con ricerca, Gemini). La lettura delle perizie dai link non è garantita: per
         le 2-3 migliori usa la Superanalisi singola con la perizia allegata.</li>
       <li><strong>⬇ Scarica CSV del gruppo</strong> (28 colonne: dati dell'annuncio, perizia, OMI e il nostro conto). Dal telefono: "📤 Condividi (prompt + CSV)"
