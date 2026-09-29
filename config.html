@@ -9,6 +9,7 @@
 <link rel="icon" href="favicon-32.png" sizes="32x32">
 <link rel="apple-touch-icon" href="apple-touch-icon.png">
 <meta name="theme-color" content="#ffffff">
+<script src="tema.js"></script>
 <meta name="apple-mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-status-bar-style" content="default">
 <meta name="apple-mobile-web-app-title" content="Registro Opp.">
@@ -471,6 +472,7 @@
     }
   }
 </style>
+<link rel="stylesheet" href="colori.css">
 <link rel="stylesheet" href="grafica-app.css">
 </head>
 <body>
@@ -583,6 +585,20 @@
         <p class="nota-campo">Riporta tutte le sette card qui sopra — area, prezzo, tipologia, altri filtri, modelli, pianificazione (lun-ven alle 10:00) e ricerca della perizia (estesa, con ricontrollo ogni 2 giorni, massimo 15 aste per giro) — ai valori predefiniti. La scelta del prompt (v1/v2) resta com'è. Salva subito, come ogni altra modifica in questa pagina.</p>
         <p id="messaggio-ripristina-predefiniti" class="messaggio-salvataggio-card"></p>
       </div>
+
+      <section class="blocco-semplice">
+        <h2>Tema</h2>
+        <p class="nota-campo">Vale solo per <strong>questo dispositivo</strong>. "Automatico" segue il telefono o il computer (chiaro di giorno, scuro di
+          sera, se impostato così). In stampa e nei PDF resta sempre chiaro.</p>
+        <div class="campo-form">
+          <label for="campo-tema">Tema delle pagine</label>
+          <select id="campo-tema" onchange="window.Tema && Tema.imposta(this.value)">
+            <option value="automatico">Automatico (come il dispositivo)</option>
+            <option value="chiaro">Chiaro</option>
+            <option value="scuro">Scuro</option>
+          </select>
+        </div>
+      </section>
 
       <section class="blocco-semplice">
         <h2>Suoni e vibrazione</h2>
@@ -1215,6 +1231,7 @@
 
   // Suoni e vibrazione: preferenza del dispositivo (feedback.js), nessuna scrittura nel database.
   function mostraFeedbackDispositivo() {
+    if (window.Tema) document.getElementById("campo-tema").value = Tema.leggi();
     if (!window.Feedback) return;
     const v = Feedback.leggi();
     document.getElementById("campo-vibrazione").checked = !!v.vibrazione;

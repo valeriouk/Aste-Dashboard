@@ -1,0 +1,99 @@
+/*
+  colori.css — tema chiaro e tema scuro (29/09/2026).
+
+  Ogni pagina ha ancora i suoi colori chiari in :root (nel suo <style>); qui:
+  - i colori delle superfici "a vetro" e delle sagome di caricamento, uguali
+    per tutte le pagine;
+  - il TEMA SCURO, che sostituisce quei colori quando:
+      · il telefono/computer è in modalità scura e in Configurazione il tema
+        è "Automatico" (predefinito), oppure
+      · in Configurazione hai scelto "Scuro" (html[data-tema="scuro"]).
+    "Chiaro" (html[data-tema="chiaro"]) lo impedisce anche col telefono scuro.
+  La scelta la applica tema.js prima che la pagina si disegni.
+  In stampa e nei PDF resta sempre il tema chiaro.
+*/
+:root {
+  --vetro: rgba(255, 255, 255, .8);
+  --vetro-forte: rgba(255, 255, 255, .9);
+  --vetro-barra: rgba(227, 231, 224, .78);
+  --vetro-pagina: rgba(238, 241, 236, .78);
+  --bordo-card: rgba(213, 218, 209, .7);
+  --sagoma-a: #e9ece6;
+  --sagoma-b: #f4f6f2;
+  color-scheme: light;
+}
+
+/* ---------------------------------------------------------------- tema scuro */
+/* Stesso blocco due volte: scelta "Scuro" oppure "Automatico" con il dispositivo scuro.
+   Solo a schermo (@media screen): in stampa restano i colori chiari. */
+@media screen {
+html[data-tema="scuro"] {
+  --bg: #121513;
+  --surface: #1b1f1c;
+  --surface-2: #252a26;
+  --border: #343b36;
+  --primary: #5d95bf;
+  --primary-soft: rgba(93, 149, 191, .16);
+  --secondary: #d08a66;
+  --secondary-soft: rgba(208, 138, 102, .16);
+  --ok: #6fbf88;
+  --ok-soft: rgba(111, 191, 136, .15);
+  --danger: #e07a66;
+  --danger-soft: rgba(224, 122, 102, .16);
+  --ink: #e6eae4;
+  --ink-muted: #a9b1a7;
+  --ink-faint: #7b8379;
+  --vetro: rgba(27, 31, 28, .78);
+  --vetro-forte: rgba(27, 31, 28, .9);
+  --vetro-barra: rgba(37, 42, 38, .78);
+  --vetro-pagina: rgba(18, 21, 19, .78);
+  --bordo-card: rgba(52, 59, 54, .9);
+  --sagoma-a: #222724;
+  --sagoma-b: #2d332f;
+  color-scheme: dark;
+}
+}
+@media screen and (prefers-color-scheme: dark) {
+  html:not([data-tema="chiaro"]) {
+    --bg: #121513;
+    --surface: #1b1f1c;
+    --surface-2: #252a26;
+    --border: #343b36;
+    --primary: #5d95bf;
+    --primary-soft: rgba(93, 149, 191, .16);
+    --secondary: #d08a66;
+    --secondary-soft: rgba(208, 138, 102, .16);
+    --ok: #6fbf88;
+    --ok-soft: rgba(111, 191, 136, .15);
+    --danger: #e07a66;
+    --danger-soft: rgba(224, 122, 102, .16);
+    --ink: #e6eae4;
+    --ink-muted: #a9b1a7;
+    --ink-faint: #7b8379;
+    --vetro: rgba(27, 31, 28, .78);
+    --vetro-forte: rgba(27, 31, 28, .9);
+    --vetro-barra: rgba(37, 42, 38, .78);
+    --vetro-pagina: rgba(18, 21, 19, .78);
+    --bordo-card: rgba(52, 59, 54, .9);
+    --sagoma-a: #222724;
+    --sagoma-b: #2d332f;
+    color-scheme: dark;
+  }
+}
+
+@media screen {
+/* Ritocchi che le variabili da sole non coprono. Il selettore .tema-scuro
+   lo mette tema.js su <html> quando il tema scuro è attivo (scelto o automatico). */
+html.tema-scuro .barra-selezione, html.tema-scuro #toast-preferiti { color: #eef1ec; }
+html.tema-scuro #toast-preferiti { background: rgba(52, 58, 54, .92); }
+html.tema-scuro .giudizio-PULITA { background: rgba(111, 191, 136, .15); color: #8fd4a4; }
+html.tema-scuro .badge-visita.vicina { background: #b8913a; color: #1c1404; }
+/* Mappe: le tessere si scuriscono con un filtro (colori approssimati) */
+html.tema-scuro .leaflet-tile-pane { filter: invert(1) hue-rotate(180deg) brightness(.92) contrast(.88) saturate(.6); }
+html.tema-scuro .leaflet-container { background: #1b1f1c; }
+/* La grana di carta dello sfondo, pensata per il chiaro, si attenua */
+html.tema-scuro body { background-image: none; }
+/* Manuale: barra di ricerca in alto e parole trovate evidenziate */
+html.tema-scuro .barra { background: rgba(18, 21, 19, .94); }
+html.tema-scuro mark { background: #6b5a14; color: #fff3c4; }
+}

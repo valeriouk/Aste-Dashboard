@@ -9,6 +9,7 @@
 <link rel="icon" href="favicon-32.png" sizes="32x32">
 <link rel="apple-touch-icon" href="apple-touch-icon.png">
 <meta name="theme-color" content="#ffffff">
+<script src="tema.js"></script>
 
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
@@ -143,6 +144,7 @@
     .voce { break-inside: avoid; }
   }
 </style>
+<link rel="stylesheet" href="colori.css">
 <link rel="stylesheet" href="grafica-app.css">
 </head>
 <body>
@@ -296,6 +298,9 @@
         il cambio di pagina di sempre).</li>
       <li><strong>Messaggi in basso</strong> ("salvata", "Annulla", errori): riquadro scuro a vetro con angoli ampi, che entra dal basso; "Annulla" è una
         pillola chiara. Il cerchio di "trascina per aggiornare" è a vetro e resta sotto la tacca dell'iPhone.</li>
+      <li><strong>Tema scuro</strong>: tutte le pagine hanno anche i colori scuri (sfondo quasi nero, card grigio scuro, colori schiariti per restare
+        leggibili; la mappa si scurisce con un filtro, con colori approssimati). Si sceglie da <a href="#config-tema">Configurazione → Tema</a>:
+        Automatico (segue il dispositivo), Chiaro o Scuro. In stampa e nei PDF resta sempre chiaro.</li>
       <li><strong>Suoni e vibrazione</strong>: si accendono e spengono da <a href="#config-suoni">Configurazione</a>, per ogni dispositivo.</li>
     </ul>
   </section>
@@ -1180,6 +1185,14 @@
       (elimina le altre)" o "Annulla". <strong>Irreversibile dalle pagine</strong>: lo storico delle aste eliminate va perso; i tuoi dati cancellati
       (note, link, visite, risultati AI, correzioni) restano per 12 mesi nella <a href="#sistema-cronologia">cronologia delle modifiche</a>. Il loro numero resta conteggiato in
       Statistiche ("Aste storiche"). Stelle e scarti da soli non contano come dati tuoi.</p>
+  </section>
+
+  <section class="voce" id="config-tema">
+    <h3>Tema (chiaro / scuro)</h3>
+    <p>"Tema delle pagine": <strong>Automatico</strong> (predefinito: segue il telefono o il computer, quindi diventa scuro da solo se il dispositivo
+      passa al tema scuro, per esempio la sera), <strong>Chiaro</strong> o <strong>Scuro</strong> sempre. Vale solo per il dispositivo su cui lo scegli
+      (salvato nel browser) e si applica subito a tutte le pagine, senza lampi di colore all'apertura. Cambia anche il colore della barra del browser.
+      Stampa e PDF restano chiari.</p>
   </section>
 
   <section class="voce" id="config-suoni">
