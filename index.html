@@ -2353,6 +2353,11 @@
   .sezione-dettagli > .sezione-costi:first-child, .sezione-dettagli > div:first-child { margin-top: 18px; }
   #sez-cifre > .lotto-margine { margin-top: 0; }
   /* Intestazione ridotta mentre si scorre la scheda */
+  /* Niente "scroll anchoring": quando l'intestazione si riduce (-84 px su PC)
+     Chrome spostava da solo lo scorrimento, si tornava sotto la soglia e
+     l'intestazione si riallargava, in un ciclo continuo (sfarfallio sotto
+     l'indice, 30/09/2026). */
+  .finestra-dettagli-asta { overflow-anchor: none; }
   .finestra-dettagli-asta.compatta .finestra-dettagli-header { padding-top: 10px; padding-bottom: 10px; }
   .finestra-dettagli-asta.compatta .finestra-dettagli-header .lotto-id,
   .finestra-dettagli-asta.compatta .finestra-dettagli-header .riga-badge-dettagli,
@@ -7978,7 +7983,12 @@ ${notaHtml}
   // ★ ✕ e indice); tornando in cima riappare intera.
   function aggiornaIntestazioneCompatta() {
     const finestra = document.querySelector(".finestra-dettagli-asta");
-    if (finestra) finestra.classList.toggle("compatta", finestra.scrollTop > 90);
+    // Isteresi: si riduce oltre 90 px, torna intera solo sotto i 30 px, così
+    // attorno alla soglia non può alternare (vedi overflow-anchor nel CSS).
+    if (finestra) {
+      const compatta = finestra.classList.contains("compatta");
+      finestra.classList.toggle("compatta", compatta ? finestra.scrollTop > 30 : finestra.scrollTop > 90);
+    }
     aggiornaVoceIndice();
   }
   document.querySelector(".finestra-dettagli-asta").addEventListener("scroll", aggiornaIntestazioneCompatta, {passive: true});
