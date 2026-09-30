@@ -9,8 +9,8 @@
 <link rel="icon" href="favicon-32.png" sizes="32x32">
 <link rel="apple-touch-icon" href="apple-touch-icon.png">
 <meta name="theme-color" content="#ffffff">
-<script src="tema.js"></script>
-<script src="sessione.js"></script>
+<script src="tema.js?v=20261001"></script>
+<script src="sessione.js?v=20261001"></script>
 
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
@@ -145,11 +145,11 @@
     .voce { break-inside: avoid; }
   }
 </style>
-<link rel="stylesheet" href="colori.css">
-<link rel="stylesheet" href="grafica-app.css">
+<link rel="stylesheet" href="colori.css?v=20261001">
+<link rel="stylesheet" href="grafica-app.css?v=20261001">
 </head>
 <body>
-<script src="menu.js"></script>
+<script src="menu.js?v=20261001"></script>
 
 <div id="gate" class="gate">
   <div class="riquadro-gate">
@@ -1210,7 +1210,8 @@
     <h3>"↺ Ripristina tutti i valori predefiniti"</h3>
     <p>Il pulsante sta in fondo alla scheda Ricerca (è un'azione rara che sovrascrive tutto) e chiede conferma con un secondo clic. Riporta ai valori
       predefiniti (e salva subito) area, prezzo, tipologia, altri filtri, esclusioni (disattivate), modelli, pianificazione e ricerca della perizia;
-      checklist e regime fiscale restano come sono:</p>
+      checklist e regime fiscale restano come sono. Se un salvataggio non riesce la pagina rilegge dal database i valori veri, così nessun
+      salvataggio successivo scrive predefiniti rimasti a metà:</p>
     <div class="tabella-scroll"><table>
       <thead><tr><th>Voce</th><th>Valore predefinito</th></tr></thead>
       <tbody>
@@ -1451,7 +1452,7 @@
         annunci si analizza una volta sola.</li>
       <li><strong>Perizie ogni 10 aste</strong>: se vicino a 10, quasi ogni asta ha la sua perizia. Eccezione nota: due lotti della stessa procedura trovati
         nello stesso batch non si riconoscono e vengono contati (e pagati) due volte.</li>
-      <li><strong>Nel tempo</strong>: perizie nuove per giorno. <strong>Per modello usato</strong>: quale modello Gemini ha analizzato ogni perizia la prima volta.</li>
+      <li><strong>Nel tempo</strong>: perizie nuove per giorno, dal più recente (gli ultimi 14; i precedenti in "+ altri"). <strong>Per modello usato</strong>: quale modello Gemini ha analizzato ogni perizia la prima volta.</li>
     </ul>
   </section>
 
@@ -1661,7 +1662,10 @@
     </table></div>
     <p>Con un condono pendente: +12 mesi nello scenario prudenziale. Tutti valori <span class="stima">STIMA</span>.</p>
     <p><strong>Occupazione usata</strong>: quella della perizia, ma se l'annuncio PVP (più recente) dice altro si usa l'annuncio, con un avviso
-      ("confermare col custode"); se la perizia parla di un contratto di locazione si tiene la perizia.</p>
+      ("confermare col custode"); se la perizia parla di un contratto di locazione si tiene la perizia. Codici del PVP: solo "Libero" = libero;
+      solo "Occupato senza titolo" = occupato da terzi senza titolo; "Occupato", "In corso di liberazione" o più codici insieme con almeno un
+      occupato = vale la perizia se dice già chi occupa, altrimenti occupato dal debitore (il caso più comune). Questa regola vale solo per i
+      conti delle pagine: il filtro dello scanner prima di Gemini (Configurazione → Altri filtri → Occupazione) resta com'è.</p>
   </section>
 
   <section class="voce" id="superanalisi-offerta-massima">

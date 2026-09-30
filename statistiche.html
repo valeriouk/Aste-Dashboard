@@ -9,8 +9,8 @@
 <link rel="icon" href="favicon-32.png" sizes="32x32">
 <link rel="apple-touch-icon" href="apple-touch-icon.png">
 <meta name="theme-color" content="#ffffff">
-<script src="tema.js"></script>
-<script src="sessione.js"></script>
+<script src="tema.js?v=20261001"></script>
+<script src="sessione.js?v=20261001"></script>
 <meta name="apple-mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-status-bar-style" content="default">
 <meta name="apple-mobile-web-app-title" content="Statistiche">
@@ -213,11 +213,11 @@
     }
   }
 </style>
-<link rel="stylesheet" href="colori.css">
-<link rel="stylesheet" href="grafica-app.css">
+<link rel="stylesheet" href="colori.css?v=20261001">
+<link rel="stylesheet" href="grafica-app.css?v=20261001">
 </head>
 <body>
-<script src="menu.js"></script>
+<script src="menu.js?v=20261001"></script>
 <script src="operazioni.js?v=20260930"></script>
 
 <div class="contenitore">
@@ -295,7 +295,7 @@
           <div class="scheda-statistica"><p class="scheda-statistica-numero" id="num-rapporto-perizie" style="font-size:1.3rem;">—</p><p class="scheda-statistica-etichetta">Perizie ogni 10 aste</p></div>
         </div>
         <p id="avviso-rapporto-perizie" class="sezione-nota avviso nascosto"></p>
-        <h3 style="font-family:var(--font-body);font-size:.85rem;font-weight:600;color:var(--ink-muted);margin:16px 0 8px;">Nel tempo (prima volta che ogni perizia è stata vista)</h3>
+        <h3 style="font-family:var(--font-body);font-size:.85rem;font-weight:600;color:var(--ink-muted);margin:16px 0 8px;">Nel tempo, dal giorno più recente (prima volta che ogni perizia è stata vista)</h3>
         <div id="barre-perizie-tempo"></div>
         <h3 style="font-family:var(--font-body);font-size:.85rem;font-weight:600;color:var(--ink-muted);margin:16px 0 8px;">Per modello usato</h3>
         <div id="barre-perizie-modello"></div>
@@ -622,7 +622,9 @@
       avvisoEl.classList.add("nascosto");
     }
 
-    listaBarre("barre-perizie-tempo", s.perizie_nel_tempo, "giorno", "n", 14);
+    // dal giorno più recente (il database li dà dal più vecchio): prima si
+    // vedevano i 14 giorni più vecchi e i recenti finivano in "+ altri"
+    listaBarre("barre-perizie-tempo", (s.perizie_nel_tempo || []).slice().reverse(), "giorno", "n", 14);
     listaBarre("barre-perizie-modello", s.perizie_per_modello, "modello", "n");
 
     document.getElementById("num-batch-pendenti").textContent = s.batch_pendenti ?? "—";

@@ -113,7 +113,9 @@
   // ===========================================================================
   // UTILITÀ
   // ===========================================================================
-  const arr = (v) => (Array.isArray(v) ? v : []);
+  // senza elementi null: un elenco con un buco (es. [null] da Gemini) faceva
+  // fallire tutto il conto della Superanalisi (01/10/2026)
+  const arr = (v) => (Array.isArray(v) ? v.filter((x) => x != null) : []);
   const somma = (o) => Object.values(o).reduce((a, b) => a + (b || 0), 0);
   const r2 = (x) => Math.round(x * 100) / 100;
 
@@ -270,9 +272,41 @@
     return null;
   }
 
+  // Codici grezzi del PVP ("LIBER", "OCCUP,OCCST"…); null se il testo non è
+  // fatto solo di codici noti (allora vale occupazioneDaAnnuncio).
+  const CODICI_OCCUPAZIONE_PVP = ['LIBER', 'OCCUP', 'OCCST', 'INCOR', 'NON_SPECIFICATA'];
+  function codiciOccupazionePvp(testo) {
+    const codici = String(testo || '').split(/[\s,;]+/).map((c) => c.trim().toUpperCase()).filter(Boolean);
+    return codici.length && codici.every((c) => CODICI_OCCUPAZIONE_PVP.includes(c)) ? new Set(codici) : null;
+  }
+
   function occupazioneEffettiva(d, annuncio) {
     const p = d.occupazione.stato;
-    const a = occupazioneDaAnnuncio(annuncio.occupazione);
+    // Regola dei codici PVP (01/10/2026; prima bastava "liber" nel testo, anche
+    // con "LIBER,OCCUP"): solo LIBER = libero, solo OCCST = occupato da terzi
+    // senza titolo; OCCUP, INCOR o codici misti con un "occupato": vale la
+    // perizia se indica già un tipo di occupazione (più dettagliata),
+    // altrimenti occupato dal debitore, il caso più comune.
+    const codici = codiciOccupazionePvp(annuncio.occupazione);
+    let a;
+    if (!codici) {
+      a = occupazioneDaAnnuncio(annuncio.occupazione);
+    } else if (codici.size === 1 && codici.has('LIBER')) {
+      a = 'libero';
+    } else if (codici.size === 1 && codici.has('OCCST')) {
+      a = 'occupato_terzi_senza_titolo';
+    } else if (['OCCUP', 'OCCST', 'INCOR'].some((c) => codici.has(c))) {
+      if (!p || p === 'libero' || p === 'non_indicato') {
+        return {
+          stato: 'occupato_debitore',
+          avviso: `Annuncio PVP: "${annuncio.occupazione}" (occupato), perizia: ${p || 'non indicato'}. `
+            + 'Considerato occupato dal debitore (caso più comune): confermare col custode.',
+        };
+      }
+      a = null;   // la perizia dice già chi occupa
+    } else {
+      a = null;   // non specificato
+    }
     if (!a || a === p) return { stato: p, avviso: null };
     if (p === 'locato_opponibile' || p === 'locato_non_opponibile') {
       return { stato: p, avviso: `Annuncio: "${annuncio.occupazione}", perizia: ${p}. Tenuto il dato della perizia (contratto): verificare col custode.` };

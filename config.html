@@ -9,8 +9,8 @@
 <link rel="icon" href="favicon-32.png" sizes="32x32">
 <link rel="apple-touch-icon" href="apple-touch-icon.png">
 <meta name="theme-color" content="#ffffff">
-<script src="tema.js"></script>
-<script src="sessione.js"></script>
+<script src="tema.js?v=20261001"></script>
+<script src="sessione.js?v=20261001"></script>
 <meta name="apple-mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-status-bar-style" content="default">
 <meta name="apple-mobile-web-app-title" content="Registro Opp.">
@@ -247,9 +247,9 @@
     cursor: pointer;
     transition: background .2s ease;
   }
-  .bottone-avvia:hover { background: #7a4530; }
+  .bottone-avvia:hover { filter: brightness(.88); }   /* prima #7a4530: illeggibile nel tema scuro */
   .bottone-avvia.secondario { background: var(--primary); }
-  .bottone-avvia.secondario:hover { background: #1a3a52; }
+  .bottone-avvia.secondario:hover { filter: brightness(.88); }
   #messaggio-azioni-principali { flex-basis: 100%; font-size: .85rem; }
 
   .overlay-modale {
@@ -434,7 +434,7 @@
     cursor: pointer;
     transition: background .2s ease;
   }
-  .bottone-salva-card:hover { background: #1a3a52; }
+  .bottone-salva-card:hover { filter: brightness(.88); }   /* prima #1a3a52: illeggibile nel tema scuro */
   .messaggio-salvataggio-card { font-size: .82rem; }
 
   .griglia-giorni { display: grid; grid-template-columns: repeat(7, 1fr); gap: 6px; margin-top: 8px; }
@@ -484,12 +484,12 @@
     }
   }
 </style>
-<link rel="stylesheet" href="colori.css">
-<link rel="stylesheet" href="grafica-app.css">
+<link rel="stylesheet" href="colori.css?v=20261001">
+<link rel="stylesheet" href="grafica-app.css?v=20261001">
 </head>
 <body>
-<script src="menu.js"></script>
-<script src="feedback.js"></script>
+<script src="menu.js?v=20261001"></script>
+<script src="feedback.js?v=20261001"></script>
 <script src="operazioni.js?v=20260930"></script>
 
 <div class="contenitore">
@@ -1354,7 +1354,7 @@
 
       configAttuale.solo_aste_future = String(config.solo_aste_future ?? true).toLowerCase() === "true";
       configAttuale.usa_astegiudiziarie_perizia = String(config.usa_astegiudiziarie_perizia ?? true).toLowerCase() === "true";
-      configAttuale.pausa_tra_aste_secondi = Number(config.pausa_tra_aste_secondi ?? 3);
+      configAttuale.pausa_tra_aste_secondi = Number(config.pausa_tra_aste_secondi ?? 1);
       configAttuale.solo_conteggio = String(config.solo_conteggio ?? false).toLowerCase() === "true";
       configAttuale.conteggia_non_analizzate = String(config.conteggia_non_analizzate ?? false).toLowerCase() === "true";
 
@@ -1374,7 +1374,7 @@
           if (Array.isArray(parsed)) pianificazioneAttuale.scanner_giorni = parsed;
         } catch (e) {}
       }
-      pianificazioneAttuale.scanner_orari = ["16:00"];
+      pianificazioneAttuale.scanner_orari = ["10:00"];
       if (config.pianificazione_scanner_orari) {
         try {
           const parsed = JSON.parse(config.pianificazione_scanner_orari);
@@ -1724,6 +1724,16 @@
     msgEl.textContent = "Ripristino in corso…";
     msgEl.className = "messaggio-salvataggio-card messaggio-attesa";
 
+    // Se un salvataggio fallisce, la pagina non deve restare con i predefiniti
+    // in memoria (il salvataggio successivo di qualsiasi card li scriverebbe
+    // tutti): si torna ai valori di prima e si rilegge dal database quello
+    // che è stato davvero salvato (01/10/2026).
+    const copia = JSON.parse(JSON.stringify({configAttuale, pianificazioneAttuale, ricercaPeriziaAttuale}));
+    const annullaInMemoria = async () => {
+      ({configAttuale, pianificazioneAttuale, ricercaPeriziaAttuale} = copia);
+      try { await caricaConfigurazioneAttuale(); } catch (e) { renderizzaTuttiIRiepiloghi(); }
+    };
+
     configAttuale.prezzo_base_min = VALORI_PREDEFINITI.prezzoMin;
     configAttuale.prezzo_base_max = VALORI_PREDEFINITI.prezzoMax;
     configAttuale.lat_riferimento = VALORI_PREDEFINITI.lat;
@@ -1760,13 +1770,14 @@
         if (risultatoPerizia.result !== "success") {
           msgEl.textContent = "Ricerca/filtri ripristinati, ma la ricerca della perizia no: " + (risultatoPerizia.message || "errore sconosciuto") + " — pianificazione non toccata.";
           msgEl.className = "messaggio-salvataggio-card messaggio-errore";
-          renderizzaTuttiIRiepiloghi();
+          await annullaInMemoria();
           return;
         }
       }
       if (risultatoConfig.result !== "success") {
         msgEl.textContent = "Ricerca/filtri: " + (risultatoConfig.message || "errore sconosciuto") + " — pianificazione non toccata.";
         msgEl.className = "messaggio-salvataggio-card messaggio-errore";
+        await annullaInMemoria();
         return;
       }
 
@@ -1780,12 +1791,7 @@
       if (risultatoPianificazione.result !== "success") {
         msgEl.textContent = "Ricerca/filtri ripristinati, ma la pianificazione no: " + (risultatoPianificazione.message || "errore sconosciuto");
         msgEl.className = "messaggio-salvataggio-card messaggio-errore";
-        renderizzaRiepilogoArea();
-        renderizzaRiepilogoPrezzo();
-        renderizzaRiepilogoTipologia();
-        renderizzaRiepilogoAltri();
-        renderizzaRiepilogoEsclusioni();
-        renderizzaRiepilogoModelli();
+        await annullaInMemoria();
         return;
       }
 
@@ -1802,6 +1808,7 @@
     } catch (e) {
       msgEl.textContent = "Richiesta non riuscita. Controlla la connessione e riprova.";
       msgEl.className = "messaggio-salvataggio-card messaggio-errore";
+      await annullaInMemoria();
     }
   }
 

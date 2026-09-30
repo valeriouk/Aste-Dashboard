@@ -10,8 +10,8 @@
 <link rel="icon" href="favicon-32.png" sizes="32x32">
 <link rel="apple-touch-icon" href="apple-touch-icon.png">
 <meta name="theme-color" content="#ffffff">
-<script src="tema.js"></script>
-<script src="sessione.js"></script>
+<script src="tema.js?v=20261001"></script>
+<script src="sessione.js?v=20261001"></script>
 <meta name="apple-mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-status-bar-style" content="default">
 <meta name="apple-mobile-web-app-title" content="Registro Opp.">
@@ -42,7 +42,7 @@
 <link href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,400..700&family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500;600&display=swap" rel="stylesheet">
 <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/leaflet.min.css" integrity="sha384-c6Rcwz4e4CITMbu/NBmnNS8yN2sC3cUElMEMfP3vqqKFp7GOYaaBBCqmaWBjmkjb" crossorigin="anonymous">
 <script src="https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/leaflet.js" integrity="sha384-cxOPjt7s7Iz04uaHJceBmS+qpjv2JkIHNVcuOrM+YHwZOmJGBXI00mdUXEq65HTH" crossorigin="anonymous"></script>
-<script src="superanalisi-esterne.js"></script>
+<script src="superanalisi-esterne.js?v=20261001"></script>
 <style>
 
   /* ============================================================
@@ -2342,7 +2342,7 @@
   }
   .riquadro-conferma-blocco li + li { margin-top: 4px; }
   .bottone-conferma-scarta { background: var(--danger); color: var(--surface); }
-  .bottone-conferma-scarta:hover { background: #6f2f23; }
+  .bottone-conferma-scarta:hover { filter: brightness(.88); }   /* prima #6f2f23: illeggibile nel tema scuro */
   /* Il link "Annulla ultimo blocco" va a capo tutto intero, mai spezzato a metà. */
   .link-annulla-blocco { white-space: nowrap; }
 
@@ -2654,12 +2654,12 @@
       -webkit-backdrop-filter: saturate(180%) blur(14px); backdrop-filter: saturate(180%) blur(14px); }
   }
 </style>
-<link rel="stylesheet" href="colori.css">
+<link rel="stylesheet" href="colori.css?v=20261001">
 </head>
 <body>
-<script src="menu.js"></script>
-<script src="underwriting.js?v=20260930"></script>
-<script src="feedback.js"></script>
+<script src="menu.js?v=20261001"></script>
+<script src="underwriting.js?v=20261001"></script>
+<script src="feedback.js?v=20261001"></script>
 <script src="operazioni.js?v=20260930"></script>
 
 <div class="contenitore">
@@ -3762,6 +3762,11 @@
     return "€ " + (Math.round(n) < 0 ? "-" : "") + String(Math.abs(Math.round(n))).replace(/\B(?=(\d{3})+(?!\d))/g, ".");
   }
 
+  // Offerta minima: 0 vuol dire "non letta dal PVP", non "gratis" (01/10/2026)
+  function formattaOffertaMinima(n) {
+    return Number(n) > 0 ? formattaEuro(n) : "—";
+  }
+
   function escapeHtml(testo) {
     const d = document.createElement("div");
     d.textContent = testo === null || testo === undefined ? "" : String(testo);
@@ -4244,7 +4249,7 @@
     document.body.appendChild(link);
     link.click();
     document.body.removeChild(link);
-    URL.revokeObjectURL(url);
+    setTimeout(() => URL.revokeObjectURL(url), 60000);   // subito: su Safari/iPhone il download può fallire
   }
 
   // Un campo va tra virgolette SOLO se contiene il separatore, le
@@ -5508,7 +5513,9 @@
       if (!Array.isArray(righe) || !righe.length || !personali || !personali.ok) return;
       const asta = ASTE.find(a => a.id === id);
       if (!asta) return;
-      const firma = () => JSON.stringify({...asta, _giudizio: undefined});
+      // giudizio e spazio sull'offerta si ricalcolano sempre: fuori dal confronto,
+      // altrimenti la scheda si ridisegnava anche senza nessun cambiamento
+      const firma = () => JSON.stringify({...asta, _giudizio: undefined, _spazio: undefined});
       const prima = firma();
       impostaDatiPersonali(personali.preferiti || [], personali.link_utili || [], personali.visite || [], personali.superanalisi_esterne || [],
         personali.operazioni || [], personali.checklist_modello || null, personali.parametri_conti || null);
@@ -5516,7 +5523,15 @@
       asta._giudizio = undefined;   // giudizio della Superanalisi da ricalcolare
       asta._spazio = undefined;     // e lo spazio sull'offerta
       applicaStatoPreferito(asta);
-      if (firma() !== prima) aggiornaCardSingola(id);
+      if (firma() !== prima) {
+        // Mentre scrivi in un campo della scheda non si ridisegna (il testo
+        // degli editor aperti andrebbe perso): i dati nuovi sono già in
+        // memoria e compaiono al prossimo aggiornamento della scheda.
+        const attivo = document.activeElement;
+        const contenitore = document.getElementById("finestra-dettagli-contenuto");
+        const staiScrivendo = attivo && /^(INPUT|TEXTAREA|SELECT)$/.test(attivo.tagName) && contenitore && contenitore.contains(attivo);
+        if (!staiScrivendo) aggiornaCardSingola(id);
+      }
     } catch (e) {
       /* rete o password: resta la versione già mostrata */
     }
@@ -6852,7 +6867,7 @@
         ${badgePopup ? `<div class="popup-lotto-badge">${badgePopup}</div>` : ""}
         <div class="popup-lotto-meta">${escapeHtml(etichettaTipologia(a.tipologia))}${a.superficieMq ? ` · ${a.superficieMq.toFixed(0)} mq` : ""}${a.statoOccupazione && a.statoOccupazione !== "N/D" ? ` · ${escapeHtml(a.statoOccupazione)}` : ""}</div>
         <div>Vendita: ${formattaData(a.dataVendita)}${testoGiorniVendita(a.dataVendita)}</div>
-        <div>Offerta minima: ${formattaEuro(a.offertaMinima)}</div>
+        <div>Offerta minima: ${formattaOffertaMinima(a.offertaMinima)}</div>
         ${testoSpazio ? `<div>Spazio sull'offerta: ${testoSpazio}</div>` : ""}
         <div>Margine lordo: ${margine}</div>
         <div>Punteggio: ${a.punteggio > 0 ? a.punteggio + "/100" : "—"}</div>
@@ -7127,7 +7142,7 @@ ${notaHtml}
         <div class="lotto-cifre">
           <div>
             <p class="cifra-etichetta">Offerta minima</p>
-            <p class="cifra-valore">${formattaEuro(a.offertaMinima)}</p>
+            <p class="cifra-valore">${formattaOffertaMinima(a.offertaMinima)}</p>
           </div>
           <div>
             <p class="cifra-etichetta">Valore stima</p>
@@ -7268,7 +7283,7 @@ ${notaHtml}
   const RIGHE_CONFRONTO = [
     {etichetta: "Margine lordo", formatta: a => a.margine !== null ? formattaEuro(a.margine) : "—"},
     {etichetta: "Giudizio Superanalisi", formatta: a => { const g = giudizioSuperanalisi(a); return g && NOMI_GIUDIZIO[g.classe] ? NOMI_GIUDIZIO[g.classe] : "—"; }},
-    {etichetta: "Offerta minima", formatta: a => formattaEuro(a.offertaMinima)},
+    {etichetta: "Offerta minima", formatta: a => formattaOffertaMinima(a.offertaMinima)},
     {etichetta: "Valore stima", formatta: a => a.valoreStima > 0 ? formattaEuro(a.valoreStima) : "—"},
     {etichetta: "Superficie", formatta: a => a.superficieMq !== null ? `${a.superficieMq.toFixed(0)} mq` : "—"},
     {etichetta: "€/mq (offerta)", formatta: a => a.euroMq !== null ? formattaEuro(a.euroMq) + "/mq" : "—"},
@@ -8257,8 +8272,10 @@ ${notaHtml}
     let testo = `${s.icona} ${s.etichetta}`, classe = "";
     if (o.stato === "aggiudicata" && o.scadenza_saldo) {
       const g = giorniAllaData(o.scadenza_saldo);
-      testo += g < 0 ? " · saldo scaduto" : ` · saldo ${testoTraGiorni(g)}`;
-      if (g <= GIORNI_SALDO_VICINO) classe = " urgente";
+      if (g !== null) {   // data non valida: niente "saldo" vuoto segnato come urgente
+        testo += g < 0 ? " · saldo scaduto" : ` · saldo ${testoTraGiorni(g)}`;
+        if (g <= GIORNI_SALDO_VICINO) classe = " urgente";
+      }
     }
     if (o.stato === "offerta" && a.dataVendita && giorniAllaData(a.dataVendita) === 0) { testo += " · ASTA OGGI"; classe = " urgente"; }
     // Dall'aggiudicazione in poi: avanzamento della checklist "dopo l'aggiudicazione".
@@ -8507,8 +8524,13 @@ ${notaHtml}
     let suggerimento = "";
     if (statoTarget === "offerta") {
       const spazio = spazioSullOfferta(asta);
+      // spazio = offerta massima − offerta minima; con l'obiettivo di utile non
+      // raggiungibile l'offerta massima vale 0 (prima compariva "€ 0")
+      const massima = spazio !== null ? asta.offertaMinima + spazio : null;
       suggerimento = `Offerta minima ${formattaEuro(asta.offertaMinima)}`
-        + (spazio !== null ? ` · offerta massima dalla Superanalisi ${formattaEuro(asta.offertaMinima + spazio)}` : "")
+        + (massima === null ? ""
+          : massima <= 0 ? " · Superanalisi: obiettivo di utile non raggiungibile"
+          : ` · offerta massima dalla Superanalisi ${formattaEuro(massima)}` + (massima < asta.offertaMinima ? " (sotto l'offerta minima)" : ""))
         + ". Cauzione vuota = 10% dell'offerta.";
     }
     if (statoTarget === "aggiudicata") suggerimento = `Scadenza del saldo vuota = ${GIORNI_SALDO_PREDEFINITI} giorni dall'aggiudicazione: controlla il termine nell'avviso di vendita.`;
@@ -8764,7 +8786,8 @@ ${notaHtml}
   // nulla: resta semplicemente il registro normale, nessun errore da
   // mostrare per questo.
   function apriDaLinkDiretto() {
-    const id = decodeURIComponent(location.hash.slice(1));
+    let id;
+    try { id = decodeURIComponent(location.hash.slice(1)); } catch (e) { return; }   // indirizzo malformato (es. "#%"): solo il registro
     if (!id) return;
     // Il registro diventa il passo di partenza e la scheda un passo sopra:
     // Indietro chiude la scheda invece di uscire dal sito.
@@ -8834,7 +8857,7 @@ ${notaHtml}
         <div class="lotto-cifre">
           <div>
             <p class="cifra-etichetta">Offerta minima</p>
-            <p class="cifra-valore">${formattaEuro(a.offertaMinima)}</p>
+            <p class="cifra-valore">${formattaOffertaMinima(a.offertaMinima)}</p>
           </div>
           <div>
             <p class="cifra-etichetta">Valore stima</p>

@@ -135,12 +135,20 @@
 
   // Incolla: se negli appunti c'è HTML e il testo semplice non è già
   // Markdown (selezione fatta col mouse), converte l'HTML in Markdown.
-  async function testoDaIncollare(evento) {
-    const dati = evento.clipboardData;
+  // Decisione SENZA attese (01/10/2026): l'incolla normale del browser va
+  // bloccato subito, prima di aspettare le librerie; dopo un await era
+  // troppo tardi e al primo incolla il testo compariva due volte.
+  // null = lascia fare al browser.
+  function datiDaIncollare(evento) {
+    const dati = evento && evento.clipboardData;
     if (!dati) return null;
     const semplice = dati.getData('text/plain') || '';
     const html = dati.getData('text/html') || '';
-    if (!html || pareMarkdown(semplice)) return null;   // lascia fare al browser
+    if (!html || pareMarkdown(semplice)) return null;
+    return { semplice, html };
+  }
+
+  async function htmlInMarkdown(html) {
     await caricaIncolla();
     const td = new window.TurndownService({ headingStyle: 'atx', bulletListMarker: '-', codeBlockStyle: 'fenced' });
     td.use(window.turndownPluginGfm.gfm);
@@ -240,14 +248,14 @@
     };
     area.addEventListener('input', aggiornaAnteprima);
     area.addEventListener('paste', async (ev) => {
-      try {
-        const convertito = await testoDaIncollare(ev);
-        if (convertito === null) return;
-        ev.preventDefault();
-        const inizio = area.selectionStart, fine = area.selectionEnd;
-        area.value = area.value.slice(0, inizio) + convertito + area.value.slice(fine);
-        aggiornaAnteprima();
-      } catch (e) { /* resta l'incolla normale del browser */ }
+      const incolla = datiDaIncollare(ev);
+      if (!incolla) return;   // incolla normale del browser
+      ev.preventDefault();
+      const inizio = area.selectionStart, fine = area.selectionEnd;
+      let testo = incolla.semplice;   // se la conversione non riesce: il testo semplice
+      try { testo = await htmlInMarkdown(incolla.html); } catch (e) { /* resta il testo semplice */ }
+      area.value = area.value.slice(0, inizio) + testo + area.value.slice(fine);
+      aggiornaAnteprima();
     });
 
     async function aggiornaElenco() {
@@ -323,5 +331,5 @@
     document.querySelectorAll('.sae-ai').forEach((s) => { s.value = nome; });
   }
 
-  return { GIUDIZI, AI_NOTE, aiAperta, leggiGiudizio, leggiClassifica, etichetta, pareMarkdown, caricaLettura, inHtml, aggiungiStile, montaSalvataggio };
+  return { GIUDIZI, AI_NOTE, aiAperta, leggiGiudizio, leggiClassifica, etichetta, pareMarkdown, datiDaIncollare, caricaLettura, inHtml, aggiungiStile, montaSalvataggio };
 });
