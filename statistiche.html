@@ -636,7 +636,9 @@
 
     // dal giorno più recente (il database li dà dal più vecchio): prima si
     // vedevano i 14 giorni più vecchi e i recenti finivano in "+ altri"
-    listaBarre("barre-perizie-tempo", (s.perizie_nel_tempo || []).slice().reverse().map(r => ({...r, giorno: Etichette.data(r.giorno)})), "giorno", "n", 14);
+    const giorni = (s.perizie_nel_tempo || []).filter(r => r.giorno).reverse()   // perizie senza data di inserimento in fondo
+      .concat((s.perizie_nel_tempo || []).filter(r => !r.giorno));
+    listaBarre("barre-perizie-tempo", giorni.map(r => ({...r, giorno: r.giorno ? Etichette.data(r.giorno) : "senza data"})), "giorno", "n", 14);
     listaBarre("barre-perizie-modello", s.perizie_per_modello, "modello", "n");
 
     document.getElementById("num-batch-pendenti").textContent = s.batch_pendenti ?? "—";
