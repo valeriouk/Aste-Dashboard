@@ -1289,13 +1289,19 @@
   .badge-operazione.urgente { background: #f3c567; color: #3b2a05; }
   .badge-operazione.spenta { background: var(--surface-2); color: var(--ink-muted); }
   .sezione-operazione { border-top: 1px solid var(--border); padding: 14px 0 6px; margin: 4px 0 14px; }
-  .percorso-operazione { display: flex; gap: 6px; overflow-x: auto; scrollbar-width: none; padding: 2px 0 10px; }
-  .percorso-operazione::-webkit-scrollbar { display: none; }
-  .percorso-operazione button { flex-shrink: 0; font: inherit; font-size: .76rem; font-weight: 500; border-radius: 999px; padding: 5px 11px;
-    cursor: pointer; border: 1px solid var(--border); background: var(--surface); color: var(--ink-muted); }
-  .percorso-operazione button.fatto { background: var(--primary-soft); border-color: transparent; color: var(--primary); }
-  .percorso-operazione button.attuale { background: var(--primary); border-color: var(--primary); color: #fff; font-weight: 600; }
-  .percorso-operazione button.uscita { background: var(--danger-soft); border-color: transparent; color: var(--danger); font-weight: 600; }
+  /* Passi: cerchi con l'icona collegati da una linea, sempre su una riga
+     (8 cerchi stanno anche sul telefono); il nome del passo attuale sotto. */
+  .percorso-operazione { position: relative; display: flex; justify-content: space-between; align-items: center; gap: 4px; margin: 2px 0 6px; }
+  .percorso-operazione::before { content: ""; position: absolute; left: 17px; right: 17px; top: 50%; height: 2px; background: var(--border); }
+  .percorso-operazione button { position: relative; flex: 0 0 34px; width: 34px; height: 34px; padding: 0; border-radius: 50%; font-size: .95rem;
+    line-height: 1; cursor: pointer; border: 1px solid var(--border); background: var(--surface); filter: grayscale(1); opacity: .75; }
+  .percorso-operazione button.fatto { background: var(--primary-soft); border-color: var(--primary); filter: none; opacity: 1; }
+  .percorso-operazione button.attuale { background: var(--primary); border-color: var(--primary); filter: none; opacity: 1;
+    box-shadow: 0 0 0 3px var(--primary-soft); }
+  .percorso-operazione button.uscita { background: var(--danger-soft); border-color: var(--danger); filter: none; opacity: 1;
+    box-shadow: 0 0 0 3px var(--danger-soft); }
+  .passo-operazione { font-size: .85rem; color: var(--ink-muted); margin: 0 0 10px; }
+  .passo-operazione strong { color: var(--ink); }
   .operazione-riepilogo { list-style: none; margin: 0 0 10px; padding: 0; display: grid; grid-template-columns: repeat(auto-fill, minmax(150px, 1fr)); gap: 8px; }
   .operazione-riepilogo li { background: var(--surface-2); border-radius: 10px; padding: 7px 10px; }
   .operazione-riepilogo li.avviso { background: var(--secondary-soft); }
@@ -2455,6 +2461,10 @@
   }
   @media (min-width: 641px) and (hover: hover) and (pointer: fine) {
     .indice-dettagli { flex-wrap: wrap; overflow-x: visible; }
+    /* Più stretto: le 12 voci stanno su una riga a 830 px (a capo solo in
+       finestre più strette). */
+    .indice-dettagli { gap: 4px; }
+    .indice-dettagli button { padding: 6px 8px; }
   }
 
   @media (max-width: 640px) {
@@ -8222,8 +8232,10 @@ ${notaHtml}
     const posizione = passi.indexOf(stato);
     const percorso = passi.map((s, i) => {
       const classe = !o ? "" : i === posizione ? (s === "persa" || s === "non_partecipo" ? "uscita" : "attuale") : i < posizione ? "fatto" : "";
-      return `<button type="button" class="${classe}" onclick="azioneOperazione('${a.id}', 'apri', '${s}')">${S[s].icona} ${escapeHtml(S[s].etichetta)}</button>`;
+      return `<button type="button" class="${classe}" onclick="azioneOperazione('${a.id}', 'apri', '${s}')" title="${escapeHtml(S[s].etichetta)}" aria-label="${escapeHtml(S[s].etichetta)}">${S[s].icona}</button>`;
     }).join("");
+    const passoAttuale = o ? `<p class="passo-operazione">${S[stato].icona} <strong>${escapeHtml(S[stato].etichetta)}</strong>`
+      + (stato === "persa" || stato === "non_partecipo" ? "" : ` · passo ${posizione + 1} di ${passi.length}`) + `</p>` : "";
 
     // Riepilogo: termine delle offerte (se lo segui ancora), numeri inseriti, scadenze.
     const righe = [];
@@ -8292,6 +8304,7 @@ ${notaHtml}
       <div class="sezione-operazione" data-id-operazione="${a.id}">
         <h3 class="sezione-costi-titolo">🧭 Operazione</h3>
         <div class="percorso-operazione">${percorso}</div>
+        ${passoAttuale}
         ${righe.length ? `<ul class="operazione-riepilogo">${righe.join("")}</ul>` : ""}
         ${o ? "" : `<p class="visita-stato">Non ancora seguita: spunta una voce della checklist o scegli un passo.</p>`}
         <div class="visita-azioni operazione-azioni">${prossimi}${modifica}${rimuovi}</div>
