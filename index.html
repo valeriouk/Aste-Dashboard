@@ -299,7 +299,6 @@
   .filtro-punteggio .testo-punteggio-lungo { display: none; }
   @media (max-width: 640px) {
     .filtro-punteggio .testo-punteggio-lungo { display: inline; }
-    .filtro-punteggio .testo-punteggio-corto { display: none; }
   }
 
   /* Due <input type="range"> nativi sovrapposti — trucco comune per un
@@ -2672,7 +2671,7 @@
         <button type="button" class="pillola" id="pillola-visite" onclick="alternaSoloVisite()" title="Mostra solo le aste con una visita in corso (richiesta, invito o appuntamento), la più vicina prima" aria-label="Visite">📅<span class="testo-pillola-mobile"> Visite</span></button>
       </div>
       <div class="filtro-punteggio">
-        <label title="Punteggio"><span class="testo-punteggio-lungo">Punteggio</span><span class="testo-punteggio-corto">Punt.</span> <span id="valore-punteggio-minimo">0</span>–<span id="valore-punteggio-massimo">100</span></label>
+        <label title="Punteggio"><span class="testo-punteggio-lungo">Punteggio </span><span id="valore-punteggio-minimo">0</span>–<span id="valore-punteggio-massimo">100</span></label>
         <div class="doppio-slider">
           <div class="doppio-slider-binario"></div>
           <div class="doppio-slider-riempimento" id="riempimento-punteggio"></div>
@@ -5969,13 +5968,13 @@
   const DEFINIZIONI_ORDINAMENTO = {
     punteggio: { etichetta: "Punteggio", ascLabel: "basso → alto", descLabel: "alto → basso", direzioneDefault: "desc",
                  comparatore: (a, b) => a.punteggio - b.punteggio },
-    margine:   { etichetta: "Margine lordo", ascLabel: "basso → alto", descLabel: "alto → basso", direzioneDefault: "desc",
+    margine:   { etichetta: "Margine lordo", etichettaBreve: "Margine", ascLabel: "basso → alto", descLabel: "alto → basso", direzioneDefault: "desc",
                  comparatore: (a, b) => (a.margine ?? -Infinity) - (b.margine ?? -Infinity) },
     // Dalla Superanalisi (solo aste con analisi v2; le altre sempre in fondo, vedi inFondo).
     giudizio:  { etichetta: "Giudizio", ascLabel: "Da scartare → Pulita", descLabel: "Pulita → Da scartare", direzioneDefault: "desc",
                  inFondo: a => !giudizioSuperanalisi(a),
                  comparatore: (a, b) => (valoreGiudizio(a) - valoreGiudizio(b)) || (a.punteggio - b.punteggio) },
-    spazio:    { etichetta: "Spazio sull'offerta", ascLabel: "meno → più", descLabel: "più → meno", direzioneDefault: "desc",
+    spazio:    { etichetta: "Spazio sull'offerta", etichettaBreve: "Spazio", ascLabel: "meno → più", descLabel: "più → meno", direzioneDefault: "desc",
                  inFondo: a => spazioSullOfferta(a) === null,
                  comparatore: (a, b) => (spazioSullOfferta(a) ?? 0) - (spazioSullOfferta(b) ?? 0) },
     prezzo:    { etichetta: "Offerta", ascLabel: "bassa → alta", descLabel: "alta → bassa", direzioneDefault: "asc",
@@ -6034,7 +6033,10 @@
   }
 
   function aggiornaEtichettaOrdinamento() {
-    document.getElementById("etichetta-ordinamento-corrente").textContent = DEFINIZIONI_ORDINAMENTO[criterioOrdinamento].etichetta;
+    // Nel pulsante chiuso il nome breve (se c'è), per tenere la barra su una riga; nel menu il nome intero.
+    const def = DEFINIZIONI_ORDINAMENTO[criterioOrdinamento];
+    document.getElementById("etichetta-ordinamento-corrente").textContent = def.etichettaBreve || def.etichetta;
+    document.getElementById("bottone-ordinamento").title = "Ordina per: " + def.etichetta;
     document.getElementById("freccia-direzione-ordinamento").textContent = direzioneOrdinamento === "asc" ? "↑" : "↓";
   }
 
