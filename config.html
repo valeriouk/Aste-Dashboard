@@ -459,6 +459,15 @@
 
   .nascosto { display: none !important; }
 
+  /* Schede della configurazione (30/09/2026): una sezione alla volta */
+  .schede-config { display: grid; grid-template-columns: repeat(6, minmax(0, 1fr)); gap: 6px; margin: 0 0 18px; }
+  .schede-config button { font: inherit; font-size: .82rem; font-weight: 600; color: var(--ink-muted); background: var(--surface-2);
+    border: none; border-radius: 999px; padding: 8px 6px; min-height: 36px; cursor: pointer; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+  .schede-config button:hover { color: var(--ink); }
+  .schede-config button.attiva { background: var(--ink); color: var(--surface); }
+  .fuori-scheda { display: none !important; }
+  @media (max-width: 640px) { .schede-config { grid-template-columns: repeat(3, minmax(0, 1fr)); } }
+
   @media (max-width: 640px) {
     .contenitore { padding: 32px 16px 64px; }
     .contenitore-mappa { height: 260px; }
@@ -480,7 +489,7 @@
 <body>
 <script src="menu.js"></script>
 <script src="feedback.js"></script>
-<script src="operazioni.js"></script>
+<script src="operazioni.js?v=20260930"></script>
 
 <div class="contenitore">
 
@@ -516,7 +525,16 @@
 
     <div id="contenuto-config" class="nascosto">
 
-      <div class="azioni-principali">
+      <nav class="schede-config" role="tablist" aria-label="Sezioni della configurazione">
+        <button type="button" role="tab" data-scheda-bottone="ricerca" onclick="mostraSchedaConfig('ricerca')">🔍 Ricerca</button>
+        <button type="button" role="tab" data-scheda-bottone="analisi" onclick="mostraSchedaConfig('analisi')">🧠 Analisi</button>
+        <button type="button" role="tab" data-scheda-bottone="orari" onclick="mostraSchedaConfig('orari')">⏱️ Orari</button>
+        <button type="button" role="tab" data-scheda-bottone="conti" onclick="mostraSchedaConfig('conti')">💶 Conti</button>
+        <button type="button" role="tab" data-scheda-bottone="dispositivo" onclick="mostraSchedaConfig('dispositivo')">📱 Dispositivo</button>
+        <button type="button" role="tab" data-scheda-bottone="sicurezza" onclick="mostraSchedaConfig('sicurezza')">🔐 Sicurezza</button>
+      </nav>
+
+      <div class="azioni-principali" data-scheda="orari">
         <button type="button" class="bottone-avvia" id="bottone-avvia-scanner" onclick="avviaScanner()">▶ Avvia scanner ora</button>
         <button type="button" class="bottone-avvia secondario" id="bottone-verifica-batch" onclick="avviaVerificaBatch()">🔄 Controlla batch ora</button>
         <button type="button" class="bottone-avvia secondario" id="bottone-controlla-preferiti" onclick="avviaControllaPreferiti()" title="Notifica subito su Telegram i preferiti in scadenza entro 15 giorni, ignorando le soglie già inviate oggi">⭐ Controlla preferiti ora</button>
@@ -524,7 +542,7 @@
       </div>
 
       <div class="elenco-card">
-        <div class="card-riepilogo">
+        <div class="card-riepilogo" data-scheda="ricerca">
           <div class="card-riepilogo-testo">
             <p class="card-riepilogo-titolo">Area di ricerca</p>
             <p class="card-riepilogo-valore" id="riepilogo-area">—</p>
@@ -532,7 +550,7 @@
           <button type="button" class="card-riepilogo-modifica" onclick="apriModale('area')">Modifica</button>
         </div>
 
-        <div class="card-riepilogo">
+        <div class="card-riepilogo" data-scheda="ricerca">
           <div class="card-riepilogo-testo">
             <p class="card-riepilogo-titolo">Filtri di prezzo</p>
             <p class="card-riepilogo-valore" id="riepilogo-prezzo">—</p>
@@ -540,7 +558,7 @@
           <button type="button" class="card-riepilogo-modifica" onclick="apriModale('prezzo')">Modifica</button>
         </div>
 
-        <div class="card-riepilogo">
+        <div class="card-riepilogo" data-scheda="ricerca">
           <div class="card-riepilogo-testo">
             <p class="card-riepilogo-titolo">Tipologia immobili</p>
             <p class="card-riepilogo-valore" id="riepilogo-tipologia">—</p>
@@ -548,7 +566,7 @@
           <button type="button" class="card-riepilogo-modifica" onclick="apriModale('tipologia')">Modifica</button>
         </div>
 
-        <div class="card-riepilogo">
+        <div class="card-riepilogo" data-scheda="ricerca">
           <div class="card-riepilogo-testo">
             <p class="card-riepilogo-titolo">Altri filtri</p>
             <p class="card-riepilogo-valore" id="riepilogo-altri">—</p>
@@ -556,7 +574,15 @@
           <button type="button" class="card-riepilogo-modifica" onclick="apriModale('altri')">Modifica</button>
         </div>
 
-        <div class="card-riepilogo">
+        <div class="card-riepilogo" data-scheda="ricerca">
+          <div class="card-riepilogo-testo">
+            <p class="card-riepilogo-titolo">Esclusioni per parole chiave</p>
+            <p class="card-riepilogo-valore" id="riepilogo-esclusioni">—</p>
+          </div>
+          <button type="button" class="card-riepilogo-modifica" onclick="apriModale('esclusioni')">Modifica</button>
+        </div>
+
+        <div class="card-riepilogo" data-scheda="analisi">
           <div class="card-riepilogo-testo">
             <p class="card-riepilogo-titolo">Modelli Gemini</p>
             <p class="card-riepilogo-valore" id="riepilogo-modelli">—</p>
@@ -564,7 +590,7 @@
           <button type="button" class="card-riepilogo-modifica" onclick="apriModale('modelli')">Modifica</button>
         </div>
 
-        <div class="card-riepilogo" id="card-pianificazione-scanner">
+        <div class="card-riepilogo" id="card-pianificazione-scanner" data-scheda="orari">
           <div class="card-riepilogo-testo">
             <p class="card-riepilogo-titolo">Pianificazione scansione</p>
             <p class="card-riepilogo-valore" id="riepilogo-pianificazione-scanner">—</p>
@@ -573,7 +599,7 @@
           <button type="button" class="card-riepilogo-modifica" onclick="apriModale('pianificazioneScanner')">Modifica</button>
         </div>
 
-        <div class="card-riepilogo">
+        <div class="card-riepilogo" data-scheda="analisi">
           <div class="card-riepilogo-testo">
             <p class="card-riepilogo-titolo">Ricerca della perizia</p>
             <p class="card-riepilogo-valore" id="riepilogo-ricerca-perizia">—</p>
@@ -583,13 +609,45 @@
 
       </div>
 
-      <div class="barra-ripristino">
+      <div class="barra-ripristino" data-scheda="ricerca">
         <button type="button" class="bottone-secondario" id="bottone-ripristina-predefiniti" onclick="confermaRipristinaPredefiniti()">↺ Ripristina tutti i valori predefiniti</button>
-        <p class="nota-campo">Riporta tutte le sette card qui sopra — area, prezzo, tipologia, altri filtri, modelli, pianificazione (lun-ven alle 10:00) e ricerca della perizia (estesa, con ricontrollo ogni 2 giorni, massimo 15 aste per giro) — ai valori predefiniti. La scelta del prompt (v1/v2) resta com'è. Salva subito, come ogni altra modifica in questa pagina.</p>
+        <p class="nota-campo">Riporta ai valori predefiniti le card delle schede Ricerca, Analisi e Orari — area, prezzo, tipologia, altri filtri, esclusioni (disattivate), modelli, pianificazione (lun-ven alle 10:00) e ricerca della perizia (estesa, con ricontrollo ogni 2 giorni, massimo 15 aste per giro). La scelta del prompt (v1/v2) resta com'è. Salva subito, come ogni altra modifica in questa pagina.</p>
         <p id="messaggio-ripristina-predefiniti" class="messaggio-salvataggio-card"></p>
       </div>
 
-      <section class="blocco-semplice">
+      <section class="blocco-semplice" data-scheda="conti">
+        <h2>Regime fiscale e conti</h2>
+        <p class="nota-campo">Valgono per la Superanalisi (singola e di gruppo), lo spazio sull'offerta nel registro e il conto reale delle
+          operazioni. <strong>Privato</strong>: 26% sulla plusvalenza se rivendi entro 5 anni dall'acquisto. <strong>Impresa</strong> (es. SRL):
+          imposte sull'utile con tutte le spese deducibili e imposta di registro sul prezzo, senza prezzo-valore né prima casa; l'IVA sulla
+          rivendita non è calcolata. Valori indicativi: verificali col commercialista.</p>
+        <div class="campo-form">
+          <label for="campo-regime-fiscale">Regime fiscale</label>
+          <select id="campo-regime-fiscale">
+            <option value="privato">Privato (26% sulla plusvalenza entro 5 anni)</option>
+            <option value="impresa">Impresa (imposte sull'utile)</option>
+          </select>
+        </div>
+        <div class="campo-form">
+          <label for="campo-aliquota-impresa">Impresa: imposte sull'utile (%)</label>
+          <input type="number" id="campo-aliquota-impresa" min="0" max="100" step="0.1">
+          <p class="nota-campo">Predefinito 27,9% = IRES 24% + IRAP 3,9% (aliquote ordinarie; l'IRAP può cambiare per regione).</p>
+        </div>
+        <div class="campo-form">
+          <label for="campo-registro-impresa">Impresa: imposta di registro all'acquisto (%)</label>
+          <input type="number" id="campo-registro-impresa" min="0" max="100" step="0.1">
+          <p class="nota-campo">Predefinito 9% sul prezzo.</p>
+        </div>
+        <div class="campo-form">
+          <label for="campo-sconto-comparabili">Comparabili: sconto di trattativa sugli annunci (%)</label>
+          <input type="number" id="campo-sconto-comparabili" min="0" max="50" step="0.5">
+          <p class="nota-campo">Il prezzo richiesto negli annunci si riduce di questa percentuale prima del conto (sulle vendite fatte no). Predefinito 5%.</p>
+        </div>
+        <button type="button" class="bottone-salva-card" onclick="salvaParametriConti()">Salva</button>
+        <p id="messaggio-parametri-conti" class="messaggio-salvataggio-card"></p>
+      </section>
+
+      <section class="blocco-semplice" data-scheda="conti">
         <h2>Checklist delle aste</h2>
         <p class="nota-campo">Voci predefinite della checklist nella sezione "🧭 Operazione" dei dettagli di ogni asta, <strong>una per riga</strong>.
           In ogni asta puoi aggiungere voci solo sue. Se togli o rinomini una voce, le spunte già date a quella voce restano salvate ma non si vedono più
@@ -609,7 +667,7 @@
         <p id="messaggio-checklist" class="messaggio-salvataggio-card"></p>
       </section>
 
-      <section class="blocco-semplice">
+      <section class="blocco-semplice" data-scheda="dispositivo">
         <h2>Tema</h2>
         <p class="nota-campo">Vale solo per <strong>questo dispositivo</strong>. "Automatico" segue il telefono o il computer (chiaro di giorno, scuro di
           sera, se impostato così). In stampa e nei PDF resta sempre chiaro.</p>
@@ -623,7 +681,7 @@
         </div>
       </section>
 
-      <section class="blocco-semplice">
+      <section class="blocco-semplice" data-scheda="dispositivo">
         <h2>Suoni e vibrazione</h2>
         <p class="nota-campo">Valgono solo per <strong>questo dispositivo</strong> (salvati nel browser): puoi averli sul telefono e non sul PC.
           Tocco leggero aprendo i dettagli e su "Annulla"; suono acuto sulla stella, grave sullo scarto; doppio tocco e suono di conferma quando salvi
@@ -634,7 +692,7 @@
         <button type="button" class="bottone-secondario" onclick="window.Feedback && Feedback.prova()" style="margin-top:10px">Prova</button>
       </section>
 
-      <section class="blocco-semplice">
+      <section class="blocco-semplice" data-scheda="sicurezza">
         <h2>Manutenzione</h2>
         <p class="nota-campo">Elimina dal registro le aste con data vendita già passata. Prima mostra quante sono e quante hanno visite, note/link, operazioni o risultati AI, e ti fa scegliere se tenere quelle. Le aste con un'<strong>offerta presentata o oltre</strong> (aggiudicata, persa, saldo…) non vengono eliminate, salvo scelta esplicita. Operazione irreversibile.</p>
         <button type="button" class="bottone-secondario" id="bottone-elimina-scadute" onclick="eliminaAsteScadute()" style="background:var(--danger-soft);color:var(--danger)">🗑 Elimina aste scadute…</button>
@@ -642,7 +700,7 @@
         <div id="scelta-elimina-scadute" class="nascosto" style="display:flex;flex-wrap:wrap;gap:8px;margin-top:6px"></div>
       </section>
 
-      <section class="blocco-semplice">
+      <section class="blocco-semplice" data-scheda="sicurezza">
         <h2>Cambia password</h2>
         <p class="nota-campo">La password di scrittura protegge questa pagina, Statistiche, Superanalisi e ogni modifica nel registro (stelle, scarti, note, link, visite): cambiarla qui vale ovunque, subito.</p>
         <form onsubmit="return false;">
@@ -663,7 +721,7 @@
         <p id="messaggio-cambio-password"></p>
       </section>
 
-      <section class="blocco-semplice">
+      <section class="blocco-semplice" data-scheda="sicurezza">
         <h2>Password di lettura del registro</h2>
         <p class="nota-campo">Password SEPARATA da quella sopra — se attiva, serve per aprire il registro e leggerne i dati, non solo per stella/scarto/nota. Facoltativa: se disattivata, il registro resta apribile da chiunque abbia il link.</p>
         <form onsubmit="return false;">
@@ -816,6 +874,34 @@
       <div class="finestra-modale-azioni">
         <button type="button" class="bottone-salva-card" id="bottone-salva-altri" onclick="confermaSalvaCard('altri')">Salva</button>
         <span id="messaggio-salva-altri" class="messaggio-salvataggio-card"></span>
+      </div>
+    </div>
+  </div>
+</div>
+
+<div id="modale-esclusioni" class="overlay-modale" onclick="if(event.target===this) chiudiModale('esclusioni')">
+  <div class="finestra-modale">
+    <div class="finestra-modale-intestazione">
+      <h2>Esclusioni per parole chiave</h2>
+      <button type="button" class="finestra-modale-chiudi" onclick="chiudiModale('esclusioni')" aria-label="Chiudi">×</button>
+    </div>
+    <div class="finestra-modale-corpo">
+      <p class="nota-campo">Lo scanner scarta, prima di qualunque analisi Gemini, gli annunci il cui testo del lotto contiene una di queste
+        voci. Le aste già nel registro restano. Il testo PVP è scritto dal delegato: una voce troppo generica può scartare aste buone.</p>
+      <div class="campo-form">
+        <label class="etichetta-checkbox"><input type="checkbox" id="campo-esclusioni-attive"> Attiva le esclusioni</label>
+      </div>
+      <div class="campo-form">
+        <label class="etichetta-checkbox"><input type="checkbox" id="campo-esclusione-quote"> Quote parziali (1/2, 1/3, ½… di proprietà)</label>
+        <p class="nota-campo">Riconosciute vicino a "quota" o "diritto" o prima di "proprietà"; "quota di piena proprietà", "1/1" e i dati catastali non contano.</p>
+      </div>
+      <div class="campo-form">
+        <label for="campo-parole-esclusione">Altre parole o frasi, una per riga (maiuscole e minuscole non contano)</label>
+        <textarea id="campo-parole-esclusione" rows="5"></textarea>
+      </div>
+      <div class="finestra-modale-azioni">
+        <button type="button" class="bottone-salva-card" id="bottone-salva-esclusioni" onclick="confermaSalvaCard('esclusioni')">Salva</button>
+        <span id="messaggio-salva-esclusioni" class="messaggio-salvataggio-card"></span>
       </div>
     </div>
   </div>
@@ -1229,6 +1315,21 @@
       // non scrive nel database le voci predefinite (resterebbero fisse).
       configAttuale.checklist_modello = config.checklist_modello && window.Operazioni ? Operazioni.modelloChecklist(config.checklist_modello) : null;
 
+      // Esclusioni per parole chiave: disattivate finché non le attivi.
+      configAttuale.esclusioni_attive = String(config.esclusioni_attive ?? false).toLowerCase() === "true";
+      configAttuale.esclusione_quote = String(config.esclusione_quote ?? true).toLowerCase() === "true";
+      configAttuale.parole_esclusione = [...PAROLE_ESCLUSIONE_PREDEFINITE];
+      if (config.parole_esclusione) {
+        try {
+          const parsed = JSON.parse(config.parole_esclusione);
+          if (Array.isArray(parsed)) configAttuale.parole_esclusione = parsed.map(String);
+        } catch (e) {}
+      }
+      // Regime fiscale e conti: null finché non li salvi (valgono i predefiniti).
+      const chiaviConti = ["regime_fiscale", "aliquota_impresa", "registro_impresa", "sconto_trattativa_comparabili"];
+      configAttuale.parametri_conti = chiaviConti.some(k => config[k] !== undefined)
+        ? Object.fromEntries(chiaviConti.filter(k => config[k] !== undefined).map(k => [k, config[k]])) : null;
+
       configAttuale.occupazioni_escluse = [];
       if (config.occupazioni_escluse) {
         try {
@@ -1334,6 +1435,14 @@
       configAttuale.tipologie_incluse.length ? configAttuale.tipologie_incluse.join(", ") : "Tutte le tipologie";
   }
 
+  // Stesse parole predefinite di comune.py (PAROLE_ESCLUSIONE_PREDEFINITE, repo dello scanner).
+  const PAROLE_ESCLUSIONE_PREDEFINITE = ["nuda proprietà", "usufrutto", "diritto di superficie", "diritto di abitazione"];
+  function renderizzaRiepilogoEsclusioni() {
+    const voci = [...(configAttuale.esclusione_quote !== false ? ["quote parziali"] : []), ...(configAttuale.parole_esclusione || [])];
+    document.getElementById("riepilogo-esclusioni").textContent =
+      configAttuale.esclusioni_attive && voci.length ? `Attive: ${voci.join(", ")}` : "Disattivate";
+  }
+
   function renderizzaRiepilogoAltri() {
     const nomiOccupazione = Object.fromEntries(STATI_OCCUPAZIONE_PVP);
     const parti = [
@@ -1404,6 +1513,8 @@
 
   function renderizzaTuttiIRiepiloghi() {
     mostraChecklist();
+    mostraParametriConti();
+    renderizzaRiepilogoEsclusioni();
     renderizzaRiepilogoRicercaPerizia();
     renderizzaRiepilogoArea();
     renderizzaRiepilogoPrezzo();
@@ -1445,6 +1556,10 @@
       document.querySelectorAll("#lista-tipologia .checkbox-tipologia").forEach(cb => {
         cb.checked = configAttuale.tipologie_incluse.includes(cb.value);
       });
+    } else if (nome === "esclusioni") {
+      document.getElementById("campo-esclusioni-attive").checked = !!configAttuale.esclusioni_attive;
+      document.getElementById("campo-esclusione-quote").checked = configAttuale.esclusione_quote !== false;
+      document.getElementById("campo-parole-esclusione").value = (configAttuale.parole_esclusione || []).join("\n");
     } else if (nome === "altri") {
       document.querySelectorAll("#lista-occupazione .checkbox-occupazione").forEach(cb => {
         cb.checked = !configAttuale.occupazioni_escluse.includes(cb.value);
@@ -1539,6 +1654,10 @@
         cerca_tutta_italia: String(configAttuale.cerca_tutta_italia),
         tipologie_incluse: JSON.stringify(configAttuale.tipologie_incluse),
         occupazioni_escluse: JSON.stringify(configAttuale.occupazioni_escluse),
+        esclusioni_attive: String(!!configAttuale.esclusioni_attive),
+        esclusione_quote: String(configAttuale.esclusione_quote !== false),
+        parole_esclusione: JSON.stringify(configAttuale.parole_esclusione || []),
+        ...(configAttuale.parametri_conti || {}),
         ...(configAttuale.checklist_modello ? {checklist_modello: JSON.stringify(configAttuale.checklist_modello)} : {}),
         solo_aste_future: String(configAttuale.solo_aste_future),
         usa_astegiudiziarie_perizia: String(configAttuale.usa_astegiudiziarie_perizia),
@@ -1560,6 +1679,7 @@
     cercaTuttaItalia: false,
     tipologieIncluse: [],
     occupazioniEscluse: [],
+    esclusioniAttive: false,
     soloFuture: true,
     astegiudiziarie: true,
     pausa: 1,
@@ -1598,6 +1718,9 @@
     configAttuale.cerca_tutta_italia = VALORI_PREDEFINITI.cercaTuttaItalia;
     configAttuale.tipologie_incluse = [...VALORI_PREDEFINITI.tipologieIncluse];
     configAttuale.occupazioni_escluse = [...VALORI_PREDEFINITI.occupazioniEscluse];
+    configAttuale.esclusioni_attive = VALORI_PREDEFINITI.esclusioniAttive;
+    configAttuale.esclusione_quote = true;
+    configAttuale.parole_esclusione = [...PAROLE_ESCLUSIONE_PREDEFINITE];
     configAttuale.solo_aste_future = VALORI_PREDEFINITI.soloFuture;
     configAttuale.usa_astegiudiziarie_perizia = VALORI_PREDEFINITI.astegiudiziarie;
     configAttuale.pausa_tra_aste_secondi = VALORI_PREDEFINITI.pausa;
@@ -1647,6 +1770,7 @@
         renderizzaRiepilogoPrezzo();
         renderizzaRiepilogoTipologia();
         renderizzaRiepilogoAltri();
+        renderizzaRiepilogoEsclusioni();
         renderizzaRiepilogoModelli();
         return;
       }
@@ -1657,6 +1781,7 @@
       renderizzaRiepilogoPrezzo();
       renderizzaRiepilogoTipologia();
       renderizzaRiepilogoAltri();
+      renderizzaRiepilogoEsclusioni();
       renderizzaRiepilogoModelli();
       renderizzaRiepilogoPianificazioneScanner();
       renderizzaRiepilogoRicercaPerizia();
@@ -1699,6 +1824,16 @@
       configAttuale.prezzo_base_max = prezzoMax;
     } else if (nomeCard === "tipologia") {
       configAttuale.tipologie_incluse = [...document.querySelectorAll("#lista-tipologia .checkbox-tipologia:checked")].map(cb => cb.value);
+    } else if (nomeCard === "esclusioni") {
+      const parole = [...new Set(document.getElementById("campo-parole-esclusione").value.split("\n").map(v => v.trim()).filter(Boolean))];
+      if (parole.some(p => p.length < 3 || p.length > 80)) {
+        msgEl.textContent = "Ogni parola o frase deve avere tra 3 e 80 caratteri (una troppo corta scarterebbe troppe aste).";
+        msgEl.className = "messaggio-salvataggio-card messaggio-errore";
+        return;
+      }
+      configAttuale.esclusioni_attive = document.getElementById("campo-esclusioni-attive").checked;
+      configAttuale.esclusione_quote = document.getElementById("campo-esclusione-quote").checked;
+      configAttuale.parole_esclusione = parole;
     } else if (nomeCard === "altri") {
       const pausaTesto = document.getElementById("campo-pausa").value;
       const pausa = Number(pausaTesto);
@@ -1796,7 +1931,7 @@
         msgEl.className = "messaggio-salvataggio-card messaggio-ok";
         const funzioniRiepilogo = {
           area: renderizzaRiepilogoArea, prezzo: renderizzaRiepilogoPrezzo,
-          tipologia: renderizzaRiepilogoTipologia, altri: renderizzaRiepilogoAltri,
+          tipologia: renderizzaRiepilogoTipologia, altri: renderizzaRiepilogoAltri, esclusioni: renderizzaRiepilogoEsclusioni,
           modelli: renderizzaRiepilogoModelli, pianificazioneScanner: renderizzaRiepilogoPianificazioneScanner,
           ricercaPerizia: renderizzaRiepilogoRicercaPerizia
         };
@@ -1924,6 +2059,70 @@
       messaggioEl.className = "messaggio-errore";
     } finally {
       bottone.disabled = false;
+    }
+  }
+
+  // Schede della configurazione: una sezione alla volta, l'ultima scelta
+  // resta su questo dispositivo.
+  const SCHEDE_CONFIG = ["ricerca", "analisi", "orari", "conti", "dispositivo", "sicurezza"];
+  function mostraSchedaConfig(nome) {
+    if (!SCHEDE_CONFIG.includes(nome)) nome = "ricerca";
+    document.querySelectorAll("#contenuto-config [data-scheda]").forEach(el => el.classList.toggle("fuori-scheda", el.dataset.scheda !== nome));
+    document.querySelectorAll(".schede-config button").forEach(b => {
+      const attiva = b.dataset.schedaBottone === nome;
+      b.classList.toggle("attiva", attiva);
+      b.setAttribute("aria-selected", attiva ? "true" : "false");
+    });
+    try { localStorage.setItem("config_scheda_v1", nome); } catch (e) { /* solo per questa visita */ }
+  }
+  (() => { let s = null; try { s = localStorage.getItem("config_scheda_v1"); } catch (e) {} mostraSchedaConfig(s || "ricerca"); })();
+
+  // Regime fiscale e conti (config: regime_fiscale, aliquota_impresa,
+  // registro_impresa, sconto_trattativa_comparabili; letti dalle altre
+  // pagine con i dati personali o leggi_parametri_conti). Frazioni nel
+  // database (0.279), percentuali nei campi (27,9).
+  function mostraParametriConti() {
+    const p = window.Operazioni ? Operazioni.parametriConti(configAttuale.parametri_conti || null)
+      : {regimeFiscale: "privato", aliquotaImpresa: 0.279, registroImpresa: 0.09, scontoTrattativaComparabili: 0.05};
+    const pct = (x) => Math.round(x * 1000) / 10;
+    document.getElementById("campo-regime-fiscale").value = p.regimeFiscale;
+    document.getElementById("campo-aliquota-impresa").value = pct(p.aliquotaImpresa);
+    document.getElementById("campo-registro-impresa").value = pct(p.registroImpresa);
+    document.getElementById("campo-sconto-comparabili").value = pct(p.scontoTrattativaComparabili);
+  }
+  async function salvaParametriConti() {
+    const msgEl = document.getElementById("messaggio-parametri-conti");
+    const leggi = (id, max) => { const v = Number(document.getElementById(id).value); return document.getElementById(id).value !== "" && v >= 0 && v <= max ? v / 100 : null; };
+    const aliquota = leggi("campo-aliquota-impresa", 100), registro = leggi("campo-registro-impresa", 100), sconto = leggi("campo-sconto-comparabili", 50);
+    if (aliquota === null || registro === null || sconto === null) {
+      msgEl.textContent = "Percentuali non valide: aliquote tra 0 e 100, sconto tra 0 e 50.";
+      msgEl.className = "messaggio-salvataggio-card messaggio-errore";
+      return;
+    }
+    const precedente = configAttuale.parametri_conti;
+    configAttuale.parametri_conti = {
+      regime_fiscale: document.getElementById("campo-regime-fiscale").value === "impresa" ? "impresa" : "privato",
+      aliquota_impresa: String(aliquota), registro_impresa: String(registro), sconto_trattativa_comparabili: String(sconto),
+    };
+    msgEl.textContent = "Salvataggio in corso…";
+    msgEl.className = "messaggio-salvataggio-card messaggio-attesa";
+    try {
+      const risultato = await salvaConfigCompletaSulServer();
+      if (risultato && risultato.result === "success") {
+        msgEl.textContent = "Salvato. Vale da subito nelle pagine che apri o ricarichi.";
+        msgEl.className = "messaggio-salvataggio-card messaggio-ok";
+        window.Feedback && Feedback.salvato();
+      } else {
+        configAttuale.parametri_conti = precedente;
+        msgEl.textContent = (risultato && risultato.message) || "Errore sconosciuto durante il salvataggio.";
+        msgEl.className = "messaggio-salvataggio-card messaggio-errore";
+        window.Feedback && Feedback.errore();
+      }
+    } catch (e) {
+      configAttuale.parametri_conti = precedente;
+      msgEl.textContent = "Richiesta non riuscita. Controlla la connessione e riprova.";
+      msgEl.className = "messaggio-salvataggio-card messaggio-errore";
+      window.Feedback && Feedback.errore();
     }
   }
 

@@ -867,6 +867,22 @@
         voce (es. chi hai sentito, cosa manca). In fondo a ogni gruppo puoi <strong>aggiungere voci solo per quell'asta</strong> (con ✕ per toglierle).
         Le voci predefinite si cambiano in <a href="#config-checklist">Configurazione → Checklist delle aste</a>. Il primo gruppo è aperto finché non
         hai l'aggiudicazione, poi si apre il secondo; puoi aprirli e chiuderli a mano.</li>
+      <li><strong>💶 Conto reale</strong> (dall'aggiudicazione in poi, si apre e chiude come i gruppi della checklist): riquadri con costi totali,
+        prezzo di vendita (o, prima della vendita, la rivendita stimata dalla Superanalisi), utile lordo, imposte secondo il
+        <a href="#config-conti">regime fiscale</a>, utile netto, rendimento sul capitale (il tuo capitale, o se non lo scrivi i costi meno mutuo e spese
+        di vendita) e annualizzato, mesi dall'aggiudicazione; sotto, l'elenco dei costi. "✏️ Finanziamento e spese" apre il modulo: capitale tuo, mutuo
+        o prestito (importo, tasso annuo, spese, date di erogazione ed estinzione), imposte d'acquisto pagate, delegato e procedura, tecnico e notaio,
+        condominio arretrato, spese di detenzione al mese, agenzia e spese di vendita, altre spese (vuoto = voce tolta).
+        <ul>
+          <li>Interessi semplici sul mutuo, dal saldo (o dalla data di erogazione) all'estinzione, alla vendita o a oggi.</li>
+          <li>Detenzione = spese al mese × mesi dall'aggiudicazione (alla vendita o a oggi).</li>
+          <li>Imposte: privato 26% sulla plusvalenza (utile + detenzione, interessi, spese del mutuo e condominio, che per un privato non si
+            deducono); impresa: l'aliquota impostata sull'utile.</li>
+        </ul></li>
+      <li><strong>Consuntivo</strong>: segnando "📨 Ho presentato l'offerta" si salva la stima della Superanalisi al prezzo offerto (scenario centrale:
+        valore di rivendita, lavori, imposte, mesi, utile netto; se correggi l'importo prima dell'aggiudicazione si rifà). Nel conto reale una tabella la
+        confronta con i numeri veri (prezzo d'acquisto, lavori, prezzo di vendita, mesi, utile netto) con lo scarto in euro e in percentuale, man mano
+        che li inserisci. Il riepilogo di tutte le operazioni è in <a href="#stat-operazioni">Statistiche → Operazioni</a>.</li>
       <li>Un'asta diventa "seguita" alla prima spunta o al primo passo scelto; da lì arrivano i <a href="#orari-operazioni">promemoria Telegram</a>.</li>
       <li><strong>Storico</strong>: ogni cambio di passo con data e ora. Le modifiche (numeri, spunte, note) finiscono anche nella
         <a href="#sistema-cronologia">cronologia delle modifiche</a>.</li>
@@ -1147,10 +1163,15 @@
   <section class="voce" id="config-generale">
     <h3>Come funziona la pagina</h3>
     <ul>
+      <li><strong>Schede</strong> in alto (una riga su PC, due righe da tre sul telefono), ognuna con la sua parte della pagina; l'ultima scelta resta
+        su questo dispositivo: <strong>🔍 Ricerca</strong> (area, prezzo, tipologia, altri filtri, esclusioni, ripristino dei predefiniti),
+        <strong>🧠 Analisi</strong> (modelli Gemini, ricerca della perizia), <strong>⏱️ Orari</strong> (pulsanti di avvio e pianificazione),
+        <strong>💶 Conti</strong> (regime fiscale e conti, checklist), <strong>📱 Dispositivo</strong> (tema, suoni e vibrazione),
+        <strong>🔐 Sicurezza</strong> (manutenzione, password).</li>
       <li>Serve la password di scrittura. Ogni riquadro ("card") mostra il valore attuale; "Modifica" apre una finestra; "Salva" chiede conferma
         ("Confermi?" per 4 secondi, poi un secondo tocco) e salva subito ("Salvato.", la finestra si chiude da sola).</li>
       <li>Lo scanner rilegge la configurazione all'inizio di ogni giro: le modifiche valgono dal <strong>giro successivo</strong>.</li>
-      <li>I tre pulsanti in alto funzionano con doppio tocco (conferma entro 4 secondi). Mentre una richiesta è in corso il pulsante resta
+      <li>I tre pulsanti della scheda Orari funzionano con doppio tocco (conferma entro 4 secondi). Mentre una richiesta è in corso il pulsante resta
         disattivato: un tocco in più non avvia una seconda esecuzione.</li>
       <li>Se il salvataggio di una card non riesce, i valori tornano quelli di prima (non vengono spediti col salvataggio di un'altra card).</li>
     </ul>
@@ -1182,8 +1203,9 @@
 
   <section class="voce" id="config-ripristina">
     <h3>"↺ Ripristina tutti i valori predefiniti"</h3>
-    <p>Il pulsante sta in fondo alla pagina, dopo le sette card e prima di Manutenzione (è un'azione rara che sovrascrive tutto), e chiede conferma con un
-      secondo clic. Riporta ai valori predefiniti (e salva subito) area, prezzo, tipologia, altri filtri, modelli, pianificazione e ricerca della perizia:</p>
+    <p>Il pulsante sta in fondo alla scheda Ricerca (è un'azione rara che sovrascrive tutto) e chiede conferma con un secondo clic. Riporta ai valori
+      predefiniti (e salva subito) area, prezzo, tipologia, altri filtri, esclusioni (disattivate), modelli, pianificazione e ricerca della perizia;
+      checklist e regime fiscale restano come sono:</p>
     <div class="tabella-scroll"><table>
       <thead><tr><th>Voce</th><th>Valore predefinito</th></tr></thead>
       <tbody>
@@ -1231,7 +1253,7 @@
         registro restano. Un annuncio con più stati è escluso solo se sono tutti tolti; uno stato nuovo che PVP dovesse introdurre passa sempre.
         Il dato è quello dichiarato nell'annuncio, spesso "Non specificato" (circa 6 aste su 10 al 30/09/2026); "Occupato" spesso vuol dire occupato
         dal debitore, cioè liberabile dal custode; anche "Occupato senza titolo" è in genere liberabile (nessun contratto opponibile).
-        Il riepilogo della card mostra "Occupazione: tutti gli stati" oppure gli stati esclusi, e i messaggi Telegram con i filtri usati (anche quello di invio del batch) mostrano la riga dell'occupazione con i nomi degli stati esclusi.</li>
+        Il riepilogo della card mostra "Occupazione: tutti gli stati" oppure gli stati esclusi, e i messaggi Telegram con i filtri usati (anche quello di invio del batch) mostrano la riga dell'occupazione con i nomi degli stati esclusi (e la riga "🚫 Esclusioni", vedi <a href="#config-esclusioni">Esclusioni per parole chiave</a>).</li>
       <li><strong>Aste da includere</strong>: "Solo aste future" (predefinito) oppure "Includi anche concluse (analisi storiche)".</li>
       <li><strong>Perizia da astegiudiziarie.it</strong>: attiva/disattiva la ricerca della perizia su quel sito. Le sue condizioni d'uso vietano lo scraping
         automatico: attivala solo se è una scelta consapevole.</li>
@@ -1242,6 +1264,21 @@
       <li><strong>"Conteggia anche le aste non analizzate (tutto il registro)"</strong> (solo con Solo conteggio): aggiunge al messaggio il totale delle
         aste senza un'analisi riuscita in tutto il registro.</li>
     </ul>
+  </section>
+
+  <section class="voce" id="config-esclusioni">
+    <h3>Card "Esclusioni per parole chiave"</h3>
+    <p>Scarta, prima di qualunque analisi Gemini, gli annunci il cui testo del lotto (scritto dal delegato su PVP) contiene una delle voci.
+      <strong>Disattivata di partenza</strong>: "Attiva le esclusioni" la accende. Voci:</p>
+    <ul>
+      <li><strong>Quote parziali</strong> (1/2, 1/3, 2/3, ½, metà… di proprietà): riconosciute vicino a "quota" o "diritto" o prima di "proprietà";
+        "quota di piena proprietà", "1/1" e i dati catastali come "p.lla 717/1/4" non contano. Provata il 30/09/2026 su 300 annunci di abitazioni
+        (circa il 4-5% ha quote o diritti parziali).</li>
+      <li><strong>Altre parole o frasi</strong>, una per riga, tra 3 e 80 caratteri (maiuscole e minuscole non contano). Di partenza: nuda proprietà,
+        usufrutto, diritto di superficie, diritto di abitazione.</li>
+    </ul>
+    <p>Le aste già nel registro restano. Il log dello scanner conta le aste scartate "per parole escluse" e i messaggi Telegram con i filtri usati
+      (anche quello del batch) hanno la riga "🚫 Esclusioni". Una voce troppo generica può scartare aste buone.</p>
   </section>
 
   <section class="voce" id="config-modelli">
@@ -1282,7 +1319,7 @@
   </section>
 
   <section class="voce" id="config-manutenzione">
-    <h3>Manutenzione: "🗑 Elimina aste scadute"</h3>
+    <h3>Manutenzione: "🗑 Elimina aste scadute" (scheda Sicurezza)</h3>
     <p>Cancella dal registro le aste con data di vendita già passata. Prima mostra quante sono e quante hanno <strong>dati tuoi</strong> (una visita, una
       nota o dei link, un risultato di superanalisi esterna, anche di gruppo), poi fa scegliere: "Elimina tutte (N)", "Tieni le M con i miei dati
       (elimina le altre)" o "Annulla". <strong>Irreversibile dalle pagine</strong>: lo storico delle aste eliminate va perso; i tuoi dati cancellati
@@ -1294,8 +1331,24 @@
       "Elimina anche le K operazioni…", con una conferma in più: cancella anche i loro numeri, la checklist e lo storico.</p>
   </section>
 
+  <section class="voce" id="config-conti">
+    <h3>Regime fiscale e conti (scheda Conti)</h3>
+    <p>Valgono per la Superanalisi (singola e di gruppo), lo spazio sull'offerta del registro e il <a href="#registro-operazione">conto reale</a>
+      delle operazioni. "Salva" li rende validi da subito nelle pagine che apri o ricarichi.</p>
+    <ul>
+      <li><strong>Regime fiscale</strong>: <strong>Privato</strong> (predefinito) = 26% sulla plusvalenza se rivendi entro 5 anni dall'acquisto;
+        <strong>Impresa</strong> (per esempio una SRL) = imposte sull'utile con tutte le spese deducibili (interessi e detenzione compresi), imposta di
+        registro all'acquisto sul prezzo, senza prezzo-valore né prima casa ("Acquisto come prima casa" in Superanalisi si disattiva). L'IVA sulla
+        rivendita e il regime delle imprese di costruzione non sono calcolati.</li>
+      <li><strong>Impresa: imposte sull'utile</strong>: predefinito 27,9% = IRES 24% + IRAP 3,9%, le aliquote ordinarie (l'IRAP può cambiare per regione).</li>
+      <li><strong>Impresa: imposta di registro all'acquisto</strong>: predefinito 9% sul prezzo.</li>
+      <li><strong>Comparabili: sconto di trattativa sugli annunci</strong>: predefinito 5%; vedi <a href="#superanalisi-comparabili">Comparabili</a>.</li>
+    </ul>
+    <p>Sono valori indicativi per confrontare le operazioni: verifica il tuo caso con il commercialista.</p>
+  </section>
+
   <section class="voce" id="config-checklist">
-    <h3>Checklist delle aste</h3>
+    <h3>Checklist delle aste (scheda Conti)</h3>
     <p>Voci predefinite della checklist della sezione <a href="#registro-operazione">🧭 Operazione</a>, una per riga, in due gruppi: "Prima
       dell'offerta" e "Dopo l'aggiudicazione". "Salva" le rende valide per tutte le aste (le voci aggiunte a una singola asta restano sue);
       "↺ Voci predefinite" rimette nei campi quelle iniziali, da salvare. Se togli o rinomini una voce, le spunte già date restano salvate ma non si
@@ -1394,6 +1447,14 @@
     </ul>
   </section>
 
+  <section class="voce" id="stat-operazioni">
+    <h3>Operazioni</h3>
+    <p>Dalla sezione <a href="#registro-operazione">🧭 Operazione</a> delle aste: quante sono in valutazione, le offerte presentate, aggiudicate,
+      perse, la quota di aggiudicazione (aggiudicate su aggiudicate + perse) e le vendute. Per le vendute: utile netto medio e rendimento annualizzato
+      medio dal conto reale, e lo scarto medio dei numeri veri dalla stima salvata all'offerta per lavori, prezzo di vendita e tempi (positivo = reale
+      più alto), con una tabella per operazione. Servono a tarare i parametri delle stime.</p>
+  </section>
+
   <section class="voce" id="stat-visite">
     <h3>Visite</h3>
     <p>Aperture per giorno del registro e della configurazione. Ogni ricaricamento conta come una visita; nessun dato su persone o paese di provenienza.</p>
@@ -1439,6 +1500,8 @@
     <h3>Valore di rivendita (ARV): da dove viene</h3>
     <p>ARV (<em>After Repair Value</em>) = il prezzo a cui si pensa di rivendere dopo i lavori. Fonte, in ordine (si usa la prima disponibile):</p>
     <ol>
+      <li><strong>I comparabili</strong>, se hai spuntato "Usa i comparabili come valore di rivendita" (vedi <a href="#superanalisi-comparabili">Comparabili</a>):
+        €/mq × superficie commerciale. Affidabilità "media" ("bassa" se la superficie è approssimata).</li>
       <li><strong>Il tuo valore</strong> (campo "Il tuo valore di rivendita (€)", salvato nel database): diventa lo scenario centrale; prudenziale = 93%,
         ottimistico = 105% <span class="stima">STIMA</span>. Affidabilità "media".</li>
       <li><strong>OMI</strong> della zona dell'asta (<a href="#omi">Agenzia Entrate - OMI</a>): €/mq minimo-massimo × superficie. Affidabilità "screening"
@@ -1448,6 +1511,24 @@
     </ol>
     <p>Con fonte OMI: controlla che la zona corrisponda all'indirizzo su <a href="https://www1.agenziaentrate.gov.it/servizi/geopoi_omi/index.php" target="_blank" rel="noopener">GEOPOI</a>
       (le coordinate dell'annuncio a volte sono approssimative); se non torna, inserisci il tuo valore. "Salva" lo memorizza; "Cancella (torna al calcolato)" lo toglie.</p>
+  </section>
+
+  <section class="voce" id="superanalisi-comparabili">
+    <h3>Comparabili</h3>
+    <p>Blocco dopo "Valore di rivendita": annunci o vendite di immobili simili nella stessa zona, uno per riga, con link, mq, prezzo, stato
+      (Ristrutturato — vale anche per il nuovo —, Buono, Da ristrutturare) e tipo (Annuncio = prezzo richiesto, Venduto = prezzo vero).</p>
+    <ul>
+      <li>Per ogni riga il prezzo al metro; sugli annunci si toglie lo <a href="#config-conti">sconto di trattativa</a> (5% di partenza).</li>
+      <li>Forchetta: 25° percentile (prudenziale), mediana (centrale), 75° percentile (ottimistico), moltiplicati per la superficie commerciale
+        dell'asta, mostrati mentre scrivi. Conta il prezzo a lavori fatti: se ci sono almeno 3 comparabili ristrutturati si usano solo quelli, altrimenti
+        tutti (con un avviso). Con meno di 3 comparabili compare un avviso.</li>
+      <li>"Importa dai link dell'asta" aggiunge una riga per ogni link salvato nei dettagli dell'asta nel registro (serve aver aperto il registro su
+        questo dispositivo); mq, prezzo e stato li aggiungi tu.</li>
+      <li>"Usa i comparabili come valore di rivendita" li rende la prima fonte del conto, qui, nella Superanalisi di gruppo, nello spazio
+        sull'offerta del registro e nella stima salvata all'offerta. "Salva" li memorizza nel database (al massimo 30), "Cancella tutti" li toglie.
+        Le modifiche finiscono nella <a href="#sistema-cronologia">cronologia</a> e un'asta con comparabili conta come "con i tuoi dati" in
+        <a href="#config-manutenzione">Elimina aste scadute</a>.</li>
+    </ul>
   </section>
 
   <section class="voce" id="superanalisi-scenari">
@@ -1497,19 +1578,23 @@
         <tr><td>Mesi stimati</td><td><a href="#superanalisi-mesi">vedi tabella</a></td></tr>
         <tr><td>Capitale investito</td><td>costo totale − costi di vendita (i soldi da anticipare prima di vendere)</td></tr>
         <tr><td>Utile lordo</td><td>ARV − costo totale</td></tr>
-        <tr><td><strong>Utile netto stimato</strong></td><td>utile lordo − imposta sulla plusvalenza</td></tr>
+        <tr><td><strong>Imposta</strong> (riga nella tabella)</td><td>privato: imposta sulla plusvalenza; impresa: imposte sull'utile</td></tr>
+        <tr><td><strong>Utile netto stimato</strong></td><td>utile lordo − imposta</td></tr>
         <tr><td>Rendimento netto sul capitale</td><td>utile netto ÷ capitale investito</td></tr>
       </tbody>
     </table></div>
     <p><strong>Imposta sulla plusvalenza</strong> <span class="stima">STIMA</span>: 26% di (utile lordo + costi di detenzione + arretrati), perché
       per un privato quei costi non sono deducibili. Rivendere entro 5 anni un immobile che non è stato abitazione principale genera una plusvalenza
-      tassabile (art. 67 TUIR); il 26% è l'imposta sostitutiva applicabile tramite il notaio. Verifica il tuo caso con il commercialista.</p>
+      tassabile (art. 67 TUIR); il 26% è l'imposta sostitutiva applicabile tramite il notaio. Verifica il tuo caso con il commercialista.
+      Con il regime <strong>impresa</strong> (<a href="#config-conti">Configurazione → Conti</a>) l'imposta è l'aliquota impostata (27,9% di partenza)
+      sull'utile lordo, con tutte le spese deducibili; sotto i parametri la pagina scrive quale regime sta usando.</p>
   </section>
 
   <section class="voce" id="superanalisi-imposte">
     <h3>Imposte di acquisto nella Superanalisi</h3>
     <ul>
-      <li>Registro 9% (2% prima casa), minimo 1.000 €; ipotecaria + catastale 100 €.</li>
+      <li>Registro 9% (2% prima casa), minimo 1.000 €; ipotecaria + catastale 100 €. Con il regime impresa: l'aliquota impostata (9% di partenza)
+        sul prezzo, senza prezzo-valore né prima casa.</li>
       <li>Base: il prezzo pagato, oppure il <a href="#glossario-prezzo-valore">prezzo-valore</a> (rendita × 1,05 × 120, o × 110 prima casa) se è più basso
         e se <strong>tutte</strong> le unità hanno la rendita. Solo per persone fisiche.</li>
       <li>Rispetto al registro è più prudente: prezzo-valore solo se conviene, niente prezzo-valore senza rendita reale (nessuna rendita stimata), tecnico
@@ -2064,7 +2149,7 @@
         <tr><td>✅ tutte già note, nessuna novità</td><td>Tutte le aste trovate erano già analizzate o in un batch.</td></tr>
         <tr><td>🔢 Scanner aste — solo conteggio</td><td>Modalità <a href="#config-altri-filtri">solo conteggio</a>: numeri, nessuna spesa.</td></tr>
         <tr><td>✅ completato / ⚠️ completato con errori</td><td>Fine di un giro con analisi subito (sincrono): quante aste analizzate e quante con errori.</td></tr>
-        <tr><td>📦 Ricerca … completata</td><td>Batch inviato a Gemini: criteri (luogo, prezzo, tipologia, stati di occupazione esclusi), numero di aste, modello; i risultati arriveranno da pochi minuti a 24 ore dopo.</td></tr>
+        <tr><td>📦 Ricerca … completata</td><td>Batch inviato a Gemini: criteri (luogo, prezzo, tipologia, stati di occupazione esclusi, esclusioni per parole), numero di aste, modello; i risultati arriveranno da pochi minuti a 24 ore dopo.</td></tr>
         <tr><td>✅ Ricerca completata, nessun documento leggibile</td><td>Nessuna asta aveva un documento valido da inviare.</td></tr>
         <tr><td>⚠️ invio del batch a Gemini fallito</td><td>Si riproverà al giro successivo.</td></tr>
         <tr><td>⛔ Scanner aste interrotto</td><td>Il database non rispondeva: il giro si è fermato senza spendere.</td></tr>
@@ -2228,7 +2313,8 @@
     <h3>Plusvalenza e imposta del 26%</h3>
     <p>Se un privato rivende entro 5 anni dall'acquisto un immobile (che non è stato la sua abitazione principale per la maggior parte del tempo), la differenza
       tra prezzo di vendita e costo è una <strong>plusvalenza</strong> tassabile (art. 67 TUIR). Si può chiedere al notaio l'imposta sostitutiva, oggi del 26%.
-      La Superanalisi usa il 26% come stima; per un'impresa il regime è diverso. Verifica con il commercialista.</p>
+      La Superanalisi usa il 26% come stima; per un'impresa si può scegliere il regime impresa in <a href="#config-conti">Configurazione → Conti</a>.
+      Verifica con il commercialista.</p>
   </section>
 
   <section class="voce" id="glossario-condoni">

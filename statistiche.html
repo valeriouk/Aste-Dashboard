@@ -217,6 +217,7 @@
 </head>
 <body>
 <script src="menu.js"></script>
+<script src="operazioni.js?v=20260930"></script>
 
 <div class="contenitore">
 
@@ -350,6 +351,15 @@
         <h3 style="font-family:var(--font-body);font-size:.85rem;font-weight:600;color:var(--ink-muted);margin:16px 0 8px;">Configurazione (config.html)</h3>
         <div id="barre-visite-config"></div>
         <p class="sezione-nota">Un ricaricamento della pagina conta come una nuova visita — nessuna deduplica per persona/sessione. Nessun dato sul paese di provenienza, per scelta.</p>
+      </div>
+
+      <div class="sezione">
+        <h2 class="sezione-titolo">Operazioni</h2>
+        <div class="griglia-statistiche" id="griglia-operazioni"><p class="messaggio-attesa">Caricamento…</p></div>
+        <div id="consuntivo-operazioni"></div>
+        <p class="sezione-nota">Dalla sezione "🧭 Operazione" delle aste. Quota di aggiudicazione = aggiudicate su aggiudicate + perse. Per le
+          vendute: conto reale (regime fiscale di Configurazione → Conti) e scarto medio dei numeri veri dalla stima della Superanalisi salvata
+          all'offerta (positivo = reale più alto): servono a tarare le stime.</p>
       </div>
 
       <div class="griglia-statistiche">
@@ -487,6 +497,7 @@
       renderizzaStatisticheAste(statistiche);
       renderizzaVisite(Array.isArray(visite) ? visite : []);
       renderizzaRicariche();
+      caricaOperazioni();
 
       document.getElementById("stato-caricamento-statistiche").classList.add("nascosto");
       document.getElementById("contenuto-statistiche").classList.remove("nascosto");
@@ -494,6 +505,55 @@
       document.getElementById("stato-caricamento-statistiche").classList.add("nascosto");
       erroreEl.textContent = "Impossibile caricare le statistiche: " + (e.message || e);
       erroreEl.classList.remove("nascosto");
+    }
+  }
+
+  // Operazioni (sql/comparabili_e_conti.sql, statistiche_operazioni): quante
+  // per passo, quota di aggiudicazione, e per quelle vendute conto reale e
+  // consuntivo (operazioni.js), per tarare le stime. Non blocca il resto
+  // della pagina se la funzione non c'è ancora.
+  async function caricaOperazioni() {
+    const griglia = document.getElementById("griglia-operazioni");
+    const dettaglio = document.getElementById("consuntivo-operazioni");
+    if (!griglia || !window.Operazioni) return;
+    try {
+      const [dati, pc] = await Promise.all([
+        chiamaRpc("statistiche_operazioni", {password_tentativo: passwordCorrente}),
+        chiamaRpc("leggi_parametri_conti", {password_tentativo: passwordCorrente, tipo: "scrittura"}).catch(() => null),
+      ]);
+      if (!dati || dati.result !== "success") throw new Error((dati && dati.message) || "funzione statistiche_operazioni non disponibile");
+      const conti = Operazioni.parametriConti(pc && pc.ok ? pc.parametri : null);
+      const elenco = (dati.operazioni || []).map(x => ({...x.operazione, indirizzo: x.indirizzo}));
+      const conta = (stati) => elenco.filter(o => stati.includes(o.stato)).length;
+      const aggiudicate = conta(["aggiudicata", "saldo", "consegna", "cantiere", "in_vendita", "venduta"]);
+      const perse = conta(["persa"]);
+      const vendute = elenco.filter(o => o.stato === "venduta").map(o => ({o, r: Operazioni.contoReale(o, {regimeFiscale: conti.regimeFiscale, aliquotaImpresa: conti.aliquotaImpresa})}))
+        .filter(x => x.r && x.r.venduta);
+      const media = (valori) => { const v = valori.filter(x => x !== null && Number.isFinite(x)); return v.length ? v.reduce((s, x) => s + x, 0) / v.length : null; };
+      const eur = (v) => v === null ? "—" : "€ " + (Math.round(v) < 0 ? "-" : "") + String(Math.abs(Math.round(v))).replace(/\B(?=(\d{3})+(?!\d))/g, ".");
+      const pct = (v) => v === null ? "—" : `${v >= 0 ? "+" : ""}${Math.round(v)}%`;
+      const scheda = (numero, etichetta) => `<div class="scheda-statistica"><p class="scheda-statistica-numero">${escapeHtml(numero)}</p><p class="scheda-statistica-etichetta">${escapeHtml(etichetta)}</p></div>`;
+      const scarti = (voce) => media(vendute.map(x => { const r = Operazioni.consuntivo(x.o, x.r).find(c => c.voce === voce); return r ? r.scartoPct : null; }));
+      griglia.innerHTML = [
+        scheda(String(conta(["valutazione"])), "In valutazione"),
+        scheda(String(elenco.filter(o => Number(o.offerta_importo) > 0).length), "Offerte presentate"),
+        scheda(String(aggiudicate), "Aggiudicate"),
+        scheda(String(perse), "Perse"),
+        scheda(aggiudicate + perse ? `${Math.round(aggiudicate / (aggiudicate + perse) * 100)}%` : "—", "Quota di aggiudicazione"),
+        scheda(String(vendute.length), "Vendute"),
+        scheda(eur(media(vendute.map(x => x.r.netto))), "Utile netto medio (vendute)"),
+        scheda(media(vendute.map(x => x.r.rendimentoAnnuoPct)) === null ? "—" : `${Math.round(media(vendute.map(x => x.r.rendimentoAnnuoPct)))}%`, "Rendimento annualizzato medio"),
+        scheda(pct(scarti("Lavori")), "Lavori: reale contro stima"),
+        scheda(pct(scarti("Prezzo di vendita")), "Vendita: reale contro stima"),
+        scheda(pct(scarti("Mesi dall'aggiudicazione alla vendita")), "Tempi: reale contro stima"),
+      ].join("");
+      dettaglio.innerHTML = vendute.length ? `<div style="overflow-x:auto"><table class="tabella-ricariche" style="margin-top:14px">
+        <thead><tr><th>Asta</th><th>Acquisto</th><th>Vendita</th><th>Utile netto</th><th>Annualizzato</th></tr></thead><tbody>
+        ${vendute.map(x => `<tr><td>${escapeHtml(x.o.indirizzo || String(x.o.id_annuncio))}</td><td>${eur(Number(x.o.prezzo_aggiudicazione))}</td>
+          <td>${eur(Number(x.o.prezzo_vendita))}</td><td>${eur(x.r.netto)}</td><td>${x.r.rendimentoAnnuoPct === null ? "—" : Math.round(x.r.rendimentoAnnuoPct) + "%"}</td></tr>`).join("")}
+        </tbody></table></div>` : "";
+    } catch (e) {
+      griglia.innerHTML = `<p class="messaggio-attesa">Operazioni non disponibili: ${escapeHtml(e.message || String(e))}.</p>`;
     }
   }
 

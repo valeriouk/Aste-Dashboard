@@ -1337,6 +1337,15 @@
   .aggiungi-voce { display: flex; gap: 6px; margin: 8px 0 4px; }
   .voce-nota-editor button, .aggiungi-voce button { font: inherit; font-size: .8rem; font-weight: 600; border-radius: 8px; padding: 6px 10px; cursor: pointer;
     border: 1px solid var(--border); background: var(--surface); color: var(--ink); }
+  /* Conto reale e consuntivo nella sezione "🧭 Operazione" */
+  .conto-operazione .operazione-riepilogo { margin-top: 6px; }
+  .conto-operazione .operazione-riepilogo li.positivo strong { color: var(--primary); }
+  .conto-operazione .operazione-riepilogo li.negativo strong { color: var(--danger); }
+  .conto-voci { font-size: .76rem; color: var(--ink-muted); margin: 0 0 8px; line-height: 1.5; }
+  .tabella-consuntivo { width: 100%; border-collapse: collapse; font-size: .8rem; margin: 6px 0 10px; }
+  .tabella-consuntivo th, .tabella-consuntivo td { text-align: right; padding: 5px 6px; border-bottom: 1px solid var(--border); white-space: nowrap; }
+  .tabella-consuntivo th:first-child, .tabella-consuntivo td:first-child { text-align: left; white-space: normal; }
+  .tabella-consuntivo th { font-size: .7rem; color: var(--ink-faint); font-weight: 600; }
   @media (pointer: coarse) {
     /* 16 px: niente zoom automatico dell'iPhone quando tocchi il campo */
     .operazione-editor input, .voce-nota-editor input, .aggiungi-voce input { font-size: 16px; }
@@ -2646,9 +2655,9 @@
 </head>
 <body>
 <script src="menu.js"></script>
-<script src="underwriting.js"></script>
+<script src="underwriting.js?v=20260930"></script>
 <script src="feedback.js"></script>
-<script src="operazioni.js"></script>
+<script src="operazioni.js?v=20260930"></script>
 
 <div class="contenitore">
 
@@ -3232,6 +3241,9 @@
   // predefinite della checklist arrivano con gli stessi dati (config).
   let OPERAZIONI = {};
   let CHECKLIST_MODELLO = window.Operazioni ? Operazioni.modelloChecklist(null) : {prima: [], dopo: []};
+  // Regime fiscale, aliquote e sconto sui comparabili (Configurazione → Conti), con i dati personali.
+  let PARAMETRI_CONTI = window.Operazioni ? Operazioni.parametriConti(null)
+    : {regimeFiscale: "privato", aliquotaImpresa: 0.279, registroImpresa: 0.09, scontoTrattativaComparabili: 0.05};
   // id_annuncio -> [risultati di superanalisi con AI esterne, senza il
   // testo] (sql/superanalisi_esterne.sql nel repo privato): un risultato di
   // gruppo compare sotto ciascuna delle sue aste. Letto con i dati personali;
@@ -5436,7 +5448,8 @@
 
   // Mette i dati personali (letti con leggi_dati_personali) nelle mappe
   // usate da applicaStatoPreferito. Usata all'avvio e da aggiornaAstaDalDatabase.
-  function impostaDatiPersonali(righePreferiti, righeLinkUtili, righeVisite, righeSuperanalisi, righeOperazioni = [], modelloChecklist = null) {
+  function impostaDatiPersonali(righePreferiti, righeLinkUtili, righeVisite, righeSuperanalisi, righeOperazioni = [], modelloChecklist = null, parametriConti = null) {
+    if (window.Operazioni) PARAMETRI_CONTI = Operazioni.parametriConti(parametriConti);
     OPERAZIONI = {};
     righeOperazioni.forEach(o => { if (o && o.id_annuncio !== null && o.id_annuncio !== undefined) OPERAZIONI[String(o.id_annuncio)] = o; });
     if (window.Operazioni) CHECKLIST_MODELLO = Operazioni.modelloChecklist(modelloChecklist);
@@ -5491,7 +5504,7 @@
       const firma = () => JSON.stringify({...asta, _giudizio: undefined});
       const prima = firma();
       impostaDatiPersonali(personali.preferiti || [], personali.link_utili || [], personali.visite || [], personali.superanalisi_esterne || [],
-        personali.operazioni || [], personali.checklist_modello || null);
+        personali.operazioni || [], personali.checklist_modello || null, personali.parametri_conti || null);
       Object.assign(asta, normalizzaRiga(righe[0]));
       asta._giudizio = undefined;   // giudizio della Superanalisi da ricalcolare
       asta._spazio = undefined;     // e lo spazio sull'offerta
@@ -5558,8 +5571,8 @@
       .then(d => (Array.isArray(d.superanalisi_esterne) ? d.superanalisi_esterne : []))
       .catch(() => []);
     const promessaOperazioni = promessaPersonali
-      .then(d => ({righe: Array.isArray(d.operazioni) ? d.operazioni : [], modello: d.checklist_modello || null}))
-      .catch(() => ({righe: [], modello: null}));
+      .then(d => ({righe: Array.isArray(d.operazioni) ? d.operazioni : [], modello: d.checklist_modello || null, conti: d.parametri_conti || null}))
+      .catch(() => ({righe: [], modello: null, conti: null}));
 
     // return qui: chi chiama avvia() può ora concatenare .then/.catch per
     // sapere DAVVERO quando il caricamento finisce (successo o fallito),
@@ -5574,9 +5587,9 @@
       conTimeoutRipiego(promessaLinkUtili, 8000, []),
       conTimeoutRipiego(promessaVisite, 8000, []),
       conTimeoutRipiego(promessaSuperanalisi, 8000, []),
-      conTimeoutRipiego(promessaOperazioni, 8000, {righe: [], modello: null})
+      conTimeoutRipiego(promessaOperazioni, 8000, {righe: [], modello: null, conti: null})
     ]).then(([righeAste, righePreferiti, righeLinkUtili, righeVisite, righeSuperanalisi, datiOperazioni]) => {
-      impostaDatiPersonali(righePreferiti, righeLinkUtili, righeVisite, righeSuperanalisi, datiOperazioni.righe, datiOperazioni.modello);
+      impostaDatiPersonali(righePreferiti, righeLinkUtili, righeVisite, righeSuperanalisi, datiOperazioni.righe, datiOperazioni.modello, datiOperazioni.conti);
       ASTE = righeAste.map(normalizzaRiga).map(applicaStatoPreferito);
       document.getElementById("testo-aggiornato").textContent =
         new Date().toLocaleTimeString("it-IT", { hour: "2-digit", minute: "2-digit" });
@@ -5666,6 +5679,7 @@
       // Lavori scelti da te nella Superanalisi dopo il sopralluogo (sql/lavori_utente.sql).
       livelloLavoriUtente: ["nessuna", "leggera", "media", "pesante"].includes(r.livello_lavori_utente) ? r.livello_lavori_utente : null,
       valoreRivenditaUtente: numeroSicuro(r.valore_rivendita_utente, null),
+      comparabiliUtente: r.comparabili_utente && typeof r.comparabili_utente === "object" ? r.comparabili_utente : null,
       importoLavoriUtente: numeroSicuro(r.importo_lavori_utente, null),
       // Solo per il CSV (colonne in coda): analisi v2 completa e OMI.
       analisiV2: r.analisi_v2 && typeof r.analisi_v2 === "object" ? r.analisi_v2 : null,
@@ -5807,34 +5821,63 @@
   // Null senza analisi v2 o se il conto non si può fare.
   const PARAMETRI_SUPERANALISI_PREDEFINITI = { utilePct: 15, minimoPrudenzialePct: 5, primaCasa: false };   // come in superanalisi.html
   const FORCHETTA_VALORE_UTENTE_REGISTRO = { prudenziale: 0.93, centrale: 1.0, ottimistico: 1.05 };         // come in superanalisi.html
+  // Conto della Superanalisi per un'asta (stessi dati e stessa precedenza
+  // delle fonti di superanalisi.html: comparabili se scegli di usarli, il
+  // tuo valore, OMI, quotazioni citate dal CTU, valore del CTU), con i
+  // parametri salvati in Superanalisi su questo dispositivo e il regime
+  // fiscale di Configurazione → Conti. prezzoOfferta: conto a quel prezzo
+  // invece che all'offerta minima. null senza analisi v2.
+  function esitoSuperanalisi(a, prezzoOfferta = null) {
+    if (!a.analisiV2 || !String(a.versionePrompt || "").startsWith("v2") || !window.Underwriting) return null;
+    let p = PARAMETRI_SUPERANALISI_PREDEFINITI;
+    try { p = { ...p, ...(JSON.parse(localStorage.getItem("superanalisi_parametri_v1") || "{}")) }; } catch (e) { /* predefiniti */ }
+    const annuncio = { comune: a.comune, offertaMinima: prezzoOfferta || a.offertaMinima || null, prezzoBase: a.prezzoBase || null,
+      valoreStima: a.valoreStima || null, occupazione: a.disponibilita,
+      renditaOverride: a.renditaCatastaleUtente > 0 ? a.renditaCatastaleUtente : null,
+      arretratiOverride: a.oneriCondominialiUtente ?? null,
+      livelloLavori: a.livelloLavoriUtente, lavoriOverride: a.importoLavoriUtente };
+    const c = a.comparabiliUtente;
+    const comparabili = c && c.usa && Array.isArray(c.righe)
+      ? Underwriting.forchettaComparabili(c.righe, { scontoTrattativaComparabili: PARAMETRI_CONTI.scontoTrattativaComparabili }) : null;
+    if (comparabili) {
+      annuncio.arvEuroMq = comparabili;
+    } else if (a.valoreRivenditaUtente > 0) {
+      const f = FORCHETTA_VALORE_UTENTE_REGISTRO, v = a.valoreRivenditaUtente;
+      annuncio.arvOverride = { prudenziale: Math.round(v * f.prudenziale), centrale: Math.round(v * f.centrale), ottimistico: Math.round(v * f.ottimistico) };
+    } else if (a.omi && a.omi.min > 0 && a.omi.max >= a.omi.min) {
+      annuncio.omi = { min: a.omi.min, max: a.omi.max };
+    } else {
+      const quot = (((a.analisiV2 || {}).valutazione_ctu || {}).quotazioni_citate || [])
+        .filter(q => q && Number(q.min_euro_mq) > 0 && Number(q.max_euro_mq) >= Number(q.min_euro_mq));
+      const scelta = quot.find(q => /omi/i.test(String(q.fonte || ""))) || quot[0];
+      if (scelta) annuncio.omi = { min: Number(scelta.min_euro_mq), max: Number(scelta.max_euro_mq) };
+    }
+    return Underwriting.analizzaAsta(a.analisiV2, annuncio, {
+      utileTargetPct: p.utilePct / 100, utileMinimoPrudenzialePct: p.minimoPrudenzialePct / 100, targetNetto: true, primaCasa: !!p.primaCasa,
+      regimeFiscale: PARAMETRI_CONTI.regimeFiscale, aliquotaImpresa: PARAMETRI_CONTI.aliquotaImpresa, registroImpresa: PARAMETRI_CONTI.registroImpresa });
+  }
   function spazioSullOfferta(a) {
     if (a._spazio !== undefined) return a._spazio;
     a._spazio = null;
-    if (!a.analisiV2 || !String(a.versionePrompt || "").startsWith("v2") || !window.Underwriting) return null;
-    try {
-      let p = PARAMETRI_SUPERANALISI_PREDEFINITI;
-      try { p = { ...p, ...(JSON.parse(localStorage.getItem("superanalisi_parametri_v1") || "{}")) }; } catch (e) { /* predefiniti */ }
-      const annuncio = { comune: a.comune, offertaMinima: a.offertaMinima || null, prezzoBase: a.prezzoBase || null,
-        valoreStima: a.valoreStima || null, occupazione: a.disponibilita,
-        renditaOverride: a.renditaCatastaleUtente > 0 ? a.renditaCatastaleUtente : null,
-        arretratiOverride: a.oneriCondominialiUtente ?? null,
-        livelloLavori: a.livelloLavoriUtente, lavoriOverride: a.importoLavoriUtente };
-      if (a.valoreRivenditaUtente > 0) {
-        const f = FORCHETTA_VALORE_UTENTE_REGISTRO, v = a.valoreRivenditaUtente;
-        annuncio.arvOverride = { prudenziale: Math.round(v * f.prudenziale), centrale: Math.round(v * f.centrale), ottimistico: Math.round(v * f.ottimistico) };
-      } else if (a.omi && a.omi.min > 0 && a.omi.max >= a.omi.min) {
-        annuncio.omi = { min: a.omi.min, max: a.omi.max };
-      } else {
-        const quot = (((a.analisiV2 || {}).valutazione_ctu || {}).quotazioni_citate || [])
-          .filter(q => q && Number(q.min_euro_mq) > 0 && Number(q.max_euro_mq) >= Number(q.min_euro_mq));
-        const scelta = quot.find(q => /omi/i.test(String(q.fonte || ""))) || quot[0];
-        if (scelta) annuncio.omi = { min: Number(scelta.min_euro_mq), max: Number(scelta.max_euro_mq) };
-      }
-      const esito = Underwriting.analizzaAsta(a.analisiV2, annuncio, {
-        utileTargetPct: p.utilePct / 100, utileMinimoPrudenzialePct: p.minimoPrudenzialePct / 100, targetNetto: true, primaCasa: !!p.primaCasa });
-      a._spazio = esito.headroom ?? null;
-    } catch (e) { a._spazio = null; }
+    try { const esito = esitoSuperanalisi(a); a._spazio = esito ? (esito.headroom ?? null) : null; } catch (e) { a._spazio = null; }
     return a._spazio;
+  }
+  // Stima della Superanalisi al prezzo offerto, scenario centrale: si salva
+  // con l'offerta (operazioni.stima_offerta) per il consuntivo.
+  function stimaAllOfferta(a, importo) {
+    try {
+      const esito = esitoSuperanalisi(a, importo);
+      const c = esito && esito.scenariAlMinimo && esito.scenariAlMinimo.centrale;
+      if (!c) return null;
+      return { data: oggiIso(), prezzo: importo, arv: c.arv, fonte_arv: esito.arv ? esito.arv.fonte : "", lavori: c.voci.lavori,
+        imposte_acquisto: c.voci.imposte, totale: c.totale, mesi: c.mesi, utile: c.utile, utile_netto: c.utileNettoStimato,
+        regime: c.regimeFiscale, offerta_massima: esito.offertaMassima };
+    } catch (e) { return null; }
+  }
+  // Valore di rivendita centrale della Superanalisi (per il conto "a oggi"
+  // prima della vendita), oppure null.
+  function rivenditaStimata(a) {
+    try { const esito = esitoSuperanalisi(a); return esito && esito.arv ? esito.arv.centrale : null; } catch (e) { return null; }
   }
 
   // Codici PVP (descrizioni lette dal dettaglio PVP del bene, verificate il 30/09/2026).
@@ -8314,10 +8357,99 @@ ${notaHtml}
         ${o ? "" : `<p class="visita-stato">Non ancora seguita: spunta una voce della checklist o scegli un passo.</p>`}
         <div class="visita-azioni operazione-azioni">${prossimi}${modifica}${rimuovi}</div>
         <div class="operazione-editor nascosto"></div>
+        ${stato !== "persa" ? sezioneContoReale(a) : ""}
         ${gruppo("prima", "Checklist prima dell'offerta", indice <= 1)}
         ${gruppo("dopo", "Dopo l'aggiudicazione", indice >= 2 && stato !== "persa")}
         ${storico}
       </div>`;
+  }
+
+  // Conto reale (dall'aggiudicazione in poi) e consuntivo: numeri in
+  // operazioni.js (contoReale, consuntivo), dati in operazioni.conto.
+  function sezioneContoReale(a) {
+    const o = a.operazione;
+    if (!o || !(Number(o.prezzo_aggiudicazione) > 0) || !window.Operazioni) return "";
+    const r = Operazioni.contoReale(o, { regimeFiscale: PARAMETRI_CONTI.regimeFiscale, aliquotaImpresa: PARAMETRI_CONTI.aliquotaImpresa,
+      rivenditaStimata: rivenditaStimata(a) });
+    if (!r) return "";
+    const impresa = r.regimeFiscale === "impresa";
+    const riquadro = (etichetta, valore, classe = "") => `<li${classe ? ` class="${classe}"` : ""}><span>${escapeHtml(etichetta)}</span><strong>${escapeHtml(valore)}</strong></li>`;
+    const segno = (v) => v === null ? "" : v >= 0 ? "positivo" : "negativo";
+    const pct = (v) => v === null ? "—" : `${(Math.round(v * 10) / 10).toLocaleString("it-IT")}%`;
+    const riquadri = [
+      riquadro("Costi totali", formattaEuro(r.costi)),
+      riquadro(r.venduta ? "Prezzo di vendita" : "Rivendita stimata (Superanalisi)", r.ricavo === null ? "—" : formattaEuro(r.ricavo)),
+      riquadro(r.venduta ? "Utile lordo" : "Utile lordo stimato", r.utile === null ? "—" : formattaEuro(r.utile), segno(r.utile)),
+      riquadro(impresa ? `Imposte sull'utile (${Math.round(PARAMETRI_CONTI.aliquotaImpresa * 1000) / 10}%)` : "Imposta sulla plusvalenza (26%)",
+        r.imposta === null ? "—" : formattaEuro(r.imposta)),
+      riquadro(r.venduta ? "Utile netto" : "Utile netto stimato", r.netto === null ? "—" : formattaEuro(r.netto), segno(r.netto)),
+      riquadro(r.capitaleStimato ? "Rendimento (capitale calcolato)" : "Rendimento sul tuo capitale", pct(r.rendimentoPct), segno(r.rendimentoPct)),
+      riquadro("Rendimento annualizzato", pct(r.rendimentoAnnuoPct), segno(r.rendimentoAnnuoPct)),
+      riquadro(r.venduta ? "Mesi dall'aggiudicazione alla vendita" : "Mesi dall'aggiudicazione", (Math.round(r.mesi * 10) / 10).toLocaleString("it-IT")),
+    ];
+    const nomi = { prezzo: "prezzo", imposte_acquisto: "imposte", spese_procedura: "procedura", notaio_tecnico: "tecnico e notaio",
+      condominio_arretrato: "condominio arretrato", lavori: "lavori", detenzione: "detenzione", interessi: "interessi",
+      mutuo_spese: "spese del mutuo", agenzia_vendita: "vendita", altre_spese: "altre spese" };
+    const voci = Object.entries(r.voci).filter(([, v]) => v > 0).map(([k, v]) => `${nomi[k] || k} ${formattaEuro(v)}`).join(" · ");
+    const righeConsuntivo = Operazioni.consuntivo(o, r);
+    const valore = (x, v) => x.tipo === "mesi" ? (Math.round(v * 10) / 10).toLocaleString("it-IT") : formattaEuro(v);
+    const consuntivo = righeConsuntivo.length ? `
+      <p class="passo-operazione" style="margin:8px 0 0"><strong>Consuntivo</strong>: stima della Superanalisi salvata all'offerta${o.stima_offerta && o.stima_offerta.data ? ` (${formattaData(o.stima_offerta.data)})` : ""} contro i numeri veri</p>
+      <table class="tabella-consuntivo"><thead><tr><th>Voce</th><th>Stima</th><th>Reale</th><th>Scarto</th></tr></thead><tbody>
+      ${righeConsuntivo.map(x => `<tr><td>${escapeHtml(x.voce)}</td><td>${valore(x, x.stimato)}</td><td>${valore(x, x.reale)}</td>
+        <td>${x.scarto >= 0 ? "+" : ""}${valore(x, x.scarto)}${x.scartoPct === null ? "" : ` (${x.scartoPct >= 0 ? "+" : ""}${Math.round(x.scartoPct)}%)`}</td></tr>`).join("")}
+      </tbody></table>` : "";
+    const scelta = GRUPPI_CHECKLIST_APERTI[`${a.id}|conto`];
+    return `
+        <details class="checklist-gruppo conto-operazione" data-gruppo="conto"${scelta === false ? "" : " open"}>
+          <summary onclick="ricordaGruppoChecklist(this.parentElement)"><span>💶 Conto reale</span>${r.netto === null ? "" : `<span class="checklist-contatore">netto ${escapeHtml(formattaEuro(r.netto))}</span>`}</summary>
+          <ul class="operazione-riepilogo">${riquadri.join("")}</ul>
+          ${voci ? `<p class="conto-voci">Costi: ${escapeHtml(voci)}.${r.venduta ? "" : " Fino a oggi; il ricavo è la rivendita stimata della Superanalisi."} Regime ${impresa ? "impresa" : "privato"} (Configurazione → Conti).</p>` : ""}
+          ${consuntivo}
+          <div class="visita-azioni operazione-azioni"><button type="button" onclick="apriEditorConto('${a.id}')">✏️ Finanziamento e spese</button></div>
+          <div class="operazione-editor conto-editor nascosto"></div>
+        </details>`;
+  }
+
+  // Modulo del conto: finanziamento e spese reali; vuoto = voce tolta.
+  function apriEditorConto(id) {
+    const asta = ASTE.find(a => a.id === id);
+    const sezione = document.querySelector(`.sezione-operazione[data-id-operazione="${id}"]`);
+    if (!asta || !asta.operazione || !sezione) return;
+    const editor = sezione.querySelector(".conto-editor");
+    const c = asta.operazione.conto || {};
+    const stima = asta.operazione.stima_offerta || {};
+    const segnaposto = { imposte_acquisto: stima.imposte_acquisto ? `stima ${formattaEuro(stima.imposte_acquisto)}` : "",
+      mutuo_dal: "", mutuo_al: "vuoto = vendita o oggi" };
+    editor.innerHTML = `
+      <p class="riga-piena"><strong>💶 Finanziamento e spese reali</strong></p>
+      ${Operazioni.CAMPI_CONTO.map(([campo, etichetta, tipo]) => {
+        const attributi = tipo === "data" ? 'type="date"' : `type="number" min="0" inputmode="decimal" step="${tipo === "percentuale" ? "0.01" : "any"}"`;
+        const valore = c[campo] === null || c[campo] === undefined ? "" : String(c[campo]);
+        return `<label>${escapeHtml(etichetta + (tipo === "euro" ? " (€)" : ""))}<input ${attributi} data-campo="${campo}" value="${escapeHtml(valore)}" placeholder="${escapeHtml(segnaposto[campo] || "")}"></label>`;
+      }).join("")}
+      <p class="riga-piena operazione-suggerimento">Capitale tuo vuoto = calcolato dai costi (meno mutuo e spese di vendita). Interessi semplici sul mutuo, dal saldo (o dalla data di erogazione) alla vendita o a oggi. Detenzione = spese al mese × mesi dall'aggiudicazione.</p>
+      <div class="riga-piena visita-azioni">
+        <button type="button" class="principale" data-salva>Salva</button>
+        <button type="button" onclick="this.closest('.operazione-editor').classList.add('nascosto')">Annulla</button>
+      </div>
+      <p class="riga-piena visita-errore nascosto"></p>`;
+    editor.classList.remove("nascosto");
+    editor.querySelector("[data-salva]").onclick = () => {
+      const errore = editor.querySelector(".visita-errore");
+      const dati = {};
+      for (const input of editor.querySelectorAll("input[data-campo]")) {
+        const v = input.value.trim();
+        if (v !== "" && input.type === "number" && !(Number(v) >= 0)) {
+          errore.textContent = "I numeri non possono essere negativi."; errore.classList.remove("nascosto"); return;
+        }
+        dati[input.dataset.campo] = v;
+      }
+      richiediPasswordSeServe(() => eseguiAzioneOperazione(id, "conto", dati));
+    };
+    const primo = editor.querySelector("input[data-campo]");
+    if (primo) primo.focus({preventScroll: true});
+    editor.scrollIntoView({block: "nearest", behavior: "smooth"});
   }
 
   // Solo i tocchi veri sul titolo (il clic arriva prima che il gruppo si
@@ -8413,6 +8545,12 @@ ${notaHtml}
       const dati = raccogli();
       if (!dati) return;
       const azione = soloDati ? "campi" : "stato";
+      // Con l'offerta si salva la stima della Superanalisi a quel prezzo (per il
+      // consuntivo); correggendo l'importo prima dell'aggiudicazione si rifà.
+      if (statoTarget === "offerta" && Number(dati.offerta_importo) > 0 && (!soloDati || statoAttuale === "offerta")) {
+        const stima = stimaAllOfferta(asta, Number(dati.offerta_importo));
+        if (stima) dati.stima_offerta = stima;
+      }
       richiediPasswordSeServe(() => eseguiAzioneOperazione(asta.id, azione, azione === "stato" ? {...dati, stato: statoTarget} : dati));
     };
     const torna = editor.querySelector("[data-torna]");

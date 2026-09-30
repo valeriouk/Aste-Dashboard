@@ -34,6 +34,17 @@
     utileTargetPct: null,
     utileMinimoPrudenzialePct: null,
     aliquotaPlusvalenza: 0.26,       // (STIMA) imposta sostitutiva plusvalenze: verificare regime personale col commercialista
+    // Regime fiscale (Configurazione → Conti): 'privato' = 26% sulla plusvalenza
+    // (vendita entro 5 anni dall'acquisto, come nel flipping); 'impresa' =
+    // imposta sull'utile con tutte le spese deducibili (SRL: IRES 24% + IRAP
+    // 3,9%, valori indicativi) e registro sul prezzo, senza prezzo-valore né
+    // prima casa. IVA sulla rivendita NON modellata. Da verificare col commercialista.
+    regimeFiscale: 'privato',
+    aliquotaImpresa: 0.279,
+    registroImpresa: 0.09,
+    // Comparabili: sconto di trattativa sui prezzi richiesti negli annunci
+    // (sulle vendite fatte no).
+    scontoTrattativaComparabili: 0.05,
 
     // Acquisto
     acquirente: 'persona_fisica',    // 'persona_fisica' | 'societa' (prezzo-valore solo persone fisiche; regime società NON modellato)
@@ -360,10 +371,14 @@
   // Imposta di registro: 9% (2% prima casa) su min(prezzo, valore catastale) se persona fisica
   // e rendita nota (prezzo-valore, esteso alle vendite giudiziarie da Corte Cost. 6/2014);
   // altrimenti sul prezzo (art. 44 DPR 131/1986). Minimo €1.000. Ipotecaria e catastale €50 + €50.
+  // Regime impresa: aliquota di registro configurabile sul prezzo (niente
+  // prezzo-valore, niente prima casa).
   function imposteAcquisto(prezzo, renditaTot, params) {
-    const aliquota = params.primaCasa ? 0.02 : 0.09;
-    const valoreCatastale = renditaTot != null ? renditaTot * 1.05 * (params.primaCasa ? 110 : 120) : null;
-    const pvAmmesso = params.acquirente === 'persona_fisica' && valoreCatastale != null;
+    const impresa = params.regimeFiscale === 'impresa';
+    const primaCasa = params.primaCasa && !impresa;
+    const aliquota = impresa ? params.registroImpresa : primaCasa ? 0.02 : 0.09;
+    const valoreCatastale = renditaTot != null ? renditaTot * 1.05 * (primaCasa ? 110 : 120) : null;
+    const pvAmmesso = !impresa && params.acquirente === 'persona_fisica' && valoreCatastale != null;
     const base = pvAmmesso ? Math.min(prezzo, valoreCatastale) : prezzo;
     const registro = Math.max(1000, aliquota * base);
     return {
@@ -481,6 +496,16 @@
   }
 
   function arvScenari(sup, d, annuncio, params, etaPerizia) {
+    // Comparabili (Superanalisi): €/mq × superficie commerciale dell'asta.
+    const c = annuncio.arvEuroMq;
+    if (c && c.centrale > 0 && sup.mq != null) {
+      const f = (k) => Math.round(sup.mq * c[k]);
+      return {
+        prudenziale: f('prudenziale'), centrale: f('centrale'), ottimistico: f('ottimistico'),
+        fonte: `comparabili (${c.n || '?'}) ${Math.round(c.prudenziale)}–${Math.round(c.ottimistico)} €/mq × ${sup.mq} mq`,
+        affidabilita: sup.approssimata ? 'bassa' : 'media',
+      };
+    }
     if (annuncio.arvOverride) {
       return { ...annuncio.arvOverride, fonte: 'override (comparabili verificati)', affidabilita: 'media' };
     }
@@ -544,8 +569,11 @@
     const totale = somma(voci);
     const capitale = totale - voci.vendita;            // cassa necessaria prima della vendita
     const utile = arv - totale;                         // utile operativo lordo
-    // (STIMA grossolana) plusvalenza ≈ utile + costi di gestione non deducibili per un privato
-    const imposta = Math.max(0, p.aliquotaPlusvalenza * (utile + voci.holding + voci.arretratiCondominiali));
+    // (STIMA grossolana) privato: plusvalenza ≈ utile + costi di gestione non
+    // deducibili; impresa: imposta sull'utile (spese tutte deducibili).
+    const imposta = p.regimeFiscale === 'impresa'
+      ? Math.max(0, p.aliquotaImpresa * utile)
+      : Math.max(0, p.aliquotaPlusvalenza * (utile + voci.holding + voci.arretratiCondominiali));
     return {
       scenario, arv, mesi,
       voci: Object.fromEntries(Object.entries(voci).map(([k, v]) => [k, Math.round(v)])),
@@ -556,6 +584,7 @@
       roiPct: r2((utile / capitale) * 100),
       roiAnnuoPct: r2((utile / capitale) * 100 * (12 / mesi)),
       impostaPlusvalenzaStimata: Math.round(imposta),
+      regimeFiscale: p.regimeFiscale === 'impresa' ? 'impresa' : 'privato',
       utileNettoStimato: Math.round(utile - imposta),
     };
   }
@@ -771,6 +800,36 @@
     return esito;
   }
 
+  // Comparabili → forchetta di €/mq. righe = [{mq, prezzo, stato, tipo}]:
+  // stato 'da_ristrutturare' | 'buono' | 'ristrutturato' (nuovo compreso),
+  // tipo 'annuncio' (prezzo richiesto: meno lo sconto di trattativa) |
+  // 'venduto'. Contano gli immobili ristrutturati (interessa il prezzo a
+  // lavori fatti): se sono almeno 3 si usano solo loro. Forchetta = 25°
+  // percentile, mediana, 75° percentile. null con meno di 1 riga valida.
+  function forchettaComparabili(righe, parametriUtente) {
+    const params = merge(PARAMETRI_DEFAULT, parametriUtente || {});
+    const valide = (righe || []).map((x) => ({ ...x, mq: num(x && x.mq), prezzo: num(x && x.prezzo) }))
+      .filter((x) => x.mq > 0 && x.prezzo > 0);
+    if (!valide.length) return null;
+    const ristrutturate = valide.filter((x) => x.stato === 'ristrutturato');
+    const usate = ristrutturate.length >= 3 ? ristrutturate : valide;
+    const euroMq = usate.map((x) => x.prezzo * (x.tipo === 'annuncio' ? 1 - params.scontoTrattativaComparabili : 1) / x.mq)
+      .sort((a, b) => a - b);
+    const quantile = (q) => {
+      const pos = (euroMq.length - 1) * q, i = Math.floor(pos), f = pos - i;
+      return i + 1 < euroMq.length ? euroMq[i] + f * (euroMq[i + 1] - euroMq[i]) : euroMq[i];
+    };
+    const avvisi = [];
+    if (valide.length < 3) avvisi.push('meno di 3 comparabili: forchetta poco affidabile');
+    if (usate !== ristrutturate) avvisi.push(ristrutturate.length
+      ? `solo ${ristrutturate.length} ristrutturati: usati tutti i comparabili (il valore a lavori fatti può essere più alto)`
+      : 'nessun comparabile ristrutturato: usati tutti (il valore a lavori fatti può essere più alto)');
+    return {
+      prudenziale: r2(quantile(0.25)), centrale: r2(quantile(0.5)), ottimistico: r2(quantile(0.75)),
+      n: usate.length, totali: valide.length, soloRistrutturati: usate === ristrutturate, avvisi,
+    };
+  }
+
   // Solo il giudizio (classe PULITA…DA_SCARTARE), senza il conto: stesso
   // percorso di analizzaAsta (normalizza → occupazione → qualità →
   // regolarizzazione → classificaOperazione), quindi la stessa classe della
@@ -797,6 +856,7 @@
     costoRegolarizzazione,
     costoLavori,
     contoEconomico,
+    forchettaComparabili,
     maxBid,
     classificaOperazione,
     analizzaAsta,

@@ -170,9 +170,10 @@
   </div>
 </div>
 
-<script src="underwriting.js"></script>
+<script src="underwriting.js?v=20260930"></script>
 <script src="superanalisi-esterne.js"></script>
 <script src="feedback.js"></script>
+<script src="operazioni.js?v=20260930"></script>
 <script>
   const SUPABASE_URL = "https://igemwrrcmsgaotoqvdzt.supabase.co";
   const SUPABASE_ANON_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImlnZW13cnJjbXNnYW90b3F2ZHp0Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODkzMDc2MjksImV4cCI6MjEwNDg4MzYyOX0.YkUOBTOb40C-N0TkuDN0o5N7fVvI_qX2F1grUp-SVe8";
@@ -192,6 +193,9 @@
   const ORDINE_CLASSE = { PULITA: 0, GESTIBILE: 1, COMPLESSA: 2, DA_SCARTARE: 3, NON_CALCOLABILE: 4 };
 
   let passwordCorrente = null;
+  // Regime fiscale, aliquote e sconto sui comparabili (Configurazione → Conti).
+  let PARAMETRI_CONTI = window.Operazioni ? Operazioni.parametriConti(null)
+    : { regimeFiscale: "privato", aliquotaImpresa: 0.279, registroImpresa: 0.09, scontoTrattativaComparabili: 0.05 };
   let RISULTATI = [];      // una voce per asta: { r, a, esito, rendimento, ... }, già in ordine di classifica
 
   // ============================================================ utilità
@@ -271,6 +275,10 @@
           body: JSON.stringify({ password_tentativo: passwordCorrente, tipo: "scrittura" }) });
       const righe = await r.json();
       if (!Array.isArray(righe) || !righe.length) { msg.textContent = "Nessuna delle aste selezionate è nel registro."; return; }
+      try {
+        const pc = await chiamaRpc("leggi_parametri_conti", { password_tentativo: passwordCorrente, tipo: "scrittura" });
+        if (pc && pc.ok && window.Operazioni) PARAMETRI_CONTI = Operazioni.parametriConti(pc.parametri);
+      } catch (e) { /* predefiniti */ }
       RISULTATI = righe.map(calcola).sort(confronta);
       const mancanti = ids.filter((id) => !righe.some((x) => String(x.id_annuncio) === id));
       msg.textContent = [
@@ -289,9 +297,14 @@
     return a && typeof a === "object" && String(riga.versione_prompt || "").startsWith("v2") ? a : null;
   }
 
-  // Come fonteRivendita in superanalisi.html: il tuo valore > OMI >
-  // quotazioni citate dal CTU > valore del CTU (dentro underwriting.js).
+  // Come fonteRivendita in superanalisi.html: comparabili (se scegli di
+  // usarli) > il tuo valore > OMI > quotazioni citate dal CTU > valore del CTU
+  // (dentro underwriting.js).
   function fonteRivendita(r, a) {
+    const c = r.comparabili_utente;
+    const comparabili = c && c.usa && Array.isArray(c.righe) && window.Underwriting
+      ? Underwriting.forchettaComparabili(c.righe, { scontoTrattativaComparabili: PARAMETRI_CONTI.scontoTrattativaComparabili }) : null;
+    if (comparabili) return { tipo: "comparabili", etichetta: `comparabili (${comparabili.n})`, arvEuroMq: comparabili };
     const utente = Number(r.valore_rivendita_utente);
     if (Number.isFinite(utente) && utente > 0) {
       const f = FORCHETTA_VALORE_UTENTE;
@@ -327,7 +340,7 @@
     const annuncio = {
       comune: r.comune__indirizzo, offertaMinima: Number(r.offerta_minima) || null, prezzoBase: Number(r.prezzo_base) || null,
       valoreStima: Number(r.valore_stima_perito) || null, occupazione: r["disponibilità_pvp"] || null,
-      omi: f.omi || null, arvOverride: f.arvOverride || null,
+      omi: f.omi || null, arvOverride: f.arvOverride || null, arvEuroMq: f.arvEuroMq || null,
       // le tue correzioni dai dettagli del registro (vuote = dati della perizia)
       renditaOverride: Number(r.rendita_catastale_utente) > 0 ? Number(r.rendita_catastale_utente) : null,
       arretratiOverride: r.oneri_condominiali_utente === null || r.oneri_condominiali_utente === undefined || r.oneri_condominiali_utente === ""
@@ -340,6 +353,7 @@
     const esito = Underwriting.analizzaAsta(a, annuncio, {
       utileTargetPct: p.utilePct / 100, utileMinimoPrudenzialePct: p.minimoPrudenzialePct / 100,
       targetNetto: true, primaCasa: !!p.primaCasa,
+      regimeFiscale: PARAMETRI_CONTI.regimeFiscale, aliquotaImpresa: PARAMETRI_CONTI.aliquotaImpresa, registroImpresa: PARAMETRI_CONTI.registroImpresa,
     });
     voce.esito = esito;
     voce.fonte = f;

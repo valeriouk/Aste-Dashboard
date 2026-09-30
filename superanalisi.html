@@ -141,6 +141,21 @@
   }
   @media print { .indice-pagina { display: none !important; } }
   @media (max-width: 560px) { .contenitore { padding: 24px 14px 72px; } h1 { font-size: 1.45rem; } }
+  /* Comparabili (30/09/2026): una scheda per comparabile, campi su griglia */
+  .comparabili { display: flex; flex-direction: column; gap: 8px; margin-top: 10px; }
+  .comparabile { display: grid; grid-template-columns: minmax(0, 3fr) repeat(4, minmax(0, 1fr)) auto auto; gap: 8px; align-items: end;
+    background: var(--surface-2); border-radius: 10px; padding: 8px 10px; }
+  .comparabile label { display: flex; flex-direction: column; gap: 3px; font-size: .72rem; color: var(--ink-muted); min-width: 0; }
+  .comparabile input, .comparabile select { width: 100%; min-width: 0; background: var(--bg); border: 1px solid var(--border); border-radius: 8px;
+    padding: 7px 9px; font-family: var(--font-body); font-size: .86rem; color: var(--ink); }
+  .comparabile .euro-mq { font-family: var(--font-mono); font-size: .86rem; white-space: nowrap; padding-bottom: 8px; }
+  .comparabile .togli { background: none; border: none; color: var(--ink-muted); cursor: pointer; font-size: 1rem; padding: 6px; }
+  .forchetta-comparabili { margin-top: 10px; }
+  @media (max-width: 720px) {
+    .comparabile { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+    .comparabile .campo-link { grid-column: 1 / -1; }
+  }
+
   /* Niente zoom automatico di iPhone toccando un campo (campi a 16 px sul telefono) */
   @media (max-width: 640px) {
     input:not([type="checkbox"]):not([type="radio"]):not([type="range"]), select, textarea {
@@ -186,9 +201,10 @@
   </div>
 </div>
 
-<script src="underwriting.js"></script>
+<script src="underwriting.js?v=20260930"></script>
 <script src="superanalisi-esterne.js"></script>
 <script src="feedback.js"></script>
+<script src="operazioni.js?v=20260930"></script>
 <script>
   const SUPABASE_URL = "https://igemwrrcmsgaotoqvdzt.supabase.co";
   const SUPABASE_ANON_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImlnZW13cnJjbXNnYW90b3F2ZHp0Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODkzMDc2MjksImV4cCI6MjEwNDg4MzYyOX0.YkUOBTOb40C-N0TkuDN0o5N7fVvI_qX2F1grUp-SVe8";
@@ -208,6 +224,10 @@
 
   let passwordCorrente = null;
   let RIGA = null;
+  // Regime fiscale, aliquote e sconto di trattativa (Configurazione → Conti),
+  // letti con leggi_parametri_conti; predefiniti finché non arrivano.
+  let PARAMETRI_CONTI = window.Operazioni ? Operazioni.parametriConti(null)
+    : { regimeFiscale: "privato", aliquotaImpresa: 0.279, registroImpresa: 0.09, scontoTrattativaComparabili: 0.05 };
   let ESITO_CONTO = null;         // ultimo conto di disegnaConto, per il prompt
   let promptModificato = false;   // true se hai scritto nel riquadro del prompt
 
@@ -297,6 +317,10 @@
       const righe = await r.json();
       if (!Array.isArray(righe) || !righe.length) { msg.textContent = `Asta ${ID_ASTA} non trovata nel registro.`; return; }
       RIGA = righe[0];
+      try {
+        const pc = await chiamaRpc("leggi_parametri_conti", { password_tentativo: passwordCorrente, tipo: "scrittura" });
+        if (pc && pc.ok && window.Operazioni) PARAMETRI_CONTI = Operazioni.parametriConti(pc.parametri);
+      } catch (e) { /* predefiniti */ }
       msg.classList.add("nascosto");
       disegna();
     } catch (e) {
@@ -328,11 +352,12 @@
     } else {
       html.push(`<div id="sa-perizia" class="sezione-pagina">${sezionePerizia(a)}</div>`);
       html.push(`<div id="blocco-valore-rivendita" class="sezione-pagina">${sezioneValoreRivendita(r, a)}</div>`);
+      html.push(`<div id="blocco-comparabili" class="sezione-pagina">${sezioneComparabili(r)}</div>`);
       html.push(`<div id="sezione-conto" class="sezione-pagina"></div>`);
     }
     html.push(`<div id="sa-seconda" class="sezione-pagina">${sezioneSecondaOpinione(r, a)}</div>`);
     document.getElementById("contenuto").innerHTML = html.join("");
-    if (a) disegnaConto();
+    if (a) { disegnaConto(); mostraComparabili(); }
     montaRisultatiEsterni();
     disegnaIndicePagina();
   }
@@ -382,7 +407,7 @@
   }
 
   const VOCI_INDICE = [["sa-riepilogo", "Riepilogo"], ["sa-annuncio", "Annuncio"], ["sa-perizia", "Perizia"],
-    ["blocco-valore-rivendita", "Rivendita"], ["sezione-conto", "Conto"], ["sa-seconda", "Seconda opinione"],
+    ["blocco-valore-rivendita", "Rivendita"], ["blocco-comparabili", "Comparabili"], ["sezione-conto", "Conto"], ["sa-seconda", "Seconda opinione"],
     ["sezione-risultati-esterni", "Risultati salvati"]];
   function disegnaIndicePagina() {
     const nav = document.getElementById("indice-pagina");
@@ -554,10 +579,181 @@
     </div>`;
   }
 
+  // ============================================================ comparabili
+  // Annunci o vendite simili (sql/comparabili_e_conti.sql nel repo privato):
+  // €/mq di ciascuno, forchetta 25°/50°/75° percentile (underwriting.js,
+  // forchettaComparabili) × superficie commerciale dell'asta. Con "usa" sono
+  // la prima fonte del valore di rivendita, anche per il registro e la
+  // Superanalisi di gruppo.
+  // Etichette corte: stanno nei campi anche su PC. "Ristrutturato" vale anche per il nuovo.
+  const STATI_COMPARABILE = [["ristrutturato", "Ristrutturato"], ["buono", "Buono"], ["da_ristrutturare", "Da ristrutturare"]];
+  const TIPI_COMPARABILE = [["annuncio", "Annuncio"], ["venduto", "Venduto"]];
+  let COMPARABILI_BOZZA = null;   // righe in modifica (non ancora salvate)
+
+  function comparabiliSalvati(r) {
+    const c = r && r.comparabili_utente;
+    return c && Array.isArray(c.righe) ? c : { righe: [], usa: false };
+  }
+  // €/mq dai comparabili salvati con "usa", per il conto (null se non si usano).
+  function arvEuroMqComparabili(r) {
+    const c = comparabiliSalvati(r);
+    if (!c.usa || !window.Underwriting) return null;
+    return Underwriting.forchettaComparabili(c.righe, { scontoTrattativaComparabili: PARAMETRI_CONTI.scontoTrattativaComparabili });
+  }
+
+  function rigaComparabile(x, i) {
+    const opzioni = (lista, scelto) => lista.map(([v, t]) => `<option value="${v}"${v === scelto ? " selected" : ""}>${t}</option>`).join("");
+    return `<div class="comparabile" data-i="${i}">
+      <label class="campo-link">Link (annuncio o atto)<input type="url" data-campo="url" value="${escapeHtml(x.url || "")}" placeholder="https://…" oninput="aggiornaComparabili()"></label>
+      <label>mq<input type="number" data-campo="mq" min="0" step="1" inputmode="numeric" value="${x.mq ?? ""}" oninput="aggiornaComparabili()"></label>
+      <label>Prezzo (€)<input type="number" data-campo="prezzo" min="0" step="1000" inputmode="numeric" value="${x.prezzo ?? ""}" oninput="aggiornaComparabili()"></label>
+      <label>Stato<select data-campo="stato" onchange="aggiornaComparabili()">${opzioni(STATI_COMPARABILE, x.stato || "ristrutturato")}</select></label>
+      <label>Tipo<select data-campo="tipo" onchange="aggiornaComparabili()">${opzioni(TIPI_COMPARABILE, x.tipo || "annuncio")}</select></label>
+      <span class="euro-mq" data-euro-mq></span>
+      <button type="button" class="togli" onclick="togliComparabile(${i})" title="Togli" aria-label="Togli">✕</button>
+    </div>`;
+  }
+
+  function sezioneComparabili(r) {
+    const c = comparabiliSalvati(r);
+    COMPARABILI_BOZZA = c.righe.map((x) => ({ ...x }));
+    return `<div class="sezione"><h2>Comparabili</h2>
+      <p class="nota">Annunci o vendite di immobili simili nella stessa zona: link, mq, prezzo, stato ("Ristrutturato" vale anche per il nuovo) e tipo ("Annuncio" = prezzo richiesto, "Venduto" = prezzo vero). Per ognuno si calcola il prezzo al metro
+        (sugli annunci meno ${Math.round(PARAMETRI_CONTI.scontoTrattativaComparabili * 100)}% di trattativa, da Configurazione → Conti); la forchetta è il 25°
+        percentile, la mediana e il 75° percentile, per la superficie commerciale dell'asta. Contano soprattutto gli immobili ristrutturati: se sono
+        almeno 3 si usano solo loro. Servono almeno 3 comparabili.</p>
+      <div class="comparabili" id="elenco-comparabili"></div>
+      <div class="riga-form">
+        <button class="bottone secondario" onclick="aggiungiComparabile()">+ Aggiungi comparabile</button>
+        <button class="bottone secondario" onclick="importaLinkComparabili()">Importa dai link dell'asta</button>
+      </div>
+      <div class="forchetta-comparabili" id="forchetta-comparabili"></div>
+      <label class="etichetta-checkbox" style="margin-top:10px"><input type="checkbox" id="usa-comparabili"${c.usa ? " checked" : ""}>
+        Usa i comparabili come valore di rivendita (hanno la precedenza sul tuo valore, sull'OMI e sul perito)</label>
+      <div class="riga-form">
+        <button class="bottone pulsante-comparabili" onclick="salvaComparabili()">Salva</button>
+        <button class="bottone secondario pulsante-comparabili" onclick="salvaComparabili(true)">Cancella tutti</button>
+      </div>
+      <p id="messaggio-comparabili" class="messaggio nascosto"></p>
+    </div>`;
+  }
+
+  function mostraComparabili() {
+    const el = document.getElementById("elenco-comparabili");
+    if (!el) return;
+    el.innerHTML = COMPARABILI_BOZZA.length ? COMPARABILI_BOZZA.map(rigaComparabile).join("")
+      : `<p class="nota">Nessun comparabile: aggiungine uno o importali dai link dell'asta.</p>`;
+    aggiornaComparabili();
+  }
+
+  function leggiComparabiliDalModulo() {
+    document.querySelectorAll("#elenco-comparabili .comparabile").forEach((riga) => {
+      const x = COMPARABILI_BOZZA[Number(riga.dataset.i)];
+      if (!x) return;
+      riga.querySelectorAll("[data-campo]").forEach((campo) => {
+        const k = campo.dataset.campo;
+        x[k] = k === "mq" || k === "prezzo" ? (campo.value === "" ? null : Number(campo.value)) : campo.value.trim();
+      });
+    });
+  }
+
+  // €/mq di ogni riga e forchetta, mentre scrivi (niente salvataggio).
+  function aggiornaComparabili() {
+    leggiComparabiliDalModulo();
+    const sconto = PARAMETRI_CONTI.scontoTrattativaComparabili;
+    document.querySelectorAll("#elenco-comparabili .comparabile").forEach((riga) => {
+      const x = COMPARABILI_BOZZA[Number(riga.dataset.i)] || {};
+      const v = x.mq > 0 && x.prezzo > 0 ? x.prezzo * (x.tipo === "annuncio" ? 1 - sconto : 1) / x.mq : null;
+      riga.querySelector("[data-euro-mq]").textContent = v ? `${eur(v)}/mq` : "—";
+    });
+    const out = document.getElementById("forchetta-comparabili");
+    if (!out || !window.Underwriting) return;
+    const f = Underwriting.forchettaComparabili(COMPARABILI_BOZZA, { scontoTrattativaComparabili: sconto });
+    if (!f) { out.innerHTML = ""; return; }
+    const sup = ESITO_CONTO && ESITO_CONTO.superficie ? ESITO_CONTO.superficie.mq : null;
+    const valore = (k) => sup ? ` → ${eur(f[k] * sup)}` : "";
+    out.innerHTML = `<div class="griglia">
+        <div class="voce"><div class="etichetta">Prudenziale (25°)</div><div class="valore">${eur(f.prudenziale)}/mq${valore("prudenziale")}</div></div>
+        <div class="voce"><div class="etichetta">Centrale (mediana)</div><div class="valore">${eur(f.centrale)}/mq${valore("centrale")}</div></div>
+        <div class="voce"><div class="etichetta">Ottimistico (75°)</div><div class="valore">${eur(f.ottimistico)}/mq${valore("ottimistico")}</div></div>
+      </div>
+      <p class="nota">Usati ${f.n} comparabili su ${f.totali}${sup ? `, superficie commerciale ${mq(sup)}` : ""}.${f.avvisi.length ? ` ⚠️ ${escapeHtml(f.avvisi.join("; "))}.` : ""}</p>`;
+  }
+
+  function aggiungiComparabile(x) {
+    leggiComparabiliDalModulo();
+    if (COMPARABILI_BOZZA.length >= 30) return;
+    COMPARABILI_BOZZA.push(x || { url: "", mq: null, prezzo: null, stato: "ristrutturato", tipo: "annuncio" });
+    mostraComparabili();
+  }
+  function togliComparabile(i) {
+    leggiComparabiliDalModulo();
+    COMPARABILI_BOZZA.splice(i, 1);
+    mostraComparabili();
+  }
+
+  // I link salvati nei dettagli dell'asta (letti con i dati personali e la
+  // password di lettura ricordata dal registro): una riga per link nuovo.
+  async function importaLinkComparabili() {
+    const msg = document.getElementById("messaggio-comparabili");
+    msg.className = "messaggio";
+    try {
+      const passwordLettura = leggiLocale("aste_password_lettura_v1") || "";
+      const d = await chiamaRpc("leggi_dati_personali", { password_tentativo: passwordLettura });
+      if (!d || !d.ok) throw new Error("apri prima il registro su questo dispositivo (serve la password di lettura)");
+      const riga = (d.link_utili || []).find((l) => String(l.id_annuncio) === String(ID_ASTA));
+      const link = (riga && Array.isArray(riga.links) ? riga.links : []).map((l) => (typeof l === "string" ? l : l && l.url) || "")
+        .filter((u) => /^https?:\/\//i.test(u));
+      leggiComparabiliDalModulo();
+      const nuovi = link.filter((u) => !COMPARABILI_BOZZA.some((x) => x.url === u));
+      if (!nuovi.length) { msg.textContent = link.length ? "I link dell'asta sono già tra i comparabili." : "Nessun link salvato nei dettagli di quest'asta."; return; }
+      nuovi.slice(0, 30 - COMPARABILI_BOZZA.length).forEach((u) => COMPARABILI_BOZZA.push({ url: u, mq: null, prezzo: null, stato: "ristrutturato", tipo: "annuncio" }));
+      mostraComparabili();
+      msg.textContent = `Importati ${nuovi.length} link: aggiungi mq, prezzo e stato, poi Salva.`;
+    } catch (e) {
+      msg.textContent = `Importazione non riuscita: ${e.message}`;
+      msg.classList.add("errore");
+    }
+  }
+
+  async function salvaComparabili(cancella = false) {
+    const msg = document.getElementById("messaggio-comparabili");
+    msg.className = "messaggio";
+    leggiComparabiliDalModulo();
+    const righe = COMPARABILI_BOZZA.filter((x) => x.url || x.mq || x.prezzo);
+    if (cancella && !confirm("Cancellare tutti i comparabili di quest'asta?")) return;
+    const valore = cancella || !righe.length ? null : { righe, usa: document.getElementById("usa-comparabili").checked };
+    document.querySelectorAll(".pulsante-comparabili").forEach((b) => { b.disabled = true; });
+    try {
+      const esito = await chiamaRpc("imposta_comparabili", { password_tentativo: passwordCorrente, id_annuncio_input: Number(ID_ASTA), comparabili_input: valore });
+      if (esito && esito.result === "success") {
+        RIGA.comparabili_utente = valore;
+        window.Feedback && Feedback.salvato();
+        document.getElementById("blocco-comparabili").innerHTML = sezioneComparabili(RIGA);
+        document.getElementById("blocco-valore-rivendita").innerHTML = sezioneValoreRivendita(RIGA, analisiV2(RIGA));
+        disegnaConto();
+        mostraComparabili();
+        const nuovo = document.getElementById("messaggio-comparabili");
+        nuovo.textContent = valore ? "Salvati." : "Cancellati.";
+        nuovo.className = "messaggio ok";
+      } else {
+        msg.textContent = (esito && esito.message) || "Salvataggio non riuscito (funzione imposta_comparabili disponibile? vedi sql/comparabili_e_conti.sql).";
+        msg.classList.add("errore");
+        window.Feedback && Feedback.errore();
+      }
+    } catch (e) { msg.textContent = "Richiesta non riuscita. Controlla la connessione."; msg.classList.add("errore"); }
+    finally { document.querySelectorAll(".pulsante-comparabili").forEach((b) => { b.disabled = false; }); }
+  }
+
   // ============================================================ valore di rivendita
-  // Precedenza: il tuo valore > OMI (dati caricati nel registro, fase 2) >
+  // Precedenza: comparabili (se scegli di usarli) > il tuo valore > OMI (dati caricati nel registro, fase 2) >
   // quotazioni citate dal CTU > valore del CTU (dentro underwriting.js).
   function fonteRivendita(r, a) {
+    const comparabili = arvEuroMqComparabili(r);
+    if (comparabili) {
+      return { tipo: "comparabili", etichetta: `comparabili (${comparabili.n}): ${eur(comparabili.prudenziale)}–${eur(comparabili.ottimistico)}/mq`,
+        arvEuroMq: comparabili };
+    }
     const utente = Number(r.valore_rivendita_utente);
     if (Number.isFinite(utente) && utente > 0) {
       const f = FORCHETTA_VALORE_UTENTE;
@@ -589,7 +785,7 @@
         che a volte sono approssimative: se la descrizione non corrisponde all'indirizzo, controlla la zona su
         <a href="https://www1.agenziaentrate.gov.it/servizi/geopoi_omi/index.php" target="_blank" rel="noopener">GEOPOI</a>
         e, se serve, inserisci il tuo valore.</p>` : ""}
-      <p class="nota">Ordine delle fonti: il tuo valore, poi OMI (Agenzia delle Entrate – OMI), poi le quotazioni citate dal CTU,
+      <p class="nota">Ordine delle fonti: i <a href="#blocco-comparabili">comparabili</a> (se scegli di usarli), il tuo valore, poi OMI (Agenzia delle Entrate – OMI), poi le quotazioni citate dal CTU,
         infine il valore del CTU. Con il tuo valore, lo scenario prudenziale usa il ${Math.round(FORCHETTA_VALORE_UTENTE.prudenziale * 100)}%
         e l'ottimistico il ${Math.round(FORCHETTA_VALORE_UTENTE.ottimistico * 100)}%.</p>
       <div class="riga-form">
@@ -723,7 +919,7 @@
     const annuncio = {
       comune: r.comune__indirizzo, offertaMinima: Number(r.offerta_minima) || null, prezzoBase: Number(r.prezzo_base) || null,
       valoreStima: Number(r.valore_stima_perito) || null, occupazione: r["disponibilità_pvp"] || null,
-      omi: f.omi || null, arvOverride: f.arvOverride || null,
+      omi: f.omi || null, arvOverride: f.arvOverride || null, arvEuroMq: f.arvEuroMq || null,
       // le tue correzioni dai dettagli del registro (vuote = dati della perizia)
       renditaOverride: Number(r.rendita_catastale_utente) > 0 ? Number(r.rendita_catastale_utente) : null,
       arretratiOverride: r.oneri_condominiali_utente === null || r.oneri_condominiali_utente === undefined || r.oneri_condominiali_utente === ""
@@ -736,7 +932,10 @@
     const esito = Underwriting.analizzaAsta(a, annuncio, {
       utileTargetPct: p.utilePct / 100, utileMinimoPrudenzialePct: p.minimoPrudenzialePct / 100,
       targetNetto: true, primaCasa: !!p.primaCasa,
+      regimeFiscale: PARAMETRI_CONTI.regimeFiscale, aliquotaImpresa: PARAMETRI_CONTI.aliquotaImpresa, registroImpresa: PARAMETRI_CONTI.registroImpresa,
     });
+    const impresa = PARAMETRI_CONTI.regimeFiscale === "impresa";
+    const testoImposta = impresa ? `imposte sull'utile (impresa, ${Math.round(PARAMETRI_CONTI.aliquotaImpresa * 1000) / 10}%)` : "imposta del 26% sulla plusvalenza (privato)";
     if (esito.arv && f.tipo === "citata") esito.arv.fonte = `${f.etichetta}: ${annuncio.omi.min}–${annuncio.omi.max} €/mq × ${esito.superficie.mq} mq`;
     if (esito.arv && f.tipo === "omi") esito.arv.fonte = `${f.etichetta} × ${esito.superficie.mq} mq (Agenzia Entrate - OMI)`;
     ESITO_CONTO = esito;
@@ -759,6 +958,7 @@
       <tr><td>Mesi stimati</td>${scenari.map((s) => `<td>${alMinimo[s].mesi}</td>`).join("")}</tr>
       <tr><td>Capitale investito</td>${scenari.map((s) => `<td>${eur(alMinimo[s].capitale)}</td>`).join("")}</tr>
       <tr><td>Utile lordo</td>${scenari.map((s) => `<td>${eur(alMinimo[s].utile)}</td>`).join("")}</tr>
+      <tr><td>${impresa ? "Imposte sull'utile (impresa)" : "Imposta sulla plusvalenza (26%)"}</td>${scenari.map((s) => `<td>${eur(alMinimo[s].impostaPlusvalenzaStimata)}</td>`).join("")}</tr>
       <tr class="totale"><td>Utile netto stimato</td>${scenari.map((s) => `<td>${eur(alMinimo[s].utileNettoStimato)}</td>`).join("")}</tr>
       <tr><td>Rendimento netto sul capitale</td>${scenari.map((s) => { const c = alMinimo[s]; return `<td>${c.capitale ? Math.round(c.utileNettoStimato / c.capitale * 100) : "—"}%</td>`; }).join("")}</tr>
       </tbody></table></div>` : "";
@@ -769,8 +969,11 @@
           <input type="number" id="p-utile" min="0" step="1" value="${p.utilePct}" onchange="aggiornaParametri()"></label>
         <label class="campo">Utile netto minimo nel prudenziale (%)
           <input type="number" id="p-minimo" min="0" step="1" value="${p.minimoPrudenzialePct}" onchange="aggiornaParametri()"></label>
-        <label class="etichetta-checkbox"><input type="checkbox" id="p-prima-casa" ${p.primaCasa ? "checked" : ""} onchange="aggiornaParametri()"> Acquisto come prima casa</label>
+        <label class="etichetta-checkbox"><input type="checkbox" id="p-prima-casa" ${p.primaCasa ? "checked" : ""}${impresa ? " disabled" : ""} onchange="aggiornaParametri()"> Acquisto come prima casa${impresa ? " (non vale per un'impresa)" : ""}</label>
       </div>
+      <p class="nota">Regime fiscale: <strong>${impresa ? "impresa" : "privato"}</strong> (Configurazione → Conti)${impresa
+        ? `: registro ${Math.round(PARAMETRI_CONTI.registroImpresa * 1000) / 10}% sul prezzo, imposte ${Math.round(PARAMETRI_CONTI.aliquotaImpresa * 1000) / 10}% sull'utile; IVA sulla rivendita non calcolata`
+        : ": 26% sulla plusvalenza se rivendi entro 5 anni"}.</p>
       ${bloccoLavoriUtente(r, a, esito)}
       <p class="verdetto"><span class="etichetta-stato stato-${escapeHtml(esito.classe)}">${escapeHtml(testo(esito.classe))}</span> ${escapeHtml(verdettoSenzaClasse(esito))}</p>
       <div class="griglia" style="margin-top:10px">
@@ -785,8 +988,7 @@
       ${esito.motivi.length ? `<h3>Cosa pesa sulla classe</h3><ul class="elenco">${esito.motivi.map((m) => `<li>${escapeHtml(m)}</li>`).join("")}</ul>` : ""}
       ${esito.qualita.motivi.length ? `<h3>Qualità dei dati (${escapeHtml(esito.qualita.livello)})</h3><ul class="elenco">${esito.qualita.motivi.map((m) => `<li>${escapeHtml(m)}</li>`).join("")}</ul>` : ""}
       ${esito.avvisi.length ? `<h3>Avvisi</h3><ul class="elenco">${esito.avvisi.map((m) => `<li>${escapeHtml(m)}</li>`).join("")}</ul>` : ""}
-      <p class="nota">Stime con parametri fissi del sistema, descritti nel manuale (imposte, spese, tempi, costi di vendita, imposta del 26% sulla
-        plusvalenza): servono a confrontare le aste, non sostituiscono il parere di un tecnico o di un commercialista. Le imposte usano
+      <p class="nota">Stime con parametri fissi del sistema, descritti nel manuale (imposte, spese, tempi, costi di vendita, ${testoImposta}): servono a confrontare le aste, non sostituiscono il parere di un tecnico o di un commercialista. Le imposte usano
         le stesse regole delle stime del registro, con tre prudenze in più: prezzo-valore solo se conviene, niente prezzo-valore senza
         rendita, tecnico sempre conteggiato.</p>
     </div>`;
