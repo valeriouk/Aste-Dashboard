@@ -5015,14 +5015,19 @@
   // analisi è stata davvero rifatta (data_analisi_v2). Il solo ricontrollo
   // non basta: ultimo_ricontrollo_perizia viene scritto anche quando il
   // ricontrollo non trova nulla di nuovo (perizia ancora assente, errore).
+  // E nemmeno le due date insieme: un'asta nuova letta dall'avviso viene
+  // ricontrollata subito dopo la prima analisi. Il ricontrollo sostituisce
+  // l'analisi solo con una perizia, quindi il documento non deve essere più
+  // uno di quelli che il ricontrollo cerca di superare (aste_da_ricontrollare).
   const SOGLIA_AGGIORNATA_ORE = 24;
+  const FONTI_DA_RICONTROLLARE = ["", "Avviso (PVP)", "Primo allegato disponibile (PVP)"];
   function eAggiornata(a) {
     const recente = (data) => {
       if (!data) return false;
       const trascorseMs = Date.now() - new Date(data).getTime();
       return trascorseMs >= 0 && trascorseMs < SOGLIA_AGGIORNATA_ORE * 3600 * 1000;
     };
-    return recente(a.ultimoRicontrolloPerizia) && recente(a.dataAnalisiV2);
+    return recente(a.ultimoRicontrolloPerizia) && recente(a.dataAnalisiV2) && !FONTI_DA_RICONTROLLARE.includes(a.fonteDocumento || "");
   }
 
   // Distanza assoluta in giorni tra una data ISO e oggi, indipendentemente
