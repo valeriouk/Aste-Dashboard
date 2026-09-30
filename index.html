@@ -8211,6 +8211,11 @@ ${notaHtml}
       if (g <= GIORNI_SALDO_VICINO) classe = " urgente";
     }
     if (o.stato === "offerta" && a.dataVendita && giorniAllaData(a.dataVendita) === 0) { testo += " · ASTA OGGI"; classe = " urgente"; }
+    // Dall'aggiudicazione in poi: avanzamento della checklist "dopo l'aggiudicazione".
+    if (posizioneOperazione(o.stato) >= 2) {
+      const {fatte, totale} = conteggioChecklist(a, "dopo");
+      if (totale) testo += ` · ☑️ ${fatte}/${totale}`;
+    }
     if (["persa", "non_partecipo", "venduta"].includes(o.stato)) classe = " spenta";
     return `<span class="badge-operazione${classe}" title="Stato dell'operazione">${escapeHtml(testo)}</span>`;
   }
