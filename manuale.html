@@ -275,7 +275,8 @@
       cancellati, da qualunque parte (pagine, scanner, "Elimina aste scadute", modifiche a mano):</p>
     <ul>
       <li>nota e i tuoi link; preferita/scartata; visite (stato, data e ora, dettagli); risultati delle AI esterne (testo compreso);
-        correzioni di rendita, spese condominiali e valore di rivendita; livello e importo dei lavori scelti da te;</li>
+        correzioni di rendita, spese condominiali e valore di rivendita; livello e importo dei lavori scelti da te; operazioni (passo, numeri,
+        checklist e note delle voci, dal 30/09/2026);</li>
       <li>non i dati letti dallo scanner (analisi, prezzi, storico PVP) e non le password;</li>
       <li>ogni voce dice quando, cosa è cambiato, se è stato dalle pagine, dallo scanner o a mano, e con quale operazione;</li>
       <li>le voci più vecchie di <strong>12 mesi</strong> si cancellano da sole; lo spazio occupato è di pochi MB l'anno.</li>
@@ -337,6 +338,7 @@
         <tr><td><a href="#orari-promemoria-omi">Promemoria OMI</a></td><td>Il lunedì, dentro il giro dello scanner</td><td>—</td><td>no</td></tr>
         <tr><td><a href="#orari-batch">Controllo batch</a></td><td>Circa ogni ora, tutto il giorno; a mano con "Controlla batch ora"</td><td>meno di 1 minuto se non c'è nulla</td><td>no (i batch sono già pagati all'invio)</td></tr>
         <tr><td><a href="#orari-visite">Promemoria delle visite</a></td><td>A ogni controllo batch orario: 3 giorni e 1 giorno prima dalle 9:00, il giorno stesso dalle 7:00, circa 2 ore prima; solleciti dalle 9:00</td><td>secondi</td><td>no</td></tr>
+        <tr><td><a href="#orari-operazioni">Promemoria delle operazioni</a></td><td>A ogni controllo batch orario: termine delle offerte, giorno dell'asta, esito, scadenza del saldo</td><td>secondi</td><td>no</td></tr>
         <tr><td><a href="#orari-preferiti">Promemoria preferiti</a></td><td>Ogni giorno alle 10:30 (ora italiana); a mano con "Controlla preferiti ora"</td><td>meno di 1 minuto</td><td>no</td></tr>
       </tbody>
     </table></div>
@@ -473,6 +475,22 @@
       <li><strong>Solleciti</strong> (dalle 9:00, una volta sola ciascuno): visita richiesta da 5 giorni senza invito; invito ricevuto da 2 giorni e non
         confermato; asta entro 7 giorni con la visita non ancora confermata.</li>
       <li>Se cambi data i promemoria ripartono per la nuova data; se annulli non ne arrivano più (e il messaggio fissato viene tolto).</li>
+    </ul>
+  </section>
+
+  <section class="voce" id="orari-operazioni">
+    <h3>Promemoria delle operazioni (ogni ora)</h3>
+    <p>Girano nel <a href="#orari-batch">controllo batch orario</a>, dopo quelli delle visite, per le aste con un'<a href="#registro-operazione">operazione</a>:</p>
+    <ul>
+      <li><strong>In valutazione</strong>: la prima volta legge dal dettaglio PVP il <strong>termine per presentare le offerte</strong> (una lettura per
+        asta, al massimo 20 per giro) e avvisa 3 giorni prima e il giorno prima (dalle 9:00) e il giorno stesso (dalle 7:00, finché il termine non è
+        passato): "⏰ Termine per le offerte tra N giorni" / "⏰ Domani…" / "🚨 OGGI il termine per le offerte", con data e ora, le voci della checklist
+        "prima dell'offerta" ancora da fare (al massimo 8), l'asta e i link.</li>
+      <li><strong>Offerta presentata</strong>: il giorno dell'asta dalle 7:00 "🔨 OGGI L'ASTA" con la tua offerta; dal giorno dopo, dalle 9:00, una volta
+        sola, "❓ Com'è andata l'asta?" per ricordarti di segnare aggiudicata o persa.</li>
+      <li><strong>Aggiudicata</strong>: scadenza del saldo 15, 7 e 1 giorno prima (dalle 9:00) e il giorno stesso (dalle 7:00), con prezzo − cauzione.</li>
+      <li>Ogni promemoria arriva una volta sola; se più scattano insieme arriva solo il più urgente. Se cambi la scadenza del saldo (o il PVP sposta il
+        termine) i promemoria ripartono per la nuova data.</li>
     </ul>
   </section>
 
@@ -634,7 +652,7 @@
   <section class="voce" id="registro-filtri-ricordati">
     <h3>Filtri ricordati e "✕ Azzera filtri"</h3>
     <ul>
-      <li><strong>Ricordati</strong>: ricerca, tipologie, libero/occupato, preferite/scartate, concluse, aggiornate, visite, fascia di punteggio, ordinamento e
+      <li><strong>Ricordati</strong>: ricerca, tipologie, libero/occupato, preferite/scartate, concluse, aggiornate, visite e operazioni in corso, fascia di punteggio, ordinamento e
         vista (griglia o mappa) restano come li hai lasciati quando torni al registro da un'altra pagina (Superanalisi, risultati AI, Configurazione…), anche se
         il browser ricarica il registro.</li>
       <li><strong>Fino a quando</strong>: finché resta aperta la scheda del browser (o l'app). Chiudendola e riaprendo il registro si riparte puliti, così
@@ -698,6 +716,8 @@
         <a href="#registro-tentativo">Tentativo e storico delle aste</a>.</li>
       <li><strong>🕓 / ✉️ / 📅 / ✅ visita</strong>: stato della visita all'immobile; il badge con la data diventa ambra dai 5 giorni prima e rosso il giorno
         stesso. Vedi <a href="#registro-visite">Gestione delle visite</a>.</li>
+      <li><strong>☑️ 6/10, 📨 Offerta presentata, 🏆 Aggiudicata · saldo tra N giorni…</strong>: stato dell'operazione. Vedi
+        <a href="#registro-operazione">Operazione e checklist</a>.</li>
       <li><strong>🧠 N</strong>: ci sono N <a href="#superanalisi-risultati">risultati delle AI esterne</a> salvati per l'asta.</li>
       <li><strong>⚖️ Pulita / Gestibile / Complessa / Da scartare</strong> (verde, blu, terracotta, rosso): il
         <a href="#superanalisi-classe">giudizio della Superanalisi</a>, calcolato nel registro con lo stesso motore e le stesse regole fisse sui fatti
@@ -803,10 +823,59 @@
         attesa della nuova data. <strong>Rimuovi</strong> cancella la visita e il suo storico.</li>
       <li><strong>Nella card</strong>: badge "🕓 Visita richiesta", "✉️ Invito da confermare", "📅 gio 8 ott · 10:30" (sfondo <strong>ambra</strong> dai 5 giorni
         prima, <strong>rosso</strong> "VISITA OGGI" il giorno stesso), "✅ Visitata".</li>
-      <li><strong>Filtro "📅 Visite"</strong>: mostra solo le aste con una visita in corso (richiesta, invito, confermata), prima gli appuntamenti confermati
-        dal più vicino, poi gli inviti, poi le richieste.</li>
+      <li><strong>Filtro "📅 In corso" → "📅 Visite in corso"</strong>: mostra solo le aste con una visita in corso (richiesta, invito, confermata), prima
+        gli appuntamenti confermati dal più vicino, poi gli inviti, poi le richieste. Nello stesso menu c'è
+        "<a href="#registro-operazione">🧭 Operazioni in corso</a>".</li>
       <li>Promemoria Telegram e chiusura automatica: vedi <a href="#orari-visite">Promemoria delle visite</a>.</li>
       <li>I dati delle visite sono protetti come le note: si leggono solo con la password.</li>
+    </ul>
+  </section>
+
+  <section class="voce" id="registro-operazione">
+    <h3>🧭 Operazione e checklist</h3>
+    <p>Nella finestra dei dettagli, subito dopo "📅 Visita", la sezione <strong>"🧭 Operazione"</strong> segue l'asta dalla valutazione alla
+      rivendita e contiene la <strong>checklist</strong> delle verifiche. Ogni modifica chiede la password di scrittura (una volta sola).</p>
+    <p><strong>Passi</strong> (fila di pillole in alto: blu pieno il passo attuale, blu tenue quelli fatti):</p>
+    <div class="tabella-scroll"><table>
+      <thead><tr><th>Passo</th><th>Dati che inserisci</th><th>Pulsanti</th></tr></thead>
+      <tbody>
+        <tr><td>🔍 In valutazione</td><td>—</td><td>"📨 Ho presentato l'offerta"; "🚫 Non partecipo"</td></tr>
+        <tr><td>📨 Offerta presentata</td><td>importo offerto, cauzione (vuota = 10% dell'offerta), data di deposito; come promemoria compaiono l'offerta
+          minima e l'offerta massima calcolata dalla <a href="#superanalisi-conto">Superanalisi</a></td><td>"🏆 Aggiudicata"; "✖ Persa"</td></tr>
+        <tr><td>🏆 Aggiudicata</td><td>prezzo di aggiudicazione, numero di offerenti, data, scadenza del saldo (vuota = 120 giorni dall'aggiudicazione:
+          controlla il termine nell'avviso di vendita)</td><td>"💶 Saldo versato"</td></tr>
+        <tr><td>✖ Persa</td><td>prezzo a cui è stata aggiudicata ad altri (se lo sai), numero di offerenti</td><td>Riapri</td></tr>
+        <tr><td>💶 Saldo versato</td><td>data</td><td>"🔑 Immobile consegnato"</td></tr>
+        <tr><td>🔑 Immobile consegnato</td><td>data</td><td>"🔨 Inizio cantiere"</td></tr>
+        <tr><td>🔨 Cantiere</td><td>inizio dei lavori, costo reale dei lavori</td><td>"🏷️ In vendita"</td></tr>
+        <tr><td>🏷️ In vendita</td><td>—</td><td>"✅ Venduta"</td></tr>
+        <tr><td>✅ Venduta</td><td>prezzo e data di vendita</td><td>—</td></tr>
+        <tr><td>🚫 Non partecipo</td><td>—</td><td>Riapri</td></tr>
+      </tbody>
+    </table></div>
+    <ul>
+      <li>Toccando una pillola: se è il passo attuale o uno già fatto correggi i suoi dati ("↩ Torna a questo passo" riporta indietro lo stato, per
+        esempio dopo un tocco sbagliato); se è un passo successivo ci passi. "✏️ Modifica dati" corregge i dati del passo attuale; "Rimuovi" cancella
+        operazione, checklist e storico dell'asta.</li>
+      <li>Sotto le pillole, un <strong>riepilogo</strong>: il termine per presentare le offerte (letto dal PVP, solo per le aste in valutazione, ambra
+        dai 3 giorni prima), i numeri inseriti, la scadenza del saldo con i giorni che mancano (ambra dai 15 giorni prima) e, a vendita fatta,
+        "Vendita − aggiudicazione − lavori" (differenza semplice, prima di imposte e spese).</li>
+      <li><strong>Checklist prima dell'offerta</strong> e <strong>dopo l'aggiudicazione</strong>: voci con casella, contatore e barra di avanzamento.
+        La voce "Visita fatta" si spunta da sola quando la <a href="#registro-visite">visita</a> è segnata come visitata. 📝 aggiunge una nota breve alla
+        voce (es. chi hai sentito, cosa manca). In fondo a ogni gruppo puoi <strong>aggiungere voci solo per quell'asta</strong> (con ✕ per toglierle).
+        Le voci predefinite si cambiano in <a href="#config-checklist">Configurazione → Checklist delle aste</a>. Il primo gruppo è aperto finché non
+        hai l'aggiudicazione, poi si apre il secondo; puoi aprirli e chiuderli a mano.</li>
+      <li>Un'asta diventa "seguita" alla prima spunta o al primo passo scelto; da lì arrivano i <a href="#orari-operazioni">promemoria Telegram</a>.</li>
+      <li><strong>Storico</strong>: ogni cambio di passo con data e ora. Le modifiche (numeri, spunte, note) finiscono anche nella
+        <a href="#sistema-cronologia">cronologia delle modifiche</a>.</li>
+      <li><strong>Nella card</strong> (e nel popup della mappa): "☑️ 6/10" (checklist prima dell'offerta, in valutazione), oppure il passo, per esempio
+        "📨 Offerta presentata" ("· ASTA OGGI" in ambra il giorno dell'asta), "🏆 Aggiudicata · saldo tra 40 giorni" (ambra dai 15 giorni prima), grigio
+        per persa, non partecipo e venduta.</li>
+      <li><strong>Filtro "📅 In corso"</strong> (menu): "📅 Visite in corso" e/o "🧭 Operazioni in corso" (dalla valutazione alla messa in vendita). Le
+        operazioni compaiono anche se l'asta è conclusa, ordinate per la scadenza più vicina (termine delle offerte, giorno dell'asta, saldo).</li>
+      <li><strong>Protezione</strong>: le aste con un'offerta presentata o oltre (persa compresa) non vengono cancellate da
+        <a href="#config-manutenzione">Elimina aste scadute</a>, salvo scelta esplicita.</li>
+      <li>In stampa/PDF la sezione esce senza pulsanti né campi.</li>
     </ul>
   </section>
 
@@ -836,6 +905,7 @@
         meno" la richiude; in stampa è sempre intera);</li>
       <li>⚠️ Rischi e note dell'AI;</li>
       <li><a href="#registro-visite">📅 Visita</a>;</li>
+      <li><a href="#registro-operazione">🧭 Operazione</a> (passi e checklist);</li>
       <li><a href="#registro-tentativo">📉 Storico delle aste (PVP)</a>: i tentativi precedenti dello stesso immobile, con ribassi ed esiti;</li>
       <li>📋 Dettagli: Tribunale, Disponibilità (PVP) (lo stato dichiarato nell'annuncio: "Libero", "Occupato", "Non specificato", "In corso di liberazione" o "Occupato senza titolo"), Prezzo base, Rilancio minimo, Superficie,
         €/mq, Spese sanatoria, Abusi edilizi, Formalità pregiudizievoli (in rosso se c'è qualcosa oltre la normale ipoteca), Fonte analisi (quale
@@ -1009,7 +1079,7 @@
       <li><strong>Preferite e scartate sono nascoste</strong> per non riaprirle per errore: "★/✕ sulla mappa" le rimostra con un distintivo.</li>
       <li>"✨ Solo nuove": solo le aste inserite nelle ultime 24 ore.</li>
       <li>La mappa si adatta ai risultati finché non la sposti o zoomi a mano. Sotto compare quante aste non sono mostrate e perché.</li>
-      <li>Popup: indirizzo; badge ⚖️ giudizio della Superanalisi, tentativo e visita; tipologia, superficie e occupazione; data di vendita con "tra N
+      <li>Popup: indirizzo; badge ⚖️ giudizio della Superanalisi, tentativo, visita e operazione; tipologia, superficie e occupazione; data di vendita con "tra N
         giorni"; offerta minima; <strong>spazio sull'offerta</strong> (come nell'<a href="#registro-ordinamento">ordinamento</a>: "+€ X" o "mancano € X" in
         rosso, solo aste con analisi v2); margine lordo; punteggio; stella/scarto, "Vedi scheda completa", "Apri annuncio PVP" e "Superanalisi".</li>
       <li>La mappa mostra le aste nell'ordine in cui le trova, non segue l'ordinamento: per escludere un gruppo usa i filtri, per esempio
@@ -1216,6 +1286,19 @@
       (elimina le altre)" o "Annulla". <strong>Irreversibile dalle pagine</strong>: lo storico delle aste eliminate va perso; i tuoi dati cancellati
       (note, link, visite, risultati AI, correzioni) restano per 12 mesi nella <a href="#sistema-cronologia">cronologia delle modifiche</a>. Il loro numero resta conteggiato in
       Statistiche ("Aste storiche"). Stelle e scarti da soli non contano come dati tuoi.</p>
+    <p>Le aste con un'<a href="#registro-operazione">operazione</a> (anche solo in valutazione o con la checklist iniziata) contano come dati tuoi.
+      Quelle con un'<strong>offerta presentata o oltre</strong> (aggiudicata, persa, saldo, cantiere, vendita) <strong>non vengono mai eliminate</strong>
+      dalle prime due scelte ("Elimina tutte tranne le operazioni (N)", "Tieni le M con i miei dati"); per cancellarle c'è la terza,
+      "Elimina anche le K operazioni…", con una conferma in più: cancella anche i loro numeri, la checklist e lo storico.</p>
+  </section>
+
+  <section class="voce" id="config-checklist">
+    <h3>Checklist delle aste</h3>
+    <p>Voci predefinite della checklist della sezione <a href="#registro-operazione">🧭 Operazione</a>, una per riga, in due gruppi: "Prima
+      dell'offerta" e "Dopo l'aggiudicazione". "Salva" le rende valide per tutte le aste (le voci aggiunte a una singola asta restano sue);
+      "↺ Voci predefinite" rimette nei campi quelle iniziali, da salvare. Se togli o rinomini una voce, le spunte già date restano salvate ma non si
+      vedono più (rimettendo la voce uguale ricompaiono). "Visita fatta" non si scrive qui: c'è sempre ed è spuntata dalla visita. Non fa parte dei
+      valori ripristinati da "Ripristina tutti i valori predefiniti".</p>
   </section>
 
   <section class="voce" id="config-tema">
@@ -1993,6 +2076,9 @@
         <tr><td>📅 Visita tra 3 giorni / 📅 Visita domani</td><td>Promemoria dell'appuntamento confermato (dalle 9:00), con dettagli, indirizzo, asta e link.</td></tr>
         <tr><td>🚨🚨 VISITA OGGI ALLE hh:mm</td><td>Il giorno della visita dalle 7:00, fissato in cima alla chat.</td></tr>
         <tr><td>🚨 Visita tra N minuti</td><td>Circa 2 ore prima dell'appuntamento.</td></tr>
+        <tr><td>⏰ Termine per le offerte tra N giorni / domani, 🚨 OGGI il termine</td><td>Aste in valutazione: termine letto dal PVP, con le voci della checklist ancora da fare. Vedi <a href="#orari-operazioni">Promemoria delle operazioni</a>.</td></tr>
+        <tr><td>🔨 OGGI L'ASTA / ❓ Com'è andata l'asta?</td><td>Offerta presentata: il giorno dell'asta dalle 7:00; il giorno dopo, dalle 9:00, per segnare aggiudicata o persa.</td></tr>
+        <tr><td>💶 Saldo del prezzo entro N giorni / 🚨 OGGI la scadenza del saldo</td><td>Aggiudicata: 15, 7, 1 giorno prima e il giorno stesso, con prezzo − cauzione.</td></tr>
         <tr><td>✅ Visita segnata come effettuata</td><td>3 ore dopo l'orario, se non l'hai cambiata; se non è andata così, riaprila dalla scheda.</td></tr>
         <tr><td>⏳ / ⚠️ solleciti visita</td><td>Richiesta senza invito da 5 giorni; invito non confermato da 2 giorni; asta entro 7 giorni senza visita confermata.</td></tr>
         <tr><td>🏠 PRENOTA LA VISITA — ASTA PREFERITA</td><td>Preferita a 15 giorni dalla vendita: contatta custode o delegato.</td></tr>
@@ -2341,7 +2427,21 @@
       <li>Dopo aver risposto, "📅 Conferma appuntamento": scegli data e ora e scrivi nei dettagli punto d'incontro e contatto.</li>
       <li>Ricevi i promemoria Telegram (3 giorni prima, il giorno prima, il giorno stesso fissato in chat, 2 ore prima). Se cambia l'orario usa "Cambia data";
         se salta, "Annulla".</li>
-      <li>Dopo la visita non serve fare nulla: 3 ore dopo diventa "Visitata". Il filtro "📅 Visite" mostra tutte quelle in corso.</li>
+      <li>Dopo la visita non serve fare nulla: 3 ore dopo diventa "Visitata". Il filtro "📅 In corso" → "Visite in corso" mostra tutte quelle in corso.</li>
+    </ol>
+  </section>
+
+  <section class="voce" id="faq-operazione">
+    <h3>Come seguo un'asta dalle verifiche all'offerta, fino alla rivendita?</h3>
+    <ol>
+      <li>Nella scheda, sezione <a href="#registro-operazione">🧭 Operazione</a>, spunta man mano le voci della checklist "prima dell'offerta" (con una
+        nota se serve): da quel momento l'asta è seguita e ricevi su Telegram il termine per le offerte con le voci ancora da fare.</li>
+      <li>Presentata l'offerta, "📨 Ho presentato l'offerta": importo, cauzione e data. Il giorno dell'asta arriva "🔨 OGGI L'ASTA".</li>
+      <li>Dopo l'asta, "🏆 Aggiudicata" (prezzo, offerenti, scadenza del saldo) o "✖ Persa". Da aggiudicata arrivano i promemoria del saldo e si apre la
+        checklist "dopo l'aggiudicazione".</li>
+      <li>Poi saldo, consegna, cantiere (con il costo reale dei lavori), messa in vendita e vendita: alla fine il riepilogo mostra vendita − aggiudicazione − lavori.</li>
+      <li>Il filtro "📅 In corso" → "Operazioni in corso" le mostra tutte, anche concluse, dalla scadenza più vicina. Le voci predefinite della checklist
+        si cambiano in <a href="#config-checklist">Configurazione</a>.</li>
     </ol>
   </section>
 

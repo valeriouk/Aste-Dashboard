@@ -323,6 +323,7 @@
   .campo-form input[type="password"],
   .campo-form input[type="number"],
   .campo-form input[type="time"],
+  .campo-form textarea,
   .campo-form select {
     width: 100%;
     min-width: 0;
@@ -479,6 +480,7 @@
 <body>
 <script src="menu.js"></script>
 <script src="feedback.js"></script>
+<script src="operazioni.js"></script>
 
 <div class="contenitore">
 
@@ -588,6 +590,26 @@
       </div>
 
       <section class="blocco-semplice">
+        <h2>Checklist delle aste</h2>
+        <p class="nota-campo">Voci predefinite della checklist nella sezione "🧭 Operazione" dei dettagli di ogni asta, <strong>una per riga</strong>.
+          In ogni asta puoi aggiungere voci solo sue. Se togli o rinomini una voce, le spunte già date a quella voce restano salvate ma non si vedono più
+          (rimettendo la voce uguale ricompaiono). "Visita fatta" c'è sempre ed è spuntata dalla visita.</p>
+        <div class="campo-form">
+          <label for="campo-checklist-prima">Prima dell'offerta</label>
+          <textarea id="campo-checklist-prima" rows="9"></textarea>
+        </div>
+        <div class="campo-form">
+          <label for="campo-checklist-dopo">Dopo l'aggiudicazione</label>
+          <textarea id="campo-checklist-dopo" rows="5"></textarea>
+        </div>
+        <div style="display:flex;flex-wrap:wrap;gap:8px">
+          <button type="button" class="bottone-salva-card" id="bottone-salva-checklist" onclick="salvaChecklist()">Salva</button>
+          <button type="button" class="bottone-secondario" onclick="ripristinaChecklistPredefinita()">↺ Voci predefinite</button>
+        </div>
+        <p id="messaggio-checklist" class="messaggio-salvataggio-card"></p>
+      </section>
+
+      <section class="blocco-semplice">
         <h2>Tema</h2>
         <p class="nota-campo">Vale solo per <strong>questo dispositivo</strong>. "Automatico" segue il telefono o il computer (chiaro di giorno, scuro di
           sera, se impostato così). In stampa e nei PDF resta sempre chiaro.</p>
@@ -614,7 +636,7 @@
 
       <section class="blocco-semplice">
         <h2>Manutenzione</h2>
-        <p class="nota-campo">Elimina dal registro le aste con data vendita già passata. Prima mostra quante sono e quante hanno visite, note/link o risultati AI, e ti fa scegliere se tenere quelle. Operazione irreversibile.</p>
+        <p class="nota-campo">Elimina dal registro le aste con data vendita già passata. Prima mostra quante sono e quante hanno visite, note/link, operazioni o risultati AI, e ti fa scegliere se tenere quelle. Le aste con un'<strong>offerta presentata o oltre</strong> (aggiudicata, persa, saldo…) non vengono eliminate, salvo scelta esplicita. Operazione irreversibile.</p>
         <button type="button" class="bottone-secondario" id="bottone-elimina-scadute" onclick="eliminaAsteScadute()" style="background:var(--danger-soft);color:var(--danger)">🗑 Elimina aste scadute…</button>
         <p id="messaggio-elimina-scadute"></p>
         <div id="scelta-elimina-scadute" class="nascosto" style="display:flex;flex-wrap:wrap;gap:8px;margin-top:6px"></div>
@@ -1203,6 +1225,10 @@
         } catch (e) {}
       }
 
+      // null finché non salvi voci tue: così il salvataggio delle altre card
+      // non scrive nel database le voci predefinite (resterebbero fisse).
+      configAttuale.checklist_modello = config.checklist_modello && window.Operazioni ? Operazioni.modelloChecklist(config.checklist_modello) : null;
+
       configAttuale.occupazioni_escluse = [];
       if (config.occupazioni_escluse) {
         try {
@@ -1377,6 +1403,7 @@
   }
 
   function renderizzaTuttiIRiepiloghi() {
+    mostraChecklist();
     renderizzaRiepilogoRicercaPerizia();
     renderizzaRiepilogoArea();
     renderizzaRiepilogoPrezzo();
@@ -1512,6 +1539,7 @@
         cerca_tutta_italia: String(configAttuale.cerca_tutta_italia),
         tipologie_incluse: JSON.stringify(configAttuale.tipologie_incluse),
         occupazioni_escluse: JSON.stringify(configAttuale.occupazioni_escluse),
+        ...(configAttuale.checklist_modello ? {checklist_modello: JSON.stringify(configAttuale.checklist_modello)} : {}),
         solo_aste_future: String(configAttuale.solo_aste_future),
         usa_astegiudiziarie_perizia: String(configAttuale.usa_astegiudiziarie_perizia),
         pausa_tra_aste_secondi: configAttuale.pausa_tra_aste_secondi,
@@ -1899,6 +1927,62 @@
     }
   }
 
+  // Checklist delle aste: voci predefinite (parametro checklist_modello
+  // della tabella config, letto dal registro con i dati personali). Si salva
+  // con imposta_configurazione come le altre impostazioni.
+  function mostraChecklist() {
+    const m = configAttuale.checklist_modello || (window.Operazioni ? Operazioni.modelloChecklist(null) : {prima: [], dopo: []});
+    document.getElementById("campo-checklist-prima").value = m.prima.join("\n");
+    document.getElementById("campo-checklist-dopo").value = m.dopo.join("\n");
+  }
+  function ripristinaChecklistPredefinita() {
+    if (!window.Operazioni) return;
+    document.getElementById("campo-checklist-prima").value = Operazioni.CHECKLIST_PREDEFINITA.prima.join("\n");
+    document.getElementById("campo-checklist-dopo").value = Operazioni.CHECKLIST_PREDEFINITA.dopo.join("\n");
+    const msgEl = document.getElementById("messaggio-checklist");
+    msgEl.textContent = "Voci predefinite rimesse: premi Salva per tenerle.";
+    msgEl.className = "messaggio-salvataggio-card messaggio-attesa";
+  }
+  async function salvaChecklist() {
+    const msgEl = document.getElementById("messaggio-checklist");
+    const righe = (id) => [...new Set(document.getElementById(id).value.split("\n").map(v => v.trim())
+      .filter(v => v && (!window.Operazioni || v !== Operazioni.VOCE_VISITA)))];
+    const prima = righe("campo-checklist-prima"), dopo = righe("campo-checklist-dopo");
+    if (!prima.length && !dopo.length) {
+      msgEl.textContent = "Serve almeno una voce.";
+      msgEl.className = "messaggio-salvataggio-card messaggio-errore";
+      return;
+    }
+    if ([...prima, ...dopo].some(v => v.length > 200)) {
+      msgEl.textContent = "Una voce è troppo lunga (massimo 200 caratteri).";
+      msgEl.className = "messaggio-salvataggio-card messaggio-errore";
+      return;
+    }
+    const precedente = configAttuale.checklist_modello;
+    configAttuale.checklist_modello = {prima, dopo};
+    msgEl.textContent = "Salvataggio in corso…";
+    msgEl.className = "messaggio-salvataggio-card messaggio-attesa";
+    try {
+      const risultato = await salvaConfigCompletaSulServer();
+      if (risultato && risultato.result === "success") {
+        msgEl.textContent = `Salvata: ${prima.length} voci prima dell'offerta, ${dopo.length} dopo l'aggiudicazione.`;
+        msgEl.className = "messaggio-salvataggio-card messaggio-ok";
+        window.Feedback && Feedback.salvato();
+        mostraChecklist();
+      } else {
+        configAttuale.checklist_modello = precedente;
+        msgEl.textContent = (risultato && risultato.message) || "Errore sconosciuto durante il salvataggio.";
+        msgEl.className = "messaggio-salvataggio-card messaggio-errore";
+        window.Feedback && Feedback.errore();
+      }
+    } catch (e) {
+      configAttuale.checklist_modello = precedente;
+      msgEl.textContent = "Richiesta non riuscita. Controlla la connessione e riprova.";
+      msgEl.className = "messaggio-salvataggio-card messaggio-errore";
+      window.Feedback && Feedback.errore();
+    }
+  }
+
   // Eliminazione delle aste scadute in due passi (29/09/2026): prima conta
   // quante sono e quante hanno dati tuoi (visite, note o link, risultati AI),
   // poi fa scegliere se eliminarle tutte o tenere quelle (sql/sicurezza_e_tentativi.sql).
@@ -1919,17 +2003,21 @@
         return;
       }
       const totale = Number(conteggio.totale) || 0, conDati = Number(conteggio.con_dati_utente) || 0;
+      // Offerta presentata o oltre: protette (sql/operazioni.sql). Assente = SQL non ancora eseguito.
+      const conOperazione = Number(conteggio.con_operazione) || 0;
       if (!totale) {
         messaggioEl.textContent = "Nessuna asta scaduta da eliminare.";
         messaggioEl.className = "messaggio-ok";
         return;
       }
-      messaggioEl.textContent = `Aste scadute: ${totale}` + (conDati ? `, di cui ${conDati} con visite, note/link o risultati AI.` : ", nessuna con visite, note/link o risultati AI.")
+      messaggioEl.textContent = `Aste scadute: ${totale}` + (conDati ? `, di cui ${conDati} con visite, note/link, operazioni o risultati AI.` : ", nessuna con visite, note/link, operazioni o risultati AI.")
+        + (conOperazione ? ` ${conOperazione} hanno un'offerta presentata o oltre: restano, salvo l'ultima scelta.` : "")
         + " L'eliminazione non si può annullare.";
       messaggioEl.className = "messaggio-attesa";
       sceltaEl.innerHTML = `
-        <button type="button" class="bottone-secondario" onclick="eseguiEliminazioneScadute(false)" style="background:var(--danger-soft);color:var(--danger)">Elimina tutte (${totale})</button>
+        <button type="button" class="bottone-secondario" onclick="eseguiEliminazioneScadute(false)" style="background:var(--danger-soft);color:var(--danger)">${conOperazione ? `Elimina tutte tranne le operazioni (${totale - conOperazione})` : `Elimina tutte (${totale})`}</button>
         ${conDati ? `<button type="button" class="bottone-secondario" onclick="eseguiEliminazioneScadute(true)">Tieni le ${conDati} con i miei dati (elimina ${totale - conDati})</button>` : ""}
+        ${conOperazione ? `<button type="button" class="bottone-secondario" onclick="eseguiEliminazioneScadute(false, true, ${conOperazione})" style="background:var(--danger-soft);color:var(--danger)">Elimina anche le ${conOperazione} operazioni…</button>` : ""}
         <button type="button" class="bottone-secondario" onclick="annullaEliminazioneScadute()">Annulla</button>`;
       sceltaEl.classList.remove("nascosto");
     } catch (e) {
@@ -1945,14 +2033,16 @@
     document.getElementById("messaggio-elimina-scadute").textContent = "";
   }
 
-  async function eseguiEliminazioneScadute(tieniDatiUtente) {
+  async function eseguiEliminazioneScadute(tieniDatiUtente, eliminaOperazioni = false, quanteOperazioni = 0) {
+    if (eliminaOperazioni && !confirm(`Eliminare anche le ${quanteOperazioni} aste con un'offerta presentata o oltre, con i loro numeri (offerta, aggiudicazione, saldo…), checklist e storico? Non si può annullare.`)) return;
     const messaggioEl = document.getElementById("messaggio-elimina-scadute");
     const sceltaEl = document.getElementById("scelta-elimina-scadute");
     sceltaEl.querySelectorAll("button").forEach((b) => { b.disabled = true; });
     messaggioEl.textContent = "Eliminazione in corso…";
     messaggioEl.className = "messaggio-attesa";
     try {
-      const risultato = await chiamaRpc("elimina_aste_scadute", {password_tentativo: passwordCorrente, tieni_dati_utente: tieniDatiUtente});
+      const risultato = await chiamaRpc("elimina_aste_scadute", {password_tentativo: passwordCorrente, tieni_dati_utente: tieniDatiUtente,
+        ...(eliminaOperazioni ? {elimina_operazioni: true} : {})});
       if (risultato && risultato.result === "success") {
         messaggioEl.textContent = `Eliminate ${risultato.righe_eliminate} aste scadute dal database` + (tieniDatiUtente ? " (tenute quelle con i tuoi dati)." : ".");
         messaggioEl.className = "messaggio-ok";

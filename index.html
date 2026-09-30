@@ -1274,6 +1274,67 @@
   .visita-storico { font-size: .8rem; }
   .visita-storico summary { cursor: pointer; color: var(--ink-muted); }
   .visita-storico ul { margin: 6px 0 0; padding-left: 18px; }
+  /* Operazione e checklist: badge nella card e sezione "🧭 Operazione" nei
+     dettagli (stesso schema della visita; stati e voci in operazioni.js). */
+  .badge-operazione {
+    display: inline-block;
+    background: var(--primary-soft);
+    color: var(--primary);
+    font-size: .72rem;
+    font-weight: 600;
+    padding: 3px 9px;
+    border-radius: 5px;
+    margin: 4px 6px 6px 0;
+  }
+  .badge-operazione.urgente { background: #f3c567; color: #3b2a05; }
+  .badge-operazione.spenta { background: var(--surface-2); color: var(--ink-muted); }
+  .sezione-operazione { border-top: 1px solid var(--border); padding: 14px 0 6px; margin: 4px 0 14px; }
+  .percorso-operazione { display: flex; gap: 6px; overflow-x: auto; scrollbar-width: none; padding: 2px 0 10px; }
+  .percorso-operazione::-webkit-scrollbar { display: none; }
+  .percorso-operazione button { flex-shrink: 0; font: inherit; font-size: .76rem; font-weight: 500; border-radius: 999px; padding: 5px 11px;
+    cursor: pointer; border: 1px solid var(--border); background: var(--surface); color: var(--ink-muted); }
+  .percorso-operazione button.fatto { background: var(--primary-soft); border-color: transparent; color: var(--primary); }
+  .percorso-operazione button.attuale { background: var(--primary); border-color: var(--primary); color: #fff; font-weight: 600; }
+  .percorso-operazione button.uscita { background: var(--danger-soft); border-color: transparent; color: var(--danger); font-weight: 600; }
+  .operazione-riepilogo { list-style: none; margin: 0 0 10px; padding: 0; display: grid; grid-template-columns: repeat(auto-fill, minmax(150px, 1fr)); gap: 8px; }
+  .operazione-riepilogo li { background: var(--surface-2); border-radius: 10px; padding: 7px 10px; }
+  .operazione-riepilogo li.avviso { background: var(--secondary-soft); }
+  .operazione-riepilogo span { display: block; font-size: .7rem; color: var(--ink-muted); }
+  .operazione-riepilogo strong { font-size: .9rem; }
+  .operazione-editor { display: grid; grid-template-columns: repeat(auto-fill, minmax(170px, 1fr)); gap: 8px; background: var(--surface-2);
+    border-radius: 12px; padding: 10px; margin: 0 0 8px; }
+  .operazione-editor label { display: flex; flex-direction: column; gap: 4px; font-size: .8rem; }
+  .operazione-editor input { font: inherit; font-size: .9rem; padding: 7px 9px; border: 1px solid var(--border); border-radius: 8px; background: var(--surface); color: inherit; }
+  .operazione-editor .riga-piena { grid-column: 1 / -1; margin: 0; }
+  .operazione-suggerimento { font-size: .78rem; color: var(--ink-muted); }
+  .checklist-gruppo { margin: 10px 0 0; }
+  .checklist-gruppo > summary { cursor: pointer; list-style: none; display: flex; justify-content: space-between; align-items: center; gap: 8px;
+    font-weight: 600; font-size: .88rem; padding: 6px 0; }
+  .checklist-gruppo > summary::-webkit-details-marker { display: none; }
+  .checklist-gruppo > summary::before { content: "▸"; color: var(--ink-faint); margin-right: -2px; }
+  .checklist-gruppo[open] > summary::before { content: "▾"; }
+  .checklist-gruppo > summary > span:first-of-type { flex: 1; }
+  .checklist-contatore { font-size: .75rem; font-weight: 600; color: var(--primary); background: var(--primary-soft); border-radius: 999px; padding: 2px 8px; }
+  .checklist-barra { height: 4px; border-radius: 2px; background: var(--surface-2); overflow: hidden; margin: 0 0 4px; }
+  .checklist-barra span { display: block; height: 100%; background: var(--primary); transition: width .25s ease; }
+  .lista-checklist { list-style: none; margin: 0; padding: 0; }
+  .voce-checklist { display: flex; flex-wrap: wrap; align-items: center; gap: 4px 6px; padding: 7px 0; border-bottom: 1px solid var(--border); }
+  .voce-checklist label { flex: 1; display: flex; align-items: flex-start; gap: 9px; font-size: .88rem; cursor: pointer; min-width: 0; }
+  .voce-checklist input[type="checkbox"] { width: 18px; height: 18px; margin: 1px 0 0; accent-color: var(--primary); flex-shrink: 0; }
+  .voce-checklist.fatta label span { color: var(--ink-muted); text-decoration: line-through; }
+  .voce-checklist em { font-style: normal; font-size: .72rem; color: var(--ink-faint); white-space: nowrap; }
+  .voce-checklist > button { font: inherit; font-size: .8rem; border: none; background: none; cursor: pointer; color: var(--ink-muted); padding: 2px 6px; border-radius: 6px; }
+  .voce-nota { flex-basis: 100%; margin: 0 0 0 27px; font-size: .78rem; color: var(--ink-muted); white-space: pre-wrap; }
+  .voce-nota-editor { flex-basis: 100%; display: flex; gap: 6px; margin-left: 27px; }
+  .voce-nota-editor input, .aggiungi-voce input { flex: 1; min-width: 0; font: inherit; font-size: .85rem; padding: 6px 9px; border: 1px solid var(--border);
+    border-radius: 8px; background: var(--surface); color: inherit; }
+  .aggiungi-voce { display: flex; gap: 6px; margin: 8px 0 4px; }
+  .voce-nota-editor button, .aggiungi-voce button { font: inherit; font-size: .8rem; font-weight: 600; border-radius: 8px; padding: 6px 10px; cursor: pointer;
+    border: 1px solid var(--border); background: var(--surface); color: var(--ink); }
+  @media (pointer: coarse) {
+    /* 16 px: niente zoom automatico dell'iPhone quando tocchi il campo */
+    .operazione-editor input, .voce-nota-editor input, .aggiungi-voce input { font-size: 16px; }
+  }
 
   .lotto-margine {
     padding: 14px 0 2px;
@@ -1842,6 +1903,7 @@
        editor della nota, azioni di chiusura/espansione. */
     .lotto-azioni, .finestra-dettagli-azioni-header,
     .nota-preferito-editor, .checkbox-selezione,
+    .operazione-azioni, .operazione-editor, .aggiungi-voce, .voce-checklist > button, .voce-nota-editor,
     .finestra-dettagli-maniglia { display: none !important; }
     /* Le tile di Leaflet in stampa escono spesso incomplete. */
     .sezione-mappa-dettagli { display: none !important; }
@@ -2576,6 +2638,7 @@
 <script src="menu.js"></script>
 <script src="underwriting.js"></script>
 <script src="feedback.js"></script>
+<script src="operazioni.js"></script>
 
 <div class="contenitore">
 
@@ -2668,7 +2731,7 @@
       </div>
       <div class="gruppo-pillole" id="gruppo-aggiornate">
         <button type="button" class="pillola" id="pillola-aggiornate" onclick="alternaSoloAggiornate()" title="Mostra solo le aste con perizia ricontrollata e rianalizzata nelle ultime 24 ore" aria-label="Aggiornate">🔄<span class="testo-pillola-mobile"> Aggiornate</span></button>
-        <button type="button" class="pillola" id="pillola-visite" onclick="alternaSoloVisite()" title="Mostra solo le aste con una visita in corso (richiesta, invito o appuntamento), la più vicina prima" aria-label="Visite">📅<span class="testo-pillola-mobile"> Visite</span></button>
+        <button type="button" class="pillola" id="pillola-visite" onclick="alternaMenuInCorso(event)" aria-expanded="false" aria-haspopup="true" title="Visite e operazioni in corso" aria-label="Visite e operazioni in corso">📅<span class="testo-pillola-mobile"> In corso</span></button>
       </div>
       <div class="filtro-punteggio">
         <label title="Punteggio"><span class="testo-punteggio-lungo">Punteggio </span><span id="valore-punteggio-minimo">0</span>–<span id="valore-punteggio-massimo">100</span></label>
@@ -2710,6 +2773,7 @@
   <div class="menu-tipologia nascosto" id="menu-tipologia"></div>
   <div class="menu-tipologia nascosto" id="menu-ordinamento"></div>
   <div class="menu-tipologia nascosto" id="menu-giudizio"></div>
+  <div class="menu-tipologia nascosto" id="menu-in-corso"></div>
 
   <div id="stato-caricamento" class="stato-pagina">
     <h2>Apertura del registro…</h2>
@@ -3152,6 +3216,12 @@
   // privato): stato, data_ora, dettagli, storico. Letta con i dati
   // personali (leggi_dati_personali), scritta con imposta_visita.
   let VISITE = {};
+  // id_annuncio -> riga della tabella operazioni (sql/operazioni.sql nel
+  // repo privato): stato dell'operazione, numeri, checklist, storico. Letta
+  // con i dati personali, scritta con imposta_operazione. Le voci
+  // predefinite della checklist arrivano con gli stessi dati (config).
+  let OPERAZIONI = {};
+  let CHECKLIST_MODELLO = window.Operazioni ? Operazioni.modelloChecklist(null) : {prima: [], dopo: []};
   // id_annuncio -> [risultati di superanalisi con AI esterne, senza il
   // testo] (sql/superanalisi_esterne.sql nel repo privato): un risultato di
   // gruppo compare sotto ciascuna delle sue aste. Letto con i dati personali;
@@ -5356,7 +5426,10 @@
 
   // Mette i dati personali (letti con leggi_dati_personali) nelle mappe
   // usate da applicaStatoPreferito. Usata all'avvio e da aggiornaAstaDalDatabase.
-  function impostaDatiPersonali(righePreferiti, righeLinkUtili, righeVisite, righeSuperanalisi) {
+  function impostaDatiPersonali(righePreferiti, righeLinkUtili, righeVisite, righeSuperanalisi, righeOperazioni = [], modelloChecklist = null) {
+    OPERAZIONI = {};
+    righeOperazioni.forEach(o => { if (o && o.id_annuncio !== null && o.id_annuncio !== undefined) OPERAZIONI[String(o.id_annuncio)] = o; });
+    if (window.Operazioni) CHECKLIST_MODELLO = Operazioni.modelloChecklist(modelloChecklist);
     SUPERANALISI_ESTERNE = {};
     righeSuperanalisi.forEach(v => (v.id_annunci || []).forEach(id => {
       (SUPERANALISI_ESTERNE[String(id)] = SUPERANALISI_ESTERNE[String(id)] || []).push(v);
@@ -5407,7 +5480,8 @@
       if (!asta) return;
       const firma = () => JSON.stringify({...asta, _giudizio: undefined});
       const prima = firma();
-      impostaDatiPersonali(personali.preferiti || [], personali.link_utili || [], personali.visite || [], personali.superanalisi_esterne || []);
+      impostaDatiPersonali(personali.preferiti || [], personali.link_utili || [], personali.visite || [], personali.superanalisi_esterne || [],
+        personali.operazioni || [], personali.checklist_modello || null);
       Object.assign(asta, normalizzaRiga(righe[0]));
       asta._giudizio = undefined;   // giudizio della Superanalisi da ricalcolare
       asta._spazio = undefined;     // e lo spazio sull'offerta
@@ -5473,6 +5547,9 @@
     const promessaSuperanalisi = promessaPersonali
       .then(d => (Array.isArray(d.superanalisi_esterne) ? d.superanalisi_esterne : []))
       .catch(() => []);
+    const promessaOperazioni = promessaPersonali
+      .then(d => ({righe: Array.isArray(d.operazioni) ? d.operazioni : [], modello: d.checklist_modello || null}))
+      .catch(() => ({righe: [], modello: null}));
 
     // return qui: chi chiama avvia() può ora concatenare .then/.catch per
     // sapere DAVVERO quando il caricamento finisce (successo o fallito),
@@ -5486,9 +5563,10 @@
       conTimeoutRipiego(promessaPreferiti, 8000, []),
       conTimeoutRipiego(promessaLinkUtili, 8000, []),
       conTimeoutRipiego(promessaVisite, 8000, []),
-      conTimeoutRipiego(promessaSuperanalisi, 8000, [])
-    ]).then(([righeAste, righePreferiti, righeLinkUtili, righeVisite, righeSuperanalisi]) => {
-      impostaDatiPersonali(righePreferiti, righeLinkUtili, righeVisite, righeSuperanalisi);
+      conTimeoutRipiego(promessaSuperanalisi, 8000, []),
+      conTimeoutRipiego(promessaOperazioni, 8000, {righe: [], modello: null})
+    ]).then(([righeAste, righePreferiti, righeLinkUtili, righeVisite, righeSuperanalisi, datiOperazioni]) => {
+      impostaDatiPersonali(righePreferiti, righeLinkUtili, righeVisite, righeSuperanalisi, datiOperazioni.righe, datiOperazioni.modello);
       ASTE = righeAste.map(normalizzaRiga).map(applicaStatoPreferito);
       document.getElementById("testo-aggiornato").textContent =
         new Date().toLocaleTimeString("it-IT", { hour: "2-digit", minute: "2-digit" });
@@ -5568,6 +5646,7 @@
       lon: numeroSicuro(r.longitudine, null),
       dataInserimento: r.data_inserimento || "",
       ultimoRicontrolloPerizia: r.ultimo_ricontrollo_perizia || "",
+      termineOfferte: r.termine_offerte || "",
       dataAnalisiV2: r.data_analisi_v2 || "",
       renditaCatastale: numeroSicuro(r.rendita_catastale, null),
       renditaCatastaleUtente: numeroSicuro(r.rendita_catastale_utente, null),
@@ -5604,6 +5683,7 @@
     asta.notaPreferito = annotazioni?.nota || "";
     asta.linkUtili = annotazioni?.links || [];
     asta.visita = VISITE[asta.id] || null;
+    asta.operazione = OPERAZIONI[asta.id] || null;
     asta.superanalisiEsterne = SUPERANALISI_ESTERNE[asta.id] || [];
     return asta;
   }
@@ -5902,6 +5982,7 @@
     {menuId: "menu-tipologia", bottoneId: "bottone-filtro-tipologia"},
     {menuId: "menu-ordinamento", bottoneId: "bottone-ordinamento"},
     {menuId: "menu-giudizio", bottoneId: "bottone-filtro-giudizio"},
+    {menuId: "menu-in-corso", bottoneId: "pillola-visite"},
     {menuId: "menu-condividi-dettagli", bottoneId: "bottone-condividi-dettagli"},
     {menuId: "menu-indirizzo-dettagli", bottoneId: "bottone-indirizzo-dettagli"},
   ];
@@ -6093,13 +6174,44 @@
   // "solo aste aggiornate" (perizia ricontrollata nelle ultime 24 ore,
   // vedi eAggiornata). Si somma agli altri filtri in applicaFiltri.
   let filtroSoloAggiornateAttivo = false;
-  // Filtro "📅 Visite": solo aste con una visita in corso, ordinate per
-  // appuntamento (confermate per data, poi inviti, poi richieste).
+  // Filtro "📅 In corso" (menu): visite in corso, ordinate per appuntamento
+  // (confermate per data, poi inviti, poi richieste), e/o operazioni in
+  // corso (dalla valutazione alla messa in vendita), per scadenza più
+  // vicina. Le operazioni passano anche se l'asta è conclusa: dopo
+  // l'aggiudicazione lo è per forza.
   let filtroSoloVisiteAttivo = false;
+  let filtroSoloOperazioniAttivo = false;
 
-  function alternaSoloVisite() {
-    filtroSoloVisiteAttivo = !filtroSoloVisiteAttivo;
-    document.getElementById("pillola-visite").classList.toggle("attiva", filtroSoloVisiteAttivo);
+  function popolaMenuInCorso() {
+    const voce = (chiave, testo, attiva) => `<label class="voce-menu-tipologia"><input type="checkbox" value="${chiave}" ${attiva ? "checked" : ""} onchange="aggiornaFiltroInCorso()"><span>${testo}</span></label>`;
+    document.getElementById("menu-in-corso").innerHTML =
+      voce("visite", "📅 Visite in corso", filtroSoloVisiteAttivo) + voce("operazioni", "🧭 Operazioni in corso", filtroSoloOperazioniAttivo);
+  }
+  function mostraPillolaInCorso() {
+    const bottone = document.getElementById("pillola-visite");
+    const icona = filtroSoloOperazioniAttivo ? (filtroSoloVisiteAttivo ? "📅🧭" : "🧭") : "📅";
+    bottone.innerHTML = `${icona}<span class="testo-pillola-mobile"> In corso</span>`;
+    bottone.classList.toggle("attiva", filtroSoloVisiteAttivo || filtroSoloOperazioniAttivo);
+  }
+  function alternaMenuInCorso(evento) {
+    if (evento) evento.stopPropagation();
+    const menu = document.getElementById("menu-in-corso");
+    const bottone = document.getElementById("pillola-visite");
+    const apri = menu.classList.contains("nascosto");
+    if (apri) {
+      popolaMenuInCorso();
+      menu.classList.remove("nascosto");
+      posizionaMenuAComparsa(menu, bottone);
+    } else {
+      menu.classList.add("nascosto");
+    }
+    bottone.setAttribute("aria-expanded", apri ? "true" : "false");
+  }
+  function aggiornaFiltroInCorso() {
+    const scelte = new Set([...document.querySelectorAll('#menu-in-corso input[type="checkbox"]:checked')].map(c => c.value));
+    filtroSoloVisiteAttivo = scelte.has("visite");
+    filtroSoloOperazioniAttivo = scelte.has("operazioni");
+    mostraPillolaInCorso();
     applicaFiltri();
   }
 
@@ -6219,7 +6331,7 @@
     if (filtroPreferitiScartatiAttivo) conteggio++;
     if (mostraConcluse) conteggio++;
     if (filtroSoloAggiornateAttivo) conteggio++;
-    if (filtroSoloVisiteAttivo) conteggio++;
+    if (filtroSoloVisiteAttivo || filtroSoloOperazioniAttivo) conteggio++;
     if (Number(document.getElementById("punteggio-minimo").value) > 0
       || Number(document.getElementById("punteggio-massimo").value) < 100) conteggio++;
     const ricercaAttiva = document.getElementById("ricerca").value.trim() !== "";
@@ -6272,6 +6384,7 @@
         concluse: mostraConcluse,
         aggiornate: filtroSoloAggiornateAttivo,
         visite: filtroSoloVisiteAttivo,
+        operazioni: filtroSoloOperazioniAttivo,
         punteggioMinimo: Number(document.getElementById("punteggio-minimo").value),
         punteggioMassimo: Number(document.getElementById("punteggio-massimo").value),
         criterio: criterioOrdinamento,
@@ -6288,7 +6401,7 @@
     aggiornaStatoPillolaValutatiMappa();
     document.getElementById("pillola-concluse").classList.toggle("attiva", mostraConcluse);
     document.getElementById("pillola-aggiornate").classList.toggle("attiva", filtroSoloAggiornateAttivo);
-    document.getElementById("pillola-visite").classList.toggle("attiva", filtroSoloVisiteAttivo);
+    mostraPillolaInCorso();
     const n = categorieTipologiaAttive.size;
     const bottoneTipo = document.getElementById("bottone-filtro-tipologia");
     bottoneTipo.innerHTML = (n > 0 ? `Tipo (${n})` : "Tipo") + ' <span class="freccia-tipologia">▾</span>';
@@ -6313,6 +6426,7 @@
     mostraConcluse = !!f.concluse;
     filtroSoloAggiornateAttivo = !!f.aggiornate;
     filtroSoloVisiteAttivo = !!f.visite;
+    filtroSoloOperazioniAttivo = !!f.operazioni;
     const min = Math.max(0, Math.min(100, Number(f.punteggioMinimo) || 0));
     const max = Math.max(min, Math.min(100, Number.isFinite(Number(f.punteggioMassimo)) ? Number(f.punteggioMassimo) : 100));
     document.getElementById("punteggio-minimo").value = min;
@@ -6336,6 +6450,7 @@
     mostraConcluse = false;
     filtroSoloAggiornateAttivo = false;
     filtroSoloVisiteAttivo = false;
+    filtroSoloOperazioniAttivo = false;
     document.getElementById("punteggio-minimo").value = 0;
     document.getElementById("punteggio-massimo").value = 100;
     mostraStatoFiltri();
@@ -6399,12 +6514,14 @@
       const passaTipologia = categorieTipologiaAttive.size === 0
         || categorieDiAsta(a.tipologia).some(c => categorieTipologiaAttive.has(c));
       const passaOccupazione = !filtroOccupazioneAttivo || classificaOccupazione(a.statoOccupazione) === filtroOccupazioneAttivo;
-      const passaConcluse = mostraConcluse ? astaConclusa(a.dataVendita) : !astaConclusa(a.dataVendita);
+      const passaConcluse = (filtroSoloOperazioniAttivo && operazioneInCorso(a))
+        || (mostraConcluse ? astaConclusa(a.dataVendita) : !astaConclusa(a.dataVendita));
       const passaPreferiti = !filtroPreferitiScartatiAttivo
         || (filtroPreferitiScartatiAttivo === "preferito" ? a.preferito : a.scartato);
       const passaPunteggio = a.punteggio >= punteggioMinimo && a.punteggio <= punteggioMassimo;
       const passaAggiornate = !filtroSoloAggiornateAttivo || eAggiornata(a);
-      const passaVisite = !filtroSoloVisiteAttivo || visitaInCorso(a);
+      const passaVisite = (!filtroSoloVisiteAttivo && !filtroSoloOperazioniAttivo)
+        || (filtroSoloVisiteAttivo && visitaInCorso(a)) || (filtroSoloOperazioniAttivo && operazioneInCorso(a));
       const passaGiudizio = giudiziAttivi.size === 0 || giudiziAttivi.has(classeGiudizioFiltro(a));
       return passaRicerca && passaTipologia && passaOccupazione && passaConcluse && passaPreferiti && passaPunteggio && passaAggiornate && passaVisite && passaGiudizio;
     });
@@ -6426,7 +6543,10 @@
     // in entrambe le direzioni (subito dopo le scartate come chiave).
     const inFondo = definizione.inFondo || (() => false);
     filtrate.sort((a, b) => (a.scartato - b.scartato) || (inFondo(a) - inFondo(b)) || segno * definizione.comparatore(a, b));
-    if (filtroSoloVisiteAttivo) filtrate.sort((a, b) => chiaveOrdineVisita(a) - chiaveOrdineVisita(b));
+    if (filtroSoloVisiteAttivo || filtroSoloOperazioniAttivo) {
+      const chiave = (a) => Math.min(filtroSoloVisiteAttivo ? chiaveOrdineVisita(a) : 9e15, filtroSoloOperazioniAttivo ? chiaveOrdineOperazione(a) : 9e15);
+      filtrate.sort((a, b) => chiave(a) - chiave(b));
+    }
 
     // Il range virtuale va azzerato a ogni cambio di filtro/ricerca/
     // ordinamento: altrimenti potrebbe combaciare per caso con quello di
@@ -6642,7 +6762,7 @@
       : `<div style="font-style:italic;color:var(--ink-faint)">Posizione approssimata (centro comune)</div>`;
     // Giudizio della Superanalisi, tentativo e visita come nella card; spazio
     // sull'offerta dal conto completo (solo aste con analisi v2).
-    const badgePopup = [badgeGiudizio(a), badgeTentativo(a.storico), badgeVisita(a)].filter(Boolean).join("");
+    const badgePopup = [badgeGiudizio(a), badgeTentativo(a.storico), badgeVisita(a), badgeOperazione(a)].filter(Boolean).join("");
     const spazio = spazioSullOfferta(a);
     const testoSpazio = spazio === null ? "" : spazio >= 0 ? `<strong class="popup-spazio">+${formattaEuro(spazio)}</strong>`
       : `<strong class="popup-spazio negativo">mancano ${formattaEuro(-spazio)}</strong>`;
@@ -6930,6 +7050,7 @@
           ${eNuova(a.dataInserimento) ? `<span class="badge-nuova" title="Trovata nelle ultime 24 ore">✨ Nuova</span>` : ""}
           ${eAggiornata(a) ? `<span class="badge-aggiornata" title="Perizia ricontrollata e rianalizzata nelle ultime 24 ore">📄 Aggiornata</span>` : ""}
           ${badgeVisita(a)}
+          ${badgeOperazione(a)}
           ${conclusa ? `<span class="badge-conclusa">🏁 Conclusa</span>` : ""}
           ${a.zonaSegnalata ? `<span class="badge-zona">🚩 ${escapeHtml(a.zonaSegnalata)}</span>` : ""}
           ${badgeGiudizio(a)}
@@ -7945,6 +8066,433 @@ ${notaHtml}
   }
 
 
+  // ==========================================================
+  // OPERAZIONE E CHECKLIST — sezione "🧭 Operazione" dei dettagli e badge
+  // nella card. Dati nella tabella operazioni (sql/operazioni.sql nel repo
+  // privato), letti con leggi_dati_personali e scritti con
+  // imposta_operazione; stati e voci predefinite in operazioni.js (le voci
+  // si cambiano in Configurazione → Checklist).
+  // ==========================================================
+  const CAMPI_OPERAZIONE = [   // [campo, etichetta, tipo], nell'ordine del riepilogo
+    ["offerta_importo", "Offerta presentata", "euro"],
+    ["cauzione", "Cauzione", "euro"],
+    ["offerta_depositata_il", "Offerta depositata il", "data"],
+    ["prezzo_aggiudicazione", "Prezzo di aggiudicazione", "euro"],
+    ["numero_offerenti", "Offerenti", "intero"],
+    ["aggiudicata_il", "Aggiudicata il", "data"],
+    ["scadenza_saldo", "Scadenza del saldo", "data"],
+    ["saldo_versato_il", "Saldo versato il", "data"],
+    ["consegna_il", "Consegnato il", "data"],
+    ["cantiere_inizio_il", "Inizio lavori", "data"],
+    ["costo_lavori_reale", "Costo reale dei lavori", "euro"],
+    ["prezzo_vendita", "Prezzo di vendita", "euro"],
+    ["venduta_il", "Venduta il", "data"],
+  ];
+  const CAMPI_PER_STATO = {
+    offerta: ["offerta_importo", "cauzione", "offerta_depositata_il"],
+    aggiudicata: ["prezzo_aggiudicazione", "numero_offerenti", "aggiudicata_il", "scadenza_saldo"],
+    persa: ["prezzo_aggiudicazione", "numero_offerenti"],
+    saldo: ["saldo_versato_il"],
+    consegna: ["consegna_il"],
+    cantiere: ["cantiere_inizio_il", "costo_lavori_reale"],
+    venduta: ["prezzo_vendita", "venduta_il"],
+  };
+  // Pulsanti del passo successivo per ogni stato: [stato, etichetta].
+  const PROSSIMI_PASSI = {
+    valutazione: [["offerta", "📨 Ho presentato l'offerta"], ["non_partecipo", "🚫 Non partecipo"]],
+    offerta: [["aggiudicata", "🏆 Aggiudicata"], ["persa", "✖ Persa"]],
+    aggiudicata: [["saldo", "💶 Saldo versato"]],
+    saldo: [["consegna", "🔑 Immobile consegnato"]],
+    consegna: [["cantiere", "🔨 Inizio cantiere"]],
+    cantiere: [["in_vendita", "🏷️ In vendita"]],
+    in_vendita: [["venduta", "✅ Venduta"]],
+    venduta: [],
+    persa: [["valutazione", "↺ Riapri"]],
+    non_partecipo: [["valutazione", "↺ Riapri"]],
+  };
+  const GIORNI_SALDO_PREDEFINITI = 120;   // se l'avviso di vendita non dice altro
+  const GIORNI_SALDO_VICINO = 15;
+  const GRUPPI_CHECKLIST_APERTI = {};    // "id|gruppo" → aperto/chiuso scelto a mano (resta tra un ridisegno e l'altro)
+  const VOCI_OPERAZIONE_IN_CORSO = {};   // id → spunte/note in attesa di risposta
+  const OPERAZIONI_IN_SALVATAGGIO = new Set();
+
+  // Posizione nel percorso: le uscite stanno subito dopo il passo da cui si esce.
+  function posizioneOperazione(stato) {
+    if (stato === "persa") return 1.5;
+    if (stato === "non_partecipo") return 0.5;
+    return Operazioni.PERCORSO.indexOf(stato);
+  }
+  // Giorni da oggi a una data ("2026-12-17") o a un momento ISO, nell'ora del dispositivo.
+  function giorniAllaData(valore) {
+    if (!valore) return null;
+    const giorno = String(valore).length > 10 ? new Date(valore) : new Date(`${valore}T00:00:00`);
+    if (isNaN(giorno)) return null;
+    const oggi = new Date(); oggi.setHours(0, 0, 0, 0);
+    giorno.setHours(0, 0, 0, 0);
+    return Math.round((giorno - oggi) / 86400000);
+  }
+  function oggiIso() {
+    const d = new Date();
+    d.setMinutes(d.getMinutes() - d.getTimezoneOffset());
+    return d.toISOString().slice(0, 10);
+  }
+  function sommaGiorniIso(iso, giorni) {
+    const d = new Date(`${iso}T12:00:00Z`);
+    d.setUTCDate(d.getUTCDate() + giorni);
+    return d.toISOString().slice(0, 10);
+  }
+  function testoTraGiorni(g) {
+    return g === null ? "" : g === 0 ? "oggi" : g === 1 ? "domani" : g > 0 ? `tra ${g} giorni` : g === -1 ? "ieri" : `${-g} giorni fa`;
+  }
+  function formattaTermineOfferte(iso) {
+    const d = new Date(iso);
+    return isNaN(d) ? "" : d.toLocaleString("it-IT", {weekday: "short", day: "numeric", month: "short", hour: "2-digit", minute: "2-digit"});
+  }
+
+  // Voci della checklist di un gruppo ("prima" | "dopo"): la voce della
+  // visita (automatica), quelle predefinite e quelle aggiunte a quest'asta.
+  function vociChecklist(a, gruppo) {
+    const o = a.operazione;
+    const base = CHECKLIST_MODELLO[gruppo] || [];
+    const extra = (o && Array.isArray(o.voci_extra) ? o.voci_extra : [])
+      .filter(v => v && v.gruppo === gruppo && v.testo).map(v => String(v.testo)).filter(t => !base.includes(t));
+    const testi = [...(gruppo === "prima" ? [Operazioni.VOCE_VISITA] : []), ...base, ...extra];
+    return testi.map(testo => {
+      const c = (o && o.checklist && o.checklist[testo]) || {};
+      const automatica = testo === Operazioni.VOCE_VISITA && !!a.visita && a.visita.stato === "visitata";
+      return {testo, fatto: automatica || !!c.fatto, nota: c.nota || "", automatica, extra: extra.includes(testo)};
+    });
+  }
+  function conteggioChecklist(a, gruppo) {
+    const voci = vociChecklist(a, gruppo);
+    return {fatte: voci.filter(v => v.fatto).length, totale: voci.length};
+  }
+
+  function operazioneInCorso(a) {
+    return !!a.operazione && !!window.Operazioni && Operazioni.IN_CORSO.includes(a.operazione.stato);
+  }
+  // Filtro "Operazioni in corso": prima la scadenza più vicina (termine
+  // delle offerte, giorno dell'asta, saldo), poi per passo.
+  function chiaveOrdineOperazione(a) {
+    const o = a.operazione;
+    if (!o) return 9e15;
+    const giorno = (iso) => iso ? new Date(`${String(iso).slice(0, 10)}T12:00:00`).getTime() : null;
+    const scadenza = {
+      valutazione: a.termineOfferte ? new Date(a.termineOfferte).getTime() : giorno(a.dataVendita),
+      offerta: giorno(a.dataVendita),
+      aggiudicata: giorno(o.scadenza_saldo),
+    }[o.stato];
+    return Number.isFinite(scadenza) ? scadenza : 8e15 + Math.max(0, posizioneOperazione(o.stato)) * 1e12;
+  }
+
+  function badgeOperazione(a) {
+    const o = a.operazione;
+    if (!o || !window.Operazioni) return "";
+    if (o.stato === "valutazione") {
+      const {fatte, totale} = conteggioChecklist(a, "prima");
+      return fatte ? `<span class="badge-operazione" title="Checklist prima dell'offerta">☑️ ${fatte}/${totale}</span>` : "";
+    }
+    const s = Operazioni.STATI[o.stato];
+    if (!s) return "";
+    let testo = `${s.icona} ${s.etichetta}`, classe = "";
+    if (o.stato === "aggiudicata" && o.scadenza_saldo) {
+      const g = giorniAllaData(o.scadenza_saldo);
+      testo += g < 0 ? " · saldo scaduto" : ` · saldo ${testoTraGiorni(g)}`;
+      if (g <= GIORNI_SALDO_VICINO) classe = " urgente";
+    }
+    if (o.stato === "offerta" && a.dataVendita && giorniAllaData(a.dataVendita) === 0) { testo += " · ASTA OGGI"; classe = " urgente"; }
+    if (["persa", "non_partecipo", "venduta"].includes(o.stato)) classe = " spenta";
+    return `<span class="badge-operazione${classe}" title="Stato dell'operazione">${escapeHtml(testo)}</span>`;
+  }
+
+  function valoreCampoOperazione(tipo, valore) {
+    if (tipo === "euro") return formattaEuro(Number(valore));
+    if (tipo === "data") return formattaData(valore);
+    return String(valore);
+  }
+
+  function sezioneOperazione(a) {
+    if (!window.Operazioni) return "";
+    const o = a.operazione;
+    const stato = o ? o.stato : "valutazione";
+    const S = Operazioni.STATI;
+    let passi = Operazioni.PERCORSO;
+    if (stato === "persa") passi = ["valutazione", "offerta", "persa"];
+    if (stato === "non_partecipo") passi = ["valutazione", "non_partecipo"];
+    const posizione = passi.indexOf(stato);
+    const percorso = passi.map((s, i) => {
+      const classe = !o ? "" : i === posizione ? (s === "persa" || s === "non_partecipo" ? "uscita" : "attuale") : i < posizione ? "fatto" : "";
+      return `<button type="button" class="${classe}" onclick="azioneOperazione('${a.id}', 'apri', '${s}')">${S[s].icona} ${escapeHtml(S[s].etichetta)}</button>`;
+    }).join("");
+
+    // Riepilogo: termine delle offerte (se lo segui ancora), numeri inseriti, scadenze.
+    const righe = [];
+    const riga = (etichetta, valore, avviso = false) =>
+      righe.push(`<li${avviso ? ' class="avviso"' : ""}><span>${escapeHtml(etichetta)}</span><strong>${escapeHtml(valore)}</strong></li>`);
+    if (a.termineOfferte && stato === "valutazione") {
+      const g = giorniAllaData(a.termineOfferte);
+      if (g !== null && g >= 0) riga("Termine per le offerte", `${formattaTermineOfferte(a.termineOfferte)} · ${testoTraGiorni(g)}`, g <= 3);
+    }
+    if (o) {
+      CAMPI_OPERAZIONE.forEach(([campo, etichetta, tipo]) => {
+        const v = o[campo];
+        if (v === null || v === undefined || v === "") return;
+        if (campo === "scadenza_saldo" && stato === "aggiudicata") {
+          const g = giorniAllaData(v);
+          riga(etichetta, `${formattaData(v)} · ${testoTraGiorni(g)}`, g !== null && g <= GIORNI_SALDO_VICINO);
+          return;
+        }
+        riga(campo === "prezzo_aggiudicazione" && stato === "persa" ? "Aggiudicata ad altri a" : etichetta, valoreCampoOperazione(tipo, v));
+      });
+      if (Number(o.prezzo_vendita) > 0 && Number(o.prezzo_aggiudicazione) > 0) {
+        const differenza = Number(o.prezzo_vendita) - Number(o.prezzo_aggiudicazione) - (Number(o.costo_lavori_reale) || 0);
+        riga("Vendita − aggiudicazione − lavori", formattaEuro(differenza));
+      }
+    }
+
+    const pulsante = (etichetta, azione, statoTarget = "", principale = false) =>
+      `<button type="button"${principale ? ' class="principale"' : ""} onclick="azioneOperazione('${a.id}', '${azione}', '${statoTarget}')">${etichetta}</button>`;
+    const prossimi = (PROSSIMI_PASSI[stato] || []).map(([s, etichetta], i) => pulsante(etichetta, "passo", s, i === 0)).join("");
+    const modifica = o && (CAMPI_PER_STATO[stato] || []).length ? pulsante("✏️ Modifica dati", "apri", stato) : "";
+    const rimuovi = o ? pulsante("Rimuovi", "rimuovi") : "";
+
+    const indice = posizioneOperazione(stato);
+    const gruppo = (chiave, titolo, apertoDiSolito) => {
+      const voci = vociChecklist(a, chiave);
+      const fatte = voci.filter(v => v.fatto).length;
+      const scelta = GRUPPI_CHECKLIST_APERTI[`${a.id}|${chiave}`];
+      const aperto = scelta === undefined ? apertoDiSolito : scelta;
+      return `
+        <details class="checklist-gruppo" data-gruppo="${chiave}"${aperto ? " open" : ""}>
+          <summary onclick="ricordaGruppoChecklist(this.parentElement)"><span>${titolo}</span><span class="checklist-contatore">${fatte}/${voci.length}</span></summary>
+          <div class="checklist-barra"><span style="width:${voci.length ? Math.round(100 * fatte / voci.length) : 0}%"></span></div>
+          <ul class="lista-checklist">${voci.map(v => `
+            <li class="voce-checklist${v.fatto ? " fatta" : ""}" data-voce="${escapeHtml(v.testo)}">
+              <label><input type="checkbox"${v.fatto ? " checked" : ""}${v.automatica ? " disabled" : ""} onchange="spuntaVoceChecklist(this)"><span>${escapeHtml(v.testo)}</span>${v.automatica ? "<em>dalla visita</em>" : ""}</label>
+              <button type="button" onclick="apriNotaVoce(this)" title="Nota" aria-label="Nota">📝</button>
+              ${v.extra ? `<button type="button" onclick="rimuoviVoceChecklist(this)" title="Rimuovi la voce" aria-label="Rimuovi la voce">✕</button>` : ""}
+              ${v.nota ? `<p class="voce-nota">${escapeHtml(v.nota)}</p>` : ""}
+            </li>`).join("")}
+          </ul>
+          <div class="aggiungi-voce">
+            <input type="text" maxlength="200" placeholder="Aggiungi una voce solo per quest'asta" onkeydown="if (event.key === 'Enter') { event.preventDefault(); aggiungiVoceChecklist(this); }">
+            <button type="button" onclick="aggiungiVoceChecklist(this.previousElementSibling)">Aggiungi</button>
+          </div>
+        </details>`;
+    };
+
+    const storico = o && Array.isArray(o.storico) && o.storico.length ? `
+      <details class="visita-storico"><summary>Storico (${o.storico.length})</summary><ul>${o.storico.slice().reverse().map(p => {
+        const q = new Date(p.quando);
+        const s = S[p.stato];
+        return `<li>${escapeHtml(q.toLocaleDateString("it-IT", {day: "numeric", month: "short"}))} ${escapeHtml(q.toLocaleTimeString("it-IT", {hour: "2-digit", minute: "2-digit"}))}: ${s ? `${s.icona} ${escapeHtml(s.etichetta)}` : escapeHtml(p.stato || "")}</li>`;
+      }).join("")}</ul></details>` : "";
+
+    return `
+      <div class="sezione-operazione" data-id-operazione="${a.id}">
+        <h3 class="sezione-costi-titolo">🧭 Operazione</h3>
+        <div class="percorso-operazione">${percorso}</div>
+        ${righe.length ? `<ul class="operazione-riepilogo">${righe.join("")}</ul>` : ""}
+        ${o ? "" : `<p class="visita-stato">Non ancora seguita: spunta una voce della checklist o scegli un passo.</p>`}
+        <div class="visita-azioni operazione-azioni">${prossimi}${modifica}${rimuovi}</div>
+        <div class="operazione-editor nascosto"></div>
+        ${gruppo("prima", "Checklist prima dell'offerta", indice <= 1)}
+        ${gruppo("dopo", "Dopo l'aggiudicazione", indice >= 2 && stato !== "persa")}
+        ${storico}
+      </div>`;
+  }
+
+  // Solo i tocchi veri sul titolo (il clic arriva prima che il gruppo si
+  // apra o chiuda): l'evento "toggle" scatta anche quando la scheda si
+  // ridisegna, e fisserebbe l'apertura predefinita.
+  function ricordaGruppoChecklist(dettagli) {
+    const sezione = dettagli.closest(".sezione-operazione");
+    if (sezione) GRUPPI_CHECKLIST_APERTI[`${sezione.dataset.idOperazione}|${dettagli.dataset.gruppo}`] = !dettagli.open;
+  }
+
+  function azioneOperazione(id, azione, statoTarget) {
+    const asta = ASTE.find(a => a.id === id);
+    if (!asta) return;
+    if (azione === "rimuovi") {
+      if (!confirm("Rimuovere l'operazione di quest'asta, con checklist e storico?")) return;
+      richiediPasswordSeServe(() => eseguiAzioneOperazione(id, "rimuovi"));
+      return;
+    }
+    if (azione === "passo" && !(CAMPI_PER_STATO[statoTarget] || []).length) {
+      richiediPasswordSeServe(() => eseguiAzioneOperazione(id, "stato", {stato: statoTarget}));
+      return;
+    }
+    apriEditorOperazione(asta, statoTarget);
+  }
+
+  // Editor del passo scelto. Passo già fatto o attuale: correggi i numeri
+  // (e, se è un passo precedente, puoi tornarci); passo successivo: ci passi.
+  function apriEditorOperazione(asta, statoTarget) {
+    const sezione = document.querySelector(`.sezione-operazione[data-id-operazione="${asta.id}"]`);
+    if (!sezione) return;
+    const editor = sezione.querySelector(".operazione-editor");
+    const o = asta.operazione || {};
+    const statoAttuale = asta.operazione ? o.stato : null;
+    const s = Operazioni.STATI[statoTarget];
+    const campi = CAMPI_PER_STATO[statoTarget] || [];
+    const passato = statoAttuale !== null && statoTarget !== statoAttuale
+      && posizioneOperazione(statoTarget) < posizioneOperazione(statoAttuale);
+    const soloDati = statoTarget === statoAttuale || passato;
+    const predefinito = (campo) => {
+      const v = o[campo];
+      if (v !== null && v !== undefined && v !== "") return v;
+      if (soloDati) return "";
+      if (campo === "prezzo_aggiudicazione" && statoTarget === "aggiudicata") return o.offerta_importo ?? "";
+      if (campo === "aggiudicata_il") return asta.dataVendita && giorniAllaData(asta.dataVendita) <= 0 ? String(asta.dataVendita).slice(0, 10) : oggiIso();
+      if (campo.endsWith("_il")) return oggiIso();
+      return "";
+    };
+    let suggerimento = "";
+    if (statoTarget === "offerta") {
+      const spazio = spazioSullOfferta(asta);
+      suggerimento = `Offerta minima ${formattaEuro(asta.offertaMinima)}`
+        + (spazio !== null ? ` · offerta massima dalla Superanalisi ${formattaEuro(asta.offertaMinima + spazio)}` : "")
+        + ". Cauzione vuota = 10% dell'offerta.";
+    }
+    if (statoTarget === "aggiudicata") suggerimento = `Scadenza del saldo vuota = ${GIORNI_SALDO_PREDEFINITI} giorni dall'aggiudicazione: controlla il termine nell'avviso di vendita.`;
+    const titolo = soloDati ? (campi.length ? `Dati: ${s.etichetta}` : s.etichetta) : `Passa a: ${s.etichetta}`;
+    editor.innerHTML = `
+      <p class="riga-piena"><strong>${s.icona} ${escapeHtml(titolo)}</strong></p>
+      ${campi.map(campo => {
+        const [, etichetta, tipo] = CAMPI_OPERAZIONE.find(c => c[0] === campo);
+        const testo = statoTarget === "persa" && campo === "prezzo_aggiudicazione" ? "Aggiudicata ad altri a (€, se noto)" : etichetta + (tipo === "euro" ? " (€)" : "");
+        const attributi = tipo === "data" ? 'type="date"' : `type="number" min="0" inputmode="${tipo === "intero" ? "numeric" : "decimal"}" step="${tipo === "intero" ? "1" : "any"}"`;
+        return `<label>${escapeHtml(testo)}<input ${attributi} data-campo="${campo}" value="${escapeHtml(String(predefinito(campo)))}"></label>`;
+      }).join("")}
+      ${suggerimento ? `<p class="riga-piena operazione-suggerimento">${escapeHtml(suggerimento)}</p>` : ""}
+      ${soloDati && !campi.length && !passato ? `<p class="riga-piena operazione-suggerimento">Nessun dato da inserire per questo passo.</p>` : ""}
+      <div class="riga-piena visita-azioni">
+        ${!soloDati || campi.length ? `<button type="button" class="principale" data-salva>${soloDati ? "Salva" : "Conferma"}</button>` : ""}
+        ${passato ? `<button type="button" data-torna>↩ Torna a questo passo</button>` : ""}
+        <button type="button" onclick="this.closest('.operazione-editor').classList.add('nascosto')">Annulla</button>
+      </div>
+      <p class="riga-piena visita-errore nascosto"></p>`;
+    editor.classList.remove("nascosto");
+    const errore = editor.querySelector(".visita-errore");
+    const raccogli = () => {
+      const dati = {};
+      for (const input of editor.querySelectorAll("input[data-campo]")) {
+        const valore = input.value.trim();
+        if (valore !== "" && input.type === "number" && !(Number(valore) >= 0)) {
+          errore.textContent = "I numeri non possono essere negativi."; errore.classList.remove("nascosto"); return null;
+        }
+        dati[input.dataset.campo] = valore;
+      }
+      if (statoTarget === "offerta" && !soloDati && !(Number(dati.offerta_importo) > 0)) {
+        errore.textContent = "Inserisci l'importo dell'offerta."; errore.classList.remove("nascosto"); return null;
+      }
+      if ("cauzione" in dati && dati.cauzione === "" && Number(dati.offerta_importo) > 0) dati.cauzione = String(Math.round(Number(dati.offerta_importo) * 0.1));
+      if ("scadenza_saldo" in dati && dati.scadenza_saldo === "" && dati.aggiudicata_il) dati.scadenza_saldo = sommaGiorniIso(dati.aggiudicata_il, GIORNI_SALDO_PREDEFINITI);
+      return dati;
+    };
+    const salva = editor.querySelector("[data-salva]");
+    if (salva) salva.onclick = () => {
+      const dati = raccogli();
+      if (!dati) return;
+      const azione = soloDati ? "campi" : "stato";
+      richiediPasswordSeServe(() => eseguiAzioneOperazione(asta.id, azione, azione === "stato" ? {...dati, stato: statoTarget} : dati));
+    };
+    const torna = editor.querySelector("[data-torna]");
+    if (torna) torna.onclick = () => {
+      const dati = raccogli();
+      if (!dati) return;
+      if (!confirm(`Tornare al passo "${s.etichetta}"? Lo storico ne tiene traccia.`)) return;
+      richiediPasswordSeServe(() => eseguiAzioneOperazione(asta.id, "stato", {...dati, stato: statoTarget}));
+    };
+    const primo = editor.querySelector("input[data-campo]");
+    if (primo) primo.focus({preventScroll: true});
+    editor.scrollIntoView({block: "nearest", behavior: "smooth"});
+  }
+
+  function idOperazioneDa(elemento) {
+    const sezione = elemento.closest(".sezione-operazione");
+    return sezione ? sezione.dataset.idOperazione : null;
+  }
+  function spuntaVoceChecklist(casella) {
+    const voce = casella.closest(".voce-checklist");
+    const id = idOperazioneDa(casella);
+    if (!id) return;
+    voce.classList.toggle("fatta", casella.checked);
+    window.Feedback && Feedback.tocco();
+    richiediPasswordSeServe(() => eseguiAzioneOperazione(id, "voce", {voce: voce.dataset.voce, fatto: casella.checked}));
+  }
+  function apriNotaVoce(bottone) {
+    const voce = bottone.closest(".voce-checklist");
+    const id = idOperazioneDa(bottone);
+    const aperto = voce.querySelector(".voce-nota-editor");
+    if (aperto) { aperto.remove(); return; }
+    const asta = ASTE.find(a => a.id === id);
+    const attuale = (asta && asta.operazione && asta.operazione.checklist && asta.operazione.checklist[voce.dataset.voce] || {}).nota || "";
+    const editor = document.createElement("div");
+    editor.className = "voce-nota-editor";
+    editor.innerHTML = `<input type="text" maxlength="500" placeholder="Nota (es. chi hai sentito, cosa manca)"><button type="button">Salva</button>`;
+    const campo = editor.querySelector("input");
+    campo.value = attuale;
+    const salva = () => richiediPasswordSeServe(() => eseguiAzioneOperazione(id, "voce", {voce: voce.dataset.voce, nota: campo.value}));
+    editor.querySelector("button").onclick = salva;
+    campo.onkeydown = (e) => { if (e.key === "Enter") { e.preventDefault(); salva(); } };
+    voce.appendChild(editor);
+    campo.focus();
+  }
+  function aggiungiVoceChecklist(campo) {
+    const id = idOperazioneDa(campo);
+    const testo = campo.value.trim();
+    const gruppo = campo.closest(".checklist-gruppo").dataset.gruppo;
+    if (!id || !testo) return;
+    const asta = ASTE.find(a => a.id === id);
+    if (asta && ["prima", "dopo"].some(g => vociChecklist(asta, g).some(v => v.testo === testo))) {
+      mostraToast("Questa voce c'è già nella checklist.");
+      return;
+    }
+    richiediPasswordSeServe(() => eseguiAzioneOperazione(id, "aggiungi_voce", {testo, gruppo}));
+  }
+  function rimuoviVoceChecklist(bottone) {
+    const id = idOperazioneDa(bottone);
+    const testo = bottone.closest(".voce-checklist").dataset.voce;
+    if (!id || !confirm(`Rimuovere la voce "${testo}" da quest'asta?`)) return;
+    richiediPasswordSeServe(() => eseguiAzioneOperazione(id, "rimuovi_voce", {testo}));
+  }
+
+  async function eseguiAzioneOperazione(id, azione, dati = {}) {
+    const asta = ASTE.find(a => a.id === id);
+    if (!asta) return;
+    // Le spunte possono susseguirsi (la coda delle scritture le tiene in
+    // ordine); le altre azioni no, per evitare il doppio tocco.
+    const spunta = azione === "voce";
+    if (!spunta && OPERAZIONI_IN_SALVATAGGIO.has(id)) return;
+    if (spunta) VOCI_OPERAZIONE_IN_CORSO[id] = (VOCI_OPERAZIONE_IN_CORSO[id] || 0) + 1;
+    else OPERAZIONI_IN_SALVATAGGIO.add(id);
+    try {
+      const risultato = await accodaScritturaProtetta("imposta_operazione", {
+        password_tentativo: passwordCorrente, id_annuncio_input: Number(id), azione, dati,
+      });
+      if (risultato.result !== "success") throw new Error(risultato.message || "");
+      if (!spunta || dati.nota !== undefined) window.Feedback && Feedback.salvato();
+      if (risultato.operazione) OPERAZIONI[id] = risultato.operazione; else delete OPERAZIONI[id];
+      asta.operazione = OPERAZIONI[id] || null;
+    } catch (e) {
+      console.error("imposta_operazione fallita:", e);
+      window.Feedback && Feedback.errore();
+      gestisceErroreAzionePassword(e);
+      mostraToast(`${indirizzoTroncato(asta.comune)} — non sono riuscita a salvare l'operazione: ${dettaglioErrore(e)}`);
+    } finally {
+      if (spunta) VOCI_OPERAZIONE_IN_CORSO[id]--;
+      else OPERAZIONI_IN_SALVATAGGIO.delete(id);
+      // Ridisegno solo quando non ci sono altre spunte in attesa: altrimenti
+      // una risposta intermedia toglierebbe per un attimo le spunte successive.
+      if (!VOCI_OPERAZIONE_IN_CORSO[id]) {
+        applicaFiltri();
+        aggiornaFinestraSeApertaSu(id);
+      }
+    }
+  }
+
+
   // Indirizzo assoluto (origin + percorso della pagina stessa, mai
   // relativo: chi lo riceve lo apre da un altro dispositivo, un link
   // relativo non vorrebbe dire nulla lì) con l'id nel frammento — letto
@@ -8144,6 +8692,7 @@ ${notaHtml}
           <div class="lotto-note">${escapeHtml(a.note)}</div>
         </div>` : ""],
       ["sez-visita", "Visita", sezioneVisita(a)],
+      ["sez-operazione", "Operazione", sezioneOperazione(a)],
       ["sez-storico", "Storico", sezioneStoricoAste(a)],
       ["sez-dettagli", "Dettagli", `<div class="sezione-costi">
           <h3 class="sezione-costi-titolo">📋 Dettagli</h3>
@@ -8189,6 +8738,7 @@ ${notaHtml}
               ${eNuova(a.dataInserimento) ? `<span class="badge-nuova" title="Trovata nelle ultime 24 ore">✨ Nuova</span>` : ""}
               ${eAggiornata(a) ? `<span class="badge-aggiornata" title="Perizia ricontrollata e rianalizzata nelle ultime 24 ore">📄 Aggiornata</span>` : ""}
               ${badgeVisita(a)}
+              ${badgeOperazione(a)}
               ${conclusa ? `<span class="badge-conclusa">🏁 Conclusa</span>` : ""}
               ${a.zonaSegnalata ? `<span class="badge-zona">🚩 ${escapeHtml(a.zonaSegnalata)}</span>` : ""}
               ${badgeGiudizio(a)}
