@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
-<title>Risultato superanalisi · Registro Opportunità</title>
+<title>Risultato superanalisi · Aste Scan</title>
 
 <link rel="manifest" href="manifest.json">
 <link rel="icon" href="favicon-32.png" sizes="32x32">
@@ -223,7 +223,7 @@
     document.getElementById("titolo").innerHTML = `${escapeHtml(v.ai)}${v.giudizio
       ? `<span class="etichetta-stato stato-${escapeHtml(v.giudizio.replace(" ", "-"))}">${escapeHtml(v.giudizio)}</span>` : ""}`;
     document.getElementById("sottotitolo").textContent = `Salvato il ${quando}`;
-    document.title = `${gruppo ? "Gruppo" : "Superanalisi"} ${v.ai} · Registro Opportunità`;
+    document.title = `${gruppo ? "Gruppo" : "Superanalisi"} ${v.ai} · Aste Scan`;
     // "← Superanalisi": la pagina dove il risultato è stato salvato (e si può eliminare).
     const linkSuperanalisi = document.getElementById("link-superanalisi");
     linkSuperanalisi.href = gruppo ? `superanalisi-gruppo.html?ids=${ids.map(encodeURIComponent).join(",")}`

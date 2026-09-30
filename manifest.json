@@ -1,6 +1,6 @@
 {
-  "name": "Registro Opportunità",
-  "short_name": "Registro Opp.",
+  "name": "Aste Scan",
+  "short_name": "Aste Scan",
   "description": "Aste giudiziarie residenziali filtrate per prezzo, distanza e margine potenziale stimato.",
   "start_url": "index.html",
   "display": "standalone",
