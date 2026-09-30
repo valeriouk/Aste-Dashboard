@@ -5742,7 +5742,8 @@
     return a._spazio;
   }
 
-  const NOMI_DISPONIBILITA = {LIBER: "Libero", OCCUP: "Occupato"};
+  // Codici PVP; INCOR e OCCST non sono documentati: significato presunto, codice lasciato visibile.
+  const NOMI_DISPONIBILITA = {LIBER: "Libero", OCCUP: "Occupato", NON_SPECIFICATA: "Non specificato", INCOR: "In liberazione (INCOR)", OCCST: "Occupato (OCCST)"};
   function etichettaDisponibilita(grezza) {
     const voci = (grezza || "").split(",").map(t => t.trim()).filter(Boolean);
     return voci.length ? [...new Set(voci.map(t => NOMI_DISPONIBILITA[t] || t))].join(", ") : "N/D";

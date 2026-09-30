@@ -372,7 +372,7 @@
 
   .sezione-disattivata { opacity: .45; pointer-events: none; }
 
-  #lista-tipologia .etichetta-checkbox:first-child { margin-top: 0; }
+  #lista-tipologia .etichetta-checkbox:first-child, #lista-occupazione .etichetta-checkbox:first-child { margin-top: 0; }
   .etichetta-tutta-italia { margin-top: 0; margin-bottom: 8px; }
   .nota-tutta-italia { margin-bottom: 16px; }
 
@@ -756,6 +756,11 @@
     </div>
     <div class="finestra-modale-corpo">
       <div class="campo-form">
+        <label>Stato di occupazione dichiarato su PVP</label>
+        <div id="lista-occupazione"></div>
+        <p class="nota-campo">Spunta gli stati da cercare: le aste degli stati tolti non vengono cercate né analizzate (niente costo Gemini). Il dato PVP è indicativo: "Occupato" spesso vuol dire occupato dal debitore, liberato dal custode. Un annuncio con più stati viene escluso solo se sono tutti tolti.</p>
+      </div>
+      <div class="campo-form">
         <label for="campo-solo-future">Aste da includere</label>
         <select id="campo-solo-future">
           <option value="true">Solo aste future</option>
@@ -1112,6 +1117,22 @@
     "Depositi e magazzini", "Fabbricati e complessi"
   ];
 
+  // Codici grezzi di PVP (campo "disponibilita"); nel database si salvano
+  // quelli ESCLUSI, così un codice nuovo passa sempre (vedi app.py).
+  const STATI_OCCUPAZIONE_PVP = [
+    ["LIBER", "Libero"], ["NON_SPECIFICATA", "Non specificato"], ["INCOR", "In liberazione (INCOR)"],
+    ["OCCST", "Occupato (OCCST)"], ["OCCUP", "Occupato"]
+  ];
+
+  function popolaListaOccupazione() {
+    document.getElementById("lista-occupazione").innerHTML = STATI_OCCUPAZIONE_PVP.map(([codice, nome]) => `
+      <label class="etichetta-checkbox">
+        <input type="checkbox" value="${codice}" class="checkbox-occupazione">
+        ${escapeHtml(nome)}
+      </label>
+    `).join("");
+  }
+
   function popolaListaTipologia() {
     const contenitore = document.getElementById("lista-tipologia");
     contenitore.innerHTML = MACROCATEGORIE_TIPOLOGIA.map(categoria => `
@@ -1146,6 +1167,7 @@
   async function caricaConfigurazioneAttuale() {
     const statoEl = document.getElementById("stato-caricamento-config");
     popolaListaTipologia();
+    popolaListaOccupazione();
     popolaGrigliaGiorni();
     try {
       // Lettura protetta dalla password di scrittura (leggi_config,
@@ -1177,6 +1199,14 @@
         try {
           const parsed = JSON.parse(config.tipologie_incluse);
           if (Array.isArray(parsed)) configAttuale.tipologie_incluse = parsed;
+        } catch (e) {}
+      }
+
+      configAttuale.occupazioni_escluse = [];
+      if (config.occupazioni_escluse) {
+        try {
+          const parsed = JSON.parse(config.occupazioni_escluse);
+          if (Array.isArray(parsed)) configAttuale.occupazioni_escluse = parsed;
         } catch (e) {}
       }
 
@@ -1278,7 +1308,9 @@
   }
 
   function renderizzaRiepilogoAltri() {
+    const nomiOccupazione = Object.fromEntries(STATI_OCCUPAZIONE_PVP);
     const parti = [
+      ...(configAttuale.occupazioni_escluse.length ? ["Esclusi: " + configAttuale.occupazioni_escluse.map(c => nomiOccupazione[c] || c).join(", ")] : []),
       configAttuale.solo_aste_future ? "Solo future" : "Anche concluse",
       configAttuale.usa_astegiudiziarie_perizia ? "Perizia esterna attiva" : "Perizia esterna disattiva",
       `pausa ${configAttuale.pausa_tra_aste_secondi}s`
@@ -1385,6 +1417,9 @@
         cb.checked = configAttuale.tipologie_incluse.includes(cb.value);
       });
     } else if (nome === "altri") {
+      document.querySelectorAll("#lista-occupazione .checkbox-occupazione").forEach(cb => {
+        cb.checked = !configAttuale.occupazioni_escluse.includes(cb.value);
+      });
       document.getElementById("campo-solo-future").value = String(configAttuale.solo_aste_future);
       document.getElementById("campo-astegiudiziarie").value = String(configAttuale.usa_astegiudiziarie_perizia);
       document.getElementById("campo-pausa").value = configAttuale.pausa_tra_aste_secondi;
@@ -1474,6 +1509,7 @@
         raggio_km: configAttuale.raggio_km,
         cerca_tutta_italia: String(configAttuale.cerca_tutta_italia),
         tipologie_incluse: JSON.stringify(configAttuale.tipologie_incluse),
+        occupazioni_escluse: JSON.stringify(configAttuale.occupazioni_escluse),
         solo_aste_future: String(configAttuale.solo_aste_future),
         usa_astegiudiziarie_perizia: String(configAttuale.usa_astegiudiziarie_perizia),
         pausa_tra_aste_secondi: configAttuale.pausa_tra_aste_secondi,
@@ -1493,6 +1529,7 @@
     raggio: 22,
     cercaTuttaItalia: false,
     tipologieIncluse: [],
+    occupazioniEscluse: [],
     soloFuture: true,
     astegiudiziarie: true,
     pausa: 1,
@@ -1530,6 +1567,7 @@
     configAttuale.raggio_km = VALORI_PREDEFINITI.raggio;
     configAttuale.cerca_tutta_italia = VALORI_PREDEFINITI.cercaTuttaItalia;
     configAttuale.tipologie_incluse = [...VALORI_PREDEFINITI.tipologieIncluse];
+    configAttuale.occupazioni_escluse = [...VALORI_PREDEFINITI.occupazioniEscluse];
     configAttuale.solo_aste_future = VALORI_PREDEFINITI.soloFuture;
     configAttuale.usa_astegiudiziarie_perizia = VALORI_PREDEFINITI.astegiudiziarie;
     configAttuale.pausa_tra_aste_secondi = VALORI_PREDEFINITI.pausa;
@@ -1639,6 +1677,17 @@
         msgEl.className = "messaggio-salvataggio-card messaggio-errore";
         return;
       }
+      const statiSpuntati = [...document.querySelectorAll("#lista-occupazione .checkbox-occupazione:checked")].map(cb => cb.value);
+      if (statiSpuntati.length === 0) {
+        msgEl.textContent = "Spunta almeno uno stato di occupazione.";
+        msgEl.className = "messaggio-salvataggio-card messaggio-errore";
+        return;
+      }
+      // Tiene anche eventuali codici esclusi che la pagina non conosce.
+      configAttuale.occupazioni_escluse = [
+        ...configAttuale.occupazioni_escluse.filter(c => !STATI_OCCUPAZIONE_PVP.some(([k]) => k === c)),
+        ...STATI_OCCUPAZIONE_PVP.map(([k]) => k).filter(k => !statiSpuntati.includes(k))
+      ];
       configAttuale.solo_aste_future = document.getElementById("campo-solo-future").value === "true";
       configAttuale.usa_astegiudiziarie_perizia = document.getElementById("campo-astegiudiziarie").value === "true";
       configAttuale.pausa_tra_aste_secondi = pausa;
