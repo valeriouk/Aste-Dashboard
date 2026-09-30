@@ -310,7 +310,7 @@
      indipendentemente, senza che il binario stesso intercetti i clic. */
   .doppio-slider {
     position: relative;
-    width: 110px;
+    width: 85px;   /* era 110: con la pillola ⚖️ la barra dei filtri resta su una riga da 1280 px in su */
     height: 20px;
     flex: 1 1 90px;
   }
@@ -676,6 +676,12 @@
   .popup-lotto strong { font-family: var(--font-display); font-size: 1rem; display: block; margin-bottom: 6px; }
   .popup-lotto div { margin-bottom: 3px; color: var(--ink-muted); }
   .popup-lotto a { display: inline-block; margin-top: 6px; font-size: .8rem; font-weight: 600; }
+  .popup-lotto-badge { display: flex; flex-wrap: wrap; gap: 0 4px; margin: -2px 0 2px; }
+  .popup-lotto-badge > span { margin: 2px 0 !important; }
+  .popup-lotto-meta { font-size: .78rem; }
+  .popup-lotto .popup-spazio { font-family: var(--font-mono); font-size: .85rem; display: inline; margin: 0; color: var(--primary); }
+  .popup-lotto .popup-spazio.negativo { color: var(--danger); }
+  .popup-lotto-link { display: flex; flex-wrap: wrap; gap: 0 14px; }
   /* Riga di azioni dentro il popup della mappa — stella/scarto riusano
      .bottone-azione-lotto (stesso aspetto ovunque nella pagina, zero
      stile duplicato), qui solo un po' più piccoli e con un bordo leggero
@@ -2643,6 +2649,13 @@
           </button>
         </div>
       </div>
+      <div class="contenitore-filtro-tipologia">
+        <div class="gruppo-pillole">
+          <button type="button" class="pillola" id="bottone-filtro-giudizio" onclick="alternaMenuGiudizio(event)" aria-expanded="false" aria-haspopup="true" title="Giudizio della Superanalisi">
+            ⚖️<span class="testo-pillola-mobile"> Giudizio</span> <span class="freccia-tipologia">▾</span>
+          </button>
+        </div>
+      </div>
       <div class="gruppo-pillole" id="gruppo-occupazione">
         <button type="button" class="pillola" data-stato="libero" onclick="attivaFiltroOccupazione('libero')">Libero</button>
         <button type="button" class="pillola" data-stato="occupato" onclick="attivaFiltroOccupazione('occupato')" title="Occupato"><span class="testo-pillola-desktop">Occ.</span><span class="testo-pillola-mobile">Occupato</span></button>
@@ -2652,7 +2665,7 @@
         <button type="button" class="pillola" data-stato-pref="scartato" onclick="attivaFiltroPreferitiScartati('scartato')" title="Scartati">✕<span class="testo-pillola-mobile"> Scartate</span></button>
       </div>
       <div class="gruppo-pillole" id="gruppo-concluse">
-        <button type="button" class="pillola" id="pillola-concluse" onclick="alternaMostraConcluse()">Concluse</button>
+        <button type="button" class="pillola" id="pillola-concluse" onclick="alternaMostraConcluse()" title="Mostra solo le aste concluse" aria-label="Concluse">🏁<span class="testo-pillola-mobile"> Concluse</span></button>
       </div>
       <div class="gruppo-pillole" id="gruppo-aggiornate">
         <button type="button" class="pillola" id="pillola-aggiornate" onclick="alternaSoloAggiornate()" title="Mostra solo le aste con perizia ricontrollata e rianalizzata nelle ultime 24 ore" aria-label="Aggiornate">🔄<span class="testo-pillola-mobile"> Aggiornate</span></button>
@@ -2697,6 +2710,7 @@
        desktop — risolve la causa, non il sintomo. -->
   <div class="menu-tipologia nascosto" id="menu-tipologia"></div>
   <div class="menu-tipologia nascosto" id="menu-ordinamento"></div>
+  <div class="menu-tipologia nascosto" id="menu-giudizio"></div>
 
   <div id="stato-caricamento" class="stato-pagina">
     <h2>Apertura del registro…</h2>
@@ -5762,6 +5776,42 @@
   // appartenere a tutte insieme.
   let categorieTipologiaAttive = new Set();
 
+  // Filtro per giudizio della Superanalisi (⚖️): nessuna voce spuntata =
+  // nessun filtro. "NESSUNO" = aste senza analisi v2 (senza giudizio).
+  const VOCI_GIUDIZIO = [["PULITA", "Pulita"], ["GESTIBILE", "Gestibile"], ["COMPLESSA", "Complessa"], ["DA_SCARTARE", "Da scartare"], ["NESSUNO", "Senza analisi v2"]];
+  let giudiziAttivi = new Set();
+  function classeGiudizioFiltro(a) { const g = giudizioSuperanalisi(a); return g && VOCI_GIUDIZIO.some(([k]) => k === g.classe) ? g.classe : "NESSUNO"; }
+  function popolaMenuGiudizio() {
+    document.getElementById("menu-giudizio").innerHTML = VOCI_GIUDIZIO.map(([chiave, nome]) =>
+      `<label class="voce-menu-tipologia"><input type="checkbox" value="${chiave}" ${giudiziAttivi.has(chiave) ? "checked" : ""} onchange="aggiornaFiltroGiudizio()"><span>${nome}</span></label>`).join("");
+  }
+  function mostraPillolaGiudizio() {
+    const n = giudiziAttivi.size;
+    const bottone = document.getElementById("bottone-filtro-giudizio");
+    bottone.innerHTML = `⚖️${n > 0 ? " " + n : ""}<span class="testo-pillola-mobile"> Giudizio</span> <span class="freccia-tipologia">▾</span>`;
+    bottone.classList.toggle("attiva", n > 0);
+  }
+  function alternaMenuGiudizio(evento) {
+    if (evento) evento.stopPropagation();
+    const menu = document.getElementById("menu-giudizio");
+    const bottone = document.getElementById("bottone-filtro-giudizio");
+    const apri = menu.classList.contains("nascosto");
+    if (apri) {
+      popolaMenuGiudizio();
+      menu.classList.remove("nascosto");
+      posizionaMenuAComparsa(menu, bottone);
+    } else {
+      menu.classList.add("nascosto");
+    }
+    bottone.setAttribute("aria-expanded", apri ? "true" : "false");
+  }
+  function aggiornaFiltroGiudizio() {
+    const spuntate = document.querySelectorAll('#menu-giudizio input[type="checkbox"]:checked');
+    giudiziAttivi = new Set([...spuntate].map(c => c.value));
+    mostraPillolaGiudizio();
+    applicaFiltri();
+  }
+
   function alternaMenuTipologia(evento) {
     if (evento) evento.stopPropagation(); // non far scattare subito la chiusura "clic fuori" qui sotto
     const menu = document.getElementById("menu-tipologia");
@@ -5846,6 +5896,7 @@
   const MENU_A_COMPARSA = [
     {menuId: "menu-tipologia", bottoneId: "bottone-filtro-tipologia"},
     {menuId: "menu-ordinamento", bottoneId: "bottone-ordinamento"},
+    {menuId: "menu-giudizio", bottoneId: "bottone-filtro-giudizio"},
     {menuId: "menu-condividi-dettagli", bottoneId: "bottone-condividi-dettagli"},
     {menuId: "menu-indirizzo-dettagli", bottoneId: "bottone-indirizzo-dettagli"},
   ];
@@ -6155,6 +6206,7 @@
   function aggiornaBadgeFiltri() {
     let conteggio = 0;
     if (categorieTipologiaAttive.size > 0) conteggio++;
+    if (giudiziAttivi.size > 0) conteggio++;
     if (filtroOccupazioneAttivo) conteggio++;
     if (filtroPreferitiScartatiAttivo) conteggio++;
     if (mostraConcluse) conteggio++;
@@ -6206,6 +6258,7 @@
       sessionStorage.setItem(CHIAVE_FILTRI, JSON.stringify({
         ricerca: document.getElementById("ricerca").value,
         tipologie: [...categorieTipologiaAttive],
+        giudizi: [...giudiziAttivi],
         occupazione: filtroOccupazioneAttivo,
         preferiti: filtroPreferitiScartatiAttivo,
         concluse: mostraConcluse,
@@ -6233,6 +6286,7 @@
     bottoneTipo.innerHTML = (n > 0 ? `Tipo (${n})` : "Tipo") + ' <span class="freccia-tipologia">▾</span>';
     bottoneTipo.classList.toggle("attiva", n > 0);
     document.querySelectorAll('#menu-tipologia input[type="checkbox"]').forEach(c => { c.checked = categorieTipologiaAttive.has(c.value); });
+    mostraPillolaGiudizio();
     document.getElementById("valore-punteggio-minimo").textContent = document.getElementById("punteggio-minimo").value;
     document.getElementById("valore-punteggio-massimo").textContent = document.getElementById("punteggio-massimo").value;
     aggiornaRiempimentoPunteggio();
@@ -6245,6 +6299,7 @@
     if (!f || typeof f !== "object") return;
     document.getElementById("ricerca").value = typeof f.ricerca === "string" ? f.ricerca : "";
     categorieTipologiaAttive = new Set(Array.isArray(f.tipologie) ? f.tipologie : []);
+    giudiziAttivi = new Set((Array.isArray(f.giudizi) ? f.giudizi : []).filter(g => VOCI_GIUDIZIO.some(([k]) => k === g)));
     filtroOccupazioneAttivo = f.occupazione === "libero" || f.occupazione === "occupato" ? f.occupazione : null;
     filtroPreferitiScartatiAttivo = f.preferiti === "preferito" || f.preferiti === "scartato" ? f.preferiti : null;
     mostraConcluse = !!f.concluse;
@@ -6267,6 +6322,7 @@
   function azzeraFiltri() {
     document.getElementById("ricerca").value = "";
     categorieTipologiaAttive = new Set();
+    giudiziAttivi = new Set();
     filtroOccupazioneAttivo = null;
     filtroPreferitiScartatiAttivo = null;
     mostraConcluse = false;
@@ -6341,7 +6397,8 @@
       const passaPunteggio = a.punteggio >= punteggioMinimo && a.punteggio <= punteggioMassimo;
       const passaAggiornate = !filtroSoloAggiornateAttivo || eAggiornata(a);
       const passaVisite = !filtroSoloVisiteAttivo || visitaInCorso(a);
-      return passaRicerca && passaTipologia && passaOccupazione && passaConcluse && passaPreferiti && passaPunteggio && passaAggiornate && passaVisite;
+      const passaGiudizio = giudiziAttivi.size === 0 || giudiziAttivi.has(classeGiudizioFiltro(a));
+      return passaRicerca && passaTipologia && passaOccupazione && passaConcluse && passaPreferiti && passaPunteggio && passaAggiornate && passaVisite && passaGiudizio;
     });
 
     // Comparatore SEMPRE in ordine crescente per il criterio scelto — la
@@ -6575,6 +6632,12 @@
     const notaPosizione = precisa
       ? ""
       : `<div style="font-style:italic;color:var(--ink-faint)">Posizione approssimata (centro comune)</div>`;
+    // Giudizio della Superanalisi, tentativo e visita come nella card; spazio
+    // sull'offerta dal conto completo (solo aste con analisi v2).
+    const badgePopup = [badgeGiudizio(a), badgeTentativo(a.storico), badgeVisita(a)].filter(Boolean).join("");
+    const spazio = spazioSullOfferta(a);
+    const testoSpazio = spazio === null ? "" : spazio >= 0 ? `<strong class="popup-spazio">+${formattaEuro(spazio)}</strong>`
+      : `<strong class="popup-spazio negativo">mancano ${formattaEuro(-spazio)}</strong>`;
 
     // Stesse identiche icone e stessi identici gestori (onClickStella /
     // onClickScarta) già usati sulla card e nella finestra dettagli — non
@@ -6598,7 +6661,11 @@
       <div class="popup-lotto">
         <strong>${escapeHtml(a.comune)}</strong>
         ${notaPosizione}
+        ${badgePopup ? `<div class="popup-lotto-badge">${badgePopup}</div>` : ""}
+        <div class="popup-lotto-meta">${escapeHtml(etichettaTipologia(a.tipologia))}${a.superficieMq ? ` · ${a.superficieMq.toFixed(0)} mq` : ""}${a.statoOccupazione && a.statoOccupazione !== "N/D" ? ` · ${escapeHtml(a.statoOccupazione)}` : ""}</div>
+        <div>Vendita: ${formattaData(a.dataVendita)}${testoGiorniVendita(a.dataVendita)}</div>
         <div>Offerta minima: ${formattaEuro(a.offertaMinima)}</div>
+        ${testoSpazio ? `<div>Spazio sull'offerta: ${testoSpazio}</div>` : ""}
         <div>Margine lordo: ${margine}</div>
         <div>Punteggio: ${a.punteggio > 0 ? a.punteggio + "/100" : "—"}</div>
         <div class="popup-lotto-azioni">
@@ -6606,9 +6673,22 @@
           <button type="button" class="bottone-azione-lotto${a.scartato ? ' scartato-attivo' : ''}" title="Non interessa" onclick="event.stopPropagation(); onClickScarta(event, '${a.id}')">${iconaScarta}</button>
           <button type="button" class="popup-lotto-link-scheda" onclick="event.stopPropagation(); apriDettagliAsta('${a.id}')">Vedi scheda completa</button>
         </div>
-        ${a.urlAsta ? `<a href="${escapeHtml(urlSicuro(a.urlAsta))}" target="_blank" rel="noopener">Apri annuncio PVP</a>` : ""}
+        <div class="popup-lotto-link">
+          ${a.urlAsta ? `<a href="${escapeHtml(urlSicuro(a.urlAsta))}" target="_blank" rel="noopener">Apri annuncio PVP</a>` : ""}
+          ${a.id ? `<a href="superanalisi.html?id=${encodeURIComponent(a.id)}">Superanalisi</a>` : ""}
+        </div>
       </div>
     `;
+  }
+
+  // "· tra 5 giorni" / "· oggi" / "· conclusa" accanto alla data di vendita
+  function testoGiorniVendita(data) {
+    if (!data) return "";
+    const oggi = new Date(); oggi.setHours(0, 0, 0, 0);
+    const giorno = new Date(String(data).slice(0, 10) + "T00:00:00");
+    const giorni = Math.round((giorno - oggi) / 86400000);
+    if (!Number.isFinite(giorni)) return "";
+    return giorni < 0 ? " · conclusa" : giorni === 0 ? " · oggi" : giorni === 1 ? " · domani" : ` · tra ${giorni} giorni`;
   }
 
   // Marcatore per un'asta preferita/scartata quando la mappa le mostra

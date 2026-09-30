@@ -91,6 +91,7 @@ html.tema-scuro .badge-visita.vicina { background: #b8913a; color: #1c1404; }
 /* Mappe: le tessere si scuriscono con un filtro (colori approssimati) */
 html.tema-scuro .leaflet-tile-pane { filter: invert(1) hue-rotate(180deg) brightness(.92) contrast(.88) saturate(.6); }
 html.tema-scuro .leaflet-container { background: #1b1f1c; }
+html.tema-scuro .leaflet-popup-content-wrapper, html.tema-scuro .leaflet-popup-tip { background: var(--surface); color: var(--ink); }
 /* La grana di carta dello sfondo, pensata per il chiaro, si attenua */
 html.tema-scuro body { background-image: none; }
 /* Manuale: barra di ricerca in alto e parole trovate evidenziate */
