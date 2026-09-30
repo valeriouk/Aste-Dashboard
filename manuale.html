@@ -258,7 +258,8 @@
         (messaggio "Troppi tentativi errati: riprova tra N minuti"). Durante il blocco è rifiutata anche la password giusta. Premere Invio conta
         un solo tentativo. I contatori di lettura e scrittura sono separati.</li>
       <li><strong>Dispositivi fidati</strong>: il primo accesso con la password giusta rende <em>fidato</em> quel telefono o computer (per quella
-        password). Un dispositivo fidato non viene mai bloccato: se qualcuno prova password a caso restano bloccati solo i dispositivi nuovi, non i tuoi.
+        password; fidato per la scrittura vale anche per la lettura). Ogni browser conta come un dispositivo a sé: su iPhone l'app sulla schermata
+        Home e Safari sono due dispositivi diversi. Un dispositivo fidato non viene mai bloccato: se qualcuno prova password a caso restano bloccati solo i dispositivi nuovi, non i tuoi.
         Un dispositivo non usato per 90 giorni torna "nuovo". Da <a href="#config-dispositivi">Configurazione → Sicurezza → Dispositivi</a> puoi
         uscire da quello che stai usando o scollegare tutti gli altri; anche cambiare una password scollega gli altri.</li>
       <li><strong>Cifrate nel database</strong>: le due password sono salvate cifrate (non si possono rileggere, solo reimpostare). Se le dimentichi o
@@ -1404,11 +1405,16 @@
   </section>
 
   <section class="voce" id="config-dispositivi">
-    <h3>Dispositivi (Esci, Scollega tutti gli altri)</h3>
-    <p><strong>Esci da questo dispositivo</strong>: cancella dal browser le password ricordate e toglie il dispositivo dai
-      <a href="#sistema-password">fidati</a>; la pagina si ricarica e chiede di nuovo la password. <strong>Scollega tutti gli altri</strong>: tutti
-      i dispositivi tranne quello in uso smettono di essere fidati (per esempio dopo aver perso un telefono); le password ricordate su quei dispositivi
-      restano finché non le cambi. Entrambi i pulsanti chiedono una conferma (secondo tocco).</p>
+    <h3>Dispositivi (stato, Scollega tutti gli altri, Esci)</h3>
+    <p><strong>Questo dispositivo</strong>: dice se il dispositivo in uso è <a href="#sistema-password">fidato</a> ("fidato", "non ancora
+      fidato" o "non riconosciuto" se il browser non conserva il codice del dispositivo o la pagina è vecchia).</p>
+    <p><strong>Scollega tutti gli altri</strong>: tutti i dispositivi tranne quello in uso smettono di essere fidati (per esempio dopo aver perso un
+      telefono); le password ricordate su quei dispositivi restano finché non le cambi. Se il dispositivo in uso non è riconosciuto non scollega
+      nessuno.</p>
+    <p><strong>Esci da questo dispositivo</strong>: cancella dal browser le password ricordate e toglie <em>questo</em> dispositivo dai fidati; la
+      pagina si ricarica e chiede di nuovo la password. Attenzione: da quel momento è un dispositivo nuovo, e se nel frattempo scatta un blocco
+      (anche per password sbagliate scritte da lui) resta fuori per 15 minuti come gli altri dispositivi nuovi. Entrambi i pulsanti chiedono una
+      conferma (secondo tocco).</p>
   </section>
 </section>
 

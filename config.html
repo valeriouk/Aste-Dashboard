@@ -743,12 +743,13 @@
 
       <section class="blocco-semplice" data-scheda="sicurezza">
         <h2>Dispositivi</h2>
-        <p class="nota-campo">Dopo la prima password giusta, questo telefono o computer diventa <strong>fidato</strong>: se qualcuno prova password a caso, i dispositivi nuovi restano bloccati per 15 minuti, i tuoi no. <strong>Esci</strong> cancella da questo dispositivo le password ricordate. <strong>Scollega gli altri</strong> toglie lo stato di fidato a tutti tranne questo (per esempio se hai perso un telefono); anche il cambio di password lo fa da solo.</p>
-        <div style="display:flex;flex-wrap:wrap;gap:8px">
-          <button type="button" class="bottone-secondario" id="bottone-esci-dispositivo" onclick="confermaEsciDispositivo()">Esci da questo dispositivo</button>
-          <button type="button" class="bottone-secondario" id="bottone-scollega-dispositivi" onclick="confermaScollegaDispositivi()">Scollega tutti gli altri</button>
-        </div>
+        <p class="nota-campo">Dopo la prima password giusta, questo telefono o computer diventa <strong>fidato</strong>: se qualcuno prova password a caso, i dispositivi nuovi restano bloccati per 15 minuti, i tuoi no. Fidato per la password di scrittura vuol dire fidato anche per quella di lettura.</p>
+        <p id="stato-dispositivo" class="nota-campo"><strong>Questo dispositivo:</strong> controllo in corso…</p>
+        <p class="nota-campo"><strong>Altri dispositivi</strong> — Scollega toglie lo stato di fidato a tutti tranne questo (per esempio se hai perso un telefono); anche il cambio di password lo fa da solo.</p>
+        <button type="button" class="bottone-secondario" id="bottone-scollega-dispositivi" onclick="confermaScollegaDispositivi()">Scollega tutti gli altri</button>
         <p id="messaggio-dispositivi"></p>
+        <p class="nota-campo" style="margin-top:22px"><strong>Questo dispositivo</strong> — Esci cancella le password ricordate e toglie lo stato di fidato <em>a questo dispositivo</em>: al prossimo accesso sarà nuovo, e durante un blocco resterebbe fuori.</p>
+        <button type="button" class="bottone-secondario" id="bottone-esci-dispositivo" onclick="confermaEsciDispositivo()">Esci da questo dispositivo</button>
       </section>
 
     </div>
@@ -1098,6 +1099,7 @@
       document.getElementById("schermata-config").classList.remove("nascosto");
       caricaConfigurazioneAttuale();
       caricaStatoPasswordLettura();
+      caricaStatoDispositivo();
     } else {
       erroreEl.textContent = await messaggioPasswordRifiutata();
       erroreEl.classList.remove("nascosto");
@@ -1115,6 +1117,7 @@
         document.getElementById("schermata-config").classList.remove("nascosto");
         caricaConfigurazioneAttuale();
         caricaStatoPasswordLettura();
+        caricaStatoDispositivo();
         return;
       }
       cancellaPasswordRicordata();
@@ -2377,7 +2380,24 @@
   // Dispositivi fidati (sessione.js, sql/dispositivi_fidati.sql nel repo privato).
   function confermaEsciDispositivo() {
     const bottone = document.getElementById("bottone-esci-dispositivo");
-    richiedeDoppioTocco("esci-dispositivo", bottone, "Esci da questo dispositivo", "Confermi l'uscita?", () => SessioneAste.esci());
+    richiedeDoppioTocco("esci-dispositivo", bottone, "Esci da questo dispositivo", "Esci? Questo dispositivo non sarà più fidato", () => SessioneAste.esci());
+  }
+
+  // "Questo dispositivo: fidato / non riconosciuto" (stato_dispositivo, senza password).
+  async function caricaStatoDispositivo() {
+    const el = document.getElementById("stato-dispositivo");
+    try {
+      const s = await chiamaRpc("stato_dispositivo", {});
+      let testo;
+      if (!s || s.riconosciuto === undefined) testo = "stato non disponibile.";
+      else if (!s.riconosciuto) testo = "non riconosciuto (la memoria del browser non è disponibile o la pagina è vecchia: ricaricala). Durante un blocco resterebbe fuori.";
+      else if (s.scrittura) testo = "✅ fidato (scrittura e lettura).";
+      else if (s.lettura) testo = "✅ fidato per la lettura; per la scrittura lo diventa al prossimo accesso a questa pagina.";
+      else testo = "non ancora fidato: lo diventa alla prossima password giusta, fuori da un blocco.";
+      el.innerHTML = "<strong>Questo dispositivo:</strong> " + escapeHtml(testo);
+    } catch (e) {
+      el.innerHTML = "<strong>Questo dispositivo:</strong> stato non disponibile (connessione).";
+    }
   }
 
   function confermaScollegaDispositivi() {
@@ -2396,6 +2416,7 @@
       if (risultato.result === "success") {
         messaggioEl.textContent = `Fatto: ${risultato.scollegati} dispositivi non sono più fidati. Questo resta collegato.`;
         messaggioEl.className = "messaggio-ok";
+        caricaStatoDispositivo();
       } else {
         messaggioEl.textContent = risultato.message || "Errore sconosciuto.";
         messaggioEl.className = "messaggio-errore";
