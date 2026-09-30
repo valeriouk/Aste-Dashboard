@@ -32,6 +32,14 @@
     turndown: 'https://cdn.jsdelivr.net/npm/turndown@7.2.0/dist/turndown.js',
     gfm: 'https://cdn.jsdelivr.net/npm/turndown-plugin-gfm@1.0.2/dist/turndown-plugin-gfm.js',
   };
+  // Impronte dei file (SHA-384): se la CDN servisse un file diverso, il
+  // browser non lo esegue. Cambiando versione vanno ricalcolate.
+  const IMPRONTE = {
+    [LIBRERIE.marked]: 'sha384-948ahk4ZmxYVYOc+rxN1H2gM1EJ2Duhp7uHtZ4WSLkV4Vtx5MUqnV+l7u9B+jFv+',
+    [LIBRERIE.purify]: 'sha384-JEyTNhjM6R1ElGoJns4U2Ln4ofPcqzSsynQkmEc/KGy6336qAZl70tDLufbkla+3',
+    [LIBRERIE.turndown]: 'sha384-OGauEFaI5hnS8jXK4qdSGShAUAObMBKoLXgcL1ORhRh7ulx5jPZH35qVpacIEA4Z',
+    [LIBRERIE.gfm]: 'sha384-2TroN1N6OfLQ+K4qttptnIfMREzUlMa3hW/nZqDZXv7Sm9BkESfGEupDEqCbzyRl',
+  };
 
   // ------------------------------------------------------------ lettura del testo
   // Toglie la formattazione Markdown più comune da una riga (**, __, `, #, >, «»).
@@ -97,6 +105,7 @@
       caricate[url] = new Promise((ok, ko) => {
         const s = document.createElement('script');
         s.src = url;
+        if (IMPRONTE[url]) { s.integrity = IMPRONTE[url]; s.crossOrigin = 'anonymous'; }
         s.onload = ok;
         s.onerror = () => ko(new Error('libreria non caricata: ' + url));
         document.head.appendChild(s);

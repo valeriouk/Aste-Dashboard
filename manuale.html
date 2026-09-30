@@ -10,6 +10,7 @@
 <link rel="apple-touch-icon" href="apple-touch-icon.png">
 <meta name="theme-color" content="#ffffff">
 <script src="tema.js"></script>
+<script src="sessione.js"></script>
 
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
@@ -255,8 +256,11 @@
         alle visite successive (viene ricontrollata col server). Sbloccare Configurazione sblocca anche Statistiche e Superanalisi.</li>
       <li><strong>Blocco dei tentativi</strong>: dopo <strong>5 password sbagliate di fila</strong> scatta un <strong>blocco di 15 minuti</strong>
         (messaggio "Troppi tentativi errati: riprova tra N minuti"). Durante il blocco è rifiutata anche la password giusta. Premere Invio conta
-        un solo tentativo. I contatori di lettura e scrittura sono separati. Il blocco vale per tutti: chi prova password a caso blocca anche te per
-        15 minuti.</li>
+        un solo tentativo. I contatori di lettura e scrittura sono separati.</li>
+      <li><strong>Dispositivi fidati</strong>: il primo accesso con la password giusta rende <em>fidato</em> quel telefono o computer (per quella
+        password). Un dispositivo fidato non viene mai bloccato: se qualcuno prova password a caso restano bloccati solo i dispositivi nuovi, non i tuoi.
+        Un dispositivo non usato per 90 giorni torna "nuovo". Da <a href="#config-dispositivi">Configurazione → Sicurezza → Dispositivi</a> puoi
+        uscire da quello che stai usando o scollegare tutti gli altri; anche cambiare una password scollega gli altri.</li>
       <li><strong>Cifrate nel database</strong>: le due password sono salvate cifrate (non si possono rileggere, solo reimpostare). Se le dimentichi o
         resti bloccato, si reimpostano o si sblocca il blocco dall'editor SQL di Supabase con le righe pronte in fondo al file SQL della sicurezza.</li>
       <li>I processi automatici (scanner, controlli) non usano queste password: hanno un accesso di servizio proprio.</li>
@@ -1386,7 +1390,8 @@
 
   <section class="voce" id="config-password">
     <h3>Cambia password (scrittura)</h3>
-    <p>Password attuale, nuova (almeno 6 caratteri) e conferma. Vale subito per Configurazione, Statistiche, Superanalisi e le modifiche nel registro.</p>
+    <p>Password attuale, nuova (almeno 6 caratteri) e conferma. Vale subito per Configurazione, Statistiche, Superanalisi e le modifiche nel registro.
+      Gli altri dispositivi smettono di essere fidati: al prossimo accesso chiedono la password nuova.</p>
   </section>
 
   <section class="voce" id="config-password-lettura">
@@ -1395,7 +1400,15 @@
       (e questo manuale) si apre solo con quella. Casella non spuntata + Salva = disattivata: il registro si apre con il solo link. Campo vuoto con casella
       spuntata = la password resta quella di prima.</p>
     <p class="nota">La password di lettura protegge anche i <strong>dati</strong> del registro (aste, analisi, stelle, note, link), non solo la pagina:
-      disattivandola diventano leggibili da chiunque abbia il link. Consigliato tenerla attiva.</p>
+      disattivandola diventano leggibili da chiunque abbia il link. Consigliato tenerla attiva. Almeno 6 caratteri.</p>
+  </section>
+
+  <section class="voce" id="config-dispositivi">
+    <h3>Dispositivi (Esci, Scollega tutti gli altri)</h3>
+    <p><strong>Esci da questo dispositivo</strong>: cancella dal browser le password ricordate e toglie il dispositivo dai
+      <a href="#sistema-password">fidati</a>; la pagina si ricarica e chiede di nuovo la password. <strong>Scollega tutti gli altri</strong>: tutti
+      i dispositivi tranne quello in uso smettono di essere fidati (per esempio dopo aver perso un telefono); le password ricordate su quei dispositivi
+      restano finché non le cambi. Entrambi i pulsanti chiedono una conferma (secondo tocco).</p>
   </section>
 </section>
 

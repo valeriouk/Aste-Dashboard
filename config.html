@@ -10,6 +10,7 @@
 <link rel="apple-touch-icon" href="apple-touch-icon.png">
 <meta name="theme-color" content="#ffffff">
 <script src="tema.js"></script>
+<script src="sessione.js"></script>
 <meta name="apple-mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-status-bar-style" content="default">
 <meta name="apple-mobile-web-app-title" content="Registro Opp.">
@@ -17,8 +18,8 @@
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,400..700&family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500;600&display=swap" rel="stylesheet">
-<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/leaflet.min.css">
-<script src="https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/leaflet.js"></script>
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/leaflet.min.css" integrity="sha384-c6Rcwz4e4CITMbu/NBmnNS8yN2sC3cUElMEMfP3vqqKFp7GOYaaBBCqmaWBjmkjb" crossorigin="anonymous">
+<script src="https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/leaflet.js" integrity="sha384-cxOPjt7s7Iz04uaHJceBmS+qpjv2JkIHNVcuOrM+YHwZOmJGBXI00mdUXEq65HTH" crossorigin="anonymous"></script>
 <style>
 
   :root {
@@ -738,6 +739,16 @@
           <button type="button" class="bottone-secondario" onclick="salvaPasswordLettura()">Salva</button>
         </form>
         <p id="messaggio-password-lettura"></p>
+      </section>
+
+      <section class="blocco-semplice" data-scheda="sicurezza">
+        <h2>Dispositivi</h2>
+        <p class="nota-campo">Dopo la prima password giusta, questo telefono o computer diventa <strong>fidato</strong>: se qualcuno prova password a caso, i dispositivi nuovi restano bloccati per 15 minuti, i tuoi no. <strong>Esci</strong> cancella da questo dispositivo le password ricordate. <strong>Scollega gli altri</strong> toglie lo stato di fidato a tutti tranne questo (per esempio se hai perso un telefono); anche il cambio di password lo fa da solo.</p>
+        <div style="display:flex;flex-wrap:wrap;gap:8px">
+          <button type="button" class="bottone-secondario" id="bottone-esci-dispositivo" onclick="confermaEsciDispositivo()">Esci da questo dispositivo</button>
+          <button type="button" class="bottone-secondario" id="bottone-scollega-dispositivi" onclick="confermaScollegaDispositivi()">Scollega tutti gli altri</button>
+        </div>
+        <p id="messaggio-dispositivi"></p>
       </section>
 
     </div>
@@ -2353,6 +2364,40 @@
         messaggioEl.className = "messaggio-ok";
       } else {
         messaggioEl.textContent = risultato.message || "Errore sconosciuto durante il salvataggio.";
+        messaggioEl.className = "messaggio-errore";
+      }
+    } catch (e) {
+      messaggioEl.textContent = "Richiesta non riuscita. Controlla la connessione e riprova.";
+      messaggioEl.className = "messaggio-errore";
+    } finally {
+      bottone.disabled = false;
+    }
+  }
+
+  // Dispositivi fidati (sessione.js, sql/dispositivi_fidati.sql nel repo privato).
+  function confermaEsciDispositivo() {
+    const bottone = document.getElementById("bottone-esci-dispositivo");
+    richiedeDoppioTocco("esci-dispositivo", bottone, "Esci da questo dispositivo", "Confermi l'uscita?", () => SessioneAste.esci());
+  }
+
+  function confermaScollegaDispositivi() {
+    const bottone = document.getElementById("bottone-scollega-dispositivi");
+    richiedeDoppioTocco("scollega-dispositivi", bottone, "Scollega tutti gli altri", "Confermi?", scollegaAltriDispositivi);
+  }
+
+  async function scollegaAltriDispositivi() {
+    const messaggioEl = document.getElementById("messaggio-dispositivi");
+    const bottone = document.getElementById("bottone-scollega-dispositivi");
+    bottone.disabled = true;
+    messaggioEl.textContent = "Scollegamento in corso…";
+    messaggioEl.className = "messaggio-attesa";
+    try {
+      const risultato = await chiamaRpc("scollega_altri_dispositivi", {password_tentativo: passwordCorrente});
+      if (risultato.result === "success") {
+        messaggioEl.textContent = `Fatto: ${risultato.scollegati} dispositivi non sono più fidati. Questo resta collegato.`;
+        messaggioEl.className = "messaggio-ok";
+      } else {
+        messaggioEl.textContent = risultato.message || "Errore sconosciuto.";
         messaggioEl.className = "messaggio-errore";
       }
     } catch (e) {
