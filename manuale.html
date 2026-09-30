@@ -603,14 +603,19 @@
       <thead><tr><th>Criterio</th><th>Ordina per</th><th>Direzione iniziale</th></tr></thead>
       <tbody>
         <tr><td>Punteggio (predefinito)</td><td>punteggio</td><td>alto → basso</td></tr>
-        <tr><td>Margine</td><td>margine lordo (mancante = in fondo)</td><td>alto → basso</td></tr>
+        <tr><td>Margine lordo</td><td><a href="#registro-margine">margine lordo</a>: valore del perito − offerta minima − sanatoria (mancante = in fondo)</td><td>alto → basso</td></tr>
+        <tr><td>Giudizio</td><td><a href="#superanalisi-classe">giudizio della Superanalisi</a> (Pulita, Gestibile, Complessa, Da scartare); a parità, il punteggio</td><td>Pulita → Da scartare</td></tr>
+        <tr><td>Spazio sull'offerta</td><td>offerta massima − offerta minima dal <a href="#superanalisi-conto">conto completo della Superanalisi</a>, con i parametri che hai impostato in Superanalisi e le tue correzioni; negativo = obiettivo non raggiungibile all'offerta minima</td><td>più → meno</td></tr>
         <tr><td>Offerta</td><td>offerta minima</td><td>bassa → alta</td></tr>
         <tr><td>Data</td><td>giorni tra vendita e oggi (in valore assoluto): la più imminente; tra le concluse la più recente</td><td>vicina → lontana</td></tr>
         <tr><td>Distanza</td><td>km dal punto di riferimento (mancante = in fondo)</td><td>vicina → lontana</td></tr>
         <tr><td>Più recenti</td><td>data di inserimento nel registro</td><td>nuove → vecchie</td></tr>
       </tbody>
     </table></div>
-    <p>Cliccare il criterio già attivo inverte la direzione. Le aste <strong>scartate vanno sempre in fondo</strong>, qualunque criterio.</p>
+    <p>Cliccare il criterio già attivo inverte la direzione. Le aste <strong>scartate vanno sempre in fondo</strong>, qualunque criterio. Con "Giudizio" e
+      "Spazio sull'offerta" vanno in fondo, in tutte e due le direzioni, anche le aste <strong>senza analisi v2</strong> (non hanno giudizio né conto) e
+      quelle per cui il conto non si può fare (per esempio senza valore di rivendita). "Spazio sull'offerta" si calcola quando lo scegli (pochi decimi di
+      secondo) e si aggiorna se cambi i parametri in Superanalisi e torni al registro.</p>
   </section>
 
   <section class="voce" id="registro-filtri-ricordati">

@@ -5392,6 +5392,7 @@
       impostaDatiPersonali(personali.preferiti || [], personali.link_utili || [], personali.visite || [], personali.superanalisi_esterne || []);
       Object.assign(asta, normalizzaRiga(righe[0]));
       asta._giudizio = undefined;   // giudizio della Superanalisi da ricalcolare
+      asta._spazio = undefined;     // e lo spazio sull'offerta
       applicaStatoPreferito(asta);
       if (firma() !== prima) aggiornaCardSingola(id);
     } catch (e) {
@@ -5403,6 +5404,7 @@
   // (con i dati di prima): si aggiorna la scheda aperta.
   window.addEventListener("pageshow", (evento) => {
     if (evento.persisted && idAstaModaleDettagli !== null) aggiornaAstaDalDatabase(idAstaModaleDettagli);
+    if (evento.persisted && criterioOrdinamento === "spazio") { ASTE.forEach(a => { a._spazio = undefined; }); applicaFiltri(); }
   });
 
   function avvia() {
@@ -5556,6 +5558,7 @@
       livelloRistrutturazioneSuggerito: r.livello_ristrutturazione_suggerito || null,
       // Lavori scelti da te nella Superanalisi dopo il sopralluogo (sql/lavori_utente.sql).
       livelloLavoriUtente: ["nessuna", "leggera", "media", "pesante"].includes(r.livello_lavori_utente) ? r.livello_lavori_utente : null,
+      valoreRivenditaUtente: numeroSicuro(r.valore_rivendita_utente, null),
       importoLavoriUtente: numeroSicuro(r.importo_lavori_utente, null),
       // Solo per il CSV (colonne in coda): analisi v2 completa e OMI.
       analisiV2: r.analisi_v2 && typeof r.analisi_v2 === "object" ? r.analisi_v2 : null,
@@ -5683,6 +5686,49 @@
     const perche = g.motivi && g.motivi.length ? ": " + g.motivi.slice(0, 3).join("; ") : "";
     return `<span class="badge-giudizio giudizio-${g.classe}" title="Giudizio della Superanalisi (regole fisse sulla perizia)${escapeAttributo(perche)}">⚖️ ${NOMI_GIUDIZIO[g.classe]}</span>`;
   }
+  // Per l'ordinamento "Giudizio": più alto = migliore.
+  const VALORE_GIUDIZIO = {PULITA: 4, GESTIBILE: 3, COMPLESSA: 2, DA_SCARTARE: 1};
+  function valoreGiudizio(a) { const g = giudizioSuperanalisi(a); return g ? (VALORE_GIUDIZIO[g.classe] || 0) : 0; }
+
+  // "Spazio sull'offerta": offerta massima − offerta minima dal conto completo
+  // della Superanalisi (underwriting.js), con gli stessi parametri che imposti
+  // in Superanalisi (salvati nel browser, superanalisi_parametri_v1) e le tue
+  // correzioni. Stessa scelta del valore di rivendita di superanalisi.html
+  // (tuo valore > OMI > quotazioni citate dal CTU > valore del CTU). Calcolato
+  // solo quando serve (ordinamento scelto) e poi tenuto in memoria per asta.
+  // Null senza analisi v2 o se il conto non si può fare.
+  const PARAMETRI_SUPERANALISI_PREDEFINITI = { utilePct: 15, minimoPrudenzialePct: 5, primaCasa: false };   // come in superanalisi.html
+  const FORCHETTA_VALORE_UTENTE_REGISTRO = { prudenziale: 0.93, centrale: 1.0, ottimistico: 1.05 };         // come in superanalisi.html
+  function spazioSullOfferta(a) {
+    if (a._spazio !== undefined) return a._spazio;
+    a._spazio = null;
+    if (!a.analisiV2 || !String(a.versionePrompt || "").startsWith("v2") || !window.Underwriting) return null;
+    try {
+      let p = PARAMETRI_SUPERANALISI_PREDEFINITI;
+      try { p = { ...p, ...(JSON.parse(localStorage.getItem("superanalisi_parametri_v1") || "{}")) }; } catch (e) { /* predefiniti */ }
+      const annuncio = { comune: a.comune, offertaMinima: a.offertaMinima || null, prezzoBase: a.prezzoBase || null,
+        valoreStima: a.valoreStima || null, occupazione: a.disponibilita,
+        renditaOverride: a.renditaCatastaleUtente > 0 ? a.renditaCatastaleUtente : null,
+        arretratiOverride: a.oneriCondominialiUtente ?? null,
+        livelloLavori: a.livelloLavoriUtente, lavoriOverride: a.importoLavoriUtente };
+      if (a.valoreRivenditaUtente > 0) {
+        const f = FORCHETTA_VALORE_UTENTE_REGISTRO, v = a.valoreRivenditaUtente;
+        annuncio.arvOverride = { prudenziale: Math.round(v * f.prudenziale), centrale: Math.round(v * f.centrale), ottimistico: Math.round(v * f.ottimistico) };
+      } else if (a.omi && a.omi.min > 0 && a.omi.max >= a.omi.min) {
+        annuncio.omi = { min: a.omi.min, max: a.omi.max };
+      } else {
+        const quot = (((a.analisiV2 || {}).valutazione_ctu || {}).quotazioni_citate || [])
+          .filter(q => q && Number(q.min_euro_mq) > 0 && Number(q.max_euro_mq) >= Number(q.min_euro_mq));
+        const scelta = quot.find(q => /omi/i.test(String(q.fonte || ""))) || quot[0];
+        if (scelta) annuncio.omi = { min: Number(scelta.min_euro_mq), max: Number(scelta.max_euro_mq) };
+      }
+      const esito = Underwriting.analizzaAsta(a.analisiV2, annuncio, {
+        utileTargetPct: p.utilePct / 100, utileMinimoPrudenzialePct: p.minimoPrudenzialePct / 100, targetNetto: true, primaCasa: !!p.primaCasa });
+      a._spazio = esito.headroom ?? null;
+    } catch (e) { a._spazio = null; }
+    return a._spazio;
+  }
+
   const NOMI_DISPONIBILITA = {LIBER: "Libero", OCCUP: "Occupato"};
   function etichettaDisponibilita(grezza) {
     const voci = (grezza || "").split(",").map(t => t.trim()).filter(Boolean);
@@ -5872,8 +5918,15 @@
   const DEFINIZIONI_ORDINAMENTO = {
     punteggio: { etichetta: "Punteggio", ascLabel: "basso → alto", descLabel: "alto → basso", direzioneDefault: "desc",
                  comparatore: (a, b) => a.punteggio - b.punteggio },
-    margine:   { etichetta: "Margine", ascLabel: "basso → alto", descLabel: "alto → basso", direzioneDefault: "desc",
+    margine:   { etichetta: "Margine lordo", ascLabel: "basso → alto", descLabel: "alto → basso", direzioneDefault: "desc",
                  comparatore: (a, b) => (a.margine ?? -Infinity) - (b.margine ?? -Infinity) },
+    // Dalla Superanalisi (solo aste con analisi v2; le altre sempre in fondo, vedi inFondo).
+    giudizio:  { etichetta: "Giudizio", ascLabel: "Da scartare → Pulita", descLabel: "Pulita → Da scartare", direzioneDefault: "desc",
+                 inFondo: a => !giudizioSuperanalisi(a),
+                 comparatore: (a, b) => (valoreGiudizio(a) - valoreGiudizio(b)) || (a.punteggio - b.punteggio) },
+    spazio:    { etichetta: "Spazio sull'offerta", ascLabel: "meno → più", descLabel: "più → meno", direzioneDefault: "desc",
+                 inFondo: a => spazioSullOfferta(a) === null,
+                 comparatore: (a, b) => (spazioSullOfferta(a) ?? 0) - (spazioSullOfferta(b) ?? 0) },
     prezzo:    { etichetta: "Offerta", ascLabel: "bassa → alta", descLabel: "alta → bassa", direzioneDefault: "asc",
                  comparatore: (a, b) => a.offertaMinima - b.offertaMinima },
     data:      { etichetta: "Data", ascLabel: "vicina → lontana", descLabel: "lontana → vicina", direzioneDefault: "asc",
@@ -6304,7 +6357,10 @@
     // non basterebbe se restassero comunque in cima. false (0) prima di
     // true (1): l'aritmetica del confronto fa il resto come chiave
     // primaria, il criterio scelto resta il comparatore secondario.
-    filtrate.sort((a, b) => (a.scartato - b.scartato) || segno * definizione.comparatore(a, b));
+    // Per Giudizio e Spazio sull'offerta le aste senza analisi v2 vanno in fondo
+    // in entrambe le direzioni (subito dopo le scartate come chiave).
+    const inFondo = definizione.inFondo || (() => false);
+    filtrate.sort((a, b) => (a.scartato - b.scartato) || (inFondo(a) - inFondo(b)) || segno * definizione.comparatore(a, b));
     if (filtroSoloVisiteAttivo) filtrate.sort((a, b) => chiaveOrdineVisita(a) - chiaveOrdineVisita(b));
 
     // Il range virtuale va azzerato a ogni cambio di filtro/ricerca/
