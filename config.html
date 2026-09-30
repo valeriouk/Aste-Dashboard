@@ -610,6 +610,25 @@
 
       </div>
 
+      <div class="barra-ripristino" data-scheda="ricerca" id="blocco-set-filtri" style="border-style:solid;margin-bottom:14px">
+        <p class="card-riepilogo-titolo">Set di filtri salvati</p>
+        <p class="nota-campo">Salva con un nome i filtri di questa scheda (area, prezzo, tipologie, altri filtri compreso "solo conteggio", esclusioni) e rimettili quando vuoi. Modelli, orari e ricerca della perizia non cambiano. "Applica" salva subito, come ogni altra modifica in questa pagina.</p>
+        <div class="campo-form">
+          <label for="campo-set-filtri">Set salvati</label>
+          <select id="campo-set-filtri"></select>
+        </div>
+        <div style="display:flex;flex-wrap:wrap;gap:8px">
+          <button type="button" class="bottone-secondario" id="bottone-applica-set" onclick="confermaApplicaSetFiltri()">Applica</button>
+          <button type="button" class="bottone-secondario" id="bottone-elimina-set" onclick="confermaEliminaSetFiltri()" style="color:var(--danger)">Elimina</button>
+        </div>
+        <div class="campo-form" style="margin-top:14px">
+          <label for="campo-nome-set">Salva i filtri attuali come…</label>
+          <input type="text" id="campo-nome-set" maxlength="40" placeholder="es. Fidenza 195 conteggio">
+        </div>
+        <button type="button" class="bottone-secondario" id="bottone-salva-set" onclick="confermaSalvaSetFiltri()">Salva set</button>
+        <p id="messaggio-set-filtri" class="messaggio-salvataggio-card"></p>
+      </div>
+
       <div class="barra-ripristino" data-scheda="ricerca">
         <button type="button" class="bottone-secondario" id="bottone-ripristina-predefiniti" onclick="confermaRipristinaPredefiniti()">↺ Ripristina tutti i valori predefiniti</button>
         <p class="nota-campo">Riporta ai valori predefiniti le card delle schede Ricerca, Analisi e Orari — area, prezzo, tipologia, altri filtri, esclusioni (disattivate), modelli, pianificazione (lun-ven alle 10:00) e ricerca della perizia (estesa, con ricontrollo ogni 2 giorni, massimo 15 aste per giro). La scelta del prompt (v1/v2) resta com'è. Salva subito, come ogni altra modifica in questa pagina.</p>
@@ -1364,6 +1383,15 @@
       // non scrive nel database le voci predefinite (resterebbero fisse).
       configAttuale.checklist_modello = config.checklist_modello && window.Operazioni ? Operazioni.modelloChecklist(config.checklist_modello) : null;
 
+      // Set di filtri salvati (parametro set_filtri): null finché non ne salvi uno.
+      configAttuale.set_filtri = null;
+      if (config.set_filtri) {
+        try {
+          const parsed = JSON.parse(config.set_filtri);
+          if (Array.isArray(parsed)) configAttuale.set_filtri = parsed.filter(x => x && x.nome && x.valori);
+        } catch (e) {}
+      }
+
       // Esclusioni per parole chiave: disattivate finché non le attivi.
       configAttuale.esclusioni_attive = String(config.esclusioni_attive ?? false).toLowerCase() === "true";
       configAttuale.esclusione_quote = String(config.esclusione_quote ?? true).toLowerCase() === "true";
@@ -1561,6 +1589,7 @@
   }
 
   function renderizzaTuttiIRiepiloghi() {
+    mostraSetFiltri();
     mostraChecklist();
     mostraParametriConti();
     renderizzaRiepilogoEsclusioni();
@@ -1708,6 +1737,7 @@
         parole_esclusione: JSON.stringify(configAttuale.parole_esclusione || []),
         ...(configAttuale.parametri_conti || {}),
         ...(configAttuale.checklist_modello ? {checklist_modello: JSON.stringify(configAttuale.checklist_modello)} : {}),
+        ...(configAttuale.set_filtri ? {set_filtri: JSON.stringify(configAttuale.set_filtri)} : {}),
         solo_aste_future: String(configAttuale.solo_aste_future),
         usa_astegiudiziarie_perizia: String(configAttuale.usa_astegiudiziarie_perizia),
         pausa_tra_aste_secondi: configAttuale.pausa_tra_aste_secondi,
@@ -1748,6 +1778,117 @@
     ricontrolloGiorni: 2,
     ricontrolloMax: 15
   };
+
+  // ---------------------------------------------------------------- set di filtri
+  // Salvati con un nome nel parametro set_filtri: [{nome, salvato_il, valori}].
+  // Solo i filtri della scheda Ricerca (scelta dell'utente, 01/10/2026).
+  const CHIAVI_SET_FILTRI = ["prezzo_base_min", "prezzo_base_max", "lat_riferimento", "lon_riferimento", "raggio_km",
+    "cerca_tutta_italia", "tipologie_incluse", "occupazioni_escluse", "esclusioni_attive", "esclusione_quote",
+    "parole_esclusione", "solo_aste_future", "usa_astegiudiziarie_perizia", "pausa_tra_aste_secondi",
+    "solo_conteggio", "conteggia_non_analizzate"];
+  const MAX_SET_FILTRI = 10;
+
+  function mostraSetFiltri(scelto) {
+    const campo = document.getElementById("campo-set-filtri");
+    const set = configAttuale.set_filtri || [];
+    campo.innerHTML = set.length
+      ? set.map(x => `<option value="${escapeHtml(x.nome)}">${escapeHtml(x.nome)}</option>`).join("")
+      : `<option value="">Nessun set salvato</option>`;
+    if (scelto && set.some(x => x.nome === scelto)) campo.value = scelto;
+    campo.disabled = !set.length;
+    document.getElementById("bottone-applica-set").disabled = !set.length;
+    document.getElementById("bottone-elimina-set").disabled = !set.length;
+  }
+
+  function messaggioSet(testo, tipo) {
+    const el = document.getElementById("messaggio-set-filtri");
+    el.textContent = testo;
+    el.className = `messaggio-salvataggio-card messaggio-${tipo}`;
+  }
+
+  // Scrive la configurazione con i set aggiornati; se non riesce, torna ai valori
+  // di prima e rilegge dal database (come "Ripristina predefiniti").
+  async function salvaConSetFiltri(prima, testoOk) {
+    try {
+      const risultato = await salvaConfigCompletaSulServer();
+      if (risultato && risultato.result === "success") {
+        messaggioSet(testoOk, "ok");
+        window.Feedback && Feedback.salvato();
+        return true;
+      }
+      messaggioSet((risultato && risultato.message) || "Errore sconosciuto durante il salvataggio.", "errore");
+    } catch (e) {
+      messaggioSet("Richiesta non riuscita. Controlla la connessione e riprova.", "errore");
+    }
+    window.Feedback && Feedback.errore();
+    ({configAttuale, pianificazioneAttuale, ricercaPeriziaAttuale} = prima);
+    try { await caricaConfigurazioneAttuale(); } catch (e) { renderizzaTuttiIRiepiloghi(); }
+    return false;
+  }
+
+  function confermaSalvaSetFiltri() {
+    const nome = document.getElementById("campo-nome-set").value.trim();
+    if (!nome) { messaggioSet("Scrivi un nome per il set.", "errore"); return; }
+    const esiste = (configAttuale.set_filtri || []).some(x => x.nome === nome);
+    if (!esiste && (configAttuale.set_filtri || []).length >= MAX_SET_FILTRI) {
+      messaggioSet(`Al massimo ${MAX_SET_FILTRI} set: eliminane uno prima.`, "errore");
+      return;
+    }
+    const bottone = document.getElementById("bottone-salva-set");
+    richiedeDoppioTocco("salva-set", bottone, "Salva set", esiste ? `Sovrascrivere "${nome}"?` : "Confermi?", () => salvaSetFiltri(nome));
+  }
+
+  async function salvaSetFiltri(nome) {
+    const prima = JSON.parse(JSON.stringify({configAttuale, pianificazioneAttuale, ricercaPeriziaAttuale}));
+    const valori = JSON.parse(JSON.stringify(Object.fromEntries(CHIAVI_SET_FILTRI.map(k => [k, configAttuale[k]]))));
+    const nuovo = {nome, salvato_il: new Date().toISOString(), valori};
+    const set = (configAttuale.set_filtri || []).filter(x => x.nome !== nome);
+    configAttuale.set_filtri = [...set, nuovo].sort((a, b) => a.nome.localeCompare(b.nome, "it"));
+    messaggioSet("Salvataggio in corso…", "attesa");
+    if (await salvaConSetFiltri(prima, `Set "${nome}" salvato.`)) {
+      document.getElementById("campo-nome-set").value = "";
+      mostraSetFiltri(nome);
+    }
+  }
+
+  function setScelto() {
+    const nome = document.getElementById("campo-set-filtri").value;
+    return (configAttuale.set_filtri || []).find(x => x.nome === nome) || null;
+  }
+
+  function confermaApplicaSetFiltri() {
+    const scelto = setScelto();
+    if (!scelto) return;
+    const bottone = document.getElementById("bottone-applica-set");
+    richiedeDoppioTocco("applica-set", bottone, "Applica", `Applicare "${scelto.nome}"?`, () => applicaSetFiltri(scelto));
+  }
+
+  async function applicaSetFiltri(scelto) {
+    const prima = JSON.parse(JSON.stringify({configAttuale, pianificazioneAttuale, ricercaPeriziaAttuale}));
+    // solo le chiavi note: un set salvato con una versione diversa non porta altro
+    CHIAVI_SET_FILTRI.forEach(k => {
+      if (scelto.valori[k] !== undefined) configAttuale[k] = JSON.parse(JSON.stringify(scelto.valori[k]));
+    });
+    messaggioSet("Applicazione in corso…", "attesa");
+    if (await salvaConSetFiltri(prima, `Filtri "${scelto.nome}" applicati e salvati.`)) {
+      renderizzaTuttiIRiepiloghi();
+      mostraSetFiltri(scelto.nome);
+    }
+  }
+
+  function confermaEliminaSetFiltri() {
+    const scelto = setScelto();
+    if (!scelto) return;
+    const bottone = document.getElementById("bottone-elimina-set");
+    richiedeDoppioTocco("elimina-set", bottone, "Elimina", `Eliminare "${scelto.nome}"?`, () => eliminaSetFiltri(scelto.nome));
+  }
+
+  async function eliminaSetFiltri(nome) {
+    const prima = JSON.parse(JSON.stringify({configAttuale, pianificazioneAttuale, ricercaPeriziaAttuale}));
+    configAttuale.set_filtri = (configAttuale.set_filtri || []).filter(x => x.nome !== nome);
+    messaggioSet("Eliminazione in corso…", "attesa");
+    if (await salvaConSetFiltri(prima, `Set "${nome}" eliminato.`)) mostraSetFiltri();
+  }
 
   function confermaRipristinaPredefiniti() {
     const bottone = document.getElementById("bottone-ripristina-predefiniti");

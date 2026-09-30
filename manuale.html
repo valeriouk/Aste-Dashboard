@@ -1206,6 +1206,23 @@
       Vedi <a href="#orari-preferiti">promemoria preferiti</a>. Non consuma Gemini.</p>
   </section>
 
+  <section class="voce" id="config-set-filtri">
+    <h3>Set di filtri salvati</h3>
+    <p>In fondo alla scheda Ricerca. Salva con un nome i filtri di quella scheda e rimettili quando vuoi, per esempio "Fidenza 195 conteggio"
+      per un giro di solo conteggio e un secondo set per il giro vero. Un set contiene: area (centro e raggio, o tutta Italia), prezzo base, tipologie,
+      altri filtri (occupazione, solo aste future, perizia da astegiudiziarie, pausa, solo conteggio) ed esclusioni per parole chiave. Modelli Gemini,
+      batch, orari e ricerca della perizia non fanno parte del set e restano quelli attuali.</p>
+    <ul>
+      <li><strong>Salva set</strong>: scrivi un nome (massimo 40 caratteri) e conferma col secondo tocco; con un nome già usato chiede se sovrascrivere.
+        Al massimo 10 set.</li>
+      <li><strong>Applica</strong>: scegli il set e conferma: i filtri vengono scritti e salvati subito, come ogni altra modifica della pagina. Se il
+        salvataggio non riesce la pagina rilegge dal database i valori veri.</li>
+      <li><strong>Elimina</strong>: toglie il set scelto (i filtri attuali non cambiano).</li>
+    </ul>
+    <p class="nota">I set stanno nella configurazione sul database (parametro "set_filtri"), quindi li vedi da tutti i dispositivi. "Ripristina tutti i
+      valori predefiniti" non li tocca.</p>
+  </section>
+
   <section class="voce" id="config-ripristina">
     <h3>"↺ Ripristina tutti i valori predefiniti"</h3>
     <p>Il pulsante sta in fondo alla scheda Ricerca (è un'azione rara che sovrascrive tutto) e chiede conferma con un secondo clic. Riporta ai valori
