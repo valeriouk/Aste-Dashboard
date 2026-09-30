@@ -201,6 +201,7 @@
     flex-shrink: 0;
   }
   .card-riepilogo-modifica:hover { background: var(--primary-soft); color: var(--primary); }
+  #riepilogo-altri { white-space: normal; }   /* più voci (occupazione compresa): va a capo invece di troncarsi */
   .card-riepilogo.in-pausa .card-riepilogo-valore { color: var(--ink-faint); font-style: italic; }
 
   .blocco-semplice {
@@ -1120,8 +1121,8 @@
   // Codici grezzi di PVP (campo "disponibilita"); nel database si salvano
   // quelli ESCLUSI, così un codice nuovo passa sempre (vedi app.py).
   const STATI_OCCUPAZIONE_PVP = [
-    ["LIBER", "Libero"], ["NON_SPECIFICATA", "Non specificato"], ["INCOR", "In liberazione (INCOR)"],
-    ["OCCST", "Occupato (OCCST)"], ["OCCUP", "Occupato"]
+    ["LIBER", "Libero"], ["NON_SPECIFICATA", "Non specificato"], ["INCOR", "In corso di liberazione"],
+    ["OCCST", "Occupato senza titolo"], ["OCCUP", "Occupato"]
   ];
 
   function popolaListaOccupazione() {
@@ -1310,7 +1311,8 @@
   function renderizzaRiepilogoAltri() {
     const nomiOccupazione = Object.fromEntries(STATI_OCCUPAZIONE_PVP);
     const parti = [
-      ...(configAttuale.occupazioni_escluse.length ? ["Esclusi: " + configAttuale.occupazioni_escluse.map(c => nomiOccupazione[c] || c).join(", ")] : []),
+      configAttuale.occupazioni_escluse.length ? "Occupazione: esclusi " + configAttuale.occupazioni_escluse.map(c => nomiOccupazione[c] || c).join(", ")
+        : "Occupazione: tutti gli stati",
       configAttuale.solo_aste_future ? "Solo future" : "Anche concluse",
       configAttuale.usa_astegiudiziarie_perizia ? "Perizia esterna attiva" : "Perizia esterna disattiva",
       `pausa ${configAttuale.pausa_tra_aste_secondi}s`

@@ -836,7 +836,7 @@
       <li>⚠️ Rischi e note dell'AI;</li>
       <li><a href="#registro-visite">📅 Visita</a>;</li>
       <li><a href="#registro-tentativo">📉 Storico delle aste (PVP)</a>: i tentativi precedenti dello stesso immobile, con ribassi ed esiti;</li>
-      <li>📋 Dettagli: Tribunale, Disponibilità (PVP) (lo stato dichiarato nell'annuncio: "Libero", "Occupato", "Non specificato", "In liberazione (INCOR)" o "Occupato (OCCST)"), Prezzo base, Rilancio minimo, Superficie,
+      <li>📋 Dettagli: Tribunale, Disponibilità (PVP) (lo stato dichiarato nell'annuncio: "Libero", "Occupato", "Non specificato", "In corso di liberazione" o "Occupato senza titolo"), Prezzo base, Rilancio minimo, Superficie,
         €/mq, Spese sanatoria, Abusi edilizi, Formalità pregiudizievoli (in rosso se c'è qualcosa oltre la normale ipoteca), Fonte analisi (quale
         documento è stato letto), Modello AI, ID Annuncio;</li>
       <li><a href="#registro-costi-trasferimento">💶 Costi di trasferimento</a> e <a href="#registro-ristrutturazione">🔨 Costi di ristrutturazione</a>;</li>
@@ -1153,12 +1153,12 @@
   <section class="voce" id="config-altri-filtri">
     <h3>Card "Altri filtri": occupazione, aste future, astegiudiziarie, pausa, solo conteggio</h3>
     <ul>
-      <li><strong>Stato di occupazione dichiarato su PVP</strong>: una casella per stato (Libero, Non specificato, In liberazione, OCCST, Occupato),
+      <li><strong>Stato di occupazione dichiarato su PVP</strong>: una casella per stato (Libero, Non specificato, In corso di liberazione, Occupato senza titolo, Occupato),
         tutte spuntate di partenza = nessun filtro. Le aste degli stati tolti non vengono cercate né analizzate (nessun costo Gemini); quelle già nel
         registro restano. Un annuncio con più stati è escluso solo se sono tutti tolti; uno stato nuovo che PVP dovesse introdurre passa sempre.
         Il dato è quello dichiarato nell'annuncio, spesso "Non specificato" (circa 6 aste su 10 al 30/09/2026); "Occupato" spesso vuol dire occupato
-        dal debitore, cioè liberabile dal custode. Il significato di INCOR ("in liberazione") e OCCST è presunto: PVP non lo documenta.
-        Il riepilogo della card mostra gli stati esclusi e i messaggi Telegram con i filtri usati mostrano la riga "Occupazione (PVP)".</li>
+        dal debitore, cioè liberabile dal custode; anche "Occupato senza titolo" è in genere liberabile (nessun contratto opponibile).
+        Il riepilogo della card mostra "Occupazione: tutti gli stati" oppure gli stati esclusi, e i messaggi Telegram con i filtri usati mostrano la riga "Occupazione (PVP)".</li>
       <li><strong>Aste da includere</strong>: "Solo aste future" (predefinito) oppure "Includi anche concluse (analisi storiche)".</li>
       <li><strong>Perizia da astegiudiziarie.it</strong>: attiva/disattiva la ricerca della perizia su quel sito. Le sue condizioni d'uso vietano lo scraping
         automatico: attivala solo se è una scelta consapevole.</li>
