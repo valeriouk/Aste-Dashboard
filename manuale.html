@@ -1158,7 +1158,7 @@
         registro restano. Un annuncio con più stati è escluso solo se sono tutti tolti; uno stato nuovo che PVP dovesse introdurre passa sempre.
         Il dato è quello dichiarato nell'annuncio, spesso "Non specificato" (circa 6 aste su 10 al 30/09/2026); "Occupato" spesso vuol dire occupato
         dal debitore, cioè liberabile dal custode; anche "Occupato senza titolo" è in genere liberabile (nessun contratto opponibile).
-        Il riepilogo della card mostra "Occupazione: tutti gli stati" oppure gli stati esclusi, e i messaggi Telegram con i filtri usati mostrano la riga "Occupazione (PVP)".</li>
+        Il riepilogo della card mostra "Occupazione: tutti gli stati" oppure gli stati esclusi, e i messaggi Telegram con i filtri usati (anche quello di invio del batch) mostrano la riga dell'occupazione con i nomi degli stati esclusi.</li>
       <li><strong>Aste da includere</strong>: "Solo aste future" (predefinito) oppure "Includi anche concluse (analisi storiche)".</li>
       <li><strong>Perizia da astegiudiziarie.it</strong>: attiva/disattiva la ricerca della perizia su quel sito. Le sue condizioni d'uso vietano lo scraping
         automatico: attivala solo se è una scelta consapevole.</li>
@@ -1978,7 +1978,7 @@
         <tr><td>✅ tutte già note, nessuna novità</td><td>Tutte le aste trovate erano già analizzate o in un batch.</td></tr>
         <tr><td>🔢 Scanner aste — solo conteggio</td><td>Modalità <a href="#config-altri-filtri">solo conteggio</a>: numeri, nessuna spesa.</td></tr>
         <tr><td>✅ completato / ⚠️ completato con errori</td><td>Fine di un giro con analisi subito (sincrono): quante aste analizzate e quante con errori.</td></tr>
-        <tr><td>📦 Ricerca … completata</td><td>Batch inviato a Gemini: criteri, numero di aste, modello; i risultati arriveranno da pochi minuti a 24 ore dopo.</td></tr>
+        <tr><td>📦 Ricerca … completata</td><td>Batch inviato a Gemini: criteri (luogo, prezzo, tipologia, stati di occupazione esclusi), numero di aste, modello; i risultati arriveranno da pochi minuti a 24 ore dopo.</td></tr>
         <tr><td>✅ Ricerca completata, nessun documento leggibile</td><td>Nessuna asta aveva un documento valido da inviare.</td></tr>
         <tr><td>⚠️ invio del batch a Gemini fallito</td><td>Si riproverà al giro successivo.</td></tr>
         <tr><td>⛔ Scanner aste interrotto</td><td>Il database non rispondeva: il giro si è fermato senza spendere.</td></tr>
