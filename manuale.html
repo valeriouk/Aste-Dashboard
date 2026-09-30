@@ -47,7 +47,7 @@
     --warn-soft: rgba(230, 162, 60, .16);
     --ink: #1e2320;
     --ink-muted: #5b615a;
-    --ink-faint: #8c9289;
+    --ink-faint: #696f67;   /* 01/10/2026: prima #8c9289, contrasto 2,8:1 sullo sfondo; ora 4,5:1 */
     --font-display: 'Fraunces', Georgia, serif;
     --font-body: 'Inter', system-ui, -apple-system, sans-serif;
     --font-mono: 'JetBrains Mono', ui-monospace, monospace;
@@ -67,7 +67,7 @@
   .riquadro-gate h2 { font-family: var(--font-display); font-size: 1.3rem; margin: 0 0 8px; }
   .riquadro-gate p { color: var(--ink-muted); font-size: .9rem; margin: 0 0 20px; }
   .riquadro-gate form { display: flex; flex-direction: column; gap: 10px; }
-  input[type="password"], input[type="search"] { background: var(--bg); border: 1px solid var(--border); border-radius: 8px; padding: 9px 12px; font-family: var(--font-body); font-size: .95rem; color: var(--ink); }
+  input[type="password"], input[type="search"] { background: var(--bg); border: 1px solid var(--border); border-radius: 8px; padding: 9px 12px; font-family: var(--font-body); font-size: 1rem; color: var(--ink); }   /* 16 px: sotto, l'iPhone ingrandisce la pagina al tocco */
   .bottone { background: var(--ink); color: var(--surface); border: none; border-radius: 8px; padding: 10px 14px; font-family: var(--font-body); font-size: .88rem; font-weight: 600; cursor: pointer; }
   .messaggio-errore { color: var(--danger); font-size: .85rem; margin: 6px 0 0; min-height: 1em; }
 
@@ -145,7 +145,7 @@
     .voce { break-inside: avoid; }
   }
 </style>
-<link rel="stylesheet" href="colori.css?v=20261001">
+<link rel="stylesheet" href="colori.css?v=20261001b">
 <link rel="stylesheet" href="grafica-app.css?v=20261001">
 </head>
 <body>
@@ -156,7 +156,7 @@
     <h2>Manuale</h2>
     <p id="testo-gate">Verifica dell'accesso…</p>
     <form id="modulo-gate" class="nascosto" onsubmit="event.preventDefault(); sblocca();">
-      <input type="password" id="campo-password" autocomplete="current-password" placeholder="Password di lettura del registro">
+      <input type="password" id="campo-password" autocomplete="current-password" placeholder="Password di lettura del registro" aria-label="Password di lettura del registro">
       <button class="bottone" type="submit">Sblocca</button>
       <p id="errore-gate" class="messaggio-errore"></p>
     </form>
@@ -604,7 +604,7 @@
   <section class="voce" id="registro-filtro-stella">
     <h3>Filtri "★" (preferiti) e "✕" (scartati)</h3>
     <p>Mostrano solo le aste preferite o solo quelle scartate; si escludono a vicenda. Nel pannello "Filtri" del telefono si leggono
-      "★ Preferite" e "✕ Scartate". Quando uno è attivo, sulla mappa il pulsante "★/✕ sulla mappa"
+      "⭐ Preferite" e "🚫 Scartate". Quando uno è attivo, sulla mappa il pulsante "⭐/🚫 sulla mappa"
       è disattivato (preferite o scartate sono già le sole mostrate).</p>
   </section>
 
@@ -688,8 +688,8 @@
       <li><strong>Stella</strong> (preferito) e <strong>cerchio con X</strong> (non interessa): vedi <a href="#registro-stella-scarto">qui</a>.</li>
       <li><strong>Nota personale</strong>: vedi <a href="#registro-nota">qui</a>.</li>
       <li>Cifre: <a href="#registro-margine">Margine lordo</a>, Offerta minima, Valore stima (valore del perito), Superficie ed
-        <a href="#registro-euro-mq">€/mq (offerta)</a> se la superficie è nota, Stato occupazione. Sul telefono la card è più bassa: le cifre stanno su
-        due colonne, senza toglierne nessuna.</li>
+        <a href="#registro-euro-mq">€/mq (offerta)</a> se la superficie è nota, Stato occupazione. Sul telefono la card è più bassa: offerta minima e valore stima su due colonne,
+        superficie, €/mq e stato di occupazione su una riga sola ("103 mq · € 324/mq · Occupato…").</li>
       <li>Una card <strong>scartata</strong> è sbiadita e va in fondo; una <strong>selezionata</strong> ha bordo blu.</li>
       <li>Cliccando la card si apre la <a href="#registro-dettaglio">finestra dei dettagli</a>.</li>
     </ul>
@@ -1099,7 +1099,7 @@
       <li>Mostra tutte le aste filtrate. Posizione: coordinate dell'annuncio; se mancano, il centro del comune (tra circa 33 comuni del Catanese), con un
         piccolo spostamento per non sovrapporre i punti e la scritta "Posizione approssimata (centro comune)" nel popup.</li>
       <li>Colori come il <a href="#registro-sigillo">sigillo</a>; anello attorno alle aste nuove (24 ore). Legenda: Punteggio alto/medio/basso, Non valutato, Nuova (24h).</li>
-      <li><strong>Preferite e scartate sono nascoste</strong> per non riaprirle per errore: "★/✕ sulla mappa" le rimostra con un distintivo.</li>
+      <li><strong>Preferite e scartate sono nascoste</strong> per non riaprirle per errore: "⭐/🚫 sulla mappa" le rimostra con un distintivo.</li>
       <li>"✨ Solo nuove": solo le aste inserite nelle ultime 24 ore.</li>
       <li>La mappa si adatta ai risultati finché non la sposti o zoomi a mano. Sotto compare quante aste non sono mostrate e perché.</li>
       <li>Popup: indirizzo; badge ⚖️ giudizio della Superanalisi, tentativo, visita e operazione; tipologia, superficie e occupazione; data di vendita con "tra N
@@ -1116,7 +1116,7 @@
       <li>Con almeno un'asta selezionata compare la barra scura in basso: "N selezionate". La selezione resta anche cambiando filtri.</li>
       <li><strong>Sul telefono</strong> la barra è bassa e a tutta larghezza: "⇄ Confronta", "🧠 gruppo" (Superanalisi di gruppo) e "Altro ▾", che apre
         sopra le altre azioni (Preferisci, Scarta, Rimuovi flag, Esporta selezionate, Deseleziona tutto). Su PC si vedono tutte insieme.</li>
-      <li><strong>★ Preferisci tutte</strong>, <strong>✕ Scarta tutte</strong>, <strong>⊖ Rimuovi flag</strong> (tornano neutre). Con più di 10 aste
+      <li><strong>⭐ Preferisci tutte</strong>, <strong>🚫 Scarta tutte</strong>, <strong>⊖ Rimuovi flag</strong> (tornano neutre). Con più di 10 aste
         chiede conferma, dicendo quante perderanno la stella o lo scarto e quante non sono visibili con i filtri attuali.</li>
       <li>Al termine: messaggio con "Annulla" (3 secondi) e link "↶ Annulla ultimo blocco (N aste)" valido <strong>48 ore</strong> (ricordato sul
         dispositivo). L'annullamento ripristina solo le aste che non hai modificato dopo.</li>
@@ -1340,7 +1340,8 @@
   <section class="voce" id="config-conti">
     <h3>Regime fiscale e conti (scheda Conti)</h3>
     <p>Valgono per la Superanalisi (singola e di gruppo), lo spazio sull'offerta del registro e il <a href="#registro-operazione">conto reale</a>
-      delle operazioni. "Salva" li rende validi da subito nelle pagine che apri o ricarichi.</p>
+      delle operazioni. La card mostra il riepilogo; "Modifica" apre la finestra con i valori salvati e "Salva" li rende validi da subito nelle
+      pagine che apri o ricarichi.</p>
     <ul>
       <li><strong>Regime fiscale</strong>: <strong>Privato</strong> (predefinito) = 26% sulla plusvalenza se rivendi entro 5 anni dall'acquisto;
         <strong>Impresa</strong> (per esempio una SRL) = imposte sull'utile con tutte le spese deducibili (interessi e detenzione compresi), imposta di
@@ -1356,7 +1357,7 @@
   <section class="voce" id="config-checklist">
     <h3>Checklist delle aste (scheda Conti)</h3>
     <p>Voci predefinite della checklist della sezione <a href="#registro-operazione">🧭 Operazione</a>, una per riga, in due gruppi: "Prima
-      dell'offerta" e "Dopo l'aggiudicazione". "Salva" le rende valide per tutte le aste (le voci aggiunte a una singola asta restano sue);
+      dell'offerta" e "Dopo l'aggiudicazione". La card mostra quante voci ci sono; "Modifica" apre la finestra. "Salva" le rende valide per tutte le aste (le voci aggiunte a una singola asta restano sue);
       "↺ Voci predefinite" rimette nei campi quelle iniziali, da salvare. Se togli o rinomini una voce, le spunte già date restano salvate ma non si
       vedono più (rimettendo la voce uguale ricompaiono). "Visita fatta" non si scrive qui: c'è sempre ed è spuntata dalla visita. Non fa parte dei
       valori ripristinati da "Ripristina tutti i valori predefiniti".</p>
@@ -1440,7 +1441,7 @@
 
   <section class="voce" id="stat-liste">
     <h3>Liste a barre: tipologia, tribunale, zone, punteggio, ristrutturazione</h3>
-    <p>Ogni lista mostra le prime 8 voci (il resto in "+ altri N"); le liste nel tempo (perizie, visite) ne mostrano 14. Per tipologia; per tribunale; zone segnalate (nascosta se non ce ne sono); distribuzione
+    <p>Ogni lista mostra le prime 8 voci (il resto in "+ altri N"); le liste nel tempo (perizie, visite) ne mostrano 14. Per tipologia (nomi leggibili, le combinazioni con lo stesso nome sommate); per tribunale (solo il nome della città); zone segnalate (nascosta se non ce ne sono); distribuzione
       del punteggio in fasce (non valutata ≤ 1, 1-20, 21-40, 41-60, 61-80, 81-100); livello di ristrutturazione suggerito. Gli abusi edilizi non sono
       contati perché sono un testo, non una categoria.</p>
   </section>

@@ -42,7 +42,7 @@ html[data-tema="scuro"] {
   --danger-soft: rgba(224, 122, 102, .16);
   --ink: #e6eae4;
   --ink-muted: #a9b1a7;
-  --ink-faint: #7b8379;
+  --ink-faint: #8f978d;   /* prima #7b8379: 4,3:1 sulle card; ora 5,5:1 */
   --vetro: rgba(27, 31, 28, .78);
   --vetro-forte: rgba(27, 31, 28, .9);
   --vetro-barra: rgba(37, 42, 38, .78);
@@ -69,7 +69,7 @@ html[data-tema="scuro"] {
     --danger-soft: rgba(224, 122, 102, .16);
     --ink: #e6eae4;
     --ink-muted: #a9b1a7;
-    --ink-faint: #7b8379;
+    --ink-faint: #8f978d;   /* prima #7b8379: 4,3:1 sulle card; ora 5,5:1 */
     --vetro: rgba(27, 31, 28, .78);
     --vetro-forte: rgba(27, 31, 28, .9);
     --vetro-barra: rgba(37, 42, 38, .78);

@@ -44,7 +44,7 @@
     --danger-soft: rgba(139, 61, 46, .10);
     --ink: #1e2320;
     --ink-muted: #5b615a;
-    --ink-faint: #8c9289;
+    --ink-faint: #696f67;   /* 01/10/2026: prima #8c9289, contrasto 2,8:1 sullo sfondo; ora 4,5:1 */
     --font-display: 'Fraunces', Georgia, serif;
     --font-body: 'Inter', system-ui, -apple-system, sans-serif;
     --font-mono: 'JetBrains Mono', ui-monospace, monospace;
@@ -164,7 +164,7 @@
     }
   }
 </style>
-<link rel="stylesheet" href="colori.css?v=20261001">
+<link rel="stylesheet" href="colori.css?v=20261001b">
 <link rel="stylesheet" href="grafica-app.css?v=20261001">
 </head>
 <body>
@@ -188,7 +188,7 @@
     <h2>Accesso</h2>
     <p>Inserisci la password di scrittura (la stessa di Configurazione).</p>
     <form onsubmit="event.preventDefault(); sblocca();">
-      <input type="password" id="campo-password" autocomplete="current-password" placeholder="Password">
+      <input type="password" id="campo-password" autocomplete="current-password" placeholder="Password" aria-label="Password di scrittura">
       <button class="bottone" type="submit">Sblocca</button>
       <p id="errore-gate" class="messaggio errore nascosto"></p>
     </form>
@@ -202,6 +202,7 @@
   </div>
 </div>
 
+<script src="etichette.js?v=20261001"></script>
 <script src="underwriting.js?v=20261001"></script>
 <script src="superanalisi-esterne.js?v=20261001"></script>
 <script src="feedback.js?v=20261001"></script>
@@ -341,7 +342,7 @@
     document.title = `Superanalisi · ${r.comune__indirizzo || ID_ASTA}`;
     document.getElementById("titolo").textContent = r.comune__indirizzo || `Asta ${ID_ASTA}`;
     document.getElementById("sottotitolo").textContent =
-      [r.tribunale, r.n__lotto ? `lotto ${r.n__lotto}` : "", r.tipologia ? String(r.tipologia).replace(/_/g, " ").toLowerCase() : ""]
+      [Etichette.tribunale(r.tribunale), r.n__lotto ? Etichette.lotto(r.n__lotto) : "", r.tipologia ? Etichette.tipologia(r.tipologia) : ""]
         .filter(Boolean).join(" · ");
     const html = [`<div id="sa-riepilogo" class="sezione-pagina">${sezioneRiepilogo(r, null)}</div>`,
       `<div id="sa-annuncio" class="sezione-pagina">${sezioneAnnuncio(r, a)}</div>`];
@@ -493,7 +494,7 @@
     return `<div class="sezione"><h2>Perizia</h2>
       <div class="griglia">
         ${voce("Tipo di documento", testo(P.tipo_documento))}
-        ${voce("Data perizia", testo(P.data_perizia), P.data_ultima_integrazione ? ` (integrazione ${escapeHtml(P.data_ultima_integrazione)})` : "")}
+        ${voce("Data perizia", Etichette.data(testo(P.data_perizia)), P.data_ultima_integrazione ? ` (integrazione ${escapeHtml(Etichette.data(P.data_ultima_integrazione))})` : "")}
         ${voce("Lotto trovato", sino(P.lotto_trovato))}
         ${voce("Lotti / beni usati", testo(P.lotti_usati))}
         ${voce("Quota in vendita", testo(I.quota_in_vendita))}
@@ -529,7 +530,7 @@
       <h3>Urbanistica</h3>
       <div class="griglia">
         ${voce("Conformità urbanistica", testo(U.conformita_urbanistica))}
-        ${voce("Agibilità", testo(U.agibilita), U.data_agibilita ? ` (${escapeHtml(U.data_agibilita)})` : "")}
+        ${voce("Agibilità", testo(U.agibilita), U.data_agibilita ? ` (${escapeHtml(Etichette.data(U.data_agibilita))})` : "")}
         ${voce("Costo totale regolarizzazione (CTU)", eur(U.costo_totale_regolarizzazione_ctu_euro))}
         ${voce("Condono pendente", sino(CP.presente), CP.presente === true || CP.presente === "true"
           ? ` ${escapeHtml([CP.legge, CP.anno_domanda, CP.stato].filter((x) => !vuoto(x)).join(", "))} ${pag(CP.pagina)}` : "")}
@@ -539,7 +540,7 @@
         : `<p class="nota">Nessuna difformità indicata.</p>`}
 
       <h3>Occupazione</h3>
-      <p><strong>${escapeHtml(testo(O.stato))}</strong>${O.data_rilevazione ? ` (rilevata ${escapeHtml(O.data_rilevazione)})` : ""} ${pag(O.pagina)}</p>
+      <p><strong>${escapeHtml(testo(O.stato))}</strong>${O.data_rilevazione ? ` (rilevata ${escapeHtml(Etichette.data(O.data_rilevazione))})` : ""} ${pag(O.pagina)}</p>
       ${vuoto(O.estremi_contratto) ? "" : `<p class="nota">Contratto: ${escapeHtml(O.estremi_contratto)}
         ${vuoto(O.scadenza_contratto) ? "" : ` · scadenza ${escapeHtml(O.scadenza_contratto)}`}
         ${vuoto(O.canone_mensile_euro) ? "" : ` · canone ${eur(O.canone_mensile_euro)}/mese`}</p>`}
@@ -837,17 +838,22 @@
   const NOMI_CLASSE_STATO = { A_pronto: "pronto da abitare", B_rinfrescare: "da rinfrescare", C_rimodernare: "da rimodernare",
     D_ristrutturare: "da ristrutturare", E_degrado: "degrado", non_valutabile: "non valutabile (testo e foto non bastano)" };
   const LIVELLO_DA_CLASSE_STATO = { A_pronto: "nessuna", B_rinfrescare: "leggera", C_rimodernare: "media", D_ristrutturare: "pesante", E_degrado: "pesante" };
+  // Testo del motore reso leggibile: "tabella D_ristrutturare × 62.59 mq" → "livello pesante × 63 mq".
+  // Usato nel riquadro Lavori, nel riepilogo del conto e nel testo per le AI esterne.
+  function testoLavoriLeggibile(t) {
+    return String(t || "—")
+      .replace(/tabella (\w+)/, (m, c) => `livello ${LIVELLO_DA_CLASSE_STATO[c] || c}`)
+      .replace(/(\d+(?:\.\d+)?) mq/, (m, n) => `${Math.round(Number(n))} mq`)
+      .replace("stato non valutabile: usata la classe D (prudenziale)", "stato non valutabile: usato «pesante» per prudenza");
+  }
+
   function bloccoLavoriUtente(r, a, esito) {
     const classe = a && a.stato_manutentivo ? a.stato_manutentivo.classe : null;
     const automatico = classe === "non_valutabile" ? "pesante, per prudenza" : (LIVELLO_DA_CLASSE_STATO[classe] || "dalla perizia");
     const livelloTu = r.livello_lavori_utente || "";
     const importoTu = r.importo_lavori_utente === null || r.importo_lavori_utente === undefined ? "" : r.importo_lavori_utente;
     const l = esito.lavori || {};
-    // Testo del motore reso leggibile: "tabella D_ristrutturare × 62.59 mq" → "livello pesante × 63 mq".
-    const leggibile = (t) => String(t || "—")
-      .replace(/tabella (\w+)/, (m, c) => `livello ${LIVELLO_DA_CLASSE_STATO[c] || c}`)
-      .replace(/(\d+(?:\.\d+)?) mq/, (m, n) => `${Math.round(Number(n))} mq`)
-      .replace("stato non valutabile: usata la classe D (prudenziale)", "stato non valutabile: usato «pesante» per prudenza");
+    const leggibile = testoLavoriLeggibile;
     const come = l.daUtente === "importo" ? "importo tuo (niente +20% nel prudenziale, restano gli imprevisti)"
       : l.daUtente === "livello" ? `${leggibile(l.fonte)} (la stima del perito non si usa)` : `${leggibile(l.fonte)}${l.nota ? "; " + leggibile(l.nota) : ""}`;
     const stimaPerito = a && a.lavori_ctu && Number(a.lavori_ctu.importo_euro) > 0 ? Number(a.lavori_ctu.importo_euro) : null;
@@ -983,7 +989,7 @@
         <div class="voce"><div class="etichetta">Qualità dei dati</div><div class="numero-grande">${escapeHtml(esito.qualita.livello)}</div></div>
       </div>
       ${esito.arv ? `<p class="nota">Valore di rivendita: ${escapeHtml(esito.arv.fonte)} (affidabilità ${escapeHtml(esito.arv.affidabilita)}).
-        Superficie: ${mq(esito.superficie.mq)} (${escapeHtml(esito.superficie.fonte)}). Lavori: ${eur(esito.lavori.importo)} (${escapeHtml(esito.lavori.fonte)}).</p>` : ""}
+        Superficie: ${mq(esito.superficie.mq)} (${escapeHtml(esito.superficie.fonte)}). Lavori: ${eur(esito.lavori.importo)} (${escapeHtml(testoLavoriLeggibile(esito.lavori.fonte))}).</p>` : ""}
       ${esito.maxBid ? `<p class="nota">Offerta massima per scenario: ${scenari.map((s) => `${s} ${eur(esito.maxBid[s])}`).join(" · ")} — vincolo: ${escapeHtml(esito.vincoloOffertaMassima || "—")}.</p>` : ""}
       ${tabella}
       ${esito.motivi.length ? `<h3>Cosa pesa sulla classe</h3><ul class="elenco">${esito.motivi.map((m) => `<li>${escapeHtml(m)}</li>`).join("")}</ul>` : ""}
@@ -1044,7 +1050,7 @@
       const c = e.scenariAlMinimo && e.scenariAlMinimo.centrale;
       righe.push("", "IL NOSTRO CONTO (stime automatiche, da verificare):");
       if (e.arv) righe.push(`- Valore di rivendita dopo i lavori: prudenziale ${eur(e.arv.prudenziale)}, centrale ${eur(e.arv.centrale)}, ottimistico ${eur(e.arv.ottimistico)} (fonte: ${e.arv.fonte})`);
-      righe.push(`- Superficie usata: ${mq(e.superficie && e.superficie.mq)}${e.superficie && e.superficie.fonte ? ` (${e.superficie.fonte})` : ""}; lavori: ${eur(e.lavori && e.lavori.importo)}${e.lavori && e.lavori.fonte ? ` (${e.lavori.fonte})` : ""}; regolarizzazione: ${e.regolarizzazione && e.regolarizzazione.nonDeterminato ? "non determinata" : eur(e.regolarizzazione && e.regolarizzazione.conRicarico)}`);
+      righe.push(`- Superficie usata: ${mq(e.superficie && e.superficie.mq)}${e.superficie && e.superficie.fonte ? ` (${e.superficie.fonte})` : ""}; lavori: ${eur(e.lavori && e.lavori.importo)}${e.lavori && e.lavori.fonte ? ` (${testoLavoriLeggibile(e.lavori.fonte)})` : ""}; regolarizzazione: ${e.regolarizzazione && e.regolarizzazione.nonDeterminato ? "non determinata" : eur(e.regolarizzazione && e.regolarizzazione.conRicarico)}`);
       if (c) righe.push(`- All'offerta minima, scenario centrale: costo totale ${eur(c.totale)}, utile netto ${eur(c.utileNettoStimato)}${c.capitale ? ` (${Math.round(c.utileNettoStimato / c.capitale * 100)}% del capitale)` : ""}, ${c.mesi} mesi`);
       righe.push(`- Offerta massima per il nostro obiettivo di utile: ${eur(e.offertaMassima)}`);
       righe.push(`- Nostra classe: ${testo(e.classe)}${e.motivi && e.motivi.length ? ` (${e.motivi.slice(0, 4).join("; ")})` : ""}`);

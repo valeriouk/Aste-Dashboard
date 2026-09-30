@@ -67,7 +67,7 @@
     --danger-soft: rgba(139, 61, 46, .10);
     --ink: #1e2320;
     --ink-muted: #5b615a;
-    --ink-faint: #8c9289;
+    --ink-faint: #696f67;   /* 01/10/2026: prima #8c9289, contrasto 2,8:1 sullo sfondo; ora 4,5:1 */
     --font-display: 'Fraunces', Georgia, serif;
     --font-body: 'Inter', system-ui, -apple-system, sans-serif;
     --font-mono: 'JetBrains Mono', ui-monospace, monospace;
@@ -1378,6 +1378,9 @@
      l'intera riga invece di forzarle nella metà colonna è insieme più
      ordinato e più leggibile. */
   .cifra-larga { grid-column: 1 / -1; }
+  /* Riga compatta "103 mq · € 324/mq · occupazione": solo sul telefono, al
+     posto delle tre celle (vedi il @media 640px). */
+  .cifre-riga-compatta { display: none; margin: 0; font-size: .85rem; color: var(--ink-muted); overflow-wrap: break-word; }
 
   .cifra-etichetta {
     font-size: .72rem;
@@ -2486,6 +2489,8 @@
     .lotto-comune { font-size: 1.02rem; overflow-wrap: break-word; word-break: normal; }
     .lotto-meta { overflow-wrap: break-word; word-break: normal; }
     .lotto-cifre { grid-template-columns: 1fr 1fr; gap: 8px 12px; padding: 8px 0 10px; margin-bottom: 10px; }
+    .lotto-cifre .cifra-dettaglio { display: none; }
+    .lotto-cifre .cifre-riga-compatta { display: block; }
     .lotto-margine { padding-top: 10px; }
     .lotto-margine-valore { font-size: 1.3rem; }
     .cifra-valore { font-size: .88rem; }
@@ -2654,10 +2659,11 @@
       -webkit-backdrop-filter: saturate(180%) blur(14px); backdrop-filter: saturate(180%) blur(14px); }
   }
 </style>
-<link rel="stylesheet" href="colori.css?v=20261001">
+<link rel="stylesheet" href="colori.css?v=20261001b">
 </head>
 <body>
 <script src="menu.js?v=20261001"></script>
+<script src="etichette.js?v=20261001"></script>
 <script src="underwriting.js?v=20261001"></script>
 <script src="feedback.js?v=20261001"></script>
 <script src="operazioni.js?v=20260930"></script>
@@ -2703,7 +2709,7 @@
 
   <div class="controlli">
     <div class="controlli-riga-compatta">
-      <input type="text" id="ricerca" placeholder="Cerca">
+      <input type="text" id="ricerca" placeholder="Cerca" aria-label="Cerca nel registro">
       <button type="button" id="bottone-apri-filtri" class="bottone-apri-filtri" onclick="apriFoglioFiltri()">
         Filtri<span id="badge-filtri-attivi" class="badge-filtri nascosto">0</span>
       </button>
@@ -2745,8 +2751,8 @@
         <button type="button" class="pillola" data-stato="occupato" onclick="attivaFiltroOccupazione('occupato')" title="Occupato"><span class="testo-pillola-desktop">Occ.</span><span class="testo-pillola-mobile">Occupato</span></button>
       </div>
       <div class="gruppo-pillole" id="gruppo-preferiti">
-        <button type="button" class="pillola" data-stato-pref="preferito" onclick="attivaFiltroPreferitiScartati('preferito')" title="Preferiti">★<span class="testo-pillola-mobile"> Preferite</span></button>
-        <button type="button" class="pillola" data-stato-pref="scartato" onclick="attivaFiltroPreferitiScartati('scartato')" title="Scartati">✕<span class="testo-pillola-mobile"> Scartate</span></button>
+        <button type="button" class="pillola" data-stato-pref="preferito" onclick="attivaFiltroPreferitiScartati('preferito')" title="Preferiti" aria-label="Preferite">⭐<span class="testo-pillola-mobile"> Preferite</span></button>
+        <button type="button" class="pillola" data-stato-pref="scartato" onclick="attivaFiltroPreferitiScartati('scartato')" title="Scartati" aria-label="Scartate">🚫<span class="testo-pillola-mobile"> Scartate</span></button>
       </div>
       <div class="gruppo-pillole" id="gruppo-concluse">
         <button type="button" class="pillola" id="pillola-concluse" onclick="alternaMostraConcluse()" title="Mostra solo le aste concluse" aria-label="Concluse">🏁<span class="testo-pillola-mobile"> Concluse</span></button>
@@ -2847,7 +2853,7 @@
         <span class="legenda-voce"><span class="pallino-legenda non-valutato"></span>Non valutato</span>
         <span class="legenda-voce"><span class="pallino-legenda anello-nuova"></span>Nuova (24h)</span>
       </p>
-      <button type="button" class="pillola" id="pillola-valutati-mappa" onclick="alternaValutatiSullaMappa()" title="Preferiti e scartati sono nascosti dalla mappa per evitare di riaprirli per errore — questo pulsante li rimostra, con un distintivo per riconoscerli">★/✕ sulla mappa</button>
+      <button type="button" class="pillola" id="pillola-valutati-mappa" onclick="alternaValutatiSullaMappa()" title="Preferiti e scartati sono nascosti dalla mappa per evitare di riaprirli per errore — questo pulsante li rimostra, con un distintivo per riconoscerli">⭐/🚫 sulla mappa</button>
       <button type="button" class="pillola" id="pillola-solo-nuove-mappa" onclick="alternaSoloNuoveSullaMappa()" title="Mostra sulla mappa solo le aste trovate nelle ultime 24 ore">✨ Solo nuove</button>
     </div>
     <p class="nota-mappa" id="nota-comuni-mancanti"></p>
@@ -2861,7 +2867,7 @@
     <div class="riquadro-password-inline">
       <h3>Password richiesta</h3>
       <p>Serve solo la prima volta in questa sessione, per preferiti, scarti, note, link utili, correzioni dei costi e azioni in blocco.</p>
-      <input type="password" id="campo-password-inline" placeholder="Password" autocomplete="current-password" onkeydown="if(event.key==='Enter') confermaPasswordInline()">
+      <input type="password" id="campo-password-inline" placeholder="Password" aria-label="Password di scrittura" autocomplete="current-password" onkeydown="if(event.key==='Enter') confermaPasswordInline()">
       <div class="riga-bottoni-password">
         <button type="button" class="bottone-password-annulla" onclick="chiudiModalePassword()">Annulla</button>
         <button type="button" class="bottone-password-conferma" onclick="confermaPasswordInline()">Conferma</button>
@@ -2917,7 +2923,7 @@
     <div class="riquadro-password-inline">
       <h3>Registro protetto</h3>
       <p>Inserisci la password per aprire il registro.</p>
-      <input type="password" id="campo-password-lettura" placeholder="Password" autocomplete="current-password" onkeydown="if(event.key==='Enter') confermaPasswordLettura()">
+      <input type="password" id="campo-password-lettura" placeholder="Password" aria-label="Password di lettura del registro" autocomplete="current-password" onkeydown="if(event.key==='Enter') confermaPasswordLettura()">
       <div class="riga-bottoni-password">
         <button type="button" class="bottone-password-conferma" style="flex:1" onclick="confermaPasswordLettura()">Sblocca</button>
       </div>
@@ -2948,8 +2954,8 @@
       <button type="button" class="barra-selezione-altro" onclick="alternaAltroSelezione()" aria-expanded="false">Altro ▾</button>
     </div>
     <div class="barra-selezione-azioni barra-selezione-secondarie">
-      <button type="button" class="barra-selezione-preferisci" onclick="eseguiAzioneInBlocco('preferito')">★ Preferisci tutte</button>
-      <button type="button" class="barra-selezione-scarta" onclick="eseguiAzioneInBlocco('scartato')">✕ Scarta tutte</button>
+      <button type="button" class="barra-selezione-preferisci" onclick="eseguiAzioneInBlocco('preferito')">⭐ Preferisci tutte</button>
+      <button type="button" class="barra-selezione-scarta" onclick="eseguiAzioneInBlocco('scartato')">🚫 Scarta tutte</button>
       <button type="button" class="barra-selezione-rimuovi" onclick="eseguiAzioneInBlocco(null)">⊖ Rimuovi flag</button>
       <button type="button" onclick="esportaCSV('selezionate')">Esporta selezionate</button>
       <button type="button" onclick="deselezionaTutto()">Deseleziona tutto</button>
@@ -5792,25 +5798,8 @@
   // filtro che comunque lo riguarda. Un Set toglie da solo eventuali
   // duplicati (capita che PVP ripeta lo stesso codice più volte).
   // Nomi leggibili dei codici PVP, solo per mostrarli (ricerca e CSV usano
-  // ancora i codici). Codice sconosciuto: minuscolo senza trattini bassi.
-  const NOMI_TIPOLOGIA = {
-    ABITAZIONE_TIPO_CIV: "Abitazione civile", ABITAZIONE_TIPO_ECO: "Abitazione economica",
-    ABITAZIONE_TIPO_POP: "Abitazione popolare", ABITAZIONE_TIPO_UPOP: "Abitazione ultrapopolare",
-    ABITAZIONE_TIPO_RUR: "Abitazione rurale", ABITAZIONE_IN_VILLINI: "Villino", APPARTAMENTO: "Appartamento",
-    GARAGE_AUTORIMESSA: "Garage", POSTO_AUTO: "Posto auto", TETTOIE_CHIUSE_APERTE: "Tettoia",
-    NEGOZIO: "Negozio", NEGOZI_BOTTEGHE: "Negozio", UFFICIO: "Ufficio", UFFICI_E_STUDI: "Ufficio o studio",
-    LABORATORI_ARTI: "Laboratorio", LABORATORIO_ARTIGIANO: "Laboratorio artigiano", ISTITUTO_CREDITO_CAMBIO: "Istituto di credito",
-    TERRENO: "Terreno", DEPOSITO: "Deposito", MAGAZZINO: "Magazzino", MAGAZZINI_E_DEPOSITO: "Magazzino o deposito",
-    CANTINA: "Cantina", STALLE_SCUDERIE_RIMESSE: "Rimessa", FABBRICATI_COSTRUITI_PER_ESIGENZE_IND: "Fabbricato industriale",
-    FABBRICATO: "Fabbricato", FABBRICATO_IN_COSTR: "Fabbricato in costruzione", FABBRICATI_COMMERCIALI: "Fabbricato commerciale",
-    COMPENDIO_PIGNORATO: "Compendio pignorato", LASTRICO_SOLARE: "Lastrico solare", PORZIONE_DI_IMMOBILE: "Porzione di immobile",
-  };
-  function etichettaTipologia(tipologiaGrezza) {
-    const voci = (tipologiaGrezza || "").split(",").map(t => t.trim()).filter(t => t && t !== "N/D");
-    if (!voci.length) return "N/D";
-    const nomi = voci.map(t => NOMI_TIPOLOGIA[t] || (t.charAt(0) + t.slice(1).toLowerCase()).replace(/_/g, " "));
-    return [...new Set(nomi)].join(" + ");
-  }
+  // ancora i codici): elenco in etichette.js, condiviso con le Statistiche.
+  function etichettaTipologia(tipologiaGrezza) { return Etichette.tipologia(tipologiaGrezza); }
   // Giudizio della Superanalisi (PULITA…DA SCARTARE) calcolato qui con lo
   // stesso motore (underwriting.js, giudizioRapido): regole fisse sui fatti
   // della perizia, diverso dal punteggio del sigillo, che è il voto dell'AI.
@@ -6343,7 +6332,7 @@
     const bloccato = !!filtroPreferitiScartatiAttivo;
     bottone.disabled = bloccato;
     bottone.title = bloccato
-      ? "Non disponibile mentre il filtro ★/✕ qui sopra è attivo — con quel filtro, preferiti/scartati sono già l'unica cosa mostrata."
+      ? "Non disponibile mentre il filtro ⭐/🚫 qui sopra è attivo — con quel filtro, preferiti/scartati sono già l'unica cosa mostrata."
       : "Preferiti e scartati sono nascosti dalla mappa per evitare di riaprirli per errore — questo pulsante li rimostra, con un distintivo per riconoscerli";
   }
 
@@ -7056,21 +7045,25 @@
   function cartellaLotto(a, indice) {
     const livello = livelloPunteggio(a.punteggio, a.valoreStima);
     const contenutoSigillo = livello === "non-valutato" ? "Non<br>valutato" : a.punteggio;
-    const distanzaTesto = a.distanza !== null ? `${a.distanza} km` : "distanza N/D";
+    const distanzaTesto = a.distanza !== null ? `${Etichette.numero(a.distanza)} km` : "distanza N/D";
     const conclusa = astaConclusa(a.dataVendita);
 
     // Celle superficie/€ al mq: solo se il dato è presente nel database (potrebbe
     // non esserci ancora se lo schema non è aggiornato, o se Gemini
     // non ha trovato la superficie in quella specifica perizia).
     const rigaSuperficie = a.superficieMq !== null ? `
-          <div>
+          <div class="cifra-dettaglio">
             <p class="cifra-etichetta">Superficie</p>
             <p class="cifra-valore">${a.superficieMq.toFixed(0)} mq</p>
           </div>
-          <div>
+          <div class="cifra-dettaglio">
             <p class="cifra-etichetta">€/mq (offerta)</p>
             <p class="cifra-valore">${a.euroMq !== null ? formattaEuro(a.euroMq) + "/mq" : "—"}</p>
           </div>` : "";
+    // Sul telefono superficie, €/mq e occupazione stanno su una riga sola (01/10/2026).
+    const rigaCompatta = [a.superficieMq !== null ? `${a.superficieMq.toFixed(0)} mq` : "",
+      a.superficieMq !== null && a.euroMq !== null ? `${formattaEuro(a.euroMq)}/mq` : "",
+      a.statoOccupazione && a.statoOccupazione !== "N/D" ? a.statoOccupazione : ""].filter(Boolean).join(" · ");
 
     // Icone stella/scarto: piena + colorata quando attiva, solo contorno
     // quando no — stessa convenzione (pieno = attivo) di GitHub/Twitter,
@@ -7113,12 +7106,12 @@
           <label class="area-selezione" onclick="event.stopPropagation()"><input type="checkbox" class="checkbox-selezione" aria-label="Seleziona per confronto o azioni multiple" ${astaSelezionate.has(a.id) ? "checked" : ""} onkeydown="event.stopPropagation()" onchange="onCambiaSelezione('${a.id}', this.checked)"></label>
           <div class="sigillo ${livello}">${contenutoSigillo}</div>
           <div>
-            <p class="lotto-id">${a.lotto ? "Lotto " + escapeHtml(a.lotto) + " · " : ""}${escapeHtml(etichettaTipologia(a.tipologia))}</p>
+            <p class="lotto-id">${a.lotto ? escapeHtml(Etichette.lotto(a.lotto)) + " · " : ""}${escapeHtml(etichettaTipologia(a.tipologia))}</p>
             <p class="lotto-comune">${escapeHtml(a.comune)}</p>
           </div>
           <div class="lotto-azioni">
-            <button type="button" class="bottone-azione-lotto${a.preferito ? ' preferito-attivo' : ''}" title="Preferito" onclick="onClickStella(event, '${a.id}')">${iconaStella}</button>
-            <button type="button" class="bottone-azione-lotto${a.scartato ? ' scartato-attivo' : ''}" title="Non interessa" onclick="onClickScarta(event, '${a.id}')">${iconaScarta}</button>
+            <button type="button" class="bottone-azione-lotto${a.preferito ? ' preferito-attivo' : ''}" title="Preferito" aria-label="${a.preferito ? 'Togli dai preferiti' : 'Aggiungi ai preferiti'}" aria-pressed="${a.preferito ? 'true' : 'false'}" onclick="onClickStella(event, '${a.id}')">${iconaStella}</button>
+            <button type="button" class="bottone-azione-lotto${a.scartato ? ' scartato-attivo' : ''}" title="Non interessa" aria-label="${a.scartato ? 'Togli dagli scartati' : 'Scarta: non interessa'}" aria-pressed="${a.scartato ? 'true' : 'false'}" onclick="onClickScarta(event, '${a.id}')">${iconaScarta}</button>
           </div>
         </div>
         <div class="lotto-sotto-testata">
@@ -7148,10 +7141,11 @@ ${notaHtml}
             <p class="cifra-etichetta">Valore stima</p>
             <p class="cifra-valore">${a.valoreStima > 0 ? formattaEuro(a.valoreStima) : "—"}</p>
           </div>${rigaSuperficie}
-          <div class="cifra-larga">
+          <div class="cifra-larga cifra-dettaglio">
             <p class="cifra-etichetta">Stato occupazione</p>
             <p class="cifra-valore">${escapeHtml(a.statoOccupazione)}</p>
           </div>
+          ${rigaCompatta ? `<p class="cifra-larga cifre-riga-compatta">${escapeHtml(rigaCompatta)}</p>` : ""}
         </div>
       </article>
     `;
@@ -7288,7 +7282,7 @@ ${notaHtml}
     {etichetta: "Superficie", formatta: a => a.superficieMq !== null ? `${a.superficieMq.toFixed(0)} mq` : "—"},
     {etichetta: "€/mq (offerta)", formatta: a => a.euroMq !== null ? formattaEuro(a.euroMq) + "/mq" : "—"},
     {etichetta: "Stato occupazione", formatta: a => escapeHtml(a.statoOccupazione)},
-    {etichetta: "Distanza", formatta: a => a.distanza !== null ? `${a.distanza} km` : "N/D"},
+    {etichetta: "Distanza", formatta: a => a.distanza !== null ? `${Etichette.numero(a.distanza)} km` : "N/D"},
     {etichetta: "Vendita", formatta: a => formattaData(a.dataVendita)},
     {etichetta: "Tentativo (storico PVP)", formatta: a => testoTentativo(a.storico) || "—"},
   ];
@@ -7310,8 +7304,8 @@ ${notaHtml}
           <div class="sigillo ${livello}" style="width:44px;height:44px;font-size:1rem;">${contenutoSigillo}</div>
           <p class="confronto-comune"><button type="button" onclick="apriDettagliDaConfronto('${a.id}')" title="Apri la scheda">${escapeHtml(a.comune)}</button></p>
           <div class="confronto-azioni">
-            <button type="button" class="bottone-azione-lotto${a.preferito ? ' preferito-attivo' : ''}" title="Preferito" onclick="onClickStella(event, '${a.id}')">${iconaStella}</button>
-            <button type="button" class="bottone-azione-lotto${a.scartato ? ' scartato-attivo' : ''}" title="Non interessa" onclick="onClickScarta(event, '${a.id}')">${iconaScarta}</button>
+            <button type="button" class="bottone-azione-lotto${a.preferito ? ' preferito-attivo' : ''}" title="Preferito" aria-label="${a.preferito ? 'Togli dai preferiti' : 'Aggiungi ai preferiti'}" aria-pressed="${a.preferito ? 'true' : 'false'}" onclick="onClickStella(event, '${a.id}')">${iconaStella}</button>
+            <button type="button" class="bottone-azione-lotto${a.scartato ? ' scartato-attivo' : ''}" title="Non interessa" aria-label="${a.scartato ? 'Togli dagli scartati' : 'Scarta: non interessa'}" aria-pressed="${a.scartato ? 'true' : 'false'}" onclick="onClickScarta(event, '${a.id}')">${iconaScarta}</button>
           </div>
         </div>`;
     }).join("");
@@ -8798,7 +8792,7 @@ ${notaHtml}
   function contenutoFinestraDettagli(a) {
     const livello = livelloPunteggio(a.punteggio, a.valoreStima);
     const contenutoSigillo = livello === "non-valutato" ? "Non<br>valutato" : a.punteggio;
-    const distanzaTesto = a.distanza !== null ? `${a.distanza} km` : "distanza N/D";
+    const distanzaTesto = a.distanza !== null ? `${Etichette.numero(a.distanza)} km` : "distanza N/D";
     const conclusa = astaConclusa(a.dataVendita);
 
     const rigaSuperficie = a.superficieMq !== null ? `
@@ -8882,7 +8876,7 @@ ${notaHtml}
       ["sez-storico", "Storico", sezioneStoricoAste(a)],
       ["sez-dettagli", "Dettagli", `<div class="sezione-costi">
           <h3 class="sezione-costi-titolo">📋 Dettagli</h3>
-          <div class="dettaglio-riga"><span>Tribunale</span><span>${escapeHtml(a.tribunale)}</span></div>
+          <div class="dettaglio-riga"><span>Tribunale</span><span>${escapeHtml(Etichette.tribunale(a.tribunale))}</span></div>
           <div class="dettaglio-riga"><span>Disponibilità (PVP)</span><span>${escapeHtml(etichettaDisponibilita(a.disponibilita))}</span></div>
           <div class="dettaglio-riga"><span>Prezzo base</span><span>${formattaEuro(a.prezzoBase)}</span></div>
           <div class="dettaglio-riga"><span>Rilancio minimo</span><span>${formattaEuro(a.rilancioMinimo)}</span></div>
@@ -8909,7 +8903,7 @@ ${notaHtml}
         <div class="finestra-dettagli-testata">
           <div class="sigillo ${livello}">${contenutoSigillo}</div>
           <div>
-            <p class="lotto-id">${a.lotto ? "Lotto " + escapeHtml(a.lotto) + " · " : ""}${escapeHtml(etichettaTipologia(a.tipologia))}</p>
+            <p class="lotto-id">${a.lotto ? escapeHtml(Etichette.lotto(a.lotto)) + " · " : ""}${escapeHtml(etichettaTipologia(a.tipologia))}</p>
             <div class="contenitore-indirizzo">
               <p class="lotto-comune"><button type="button" class="indirizzo-cliccabile" id="bottone-indirizzo-dettagli" onclick="apriMenuIndirizzo(this)" aria-expanded="false" title="Apri in Google Maps o Street View">📍 ${escapeHtml(a.comune)}</button></p>
               <div class="menu-condividi menu-indirizzo nascosto" id="menu-indirizzo-dettagli">

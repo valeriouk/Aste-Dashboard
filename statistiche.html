@@ -33,7 +33,7 @@
     --danger-soft: rgba(139, 61, 46, .10);
     --ink: #1e2320;
     --ink-muted: #5b615a;
-    --ink-faint: #8c9289;
+    --ink-faint: #696f67;   /* 01/10/2026: prima #8c9289, contrasto 2,8:1 sullo sfondo; ora 4,5:1 */
     --font-display: 'Fraunces', Georgia, serif;
     --font-body: 'Inter', system-ui, -apple-system, sans-serif;
     --font-mono: 'JetBrains Mono', ui-monospace, monospace;
@@ -213,11 +213,12 @@
     }
   }
 </style>
-<link rel="stylesheet" href="colori.css?v=20261001">
+<link rel="stylesheet" href="colori.css?v=20261001b">
 <link rel="stylesheet" href="grafica-app.css?v=20261001">
 </head>
 <body>
 <script src="menu.js?v=20261001"></script>
+<script src="etichette.js?v=20261001"></script>
 <script src="operazioni.js?v=20260930"></script>
 
 <div class="contenitore">
@@ -242,7 +243,7 @@
     <h2>Accesso protetto</h2>
     <p>Stessa password della configurazione.</p>
     <form onsubmit="event.preventDefault(); sblocca();">
-      <input type="password" id="campo-password" placeholder="Password" autocomplete="current-password">
+      <input type="password" id="campo-password" placeholder="Password" autocomplete="current-password" aria-label="Password di scrittura">
       <button type="submit" class="bottone-primario">Sblocca</button>
     </form>
     <p id="errore-gate" class="messaggio-errore nascosto"></p>
@@ -583,17 +584,28 @@
     el.innerHTML = html;
   }
 
+  // Raggruppa le righe [{chiave, n}] per etichetta leggibile, dalla più numerosa.
+  function sommaPerEtichetta(righe, chiave, etichetta) {
+    const somme = new Map();
+    (righe || []).forEach(r => {
+      const nome = etichetta(r[chiave]) || "N/D";
+      somme.set(nome, (somme.get(nome) || 0) + (Number(r.n) || 0));
+    });
+    return [...somme].map(([nome, n]) => ({[chiave]: nome, n})).sort((a, b) => b.n - a.n);
+  }
+
   function renderizzaStatisticheAste(s) {
     document.getElementById("num-totale-aste").textContent = s.totale ?? "—";
     document.getElementById("num-totale-storico").textContent = s.totale_storico ?? "—";
     const daRiprovareEl = document.getElementById("num-da-riprovare");
     daRiprovareEl.textContent = s.da_riprovare ?? "—";
     daRiprovareEl.classList.toggle("attenzione", (s.da_riprovare || 0) > 0);
-    document.getElementById("num-punteggio-medio").textContent = s.punteggio_medio != null ? s.punteggio_medio : "—";
+    document.getElementById("num-punteggio-medio").textContent = s.punteggio_medio != null ? Etichette.numero(s.punteggio_medio) : "—";
     document.getElementById("num-margine-medio").textContent = s.margine_medio != null ? `€ ${((n) => (Math.round(n) < 0 ? "-" : "") + String(Math.abs(Math.round(n))).replace(/\B(?=(\d{3})+(?!\d))/g, "."))(Number(s.margine_medio))}` : "—";
 
-    listaBarre("barre-tipologia", s.per_tipologia, "tipologia", "n");
-    listaBarre("barre-tribunale", s.per_tribunale, "tribunale", "n");
+    // nomi leggibili; combinazioni con lo stesso nome ("POSTO_AUTO, POSTO_AUTO") in una barra sola
+    listaBarre("barre-tipologia", sommaPerEtichetta(s.per_tipologia, "tipologia", Etichette.tipologia), "tipologia", "n");
+    listaBarre("barre-tribunale", sommaPerEtichetta(s.per_tribunale, "tribunale", Etichette.nomeTribunale), "tribunale", "n");
 
     const sezioneZona = document.getElementById("sezione-zona-segnalata");
     if (!s.per_zona_segnalata || s.per_zona_segnalata.length === 0) {
@@ -613,7 +625,7 @@
 
     document.getElementById("num-perizie-distinte").textContent = s.perizie_totale_distinte ?? "—";
     const rapporto = s.totale > 0 ? (s.perizie_totale_distinte / s.totale) * 10 : 0;
-    document.getElementById("num-rapporto-perizie").textContent = s.totale > 0 ? rapporto.toFixed(1) : "—";
+    document.getElementById("num-rapporto-perizie").textContent = s.totale > 0 ? Etichette.numero(rapporto) : "—";
     const avvisoEl = document.getElementById("avviso-rapporto-perizie");
     if (s.totale > 0 && rapporto >= 9.5) {
       avvisoEl.textContent = "Vicino a 1 perizia per asta: se usi spesso la modalità tutta Italia, è compatibile col limite del riuso in batch descritto qui sotto.";
@@ -624,7 +636,7 @@
 
     // dal giorno più recente (il database li dà dal più vecchio): prima si
     // vedevano i 14 giorni più vecchi e i recenti finivano in "+ altri"
-    listaBarre("barre-perizie-tempo", (s.perizie_nel_tempo || []).slice().reverse(), "giorno", "n", 14);
+    listaBarre("barre-perizie-tempo", (s.perizie_nel_tempo || []).slice().reverse().map(r => ({...r, giorno: Etichette.data(r.giorno)})), "giorno", "n", 14);
     listaBarre("barre-perizie-modello", s.perizie_per_modello, "modello", "n");
 
     document.getElementById("num-batch-pendenti").textContent = s.batch_pendenti ?? "—";

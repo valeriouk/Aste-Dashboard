@@ -43,7 +43,7 @@
     --secondary-soft: rgba(161, 92, 62, .10);
     --ink: #1e2320;
     --ink-muted: #5b615a;
-    --ink-faint: #8c9289;
+    --ink-faint: #696f67;   /* 01/10/2026: prima #8c9289, contrasto 2,8:1 sullo sfondo; ora 4,5:1 */
     --font-display: 'Fraunces', Georgia, serif;
     --font-body: 'Inter', system-ui, -apple-system, sans-serif;
     --font-mono: 'JetBrains Mono', ui-monospace, monospace;
@@ -106,7 +106,7 @@
     }
   }
 </style>
-<link rel="stylesheet" href="colori.css?v=20261001">
+<link rel="stylesheet" href="colori.css?v=20261001b">
 <link rel="stylesheet" href="grafica-app.css?v=20261001">
 </head>
 <body>
@@ -118,7 +118,7 @@
     <h2>Risultato superanalisi</h2>
     <p>Inserisci la password di lettura del registro.</p>
     <form onsubmit="event.preventDefault(); sblocca();">
-      <input type="password" id="campo-password" autocomplete="current-password" placeholder="Password di lettura del registro">
+      <input type="password" id="campo-password" autocomplete="current-password" placeholder="Password di lettura del registro" aria-label="Password di lettura del registro">
       <button class="bottone" type="submit">Sblocca</button>
       <p id="errore-gate" class="messaggio-errore"></p>
     </form>

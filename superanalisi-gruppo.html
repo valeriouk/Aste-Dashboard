@@ -46,7 +46,7 @@
     --danger-soft: rgba(139, 61, 46, .10);
     --ink: #1e2320;
     --ink-muted: #5b615a;
-    --ink-faint: #8c9289;
+    --ink-faint: #696f67;   /* 01/10/2026: prima #8c9289, contrasto 2,8:1 sullo sfondo; ora 4,5:1 */
     --font-display: 'Fraunces', Georgia, serif;
     --font-body: 'Inter', system-ui, -apple-system, sans-serif;
     --font-mono: 'JetBrains Mono', ui-monospace, monospace;
@@ -137,7 +137,7 @@
     }
   }
 </style>
-<link rel="stylesheet" href="colori.css?v=20261001">
+<link rel="stylesheet" href="colori.css?v=20261001b">
 <link rel="stylesheet" href="grafica-app.css?v=20261001">
 </head>
 <body>
@@ -158,7 +158,7 @@
     <h2>Accesso</h2>
     <p>Inserisci la password di scrittura (la stessa di Configurazione).</p>
     <form onsubmit="event.preventDefault(); sblocca();">
-      <input type="password" id="campo-password" autocomplete="current-password" placeholder="Password">
+      <input type="password" id="campo-password" autocomplete="current-password" placeholder="Password" aria-label="Password di scrittura">
       <button class="bottone" type="submit">Sblocca</button>
       <p id="errore-gate" class="messaggio errore nascosto"></p>
     </form>

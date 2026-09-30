@@ -35,7 +35,7 @@
     --danger-soft: rgba(139, 61, 46, .10);
     --ink: #1e2320;
     --ink-muted: #5b615a;
-    --ink-faint: #8c9289;
+    --ink-faint: #696f67;   /* 01/10/2026: prima #8c9289, contrasto 2,8:1 sullo sfondo; ora 4,5:1 */
     --font-display: 'Fraunces', Georgia, serif;
     --font-body: 'Inter', system-ui, -apple-system, sans-serif;
     --font-mono: 'JetBrains Mono', ui-monospace, monospace;
@@ -484,7 +484,7 @@
     }
   }
 </style>
-<link rel="stylesheet" href="colori.css?v=20261001">
+<link rel="stylesheet" href="colori.css?v=20261001b">
 <link rel="stylesheet" href="grafica-app.css?v=20261001">
 </head>
 <body>
@@ -514,7 +514,7 @@
     <h2>Accesso protetto</h2>
     <p>Inserisci la password per modificare la configurazione.</p>
     <form onsubmit="event.preventDefault(); sblocca();">
-      <input type="password" id="campo-password" placeholder="Password" autocomplete="current-password">
+      <input type="password" id="campo-password" placeholder="Password" autocomplete="current-password" aria-label="Password di scrittura">
       <button type="submit" class="bottone-primario">Sblocca</button>
     </form>
     <p id="errore-gate" class="messaggio-errore nascosto"></p>
@@ -616,57 +616,24 @@
         <p id="messaggio-ripristina-predefiniti" class="messaggio-salvataggio-card"></p>
       </div>
 
-      <section class="blocco-semplice" data-scheda="conti">
-        <h2>Regime fiscale e conti</h2>
-        <p class="nota-campo">Valgono per la Superanalisi (singola e di gruppo), lo spazio sull'offerta nel registro e il conto reale delle
-          operazioni. <strong>Privato</strong>: 26% sulla plusvalenza se rivendi entro 5 anni dall'acquisto. <strong>Impresa</strong> (es. SRL):
-          imposte sull'utile con tutte le spese deducibili e imposta di registro sul prezzo, senza prezzo-valore né prima casa; l'IVA sulla
-          rivendita non è calcolata. Valori indicativi: verificali col commercialista.</p>
-        <div class="campo-form">
-          <label for="campo-regime-fiscale">Regime fiscale</label>
-          <select id="campo-regime-fiscale">
-            <option value="privato">Privato (26% sulla plusvalenza entro 5 anni)</option>
-            <option value="impresa">Impresa (imposte sull'utile)</option>
-          </select>
+      <div class="elenco-card" data-scheda="conti">
+        <div class="card-riepilogo" data-scheda="conti">
+          <div class="card-riepilogo-testo">
+            <p class="card-riepilogo-titolo">Regime fiscale e conti</p>
+            <p class="card-riepilogo-valore" id="riepilogo-conti">—</p>
+          </div>
+          <button type="button" class="card-riepilogo-modifica" onclick="apriModaleConti()">Modifica</button>
         </div>
-        <div class="campo-form">
-          <label for="campo-aliquota-impresa">Impresa: imposte sull'utile (%)</label>
-          <input type="number" id="campo-aliquota-impresa" min="0" max="100" step="0.1">
-          <p class="nota-campo">Predefinito 27,9% = IRES 24% + IRAP 3,9% (aliquote ordinarie; l'IRAP può cambiare per regione).</p>
-        </div>
-        <div class="campo-form">
-          <label for="campo-registro-impresa">Impresa: imposta di registro all'acquisto (%)</label>
-          <input type="number" id="campo-registro-impresa" min="0" max="100" step="0.1">
-          <p class="nota-campo">Predefinito 9% sul prezzo.</p>
-        </div>
-        <div class="campo-form">
-          <label for="campo-sconto-comparabili">Comparabili: sconto di trattativa sugli annunci (%)</label>
-          <input type="number" id="campo-sconto-comparabili" min="0" max="50" step="0.5">
-          <p class="nota-campo">Il prezzo richiesto negli annunci si riduce di questa percentuale prima del conto (sulle vendite fatte no). Predefinito 5%.</p>
-        </div>
-        <button type="button" class="bottone-salva-card" onclick="salvaParametriConti()">Salva</button>
-        <p id="messaggio-parametri-conti" class="messaggio-salvataggio-card"></p>
-      </section>
 
-      <section class="blocco-semplice" data-scheda="conti">
-        <h2>Checklist delle aste</h2>
-        <p class="nota-campo">Voci predefinite della checklist nella sezione "🧭 Operazione" dei dettagli di ogni asta, <strong>una per riga</strong>.
-          In ogni asta puoi aggiungere voci solo sue. Se togli o rinomini una voce, le spunte già date a quella voce restano salvate ma non si vedono più
-          (rimettendo la voce uguale ricompaiono). "Visita fatta" c'è sempre ed è spuntata dalla visita.</p>
-        <div class="campo-form">
-          <label for="campo-checklist-prima">Prima dell'offerta</label>
-          <textarea id="campo-checklist-prima" rows="9"></textarea>
+        <div class="card-riepilogo" data-scheda="conti">
+          <div class="card-riepilogo-testo">
+            <p class="card-riepilogo-titolo">Checklist delle aste</p>
+            <p class="card-riepilogo-valore" id="riepilogo-checklist">—</p>
+          </div>
+          <button type="button" class="card-riepilogo-modifica" onclick="apriModaleChecklist()">Modifica</button>
         </div>
-        <div class="campo-form">
-          <label for="campo-checklist-dopo">Dopo l'aggiudicazione</label>
-          <textarea id="campo-checklist-dopo" rows="5"></textarea>
-        </div>
-        <div style="display:flex;flex-wrap:wrap;gap:8px">
-          <button type="button" class="bottone-salva-card" id="bottone-salva-checklist" onclick="salvaChecklist()">Salva</button>
-          <button type="button" class="bottone-secondario" onclick="ripristinaChecklistPredefinita()">↺ Voci predefinite</button>
-        </div>
-        <p id="messaggio-checklist" class="messaggio-salvataggio-card"></p>
-      </section>
+      </div>
+
 
       <section class="blocco-semplice" data-scheda="dispositivo">
         <h2>Tema</h2>
@@ -1029,6 +996,74 @@
       <div class="finestra-modale-azioni">
         <button type="button" class="bottone-salva-card" id="bottone-salva-ricercaPerizia" onclick="confermaSalvaCard('ricercaPerizia')">Salva</button>
         <span id="messaggio-salva-ricercaPerizia" class="messaggio-salvataggio-card"></span>
+      </div>
+    </div>
+  </div>
+</div>
+
+<div id="modale-conti" class="overlay-modale" onclick="if(event.target===this) chiudiModale('conti')">
+  <div class="finestra-modale">
+    <div class="finestra-modale-intestazione">
+      <h2>Regime fiscale e conti</h2>
+      <button type="button" class="finestra-modale-chiudi" onclick="chiudiModale('conti')" aria-label="Chiudi">×</button>
+    </div>
+    <div class="finestra-modale-corpo">
+      <p class="nota-campo">Valgono per la Superanalisi (singola e di gruppo), lo spazio sull'offerta nel registro e il conto reale delle
+        operazioni. <strong>Privato</strong>: 26% sulla plusvalenza se rivendi entro 5 anni dall'acquisto. <strong>Impresa</strong> (es. SRL):
+        imposte sull'utile con tutte le spese deducibili e imposta di registro sul prezzo, senza prezzo-valore né prima casa; l'IVA sulla
+        rivendita non è calcolata. Valori indicativi: verificali col commercialista.</p>
+      <div class="campo-form">
+        <label for="campo-regime-fiscale">Regime fiscale</label>
+        <select id="campo-regime-fiscale">
+          <option value="privato">Privato (26% sulla plusvalenza entro 5 anni)</option>
+          <option value="impresa">Impresa (imposte sull'utile)</option>
+        </select>
+      </div>
+      <div class="campo-form">
+        <label for="campo-aliquota-impresa">Impresa: imposte sull'utile (%)</label>
+        <input type="number" id="campo-aliquota-impresa" min="0" max="100" step="0.1">
+        <p class="nota-campo">Predefinito 27,9% = IRES 24% + IRAP 3,9% (aliquote ordinarie; l'IRAP può cambiare per regione).</p>
+      </div>
+      <div class="campo-form">
+        <label for="campo-registro-impresa">Impresa: imposta di registro all'acquisto (%)</label>
+        <input type="number" id="campo-registro-impresa" min="0" max="100" step="0.1">
+        <p class="nota-campo">Predefinito 9% sul prezzo.</p>
+      </div>
+      <div class="campo-form">
+        <label for="campo-sconto-comparabili">Comparabili: sconto di trattativa sugli annunci (%)</label>
+        <input type="number" id="campo-sconto-comparabili" min="0" max="50" step="0.5">
+        <p class="nota-campo">Il prezzo richiesto negli annunci si riduce di questa percentuale prima del conto (sulle vendite fatte no). Predefinito 5%.</p>
+      </div>
+      <div class="finestra-modale-azioni">
+        <button type="button" class="bottone-salva-card" onclick="salvaParametriConti()">Salva</button>
+        <span id="messaggio-parametri-conti" class="messaggio-salvataggio-card"></span>
+      </div>
+    </div>
+  </div>
+</div>
+
+<div id="modale-checklist" class="overlay-modale" onclick="if(event.target===this) chiudiModale('checklist')">
+  <div class="finestra-modale">
+    <div class="finestra-modale-intestazione">
+      <h2>Checklist delle aste</h2>
+      <button type="button" class="finestra-modale-chiudi" onclick="chiudiModale('checklist')" aria-label="Chiudi">×</button>
+    </div>
+    <div class="finestra-modale-corpo">
+      <p class="nota-campo">Voci predefinite della checklist nella sezione "🧭 Operazione" dei dettagli di ogni asta, <strong>una per riga</strong>.
+        In ogni asta puoi aggiungere voci solo sue. Se togli o rinomini una voce, le spunte già date a quella voce restano salvate ma non si vedono più
+        (rimettendo la voce uguale ricompaiono). "Visita fatta" c'è sempre ed è spuntata dalla visita.</p>
+      <div class="campo-form">
+        <label for="campo-checklist-prima">Prima dell'offerta</label>
+        <textarea id="campo-checklist-prima" rows="9"></textarea>
+      </div>
+      <div class="campo-form">
+        <label for="campo-checklist-dopo">Dopo l'aggiudicazione</label>
+        <textarea id="campo-checklist-dopo" rows="5"></textarea>
+      </div>
+      <div class="finestra-modale-azioni">
+        <button type="button" class="bottone-salva-card" id="bottone-salva-checklist" onclick="salvaChecklist()">Salva</button>
+        <button type="button" class="bottone-secondario" onclick="ripristinaChecklistPredefinita()">↺ Voci predefinite</button>
+        <span id="messaggio-checklist" class="messaggio-salvataggio-card"></span>
       </div>
     </div>
   </div>
@@ -2110,6 +2145,22 @@
     document.getElementById("campo-aliquota-impresa").value = pct(p.aliquotaImpresa);
     document.getElementById("campo-registro-impresa").value = pct(p.registroImpresa);
     document.getElementById("campo-sconto-comparabili").value = pct(p.scontoTrattativaComparabili);
+    const v = (x) => String(pct(x)).replace(".", ",") + "%";
+    document.getElementById("riepilogo-conti").textContent = p.regimeFiscale === "impresa"
+      ? `Impresa · imposte sull'utile ${v(p.aliquotaImpresa)} · registro ${v(p.registroImpresa)} · sconto comparabili ${v(p.scontoTrattativaComparabili)}`
+      : `Privato (26% sulla plusvalenza entro 5 anni) · sconto comparabili ${v(p.scontoTrattativaComparabili)}`;
+  }
+  // Scheda Conti come le altre: riepilogo, "Modifica" apre la finestra con i
+  // valori salvati (quelli scritti e non salvati si perdono chiudendo).
+  function apriModaleConti() {
+    mostraParametriConti();
+    document.getElementById("messaggio-parametri-conti").textContent = "";
+    apriModale("conti");
+  }
+  function apriModaleChecklist() {
+    mostraChecklist();
+    document.getElementById("messaggio-checklist").textContent = "";
+    apriModale("checklist");
   }
   async function salvaParametriConti() {
     const msgEl = document.getElementById("messaggio-parametri-conti");
@@ -2133,6 +2184,8 @@
         msgEl.textContent = "Salvato. Vale da subito nelle pagine che apri o ricarichi.";
         msgEl.className = "messaggio-salvataggio-card messaggio-ok";
         window.Feedback && Feedback.salvato();
+        mostraParametriConti();
+        setTimeout(() => chiudiModale("conti"), 700);
       } else {
         configAttuale.parametri_conti = precedente;
         msgEl.textContent = (risultato && risultato.message) || "Errore sconosciuto durante il salvataggio.";
@@ -2154,6 +2207,8 @@
     const m = configAttuale.checklist_modello || (window.Operazioni ? Operazioni.modelloChecklist(null) : {prima: [], dopo: []});
     document.getElementById("campo-checklist-prima").value = m.prima.join("\n");
     document.getElementById("campo-checklist-dopo").value = m.dopo.join("\n");
+    document.getElementById("riepilogo-checklist").textContent =
+      `${m.prima.length} voci prima dell'offerta · ${m.dopo.length} dopo l'aggiudicazione${configAttuale.checklist_modello ? "" : " (predefinite)"}`;
   }
   function ripristinaChecklistPredefinita() {
     if (!window.Operazioni) return;
@@ -2189,6 +2244,7 @@
         msgEl.className = "messaggio-salvataggio-card messaggio-ok";
         window.Feedback && Feedback.salvato();
         mostraChecklist();
+        setTimeout(() => chiudiModale("checklist"), 700);
       } else {
         configAttuale.checklist_modello = precedente;
         msgEl.textContent = (risultato && risultato.message) || "Errore sconosciuto durante il salvataggio.";
