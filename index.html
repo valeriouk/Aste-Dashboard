@@ -2643,6 +2643,8 @@
   }
   .toast-azione { border-radius: 999px; padding: 6px 12px; font-weight: 600;
     background: rgba(255, 255, 255, .16); color: #fff; }
+  /* Uscita: si dissolve piano (0,8 s, come DISSOLVENZA_TOAST_MS) invece di sparire di colpo */
+  #toast-preferiti:not(.visibile) { transition: opacity .8s ease, transform .8s ease; }
 
   /* "Trascina per aggiornare": cerchio a vetro un po' più grande, sotto la tacca dell'iPhone */
   .indicatore-refresh { top: env(safe-area-inset-top); width: 42px; height: 42px; border-color: var(--bordo-card); }
@@ -4081,6 +4083,7 @@
   // di procedere. Il toast resta comunque solo un avviso che scompare da
   // solo: se non lo si tocca in tempo, semplicemente sparisce senza
   // ulteriori conseguenze, l'azione principale (lo scarto) è già avvenuta.
+  const DISSOLVENZA_TOAST_MS = 800;
   function mostraToast(testo, azione, durataMs) {
     let toast = document.getElementById("toast-preferiti");
     if (!toast) {
@@ -4101,7 +4104,10 @@
     clearTimeout(toast._timeoutToast);
     // Più tempo quando c'è un'azione da poter cogliere (serve un attimo
     // per notare il pulsante e decidere), il solito avviso breve altrimenti.
-    toast._timeoutToast = setTimeout(() => toast.classList.remove("visibile"), durataMs || (azione ? 5000 : 3200));
+    // La scomparsa dura DISSOLVENZA_TOAST_MS (vedi #toast-preferiti:not(.visibile)):
+    // comincia prima, così il tempo totale resta quello di sempre.
+    const durata = durataMs || (azione ? 5000 : 3200);
+    toast._timeoutToast = setTimeout(() => toast.classList.remove("visibile"), Math.max(1000, durata - DISSOLVENZA_TOAST_MS));
   }
 
   // Clic sulla stella: se già preferita, la toglie (torna neutro); se no,

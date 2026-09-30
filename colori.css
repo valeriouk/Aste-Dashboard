@@ -85,7 +85,10 @@ html[data-tema="scuro"] {
 /* Ritocchi che le variabili da sole non coprono. Il selettore .tema-scuro
    lo mette tema.js su <html> quando il tema scuro è attivo (scelto o automatico). */
 html.tema-scuro .barra-selezione, html.tema-scuro #toast-preferiti { color: #eef1ec; }
-html.tema-scuro #toast-preferiti { background: rgba(52, 58, 54, .92); }
+/* La barra della selezione usa lo sfondo --ink, chiaro nel tema scuro: qui
+   diventa scura come il toast, con testo e pulsanti chiari. */
+html.tema-scuro .barra-selezione, html.tema-scuro #toast-preferiti { background: rgba(52, 58, 54, .92); }
+html.tema-scuro .barra-selezione button { color: #eef1ec; }
 html.tema-scuro .giudizio-PULITA { background: rgba(111, 191, 136, .15); color: #8fd4a4; }
 html.tema-scuro .badge-visita.vicina { background: #b8913a; color: #1c1404; }
 /* Mappe: le tessere si scuriscono con un filtro (colori approssimati) */
