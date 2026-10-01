@@ -1230,7 +1230,9 @@
         cambiano le spunte in blocco.</li>
       <li><strong>"Analizza le N scelte"</strong> (conferma col secondo tocco): salva la scelta e avvia subito lo scanner, che lavora <strong>solo su quelle
         aste</strong>, senza rifare la ricerca sul PVP: ricerca della perizia, analisi Gemini (subito o in batch, come da Configurazione) e notifiche. Appena
-        il giro parte, l'elenco viene cancellato. In quel giro il ricontrollo delle perizie resta fermo: spendi solo per ciò che hai scelto. La modalità
+        il giro parte, l'elenco viene cancellato. Se ricarichi Configurazione prima di quel momento (uno o due minuti dopo l'avvio) la riga dice
+        "Conteggio accettato: scanner avviato…" e la finestra si apre in sola consultazione, con pulsanti e spunte disattivati; la pagina rilegge lo stato
+        ogni 30 secondi e la riga sparisce da sola quando lo scanner ha preso in carico la scelta. In quel giro il ricontrollo delle perizie resta fermo: spendi solo per ciò che hai scelto. La modalità
         salvata in Configurazione non cambia: se era "Solo conteggio" resta tale.</li>
       <li><strong>"Rifiuta tutto"</strong> (conferma col secondo tocco): cancella l'elenco, non parte nulla.</li>
       <li><strong>Se lo scanner non parte</strong> (per esempio c'è già un giro in corso): l'elenco torna in attesa e la finestra dice di riprovare tra poco.

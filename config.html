@@ -1657,8 +1657,21 @@
   const oraBreve = (iso) => new Date(iso).toLocaleTimeString("it-IT", {hour: "2-digit", minute: "2-digit"});
 
   // Se le funzioni non ci sono ancora nel database, o la lettura non riesce, la riga resta nascosta.
+  // Scelta accettata: la riga resta finché lo scanner non la prende in carico
+  // (uno o due minuti dopo l'avvio). In quell'attesa, e solo in quella, la
+  // pagina rilegge lo stato ogni 30 secondi e quando torni sulla scheda.
+  let timerConteggio = null;
+  const conteggioAccettato = () => !!conteggioAttuale && conteggioAttuale.stato === "accettato";
+  function programmaRiletturaConteggio() {
+    clearTimeout(timerConteggio);
+    if (!conteggioAccettato()) return;
+    timerConteggio = setTimeout(() => { document.hidden ? programmaRiletturaConteggio() : caricaConteggio(); }, 30000);
+  }
+  document.addEventListener("visibilitychange", () => { if (!document.hidden && conteggioAccettato()) caricaConteggio(); });
+
   async function caricaConteggio() {
     const riga = document.getElementById("riga-conteggio");
+    const eraAccettato = conteggioAccettato();
     try {
       const risposta = await chiamaRpc("leggi_conteggio", {password_tentativo: passwordCorrente});
       conteggioAttuale = risposta && risposta.result === "success" ? risposta.conteggio : null;
@@ -1667,7 +1680,12 @@
     }
     const aste = conteggioAttuale ? (conteggioAttuale.aste || []) : [];
     riga.classList.toggle("nascosto", !aste.length);
-    if (!aste.length) return;
+    programmaRiletturaConteggio();
+    if (!aste.length) {
+      // lo scanner ha preso in carico la scelta: se la finestra era aperta in sola consultazione, si chiude
+      if (eraAccettato) chiudiModale("conteggio");
+      return;
+    }
     riga.textContent = conteggioAttuale.stato === "accettato"
       ? `🔢 Conteggio accettato: scanner avviato, analizza ${(conteggioAttuale.id_accettati || []).length === 1 ? "1 asta" : (conteggioAttuale.id_accettati || []).length + " aste"} · Dettagli`
       : `🔢 Conteggio in attesa: ${aste.length} ${aste.length === 1 ? "asta" : "aste"} da scegliere · fino alle ${oraBreve(conteggioAttuale.scade_il)} · Apri`;
