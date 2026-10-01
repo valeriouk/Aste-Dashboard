@@ -290,6 +290,24 @@
       una rimozione di nota, link o correzioni dei costi, c'è anche il più rapido "Annulla" per 3 secondi.</p>
   </section>
 
+  <section class="voce" id="sistema-backup">
+    <h3>Backup: codice e database</h3>
+    <ul>
+      <li><strong>Codice</strong>: i due repository su GitHub conservano ogni versione. I punti di ritorno con un nome sono i <strong>tag</strong>
+        <code>backup-AAAA-MM-GG</code>, con lo stesso nome nei due repository (il primo è <code>backup-2026-10-01</code>): su GitHub stanno in "Tags", con lo zip
+        di quello stato. Conviene metterne uno nei momenti stabili e prima dei lavori grossi.</li>
+      <li><strong>Database</strong>: nel repository privato, pagina <strong>Actions → "Backup database" → Run workflow</strong>. Solo avvio manuale, 1-2 minuti
+        GitHub, sola lettura. Alla fine, in fondo alla pagina del run, sotto "Artifacts", c'è lo zip <code>backup-database-data_ora</code> con:
+        <code>database.dump</code> (tutto lo schema "public": tabelle, dati, funzioni, permessi e regole di accesso), <code>struttura.sql</code> (solo la
+        struttura, leggibile), <code>righe_per_tabella.txt</code> e <code>LEGGIMI.txt</code> con il comando di ripristino.</li>
+      <li>Lo zip resta su GitHub <strong>30 giorni</strong>, poi viene cancellato (lo spazio del piano gratuito è limitato): quello da conservare va
+        scaricato sul PC. Contiene anche le password cifrate: non va passato ad altri.</li>
+      <li>Il backup usa il segreto <code>SUPABASE_DB_URL</code> del repository (stringa di connessione "Session pooler" di Supabase con la password del
+        database): se la password del database cambia, va aggiornato anche il segreto.</li>
+      <li>Non sono nel backup: i segreti di GitHub e di Supabase, e le Edge Function pubblicate (le copie sono nel repository privato).</li>
+    </ul>
+  </section>
+
   <section class="voce" id="sistema-aspetto-app">
     <h3>Aspetto "da app", suoni e vibrazione</h3>
     <ul>
