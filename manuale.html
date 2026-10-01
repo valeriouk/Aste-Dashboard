@@ -305,7 +305,10 @@
         e uno zip pesa circa 77 MB). Se un backup non riesce, i precedenti non vengono toccati e restano al massimo 90 giorni. Quello da conservare più a
         lungo va scaricato sul PC. Contiene anche le password cifrate: non va passato ad altri.</li>
       <li><strong>Avviso Telegram</strong> a ogni backup: "💾 Backup del database riuscito" con data, peso, numero di aste, quanti backup più vecchi ha
-        cancellato e il link al run per scaricare lo zip; oppure "❌ Backup del database NON riuscito" con il link per vedere l'errore.</li>
+        cancellato, lo spazio occupato su GitHub da tutti gli zip (su 500 MB del piano gratuito) e due link: "⬇️ Scarica lo zip" (download diretto, da
+        loggato su GitHub) e "Apri il run"; oppure "❌ Backup del database NON riuscito" con il link per vedere l'errore.</li>
+      <li>GitHub non ha una pagina unica con tutti gli zip: ognuno sta in fondo alla pagina del suo run (Actions → "Backup database" → il run → "Artifacts"),
+        dove l'icona del cestino lo cancella a mano. Di norma non serve: la pulizia è automatica e lo spazio occupato è scritto in ogni avviso Telegram.</li>
       <li>Il backup usa il segreto <code>SUPABASE_DB_URL</code> del repository (stringa di connessione "Session pooler" di Supabase con la password del
         database): se la password del database cambia, va aggiornato anche il segreto.</li>
       <li>Non sono nel backup: i segreti di GitHub e di Supabase, e le Edge Function pubblicate (le copie sono nel repository privato).</li>
