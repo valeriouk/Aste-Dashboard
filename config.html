@@ -352,6 +352,14 @@
     display: block;
   }
   .nota-campo { font-size: .78rem; color: var(--ink-faint); margin: 6px 0 0; line-height: 1.4; }
+  /* Conteggio in attesa: riga in cima alla pagina ed elenco delle aste da scegliere */
+  .riga-conteggio { display: block; width: 100%; text-align: left; background: var(--secondary-soft); color: inherit; border: 1px solid var(--secondary); border-radius: 12px; padding: 10px 14px; margin-bottom: 14px; font: inherit; font-size: .9rem; font-weight: 600; cursor: pointer; }
+  .lista-conteggio { display: flex; flex-direction: column; gap: 6px; max-height: 52vh; overflow-y: auto; margin-top: 6px; }
+  .asta-conteggio { display: flex; gap: 10px; align-items: flex-start; border: 1px solid var(--secondary-soft); border-radius: 10px; padding: 8px 10px; font-size: .86rem; line-height: 1.35; }
+  .asta-conteggio input { margin-top: 3px; flex: none; }
+  .asta-conteggio strong { display: block; overflow-wrap: anywhere; }
+  .asta-conteggio .nota-campo { margin: 2px 0 0; }
+
   /* Elenco "Solo questi comuni": etichette con la × per togliere */
   .lista-comuni { display: flex; flex-wrap: wrap; gap: 6px; margin-top: 8px; }
   .lista-comuni:empty::before { content: "Nessun comune in elenco."; font-size: .82rem; color: var(--ink-faint); }
@@ -508,6 +516,7 @@
 <script src="menu.js?v=20261001"></script>
 <script src="feedback.js?v=20261001"></script>
 <script src="operazioni.js?v=20260930"></script>
+<script src="etichette.js?v=20261001"></script>
 
 <div class="contenitore">
 
@@ -543,6 +552,7 @@
 
     <div id="contenuto-config" class="nascosto">
 
+      <button type="button" id="riga-conteggio" class="riga-conteggio nascosto" onclick="apriConteggio()"></button>
       <div id="avvisi-config" class="avvisi-config nascosto" role="status"></div>
 
       <nav class="schede-config" role="tablist" aria-label="Sezioni della configurazione">
@@ -818,6 +828,30 @@
       <div class="finestra-modale-azioni">
         <button type="button" class="bottone-salva-card" id="bottone-salva-area" onclick="confermaSalvaCard('area')">Salva</button>
         <span id="messaggio-salva-area" class="messaggio-salvataggio-card"></span>
+      </div>
+    </div>
+  </div>
+</div>
+
+<div id="modale-conteggio" class="overlay-modale" onclick="if(event.target===this) chiudiModale('conteggio')">
+  <div class="finestra-modale">
+    <div class="finestra-modale-intestazione">
+      <h2>Conteggio in attesa</h2>
+      <button type="button" class="finestra-modale-chiudi" onclick="chiudiModale('conteggio')" aria-label="Chiudi">×</button>
+    </div>
+    <div class="finestra-modale-corpo">
+      <p class="nota-campo" id="conteggio-intestazione" style="margin-top:0"></p>
+      <p class="nota-campo">Scegli le aste da analizzare: lo scanner parte subito e lavora solo su quelle, senza rifare la ricerca sul PVP. Ogni asta analizzata è un'analisi Gemini (a pagamento). In questo giro il ricontrollo delle perizie resta fermo. "Rifiuta tutto" cancella l'elenco senza analizzare nulla.</p>
+      <div style="display:flex;flex-wrap:wrap;gap:8px;align-items:center;margin:12px 0 4px">
+        <button type="button" class="bottone-secondario" onclick="spuntaConteggio(true)">Tutte</button>
+        <button type="button" class="bottone-secondario" onclick="spuntaConteggio(false)">Nessuna</button>
+        <span class="nota-campo" id="conteggio-scelte" style="margin:0"></span>
+      </div>
+      <div id="lista-conteggio" class="lista-conteggio"></div>
+      <div class="finestra-modale-azioni">
+        <button type="button" class="bottone-salva-card" id="bottone-accetta-conteggio" onclick="confermaAccettaConteggio()">Analizza le scelte</button>
+        <button type="button" class="bottone-secondario" id="bottone-rifiuta-conteggio" onclick="confermaRifiutaConteggio()" style="color:var(--danger)">Rifiuta tutto</button>
+        <span id="messaggio-conteggio" class="messaggio-salvataggio-card"></span>
       </div>
     </div>
   </div>
@@ -1548,6 +1582,7 @@
 
       renderizzaTuttiIRiepiloghi();
       caricaStatoEsecuzioniPianificazione();
+      caricaConteggio();
     } catch (e) {
       statoEl.textContent = "Impossibile leggere la configurazione attuale: controlla la connessione e ricarica la pagina.";
     }
@@ -1609,6 +1644,144 @@
     const voci = [...(configAttuale.esclusione_quote !== false ? ["quote parziali"] : []), ...(configAttuale.parole_esclusione || [])];
     document.getElementById("riepilogo-esclusioni").textContent =
       configAttuale.esclusioni_attive && voci.length ? `Attive: ${voci.join(", ")}` : "Disattivate";
+  }
+
+  // ---------------------------------------------------------------- conteggio in attesa
+  // Dopo un giro in "solo conteggio" lo scanner salva l'elenco delle aste che
+  // analizzerebbe (sql/conteggio_in_attesa.sql in aste-immobiliari). Qui si
+  // scelgono asta per asta: accettando parte lo scanner, che lavora solo su
+  // quelle; rifiutando l'elenco viene cancellato. Vale 6 ore dal conteggio.
+  let conteggioAttuale = null;
+
+  const oraBreve = (iso) => new Date(iso).toLocaleTimeString("it-IT", {hour: "2-digit", minute: "2-digit"});
+
+  // Se le funzioni non ci sono ancora nel database, o la lettura non riesce, la riga resta nascosta.
+  async function caricaConteggio() {
+    const riga = document.getElementById("riga-conteggio");
+    try {
+      const risposta = await chiamaRpc("leggi_conteggio", {password_tentativo: passwordCorrente});
+      conteggioAttuale = risposta && risposta.result === "success" ? risposta.conteggio : null;
+    } catch (e) {
+      conteggioAttuale = null;
+    }
+    const aste = conteggioAttuale ? (conteggioAttuale.aste || []) : [];
+    riga.classList.toggle("nascosto", !aste.length);
+    if (!aste.length) return;
+    riga.textContent = conteggioAttuale.stato === "accettato"
+      ? `🔢 Conteggio accettato: lo scanner sta per analizzare ${(conteggioAttuale.id_accettati || []).length} aste`
+      : `🔢 Conteggio in attesa: ${aste.length} ${aste.length === 1 ? "asta" : "aste"} da scegliere · fino alle ${oraBreve(conteggioAttuale.scade_il)} · Apri`;
+  }
+
+  function apriConteggio() {
+    if (!conteggioAttuale) return;
+    const occupazione = Object.fromEntries(STATI_OCCUPAZIONE_PVP);
+    const accettato = conteggioAttuale.stato === "accettato";
+    document.getElementById("conteggio-intestazione").textContent =
+      `Conteggio delle ${oraBreve(conteggioAttuale.creato_il)}, valido fino alle ${oraBreve(conteggioAttuale.scade_il)}. Filtri: ${String(conteggioAttuale.filtri || "—").split("\n").join(" · ")}`;
+    document.getElementById("lista-conteggio").innerHTML = (conteggioAttuale.aste || []).map(a => {
+      const stati = String(a.disponibilita || "").split(",").map(c => c.trim()).filter(c => c && c !== "N/D");
+      const dettagli = [
+        window.Etichette ? Etichette.tipologia(a.tipologia) : a.tipologia,
+        a.numero_lotto ? (window.Etichette ? Etichette.lotto(a.numero_lotto) : `lotto ${a.numero_lotto}`) : "",
+        `base € ${formattaEuro(Number(a.prezzo_base) || 0)}`,
+        `offerta minima € ${formattaEuro(Number(a.offerta_minima) || 0)}`,
+        a.data_vendita ? `vendita ${window.Etichette ? Etichette.data(String(a.data_vendita).slice(0, 10)) : String(a.data_vendita).slice(0, 10)}` : "",
+        stati.length ? stati.map(c => occupazione[c] || c).join(", ") : "occupazione non specificata",
+        a.da_riprovare ? "da riprovare" : ""
+      ].filter(Boolean).join(" · ");
+      const link = /^https:\/\//.test(String(a.url_asta || "")) ? ` · <a href="${escapeHtml(a.url_asta)}" target="_blank" rel="noopener">PVP ↗</a>` : "";
+      return `<label class="asta-conteggio"><input type="checkbox" class="checkbox-conteggio" value="${escapeHtml(String(a.id_annuncio))}" checked onchange="aggiornaScelteConteggio()">
+        <span><strong>${escapeHtml(a.comune || "Indirizzo non disponibile")}</strong><span class="nota-campo" style="display:block">${escapeHtml(dettagli)}${link}</span></span></label>`;
+    }).join("");
+    document.getElementById("bottone-accetta-conteggio").disabled = accettato;
+    messaggioConteggio(accettato ? "Già accettato: lo scanner sta per usarlo." : "", "attesa");
+    aggiornaScelteConteggio();
+    apriModale("conteggio");
+  }
+
+  const idSceltiConteggio = () => [...document.querySelectorAll("#lista-conteggio .checkbox-conteggio:checked")].map(cb => cb.value);
+
+  const testoAccettaConteggio = (n) => n === 1 ? "Analizza l'asta scelta" : n ? `Analizza le ${n} scelte` : "Analizza le scelte";
+
+  function aggiornaScelteConteggio() {
+    const scelte = idSceltiConteggio().length, totale = document.querySelectorAll("#lista-conteggio .checkbox-conteggio").length;
+    document.getElementById("conteggio-scelte").textContent = `${scelte} di ${totale} scelte`;
+    document.getElementById("bottone-accetta-conteggio").textContent = testoAccettaConteggio(scelte);
+  }
+
+  function spuntaConteggio(valore) {
+    document.querySelectorAll("#lista-conteggio .checkbox-conteggio").forEach(cb => { cb.checked = valore; });
+    aggiornaScelteConteggio();
+  }
+
+  function messaggioConteggio(testo, tipo) {
+    const el = document.getElementById("messaggio-conteggio");
+    el.textContent = testo;
+    el.className = `messaggio-salvataggio-card messaggio-${tipo}`;
+  }
+
+  function confermaAccettaConteggio() {
+    const scelti = idSceltiConteggio();
+    if (!scelti.length) { messaggioConteggio("Scegli almeno un'asta, oppure rifiuta tutto.", "errore"); return; }
+    const bottone = document.getElementById("bottone-accetta-conteggio");
+    richiedeDoppioTocco("accetta-conteggio", bottone, testoAccettaConteggio(scelti.length), `Confermi ${scelti.length} analisi?`, () => accettaConteggio(scelti));
+  }
+
+  // Salva la scelta e avvia subito lo scanner; se l'avvio non riesce l'elenco torna in attesa.
+  async function accettaConteggio(scelti) {
+    const bottoni = [document.getElementById("bottone-accetta-conteggio"), document.getElementById("bottone-rifiuta-conteggio")];
+    bottoni.forEach(b => { b.disabled = true; });
+    messaggioConteggio("Avvio in corso…", "attesa");
+    try {
+      const esito = await chiamaRpc("decidi_conteggio", {password_tentativo: passwordCorrente, azione: "accetta", id_scelti: scelti});
+      if (!esito || esito.result !== "success") {
+        messaggioConteggio((esito && esito.message) || "Scelta non salvata.", "errore");
+        window.Feedback && Feedback.errore();
+        await caricaConteggio();
+        return;
+      }
+      let avvio = null;
+      try { avvio = await avviaWorkflowGitHub("scheduler.yml"); } catch (e) { avvio = null; }
+      if (avvio && avvio.result === "success") {
+        messaggioConteggio(`Scanner avviato: analizza ${scelti.length} ${scelti.length === 1 ? "asta" : "aste"}. I risultati arrivano su Telegram.`, "ok");
+        window.Feedback && Feedback.salvato();
+        document.getElementById("riga-conteggio").classList.add("nascosto");
+        conteggioAttuale = null;
+        setTimeout(() => chiudiModale("conteggio"), 2500);
+        return;
+      }
+      // avvio non riuscito (per esempio un giro già in corso): la scelta non deve restare in coda
+      await chiamaRpc("decidi_conteggio", {password_tentativo: passwordCorrente, azione: "riapri"});
+      messaggioConteggio(`Scanner non avviato: ${(avvio && avvio.message) || "richiesta non riuscita"}. L'elenco resta in attesa: riprova tra poco.`, "errore");
+      window.Feedback && Feedback.errore();
+      await caricaConteggio();
+    } catch (e) {
+      messaggioConteggio("Richiesta non riuscita. Controlla la connessione e riprova.", "errore");
+      window.Feedback && Feedback.errore();
+    } finally {
+      bottoni.forEach(b => { b.disabled = false; });
+    }
+  }
+
+  function confermaRifiutaConteggio() {
+    const bottone = document.getElementById("bottone-rifiuta-conteggio");
+    richiedeDoppioTocco("rifiuta-conteggio", bottone, "Rifiuta tutto", "Confermi il rifiuto?", rifiutaConteggio);
+  }
+
+  async function rifiutaConteggio() {
+    messaggioConteggio("Cancellazione in corso…", "attesa");
+    try {
+      const esito = await chiamaRpc("decidi_conteggio", {password_tentativo: passwordCorrente, azione: "rifiuta"});
+      if (esito && esito.result === "success") {
+        conteggioAttuale = null;
+        document.getElementById("riga-conteggio").classList.add("nascosto");
+        chiudiModale("conteggio");
+        return;
+      }
+      messaggioConteggio((esito && esito.message) || "Elenco non cancellato.", "errore");
+    } catch (e) {
+      messaggioConteggio("Richiesta non riuscita. Controlla la connessione e riprova.", "errore");
+    }
   }
 
   // ---------------------------------------------------------------- solo questi comuni

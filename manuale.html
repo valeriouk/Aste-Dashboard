@@ -1219,6 +1219,31 @@
       corso — attendi che finisca".</p>
   </section>
 
+  <section class="voce" id="config-conteggio-in-attesa">
+    <h3>Conteggio in attesa: scegliere le aste prima di analizzarle</h3>
+    <p>Con la <a href="#config-altri-filtri">modalità "Solo conteggio"</a> lo scanner, oltre a mandare il messaggio Telegram, salva l'elenco delle aste che
+      analizzerebbe (mai viste e da riprovare). In cima a Configurazione, su tutte le schede, compare la riga <strong>"🔢 Conteggio in attesa: N aste da
+      scegliere · fino alle HH:MM · Apri"</strong>; il messaggio Telegram del conteggio ha il link "Scegli in Configurazione".</p>
+    <ul>
+      <li><strong>La finestra</strong> mostra ora del conteggio, scadenza, filtri usati e una riga per asta: indirizzo, tipologia, lotto, prezzo base,
+        offerta minima, data di vendita, stato di occupazione, "da riprovare" e il link al PVP. Tutte spuntate di partenza; "Tutte" e "Nessuna"
+        cambiano le spunte in blocco.</li>
+      <li><strong>"Analizza le N scelte"</strong> (conferma col secondo tocco): salva la scelta e avvia subito lo scanner, che lavora <strong>solo su quelle
+        aste</strong>, senza rifare la ricerca sul PVP: ricerca della perizia, analisi Gemini (subito o in batch, come da Configurazione) e notifiche. Appena
+        il giro parte, l'elenco viene cancellato. In quel giro il ricontrollo delle perizie resta fermo: spendi solo per ciò che hai scelto. La modalità
+        salvata in Configurazione non cambia: se era "Solo conteggio" resta tale.</li>
+      <li><strong>"Rifiuta tutto"</strong> (conferma col secondo tocco): cancella l'elenco, non parte nulla.</li>
+      <li><strong>Se lo scanner non parte</strong> (per esempio c'è già un giro in corso): l'elenco torna in attesa e la finestra dice di riprovare tra poco.
+        Nessun giro programmato lo esegue al posto tuo.</li>
+      <li><strong>Scadenza: 6 ore</strong> dal conteggio. Oltre, l'elenco viene ignorato e cancellato. Un conteggio nuovo sostituisce quello in attesa; un
+        conteggio senza aste da analizzare lo cancella.</li>
+      <li>Al momento dell'analisi le aste già analizzate nel frattempo, in un batch in corso o con vendita ormai passata vengono saltate. L'asta è
+        analizzata con i dati letti al conteggio: un cambio di prezzo o di data sul PVP nel frattempo lo vede il giro successivo.</li>
+    </ul>
+    <p class="nota">Lasciando la modalità su "Solo conteggio", ogni scansione programmata diventa "conta e chiedimi": niente viene analizzato senza la tua
+      scelta. Il risparmio di minuti GitHub è piccolo (si evita solo la seconda lettura del PVP); il vantaggio è decidere il costo prima di spenderlo.</p>
+  </section>
+
   <section class="voce" id="config-controlla-batch">
     <h3>"🔄 Controlla batch ora"</h3>
     <p>Avvia subito il <a href="#orari-batch">controllo dei batch</a> in sospeso (senza aspettare quello automatico orario, e ignorando il limite dei
@@ -1367,7 +1392,8 @@
       <li><strong>Pausa tra un'asta e l'altra</strong> (0-60 s): attesa tra un'analisi e la successiva; riduce errori e l'esaurimento della quota Gemini.</li>
       <li><strong>Modalità di esecuzione</strong>: "Normale" oppure "<strong>Solo conteggio</strong>": lo scanner conta le aste nei filtri e si ferma, senza
         browser, senza Gemini (nessun costo) e senza scrivere nel database; arriva comunque un messaggio Telegram col conteggio (da analizzare, da
-        riprovare, mai viste, già completate). Salta anche il ricontrollo.</li>
+        riprovare, mai viste, già completate). Salta anche il ricontrollo. Le aste da analizzare restano per 6 ore nel
+        <a href="#config-conteggio-in-attesa">conteggio in attesa</a>: da lì scegli quali analizzare, senza cambiare modalità.</li>
       <li><strong>"Conteggia anche le aste non analizzate (tutto il registro)"</strong> (solo con Solo conteggio): aggiunge al messaggio il totale delle
         aste senza un'analisi riuscita in tutto il registro.</li>
     </ul>
@@ -2272,7 +2298,7 @@
           non risponde o se in quel giro sono già stati spesi 5 minuti a calcolare storici per le notifiche (lo storico arriva comunque a fine giro).</td></tr>
         <tr><td>✅ nessuna asta entro i filtri</td><td>Lo scanner non ha trovato annunci con i filtri attuali (li elenca).</td></tr>
         <tr><td>✅ tutte già note, nessuna novità</td><td>Tutte le aste trovate erano già analizzate o in un batch.</td></tr>
-        <tr><td>🔢 Scanner aste — solo conteggio</td><td>Modalità <a href="#config-altri-filtri">solo conteggio</a>: numeri, nessuna spesa.</td></tr>
+        <tr><td>🔢 Scanner aste — solo conteggio</td><td>Modalità <a href="#config-altri-filtri">solo conteggio</a>: numeri, nessuna spesa. Se ci sono aste da analizzare, il link "Scegli in Configurazione" porta al <a href="#config-conteggio-in-attesa">conteggio in attesa</a> (6 ore).</td></tr>
         <tr><td>✅ completato / ⚠️ completato con errori</td><td>Fine di un giro con analisi subito (sincrono): quante aste analizzate e quante con errori.</td></tr>
         <tr><td>📦 Ricerca … completata</td><td>Batch inviato a Gemini: criteri (luogo, prezzo, tipologia, stati di occupazione esclusi, esclusioni per parole), numero di aste, modello; i risultati arriveranno da pochi minuti a 24 ore dopo.</td></tr>
         <tr><td>✅ Ricerca completata, nessun documento leggibile</td><td>Nessuna asta aveva un documento valido da inviare.</td></tr>
