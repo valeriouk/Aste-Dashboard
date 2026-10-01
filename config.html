@@ -359,6 +359,7 @@
   .asta-conteggio input { margin-top: 3px; flex: none; }
   .asta-conteggio strong { display: block; overflow-wrap: anywhere; }
   .asta-conteggio .nota-campo { margin: 2px 0 0; }
+  #modale-conteggio button:disabled { opacity: .4; cursor: not-allowed; }
 
   /* Elenco "Solo questi comuni": etichette con la × per togliere */
   .lista-comuni { display: flex; flex-wrap: wrap; gap: 6px; margin-top: 8px; }
@@ -843,8 +844,8 @@
       <p class="nota-campo" id="conteggio-intestazione" style="margin-top:0"></p>
       <p class="nota-campo">Scegli le aste da analizzare: lo scanner parte subito e lavora solo su quelle, senza rifare la ricerca sul PVP. Ogni asta analizzata è un'analisi Gemini (a pagamento). In questo giro il ricontrollo delle perizie resta fermo. "Rifiuta tutto" cancella l'elenco senza analizzare nulla.</p>
       <div style="display:flex;flex-wrap:wrap;gap:8px;align-items:center;margin:12px 0 4px">
-        <button type="button" class="bottone-secondario" onclick="spuntaConteggio(true)">Tutte</button>
-        <button type="button" class="bottone-secondario" onclick="spuntaConteggio(false)">Nessuna</button>
+        <button type="button" class="bottone-secondario bottone-spunta-conteggio" onclick="spuntaConteggio(true)">Tutte</button>
+        <button type="button" class="bottone-secondario bottone-spunta-conteggio" onclick="spuntaConteggio(false)">Nessuna</button>
         <span class="nota-campo" id="conteggio-scelte" style="margin:0"></span>
       </div>
       <div id="lista-conteggio" class="lista-conteggio"></div>
@@ -1668,7 +1669,7 @@
     riga.classList.toggle("nascosto", !aste.length);
     if (!aste.length) return;
     riga.textContent = conteggioAttuale.stato === "accettato"
-      ? `🔢 Conteggio accettato: lo scanner sta per analizzare ${(conteggioAttuale.id_accettati || []).length} aste`
+      ? `🔢 Conteggio accettato: scanner avviato, analizza ${(conteggioAttuale.id_accettati || []).length === 1 ? "1 asta" : (conteggioAttuale.id_accettati || []).length + " aste"} · Dettagli`
       : `🔢 Conteggio in attesa: ${aste.length} ${aste.length === 1 ? "asta" : "aste"} da scegliere · fino alle ${oraBreve(conteggioAttuale.scade_il)} · Apri`;
   }
 
@@ -1693,10 +1694,22 @@
       return `<label class="asta-conteggio"><input type="checkbox" class="checkbox-conteggio" value="${escapeHtml(String(a.id_annuncio))}" checked onchange="aggiornaScelteConteggio()">
         <span><strong>${escapeHtml(a.comune || "Indirizzo non disponibile")}</strong><span class="nota-campo" style="display:block">${escapeHtml(dettagli)}${link}</span></span></label>`;
     }).join("");
-    document.getElementById("bottone-accetta-conteggio").disabled = accettato;
-    messaggioConteggio(accettato ? "Già accettato: lo scanner sta per usarlo." : "", "attesa");
+    // Già accettato: lo scanner è partito e sta per leggere la scelta. Si può solo guardare:
+    // spunte ferme su quelle accettate, pulsanti spenti.
+    if (accettato) {
+      const scelti = new Set((conteggioAttuale.id_accettati || []).map(String));
+      document.querySelectorAll("#lista-conteggio .checkbox-conteggio").forEach(cb => { cb.checked = scelti.has(cb.value); });
+    }
+    bloccaConteggio(accettato);
+    messaggioConteggio(accettato ? "Già accettato: lo scanner è partito e analizza le aste spuntate. Non c'è altro da fare qui." : "", "attesa");
     aggiornaScelteConteggio();
     apriModale("conteggio");
+  }
+
+  // Spegne (o riaccende) tutto ciò che nella finestra si può toccare.
+  function bloccaConteggio(bloccato) {
+    document.querySelectorAll("#lista-conteggio .checkbox-conteggio, #modale-conteggio .bottone-spunta-conteggio, #bottone-accetta-conteggio, #bottone-rifiuta-conteggio")
+      .forEach(el => { el.disabled = bloccato; });
   }
 
   const idSceltiConteggio = () => [...document.querySelectorAll("#lista-conteggio .checkbox-conteggio:checked")].map(cb => cb.value);
@@ -1729,8 +1742,8 @@
 
   // Salva la scelta e avvia subito lo scanner; se l'avvio non riesce l'elenco torna in attesa.
   async function accettaConteggio(scelti) {
-    const bottoni = [document.getElementById("bottone-accetta-conteggio"), document.getElementById("bottone-rifiuta-conteggio")];
-    bottoni.forEach(b => { b.disabled = true; });
+    let avviato = false;
+    bloccaConteggio(true);
     messaggioConteggio("Avvio in corso…", "attesa");
     try {
       const esito = await chiamaRpc("decidi_conteggio", {password_tentativo: passwordCorrente, azione: "accetta", id_scelti: scelti});
@@ -1745,6 +1758,7 @@
       if (avvio && avvio.result === "success") {
         messaggioConteggio(`Scanner avviato: analizza ${scelti.length} ${scelti.length === 1 ? "asta" : "aste"}. I risultati arrivano su Telegram.`, "ok");
         window.Feedback && Feedback.salvato();
+        avviato = true;   // la finestra resta bloccata finché si chiude
         document.getElementById("riga-conteggio").classList.add("nascosto");
         conteggioAttuale = null;
         setTimeout(() => chiudiModale("conteggio"), 2500);
@@ -1759,7 +1773,7 @@
       messaggioConteggio("Richiesta non riuscita. Controlla la connessione e riprova.", "errore");
       window.Feedback && Feedback.errore();
     } finally {
-      bottoni.forEach(b => { b.disabled = false; });
+      if (!avviato) bloccaConteggio(false);
     }
   }
 
