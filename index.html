@@ -1405,6 +1405,18 @@
   .dettaglio-riga span:last-child { text-align: right; color: var(--ink); }
   .dettaglio-riga.avviso span:last-child { color: var(--danger); font-weight: 500; }
 
+  /* Riquadro "Procedura": i dati da ricopiare sui portali per cercare
+     l'esito della vendita, affiancati e ben leggibili. */
+  .riquadro-procedura { border: 1px solid var(--border); border-radius: 10px; padding: 10px 12px; margin: 4px 0 10px; background: var(--surface-2); }
+  .riquadro-procedura-testa { display: flex; justify-content: space-between; align-items: baseline; gap: 10px; margin-bottom: 8px; }
+  .riquadro-procedura-testa strong { font-size: .8rem; letter-spacing: .04em; text-transform: uppercase; color: var(--ink-muted); }
+  .riquadro-procedura-testa a { font-size: .85rem; font-weight: 600; color: var(--primary); white-space: nowrap; }
+  .griglia-procedura { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 6px 12px; margin: 0; }
+  .griglia-procedura div { min-width: 0; }
+  .griglia-procedura dt { font-size: .72rem; color: var(--ink-faint); margin: 0 0 1px; }
+  .griglia-procedura dd { margin: 0; font-size: .92rem; line-height: 1.25; font-weight: 600; color: var(--ink); overflow-wrap: anywhere; user-select: all; -webkit-user-select: all; }
+  .griglia-procedura .procedura-larga { grid-column: 1 / -1; }
+
   /* ============================================================
      COSTI DI TRASFERIMENTO E RISTRUTTURAZIONE — dentro la finestra
      dettagli, sotto note/descrizione. tabella-scroll scorre in
@@ -8799,6 +8811,24 @@ ${notaHtml}
           <div class="dettaglio-riga"><span>Superficie</span><span>${a.superficieMq.toFixed(0)} mq</span></div>
           <div class="dettaglio-riga"><span>€/mq (offerta)</span><span>${a.euroMq !== null ? formattaEuro(a.euroMq) + "/mq" : "—"}</span></div>` : "";
 
+    // Dati della procedura (dallo storico PVP, già nel database): sono quelli
+    // che il PVP chiede per cercare l'esito di una vendita (01/10/2026).
+    const procedura = (a.storico && a.storico.dati && a.storico.dati.procedura) || {};
+    const voceProcedura = (etichetta, valore, larga) =>
+      `<div${larga ? ' class="procedura-larga"' : ""}><dt>${etichetta}</dt><dd>${escapeHtml(String(valore ?? "").trim() || "N/D")}</dd></div>`;
+    const riquadroProcedura = `
+          <div class="riquadro-procedura">
+            <div class="riquadro-procedura-testa"><strong>Procedura</strong>
+              <a href="https://www.astegiudiziarie.it/esiti-vendite" target="_blank" rel="noopener" title="Cerca l'esito della vendita su astegiudiziarie.it con questi dati">Verifica esito ↗</a></div>
+            <dl class="griglia-procedura">
+              ${voceProcedura("Tribunale", Etichette.tribunale(a.tribunale), true)}
+              ${voceProcedura("Tipo procedura", procedura.rito, true)}
+              ${voceProcedura("Numero", procedura.numero)}
+              ${voceProcedura("Anno", procedura.anno)}
+              ${voceProcedura("Lotto", a.lotto)}
+            </dl>
+          </div>`;
+
     const formalitaTesto = a.formalitaPregiudizievoli;
     const formalitaConAvviso = formalitaTesto && formalitaTesto !== "N/D"
       && formalitaTesto.toLowerCase().indexOf("nessuna criticità") !== 0;
@@ -8876,7 +8906,7 @@ ${notaHtml}
       ["sez-storico", "Storico", sezioneStoricoAste(a)],
       ["sez-dettagli", "Dettagli", `<div class="sezione-costi">
           <h3 class="sezione-costi-titolo">📋 Dettagli</h3>
-          <div class="dettaglio-riga"><span>Tribunale</span><span>${escapeHtml(Etichette.tribunale(a.tribunale))}</span></div>
+${riquadroProcedura}
           <div class="dettaglio-riga"><span>Disponibilità (PVP)</span><span>${escapeHtml(etichettaDisponibilita(a.disponibilita))}</span></div>
           <div class="dettaglio-riga"><span>Prezzo base</span><span>${formattaEuro(a.prezzoBase)}</span></div>
           <div class="dettaglio-riga"><span>Rilancio minimo</span><span>${formattaEuro(a.rilancioMinimo)}</span></div>
