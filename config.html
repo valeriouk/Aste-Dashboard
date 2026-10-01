@@ -226,6 +226,12 @@
     flex-wrap: wrap;
     margin-bottom: 28px;
   }
+  /* Avvisi ben visibili: nota fissa in cima e avviso sotto la mappa */
+  .avvisi-config { background: var(--danger-soft); color: var(--danger); border: 1px solid var(--danger); border-radius: 12px; padding: 10px 14px; margin-bottom: 14px; font-size: .9rem; font-weight: 500; }
+  .avvisi-config p { margin: 0; }
+  .avvisi-config p + p { margin-top: 6px; }
+  .avviso-rosso { color: var(--danger); font-weight: 600; font-size: .88rem; margin: 8px 0 0; }
+
   .barra-ripristino {
     background: var(--surface);
     border: 1px dashed var(--border);
@@ -526,6 +532,8 @@
 
     <div id="contenuto-config" class="nascosto">
 
+      <div id="avvisi-config" class="avvisi-config nascosto" role="status"></div>
+
       <nav class="schede-config" role="tablist" aria-label="Sezioni della configurazione">
         <button type="button" role="tab" data-scheda-bottone="ricerca" onclick="mostraSchedaConfig('ricerca')">🔍 Ricerca</button>
         <button type="button" role="tab" data-scheda-bottone="analisi" onclick="mostraSchedaConfig('analisi')">🧠 Analisi</button>
@@ -751,7 +759,7 @@
     </div>
     <div class="finestra-modale-corpo">
       <label class="etichetta-checkbox etichetta-tutta-italia">
-        <input type="checkbox" id="campo-tutta-italia" onchange="aggiornaStatoTuttaItalia()">
+        <input type="checkbox" id="campo-tutta-italia" onchange="aggiornaStatoTuttaItalia(); aggiornaAvvisoRaggioAmpio()">
         Cerca su tutta Italia (ignora punto e raggio qui sotto)
       </label>
       <p class="nota-campo nota-tutta-italia">L'analisi in questa modalità è asincrona: le aste trovate vengono inviate a Gemini in un unico batch invece che una alla volta — può volerci da pochi minuti fino a 24 ore. Riceverai una notifica Telegram non appena l'invio è completato, e una notifica separata per ogni asta quando la sua analisi sarà pronta.</p>
@@ -766,6 +774,7 @@
           <label>Raggio di ricerca: <span id="etichetta-raggio">22</span> km</label>
           <input type="range" id="campo-raggio" min="1" max="300" value="22">
         </div>
+        <p id="avviso-raggio-ampio" class="avviso-rosso nascosto"></p>
         <p class="nota-coordinate">Punto selezionato: <span id="etichetta-coordinate">—</span> · clicca sulla mappa o trascina il segnaposto</p>
       </div>
       <div class="finestra-modale-azioni">
@@ -847,6 +856,20 @@
         </select>
       </div>
       <div class="campo-form">
+        <label class="etichetta-checkbox" style="margin-top:0">
+          <input type="checkbox" id="campo-vendita-vicina" onchange="aggiornaStatoVenditaVicina()">
+          Solo aste con vendita vicina
+        </label>
+        <div id="blocco-vendita-vicina" style="display:flex;align-items:center;gap:8px;flex-wrap:wrap;margin-top:8px">
+          <span>tra</span>
+          <input type="number" id="campo-vendita-giorni-min" min="1" max="30" step="1" style="width:5.5em" aria-label="Giorni minimi alla vendita">
+          <span>e</span>
+          <input type="number" id="campo-vendita-giorni-max" min="1" max="30" step="1" style="width:5.5em" aria-label="Giorni massimi alla vendita">
+          <span>giorni da oggi</span>
+        </div>
+        <p class="nota-campo">Spento: tutte le aste future. Acceso: lo scanner cerca e analizza solo le aste con vendita in quell'intervallo (le altre non costano Gemini e vengono riviste nei giri successivi, quando ci entrano). Numeri interi tra 1 e 30. Il minimo serve a escludere le aste troppo vicine per preparare l'offerta. Non fa parte dei set di filtri salvati; "Ripristina predefiniti" lo spegne.</p>
+      </div>
+      <div class="campo-form">
         <label for="campo-astegiudiziarie">Perizia da astegiudiziarie.it</label>
         <select id="campo-astegiudiziarie">
           <option value="true">Attiva</option>
@@ -857,6 +880,15 @@
       <div class="campo-form">
         <label for="campo-pausa">Pausa tra un'asta e l'altra (secondi)</label>
         <input type="number" id="campo-pausa" min="0" max="60" step="1">
+      </div>
+      <div class="campo-form">
+        <label for="campo-pagine-massime">Tetto di lettura della ricerca a raggio (pagine del PVP)</label>
+        <p class="nota-campo">Lo scanner legge i risultati del PVP dalle vendite più lontane nel tempo e si ferma a questo tetto: 40 pagine = 480 aste (predefinito), al massimo 300 = 3.600. Con un'area ampia le aste più vicine alla vendita restano oltre il tetto: per quelle c'è "Solo aste con vendita vicina" qui sopra. "Tutta Italia" usa sempre 300 pagine.</p>
+        <label class="etichetta-checkbox">
+          <input type="checkbox" id="campo-accetta-pagine" onchange="aggiornaStatoPagineMassime()">
+          Ho capito: alzare il tetto fa leggere più aste, quindi più analisi Gemini (a pagamento) per quelle che passano i filtri e giri più lunghi (minuti GitHub)
+        </label>
+        <input type="number" id="campo-pagine-massime" min="40" max="300" step="10" style="margin-top:8px">
       </div>
       <div class="campo-form">
         <label for="campo-solo-conteggio">Modalità di esecuzione</label>
@@ -1233,6 +1265,7 @@
       const km = Number(e.target.value);
       document.getElementById("etichetta-raggio").textContent = km;
       cerchio.setRadius(km * 1000);
+      aggiornaAvvisoRaggioAmpio();
     });
   }
 
@@ -1416,6 +1449,12 @@
       }
 
       configAttuale.solo_aste_future = String(config.solo_aste_future ?? true).toLowerCase() === "true";
+      // "Solo aste con vendita vicina": spento finché non lo accendi (predefiniti 2 e 15 giorni).
+      configAttuale.vendita_giorni_attivo = String(config.vendita_giorni_attivo ?? false).toLowerCase() === "true";
+      configAttuale.vendita_giorni_min = Number(config.vendita_giorni_min ?? VALORI_PREDEFINITI.venditaGiorniMin);
+      configAttuale.vendita_giorni_max = Number(config.vendita_giorni_max ?? VALORI_PREDEFINITI.venditaGiorniMax);
+      // Tetto di lettura della ricerca a raggio (pagine del PVP): 40 finché non lo alzi.
+      configAttuale.pagine_massime_ricerca = Number(config.pagine_massime_ricerca ?? VALORI_PREDEFINITI.pagineMassime);
       configAttuale.usa_astegiudiziarie_perizia = String(config.usa_astegiudiziarie_perizia ?? true).toLowerCase() === "true";
       configAttuale.pausa_tra_aste_secondi = Number(config.pausa_tra_aste_secondi ?? 1);
       configAttuale.solo_conteggio = String(config.solo_conteggio ?? false).toLowerCase() === "true";
@@ -1520,6 +1559,47 @@
       configAttuale.esclusioni_attive && voci.length ? `Attive: ${voci.join(", ")}` : "Disattivate";
   }
 
+  function aggiornaStatoPagineMassime() {
+    document.getElementById("campo-pagine-massime").disabled = !document.getElementById("campo-accetta-pagine").checked;
+  }
+
+  // Oltre questo raggio (o su tutta Italia) le aste future possono essere più
+  // del tetto di lettura: quelle più vicine alla vendita resterebbero fuori.
+  const SOGLIA_RAGGIO_AMPIO_KM = 100;
+  const testoVenditaVicina = () => `"Solo aste con vendita vicina" (tra ${configAttuale.vendita_giorni_min} e ${configAttuale.vendita_giorni_max} giorni)`;
+
+  // Avviso rosso sotto la mappa, mentre scegli zona e raggio.
+  function aggiornaAvvisoRaggioAmpio() {
+    const el = document.getElementById("avviso-raggio-ampio");
+    const tuttaItalia = document.getElementById("campo-tutta-italia").checked;
+    const km = Number(document.getElementById("campo-raggio").value);
+    const ampio = tuttaItalia || km > SOGLIA_RAGGIO_AMPIO_KM;
+    el.classList.toggle("nascosto", !ampio || !!configAttuale.vendita_giorni_attivo);
+    el.textContent = `⚠️ Attenzione: con ${tuttaItalia ? "tutta Italia" : "un raggio di " + km + " km"} le aste in scadenza potrebbero non essere lette (lo scanner parte dalle vendite più lontane e si ferma al tetto di lettura). Attiva ${testoVenditaVicina()} in "Altri filtri".`;
+  }
+
+  // Nota fissa in cima alla pagina: zona ampia senza "vendita vicina", tetto di lettura alzato.
+  function renderizzaAvvisiConfig() {
+    const avvisi = [];
+    const ampio = configAttuale.cerca_tutta_italia || Number(configAttuale.raggio_km) > SOGLIA_RAGGIO_AMPIO_KM;
+    if (ampio && !configAttuale.vendita_giorni_attivo) {
+      avvisi.push(`⚠️ Zona di ricerca ampia (${configAttuale.cerca_tutta_italia ? "tutta Italia" : configAttuale.raggio_km + " km"}): le aste in scadenza potrebbero non essere lette. Attiva ${testoVenditaVicina()} in Ricerca → Altri filtri.`);
+    }
+    if (Number(configAttuale.pagine_massime_ricerca) > VALORI_PREDEFINITI.pagineMassime) {
+      avvisi.push(`⚠️ Tetto di lettura alzato a ${configAttuale.pagine_massime_ricerca} pagine (fino a ${configAttuale.pagine_massime_ricerca * 12} aste lette per giro): più analisi Gemini e giri più lunghi. Si cambia in Ricerca → Altri filtri.`);
+    }
+    const el = document.getElementById("avvisi-config");
+    el.innerHTML = avvisi.map(a => `<p>${escapeHtml(a)}</p>`).join("");
+    el.classList.toggle("nascosto", !avvisi.length);
+  }
+
+  function aggiornaStatoVenditaVicina() {
+    const acceso = document.getElementById("campo-vendita-vicina").checked;
+    document.getElementById("blocco-vendita-vicina").classList.toggle("sezione-disattivata", !acceso);
+    document.getElementById("campo-vendita-giorni-min").disabled = !acceso;
+    document.getElementById("campo-vendita-giorni-max").disabled = !acceso;
+  }
+
   function renderizzaRiepilogoAltri() {
     const nomiOccupazione = Object.fromEntries(STATI_OCCUPAZIONE_PVP);
     const parti = [
@@ -1529,6 +1609,9 @@
       configAttuale.usa_astegiudiziarie_perizia ? "Perizia esterna attiva" : "Perizia esterna disattiva",
       `pausa ${configAttuale.pausa_tra_aste_secondi}s`
     ];
+    if (configAttuale.vendita_giorni_attivo) parti.push(`VENDITA TRA ${configAttuale.vendita_giorni_min} E ${configAttuale.vendita_giorni_max} GIORNI`);
+    if (Number(configAttuale.pagine_massime_ricerca) > VALORI_PREDEFINITI.pagineMassime) parti.push(`tetto ${configAttuale.pagine_massime_ricerca} pagine`);
+    renderizzaAvvisiConfig();
     if (configAttuale.solo_conteggio) parti.push("SOLO CONTEGGIO");
     document.getElementById("riepilogo-altri").textContent = parti.join(" · ");
   }
@@ -1589,6 +1672,7 @@
   }
 
   function renderizzaTuttiIRiepiloghi() {
+    renderizzaAvvisiConfig();
     mostraSetFiltri();
     mostraChecklist();
     mostraParametriConti();
@@ -1621,6 +1705,7 @@
       document.getElementById("campo-tutta-italia").checked = configAttuale.cerca_tutta_italia;
       document.getElementById("campo-raggio").value = configAttuale.raggio_km;
       document.getElementById("etichetta-raggio").textContent = configAttuale.raggio_km;
+      aggiornaAvvisoRaggioAmpio();
     } else if (nome === "prezzo") {
       const minIllimitato = configAttuale.prezzo_base_min === 0;
       document.getElementById("campo-prezzo-minimo-illimitato").checked = minIllimitato;
@@ -1643,6 +1728,13 @@
         cb.checked = !configAttuale.occupazioni_escluse.includes(cb.value);
       });
       document.getElementById("campo-solo-future").value = String(configAttuale.solo_aste_future);
+      document.getElementById("campo-vendita-vicina").checked = !!configAttuale.vendita_giorni_attivo;
+      document.getElementById("campo-vendita-giorni-min").value = configAttuale.vendita_giorni_min;
+      document.getElementById("campo-vendita-giorni-max").value = configAttuale.vendita_giorni_max;
+      aggiornaStatoVenditaVicina();
+      document.getElementById("campo-pagine-massime").value = configAttuale.pagine_massime_ricerca;
+      document.getElementById("campo-accetta-pagine").checked = false;
+      aggiornaStatoPagineMassime();
       document.getElementById("campo-astegiudiziarie").value = String(configAttuale.usa_astegiudiziarie_perizia);
       document.getElementById("campo-pausa").value = configAttuale.pausa_tra_aste_secondi;
       document.getElementById("campo-solo-conteggio").value = String(configAttuale.solo_conteggio);
@@ -1739,6 +1831,10 @@
         ...(configAttuale.checklist_modello ? {checklist_modello: JSON.stringify(configAttuale.checklist_modello)} : {}),
         ...(configAttuale.set_filtri ? {set_filtri: JSON.stringify(configAttuale.set_filtri)} : {}),
         solo_aste_future: String(configAttuale.solo_aste_future),
+        vendita_giorni_attivo: String(!!configAttuale.vendita_giorni_attivo),
+        vendita_giorni_min: configAttuale.vendita_giorni_min,
+        vendita_giorni_max: configAttuale.vendita_giorni_max,
+        pagine_massime_ricerca: configAttuale.pagine_massime_ricerca,
         usa_astegiudiziarie_perizia: String(configAttuale.usa_astegiudiziarie_perizia),
         pausa_tra_aste_secondi: configAttuale.pausa_tra_aste_secondi,
         solo_conteggio: String(configAttuale.solo_conteggio),
@@ -1760,6 +1856,10 @@
     occupazioniEscluse: [],
     esclusioniAttive: false,
     soloFuture: true,
+    venditaGiorniAttivo: false,
+    venditaGiorniMin: 2,
+    venditaGiorniMax: 15,
+    pagineMassime: 40,
     astegiudiziarie: true,
     pausa: 1,
     soloConteggio: false,
@@ -1922,6 +2022,10 @@
     configAttuale.esclusione_quote = true;
     configAttuale.parole_esclusione = [...PAROLE_ESCLUSIONE_PREDEFINITE];
     configAttuale.solo_aste_future = VALORI_PREDEFINITI.soloFuture;
+    configAttuale.vendita_giorni_attivo = VALORI_PREDEFINITI.venditaGiorniAttivo;
+    configAttuale.vendita_giorni_min = VALORI_PREDEFINITI.venditaGiorniMin;
+    configAttuale.vendita_giorni_max = VALORI_PREDEFINITI.venditaGiorniMax;
+    configAttuale.pagine_massime_ricerca = VALORI_PREDEFINITI.pagineMassime;
     configAttuale.usa_astegiudiziarie_perizia = VALORI_PREDEFINITI.astegiudiziarie;
     configAttuale.pausa_tra_aste_secondi = VALORI_PREDEFINITI.pausa;
     configAttuale.solo_conteggio = VALORI_PREDEFINITI.soloConteggio;
@@ -2039,6 +2143,24 @@
         msgEl.className = "messaggio-salvataggio-card messaggio-errore";
         return;
       }
+      const venditaVicina = document.getElementById("campo-vendita-vicina").checked;
+      const giorniMin = Number(document.getElementById("campo-vendita-giorni-min").value);
+      const giorniMax = Number(document.getElementById("campo-vendita-giorni-max").value);
+      const interi = (n) => Number.isInteger(n) && n >= 1 && n <= 30;
+      if (venditaVicina && (document.getElementById("campo-vendita-giorni-min").value === "" || document.getElementById("campo-vendita-giorni-max").value === ""
+          || !interi(giorniMin) || !interi(giorniMax) || giorniMax < giorniMin)) {
+        msgEl.textContent = "Vendita vicina: servono due numeri interi tra 1 e 30, il secondo non più piccolo del primo.";
+        msgEl.className = "messaggio-salvataggio-card messaggio-errore";
+        return;
+      }
+      // Il tetto si cambia solo con l'avviso accettato; senza, resta quello di prima.
+      const accettaPagine = document.getElementById("campo-accetta-pagine").checked;
+      const pagine = Number(document.getElementById("campo-pagine-massime").value);
+      if (accettaPagine && (!Number.isInteger(pagine) || pagine < 40 || pagine > 300)) {
+        msgEl.textContent = "Tetto di lettura: un numero intero tra 40 e 300 pagine.";
+        msgEl.className = "messaggio-salvataggio-card messaggio-errore";
+        return;
+      }
       const statiSpuntati = [...document.querySelectorAll("#lista-occupazione .checkbox-occupazione:checked")].map(cb => cb.value);
       if (statiSpuntati.length === 0) {
         msgEl.textContent = "Spunta almeno uno stato di occupazione.";
@@ -2051,6 +2173,12 @@
         ...STATI_OCCUPAZIONE_PVP.map(([k]) => k).filter(k => !statiSpuntati.includes(k))
       ];
       configAttuale.solo_aste_future = document.getElementById("campo-solo-future").value === "true";
+      configAttuale.vendita_giorni_attivo = venditaVicina;
+      if (accettaPagine) configAttuale.pagine_massime_ricerca = pagine;
+      if (venditaVicina) {   // spento: restano i giorni di prima, pronti per la prossima volta
+        configAttuale.vendita_giorni_min = giorniMin;
+        configAttuale.vendita_giorni_max = giorniMax;
+      }
       configAttuale.usa_astegiudiziarie_perizia = document.getElementById("campo-astegiudiziarie").value === "true";
       configAttuale.pausa_tra_aste_secondi = pausa;
       configAttuale.solo_conteggio = document.getElementById("campo-solo-conteggio").value === "true";

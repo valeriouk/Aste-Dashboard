@@ -1210,7 +1210,7 @@
     <h3>Set di filtri salvati</h3>
     <p>In fondo alla scheda Ricerca. Salva con un nome i filtri di quella scheda e rimettili quando vuoi, per esempio "Fidenza 195 conteggio"
       per un giro di solo conteggio e un secondo set per il giro vero. Un set contiene: area (centro e raggio, o tutta Italia), prezzo base, tipologie,
-      altri filtri (occupazione, solo aste future, perizia da astegiudiziarie, pausa, solo conteggio) ed esclusioni per parole chiave. Modelli Gemini,
+      altri filtri (occupazione, solo aste future, perizia da astegiudiziarie, pausa, solo conteggio; non "vendita vicina" né il tetto di lettura) ed esclusioni per parole chiave. Modelli Gemini,
       batch, orari e ricerca della perizia non fanno parte del set e restano quelli attuali.</p>
     <ul>
       <li><strong>Salva set</strong>: scrivi un nome (massimo 40 caratteri) e conferma col secondo tocco; con un nome già usato chiede se sovrascrivere.
@@ -1249,7 +1249,10 @@
     <ul>
       <li><strong>Mappa e segnaposto</strong>: il punto di riferimento (clicca sulla mappa o trascina il segnaposto; "Cerca un indirizzo o una città" lo
         sposta). Il cerchio mostra il raggio. Dal punto si calcola anche la colonna "distanza" di ogni asta.</li>
-      <li><strong>Raggio di ricerca</strong>: da 1 a 300 km.</li>
+      <li><strong>Raggio di ricerca</strong>: da 1 a 300 km. Oltre i 100 km (o con "Cerca su tutta Italia"), se "Solo aste con vendita vicina" è spento,
+        sotto la mappa compare un <strong>avviso rosso</strong>: le aste in scadenza potrebbero non essere lette, perché lo scanner parte dalle vendite più
+        lontane nel tempo e si ferma al tetto di lettura (vedi <a href="#config-altri-filtri">Altri filtri</a>). Lo stesso avviso resta fisso in cima alla
+        pagina di Configurazione finché la zona è ampia e il filtro è spento.</li>
       <li><strong>"Cerca su tutta Italia"</strong>: ignora punto e raggio e cerca in tutto il paese (legge fino a 300 pagine di annunci). Usa
         <strong>sempre il batch</strong>: le analisi arrivano da pochi minuti a 24 ore dopo, con una notifica all'invio e una per ogni asta quando è
         pronta. La distanza resta calcolata dal punto scelto.</li>
@@ -1278,6 +1281,24 @@
         dal debitore, cioè liberabile dal custode; anche "Occupato senza titolo" è in genere liberabile (nessun contratto opponibile).
         Il riepilogo della card mostra "Occupazione: tutti gli stati" oppure gli stati esclusi, e i messaggi Telegram con i filtri usati (anche quello di invio del batch) mostrano la riga dell'occupazione con i nomi degli stati esclusi (e la riga "🚫 Esclusioni", vedi <a href="#config-esclusioni">Esclusioni per parole chiave</a>).</li>
       <li><strong>Aste da includere</strong>: "Solo aste future" (predefinito) oppure "Includi anche concluse (analisi storiche)".</li>
+      <li><strong>Solo aste con vendita vicina</strong> (spento di partenza): "tra X e Y giorni da oggi", predefiniti 2 e 15, numeri interi tra 1 e 30
+        (il secondo non più piccolo del primo; lo scanner riporta comunque i valori dentro questi limiti). Acceso, lo scanner cerca e
+        analizza solo le aste con vendita in quell'intervallo: le altre vengono scartate prima di qualunque analisi (nessun costo Gemini) e riviste nei giri
+        successivi, quando entrano nell'intervallo. Il minimo serve a lasciare fuori le aste troppo vicine per preparare l'offerta (termine delle offerte,
+        cauzione, firma digitale). La ricerca salta direttamente alle pagine del PVP con quelle date, quindi funziona anche su aree molto grandi, dove
+        senza questo filtro la ricerca a raggio legge al massimo 480 aste partendo dalle più lontane nel tempo. Il riepilogo della card e i messaggi Telegram
+        con i filtri mostrano "vendita tra X e Y giorni"; il log del giro dice quante aste sono state scartate perché fuori dall'intervallo. <strong>Non fa
+        parte dei set di filtri salvati</strong> (resta com'è quando applichi un set) e "Ripristina tutti i valori predefiniti" lo spegne.</li>
+      <li><strong>Tetto di lettura della ricerca a raggio</strong>: quante pagine del PVP (12 aste l'una) lo scanner legge al massimo in un giro, partendo
+        dalle vendite più lontane nel tempo. Predefinito 40 pagine = 480 aste; si può alzare fino a 300 = 3.600 (a passi liberi, numero intero). Il campo si
+        sblocca solo spuntando la casella di accettazione: alzare il tetto fa leggere più aste, quindi più analisi Gemini a pagamento per quelle che
+        passano gli altri filtri (prezzo, occupazione, esclusioni restano attivi e riducono il carico) e giri più lunghi (minuti GitHub). Con il tetto
+        sopra 40 una <strong>nota rossa resta fissa in cima alla pagina</strong> di Configurazione e il riepilogo della card mostra "tetto N pagine".
+        "Tutta Italia" legge sempre fino a 300 pagine; con "vendita vicina" acceso il tetto non conta (si legge tutto l'intervallo). Non fa parte dei
+        set salvati; "Ripristina tutti i valori predefiniti" lo riporta a 40.</li>
+      <li><strong>Avviso "ricerca fermata al tetto"</strong>: se un giro legge tutte le pagine consentite senza arrivare alla fine delle aste future,
+        il log e i messaggi Telegram con i filtri usati riportano "⚠️ Ricerca fermata al tetto di N pagine…: le aste con vendita più vicina NON sono
+        state lette", con il consiglio di attivare "vendita vicina" o restringere zona o tipologia.</li>
       <li><strong>Perizia da astegiudiziarie.it</strong>: attiva/disattiva la ricerca della perizia su quel sito. Le sue condizioni d'uso vietano lo scraping
         automatico: attivala solo se è una scelta consapevole.</li>
       <li><strong>Pausa tra un'asta e l'altra</strong> (0-60 s): attesa tra un'analisi e la successiva; riduce errori e l'esaurimento della quota Gemini.</li>
