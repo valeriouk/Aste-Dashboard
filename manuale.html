@@ -453,13 +453,13 @@
   <section class="voce" id="orari-preferiti">
     <h3>Promemoria delle aste preferite (ogni giorno alle 10:30)</h3>
     <ul>
-      <li>Riguarda solo le aste con la stella (preferite). Le soglie sono <strong>15, 7, 5, 3 e 1 giorni</strong> prima della vendita.</li>
+      <li>Riguarda solo le aste con la stella (preferite). Le soglie sono <strong>30, 21, 16, 7, 5, 3 e 1 giorni</strong> prima della vendita.</li>
       <li>Funziona a <strong>fasce</strong>, non a giorni esatti: con 6 giorni mancanti vale la soglia dei 7, con 4 quella dei 5. Ogni soglia si invia
         una sola volta per asta; se il promemoria salta un giorno, la soglia arriva il giorno dopo. Se salta più giorni si invia solo la soglia più
         urgente raggiunta.</li>
-      <li>La soglia dei 15 giorni ha un testo dedicato: "🏠 PRENOTA LA VISITA" (contattare custode o delegato). Le altre: "⭐ PROMEMORIA ASTA PREFERITA".</li>
-      <li><strong>"⭐ Controlla preferiti ora"</strong> (Configurazione): modalità immediata, notifica subito tutte le preferite con vendita entro 15 giorni,
-        ignorando le soglie già inviate e senza registrarle (non disturba il giro del giorno dopo). Se non ce ne sono: "Nessuna preferita in scadenza entro 15 giorni".</li>
+      <li>Le soglie dei 30, 21 e 16 giorni hanno un testo dedicato: "🏠 PRENOTA LA VISITA", con i giorni che mancano alla vendita e l'<strong>ultimo giorno utile per prenotare la visita</strong> (16 giorni prima della vendita: il custode ha 15 giorni dalla richiesta per farla fare, più 1 giorno di margine); la soglia dei 16 giorni cade proprio su quell'ultimo giorno ("Oggi è l'ultimo giorno utile"). Se quel giorno è già passato (per esempio perché hai messo la stella tardi) il messaggio lo dice e suggerisce di contattare custode o delegato. Le altre: "⭐ PROMEMORIA ASTA PREFERITA".</li>
+      <li><strong>"⭐ Controlla preferiti ora"</strong> (Configurazione): modalità immediata, notifica subito tutte le preferite con vendita entro 30 giorni,
+        ignorando le soglie già inviate e senza registrarle (non disturba il giro del giorno dopo). Se non ce ne sono: "Nessuna preferita in scadenza entro 30 giorni".</li>
     </ul>
   </section>
 
@@ -1202,7 +1202,7 @@
 
   <section class="voce" id="config-controlla-preferiti">
     <h3>"⭐ Controlla preferiti ora"</h3>
-    <p>Manda subito su Telegram i promemoria di tutte le preferite con vendita entro 15 giorni, ignorando le soglie già inviate e senza registrarle.
+    <p>Manda subito su Telegram i promemoria di tutte le preferite con vendita entro 30 giorni, ignorando le soglie già inviate e senza registrarle.
       Vedi <a href="#orari-preferiti">promemoria preferiti</a>. Non consuma Gemini.</p>
   </section>
 
@@ -2209,9 +2209,9 @@
         <tr><td>💶 Saldo del prezzo entro N giorni / 🚨 OGGI la scadenza del saldo</td><td>Aggiudicata: 15, 7, 1 giorno prima e il giorno stesso, con prezzo − cauzione.</td></tr>
         <tr><td>✅ Visita segnata come effettuata</td><td>3 ore dopo l'orario, se non l'hai cambiata; se non è andata così, riaprila dalla scheda.</td></tr>
         <tr><td>⏳ / ⚠️ solleciti visita</td><td>Richiesta senza invito da 5 giorni; invito non confermato da 2 giorni; asta entro 7 giorni senza visita confermata.</td></tr>
-        <tr><td>🏠 PRENOTA LA VISITA — ASTA PREFERITA</td><td>Preferita a 15 giorni dalla vendita: contatta custode o delegato.</td></tr>
+        <tr><td>🏠 PRENOTA LA VISITA — ASTA PREFERITA</td><td>Preferita a 30, 21 e 16 giorni dalla vendita: giorni mancanti e ultimo giorno utile per prenotare la visita.</td></tr>
         <tr><td>⭐ PROMEMORIA ASTA PREFERITA</td><td>Preferita a 7, 5, 3, 1 giorni dalla vendita (con la tua nota).</td></tr>
-        <tr><td>✅ Controllo preferiti: nessuna in scadenza</td><td>Solo con "Controlla preferiti ora" se nessuna preferita è entro 15 giorni.</td></tr>
+        <tr><td>✅ Controllo preferiti: nessuna in scadenza</td><td>Solo con "Controlla preferiti ora" se nessuna preferita è entro 30 giorni.</td></tr>
       </tbody>
     </table></div>
     <p>Se Telegram segnala troppi messaggi, il sistema aspetta e riprova. Le aste di un batch fallito o scaduto vengono scritte ma non notificate.</p>
