@@ -8388,7 +8388,7 @@ ${notaHtml}
         <div class="visita-azioni operazione-azioni">${prossimi}${modifica}${rimuovi}</div>
         <div class="operazione-editor nascosto"></div>
         ${stato !== "persa" ? sezioneContoReale(a) : ""}
-        ${gruppo("prima", "Checklist prima dell'offerta", indice <= 1)}
+        ${gruppo("prima", "Checklist prima dell'offerta", false)}
         ${gruppo("dopo", "Dopo l'aggiudicazione", indice >= 2 && stato !== "persa")}
         ${storico}
       </div>`;
