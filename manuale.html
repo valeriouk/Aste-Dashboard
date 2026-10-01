@@ -1239,13 +1239,30 @@
         <tr><td>Prezzo base</td><td>nessun minimo, massimo 110.000 €</td></tr>
         <tr><td>Area</td><td>Catania centro, raggio 22 km, tutta Italia no</td></tr>
         <tr><td>Tipologie</td><td>tutte</td></tr>
-        <tr><td>Altri filtri</td><td>tutti gli stati di occupazione, solo aste future, perizia da astegiudiziarie attiva, pausa 1 s, modalità normale</td></tr>
+        <tr><td>Altri filtri</td><td>tutti gli stati di occupazione, solo aste future, "vendita vicina" spento (2 e 15 giorni), tetto di lettura 40 pagine,
+          perizia da astegiudiziarie attiva, pausa 1 s, modalità normale</td></tr>
+        <tr><td>Esclusioni</td><td>disattivate, quote escluse, elenco di parole predefinito</td></tr>
         <tr><td>Modelli</td><td>cascata consigliata, batch anche in locale attivo</td></tr>
         <tr><td>Pianificazione</td><td>attiva, lunedì-venerdì alle 10:00</td></tr>
         <tr><td>Ricerca della perizia</td><td>estesa, ricontrollo ogni 2 giorni, massimo 15 aste per giro</td></tr>
       </tbody>
     </table></div>
-    <p>Non cambia la scelta del prompt (v1/v2).</p>
+    <p>Non cambiano la scelta del prompt (v1/v2), i set di filtri salvati, la scheda Conti e le schede Dispositivo e Sicurezza.</p>
+    <p><strong>I simboli * e °</strong> accanto ai titoli delle card e ai singoli campi dicono cosa resta fuori: <strong>*</strong> = non torna ai
+      predefiniti con "Ripristina"; <strong>°</strong> = non fa parte dei <a href="#config-set-filtri">set di filtri salvati</a>. Senza simbolo = ripristinato e
+      compreso nei set. Una riga in fondo a ogni scheda (e nelle finestre "Altri filtri" e "Ricerca della perizia") ricorda il significato.</p>
+    <div class="tabella-scroll"><table>
+      <thead><tr><th>Card</th><th>Scheda</th><th>"Ripristina" la riporta ai predefiniti</th><th>Entra nei set salvati</th></tr></thead>
+      <tbody>
+        <tr><td>Area di ricerca, Filtri di prezzo, Tipologia immobili, Esclusioni</td><td>Ricerca</td><td>sì</td><td>sì</td></tr>
+        <tr><td>Altri filtri</td><td>Ricerca</td><td>sì, tutti</td><td>sì, tranne "vendita vicina" ° e tetto di lettura °</td></tr>
+        <tr><td>Modelli Gemini °</td><td>Analisi</td><td>sì</td><td>no</td></tr>
+        <tr><td>Ricerca della perizia °</td><td>Analisi</td><td>sì, tranne il prompt di analisi *</td><td>no</td></tr>
+        <tr><td>Pianificazione scansione °</td><td>Orari</td><td>sì</td><td>no</td></tr>
+        <tr><td>Regime fiscale e conti * °, Checklist delle aste * °</td><td>Conti</td><td>no</td><td>no</td></tr>
+        <tr><td>Tema, suoni, manutenzione, password, dispositivi</td><td>Dispositivo, Sicurezza</td><td>no</td><td>no</td></tr>
+      </tbody>
+    </table></div>
   </section>
 
   <section class="voce" id="config-area">
