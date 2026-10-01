@@ -296,12 +296,16 @@
       <li><strong>Codice</strong>: i due repository su GitHub conservano ogni versione. I punti di ritorno con un nome sono i <strong>tag</strong>
         <code>backup-AAAA-MM-GG</code>, con lo stesso nome nei due repository (il primo è <code>backup-2026-10-01</code>): su GitHub stanno in "Tags", con lo zip
         di quello stato. Conviene metterne uno nei momenti stabili e prima dei lavori grossi.</li>
-      <li><strong>Database</strong>: nel repository privato, pagina <strong>Actions → "Backup database" → Run workflow</strong>. Solo avvio manuale, 1-2 minuti
-        GitHub, sola lettura. Alla fine, in fondo alla pagina del run, sotto "Artifacts", c'è lo zip <code>backup-database-data_ora</code> con:
+      <li><strong>Database</strong>: il backup parte <strong>da solo l'1 e il 16 di ogni mese</strong>, verso le 4-5 del mattino (anche con qualche ora di
+        ritardo), e a mano dal repository privato, pagina <strong>Actions → "Backup database" → Run workflow</strong>. Circa 2 minuti GitHub a backup, sola
+        lettura. Alla fine, in fondo alla pagina del run, sotto "Artifacts", c'è lo zip <code>backup-database-data_ora</code> con:
         <code>database.dump</code> (tutto lo schema "public": tabelle, dati, funzioni, permessi e regole di accesso), <code>struttura.sql</code> (solo la
         struttura, leggibile), <code>righe_per_tabella.txt</code> e <code>LEGGIMI.txt</code> con il comando di ripristino.</li>
-      <li>Lo zip resta su GitHub <strong>30 giorni</strong>, poi viene cancellato (lo spazio del piano gratuito è limitato): quello da conservare va
-        scaricato sul PC. Contiene anche le password cifrate: non va passato ad altri.</li>
+      <li>Su GitHub restano <strong>gli ultimi due zip</strong>: quando un backup riesce, cancella quelli più vecchi (lo spazio del piano gratuito è limitato
+        e uno zip pesa circa 77 MB). Se un backup non riesce, i precedenti non vengono toccati e restano al massimo 90 giorni. Quello da conservare più a
+        lungo va scaricato sul PC. Contiene anche le password cifrate: non va passato ad altri.</li>
+      <li><strong>Avviso Telegram</strong> a ogni backup: "💾 Backup del database riuscito" con data, peso, numero di aste, quanti backup più vecchi ha
+        cancellato e il link al run per scaricare lo zip; oppure "❌ Backup del database NON riuscito" con il link per vedere l'errore.</li>
       <li>Il backup usa il segreto <code>SUPABASE_DB_URL</code> del repository (stringa di connessione "Session pooler" di Supabase con la password del
         database): se la password del database cambia, va aggiornato anche il segreto.</li>
       <li>Non sono nel backup: i segreti di GitHub e di Supabase, e le Edge Function pubblicate (le copie sono nel repository privato).</li>
