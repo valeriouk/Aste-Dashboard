@@ -352,6 +352,13 @@
     display: block;
   }
   .nota-campo { font-size: .78rem; color: var(--ink-faint); margin: 6px 0 0; line-height: 1.4; }
+  /* Elenco "Solo questi comuni": etichette con la × per togliere */
+  .lista-comuni { display: flex; flex-wrap: wrap; gap: 6px; margin-top: 8px; }
+  .lista-comuni:empty::before { content: "Nessun comune in elenco."; font-size: .82rem; color: var(--ink-faint); }
+  .comune-scelto { display: inline-flex; align-items: center; gap: 4px; background: var(--secondary-soft); border-radius: 999px; padding: 4px 6px 4px 12px; font-size: .86rem; }
+  .comune-scelto button { border: 0; background: transparent; color: inherit; font-size: 1.05rem; line-height: 1; padding: 2px 6px; cursor: pointer; border-radius: 999px; }
+  .blocco-spento { opacity: .5; pointer-events: none; }
+
   /* Simboli * (non ripristinato) e ° (non nei set salvati) e la loro legenda */
   .simbolo-nota { color: var(--danger); font-weight: 700; margin-left: 3px; cursor: help; }
   .legenda-simboli { margin: 0 0 14px; }
@@ -788,6 +795,25 @@
         </div>
         <p id="avviso-raggio-ampio" class="avviso-rosso nascosto"></p>
         <p class="nota-coordinate">Punto selezionato: <span id="etichetta-coordinate">—</span> · clicca sulla mappa o trascina il segnaposto</p>
+      </div>
+      <div class="campo-form" style="margin-top:14px">
+        <label class="etichetta-checkbox" style="margin-top:0">
+          <input type="checkbox" id="campo-comuni-attivo" onchange="aggiornaStatoComuni()">
+          Solo questi comuni
+        </label>
+        <p class="nota-campo">Spento: tutti i comuni dell'area. Acceso: dentro l'area lo scanner tiene solo le aste in questi comuni; le altre vengono scartate prima di qualunque analisi (nessun costo Gemini) e non entrano nel registro. Conta il comune, non la zona: per la cintura di una città aggiungi i singoli comuni.</p>
+        <div id="blocco-comuni">
+          <div id="lista-comuni" class="lista-comuni"></div>
+          <div class="riga-ricerca-indirizzo" style="margin-top:8px">
+            <input type="text" id="campo-nuovo-comune" maxlength="60" placeholder="Aggiungi un comune (es. Sesto San Giovanni)" onkeydown="if(event.key==='Enter') aggiungiComuneScritto()">
+            <button type="button" onclick="aggiungiComuneScritto()">Aggiungi</button>
+          </div>
+          <div style="display:flex;flex-wrap:wrap;gap:8px;margin-top:8px">
+            <button type="button" class="bottone-secondario" onclick="proponiGrandiCitta()">Proponi le grandi città nell'area</button>
+            <button type="button" class="bottone-secondario" onclick="svuotaComuni()">Svuota l'elenco</button>
+          </div>
+          <p class="nota-campo" id="messaggio-comuni"></p>
+        </div>
       </div>
       <div class="finestra-modale-azioni">
         <button type="button" class="bottone-salva-card" id="bottone-salva-area" onclick="confermaSalvaCard('area')">Salva</button>
@@ -1426,6 +1452,16 @@
         } catch (e) {}
       }
 
+      // "Solo questi comuni" (card Area di ricerca): spento e vuoto di partenza.
+      configAttuale.comuni_attivo = String(config.comuni_attivo ?? "false").toLowerCase() === "true";
+      configAttuale.comuni_inclusi = [];
+      if (config.comuni_inclusi) {
+        try {
+          const parsed = JSON.parse(config.comuni_inclusi);
+          if (Array.isArray(parsed)) configAttuale.comuni_inclusi = parsed.map(String);
+        } catch (e) {}
+      }
+
       // null finché non salvi voci tue: così il salvataggio delle altre card
       // non scrive nel database le voci predefinite (resterebbero fisse).
       configAttuale.checklist_modello = config.checklist_modello && window.Operazioni ? Operazioni.modelloChecklist(config.checklist_modello) : null;
@@ -1545,13 +1581,15 @@
 
   async function renderizzaRiepilogoArea() {
     const el = document.getElementById("riepilogo-area");
+    const comuni = configAttuale.comuni_attivo ? (configAttuale.comuni_inclusi || []) : [];
+    const codaComuni = !comuni.length ? "" : comuni.length <= 3 ? ` · solo ${comuni.join(", ")}` : ` · solo ${comuni.length} comuni`;
     if (configAttuale.cerca_tutta_italia) {
-      el.textContent = "Tutta Italia";
+      el.textContent = "Tutta Italia" + codaComuni;
       return;
     }
-    el.textContent = `Raggio ${configAttuale.raggio_km} km da ${configAttuale.lat_riferimento.toFixed(3)}, ${configAttuale.lon_riferimento.toFixed(3)}`;
+    el.textContent = `Raggio ${configAttuale.raggio_km} km da ${configAttuale.lat_riferimento.toFixed(3)}, ${configAttuale.lon_riferimento.toFixed(3)}` + codaComuni;
     const nome = await nomePosizioneLeggibile(configAttuale.lat_riferimento, configAttuale.lon_riferimento);
-    if (nome) el.textContent = `Raggio ${configAttuale.raggio_km} km da ${nome}`;
+    if (nome) el.textContent = `Raggio ${configAttuale.raggio_km} km da ${nome}` + codaComuni;
   }
 
   function renderizzaRiepilogoPrezzo() {
@@ -1571,6 +1609,87 @@
     const voci = [...(configAttuale.esclusione_quote !== false ? ["quote parziali"] : []), ...(configAttuale.parole_esclusione || [])];
     document.getElementById("riepilogo-esclusioni").textContent =
       configAttuale.esclusioni_attive && voci.length ? `Attive: ${voci.join(", ")}` : "Disattivate";
+  }
+
+  // ---------------------------------------------------------------- solo questi comuni
+  // Capoluoghi di provincia con circa 80.000 abitanti o più, con il nome
+  // ufficiale usato dal PVP e le coordinate del centro: servono solo a
+  // proporre quelli dentro l'area di ricerca; l'elenco resta libero.
+  const GRANDI_CITTA = [
+    ["Alessandria", 44.91, 8.61], ["Ancona", 43.62, 13.52], ["Andria", 41.23, 16.29], ["Arezzo", 43.46, 11.88],
+    ["Bari", 41.12, 16.87], ["Barletta", 41.32, 16.28], ["Bergamo", 45.70, 9.67], ["Bologna", 44.49, 11.34],
+    ["Bolzano", 46.50, 11.35], ["Brescia", 45.54, 10.22], ["Brindisi", 40.63, 17.94], ["Cagliari", 39.22, 9.12],
+    ["Catania", 37.50, 15.09], ["Catanzaro", 38.91, 16.59], ["Cesena", 44.14, 12.24], ["Como", 45.81, 9.08],
+    ["Ferrara", 44.84, 11.62], ["Firenze", 43.77, 11.26], ["Foggia", 41.46, 15.54], ["Forlì", 44.22, 12.04],
+    ["Genova", 44.41, 8.93], ["Grosseto", 42.76, 11.11], ["La Spezia", 44.10, 9.82], ["Latina", 41.47, 12.90],
+    ["Lecce", 40.35, 18.17], ["Livorno", 43.55, 10.31], ["Lucca", 43.84, 10.50], ["Messina", 38.19, 15.55],
+    ["Milano", 45.46, 9.19], ["Modena", 44.65, 10.93], ["Monza", 45.58, 9.27], ["Napoli", 40.85, 14.27],
+    ["Novara", 45.45, 8.62], ["Padova", 45.41, 11.88], ["Palermo", 38.12, 13.36], ["Parma", 44.80, 10.33],
+    ["Perugia", 43.11, 12.39], ["Pesaro", 43.91, 12.91], ["Pescara", 42.46, 14.21], ["Piacenza", 45.05, 9.70],
+    ["Pisa", 43.72, 10.40], ["Pistoia", 43.93, 10.92], ["Prato", 43.88, 11.10], ["Ravenna", 44.42, 12.20],
+    ["Reggio di Calabria", 38.11, 15.65], ["Reggio nell'Emilia", 44.70, 10.63], ["Rimini", 44.06, 12.57], ["Roma", 41.90, 12.50],
+    ["Salerno", 40.68, 14.76], ["Sassari", 40.73, 8.56], ["Siracusa", 37.08, 15.29], ["Taranto", 40.47, 17.23],
+    ["Terni", 42.56, 12.64], ["Torino", 45.07, 7.69], ["Trento", 46.07, 11.12], ["Treviso", 45.67, 12.24],
+    ["Trieste", 45.65, 13.78], ["Udine", 46.06, 13.24], ["Varese", 45.82, 8.83], ["Venezia", 45.44, 12.33],
+    ["Verona", 45.44, 10.99], ["Vicenza", 45.55, 11.54]
+  ];
+  let comuniInModifica = [];
+
+  const chiaveComune = (nome) => String(nome).normalize("NFKD").replace(/[\u0300-\u036f]/g, "").toLowerCase().replace(/[^a-z0-9]+/g, " ").trim();
+
+  function mostraComuni() {
+    document.getElementById("lista-comuni").innerHTML = comuniInModifica.map((nome, i) =>
+      `<span class="comune-scelto">${escapeHtml(nome)}<button type="button" onclick="togliComune(${i})" aria-label="Togli ${escapeHtml(nome)}">×</button></span>`).join("");
+  }
+
+  // Aggiunge senza doppioni (stesso nome a meno di maiuscole e accenti); ritorna quanti ne ha aggiunti.
+  function aggiungiComuni(nomi) {
+    let aggiunti = 0;
+    nomi.forEach(nome => {
+      const pulito = String(nome).trim().replace(/\s+/g, " ");
+      if (!pulito || comuniInModifica.some(c => chiaveComune(c) === chiaveComune(pulito))) return;
+      comuniInModifica.push(pulito);
+      aggiunti++;
+    });
+    comuniInModifica.sort((a, b) => a.localeCompare(b, "it"));
+    mostraComuni();
+    return aggiunti;
+  }
+
+  function aggiungiComuneScritto() {
+    const campo = document.getElementById("campo-nuovo-comune");
+    // più comuni in una volta, separati da virgola
+    const aggiunti = aggiungiComuni(campo.value.split(","));
+    document.getElementById("messaggio-comuni").textContent = campo.value.trim() && !aggiunti ? "Già in elenco." : "";
+    campo.value = "";
+  }
+
+  function togliComune(indice) {
+    comuniInModifica.splice(indice, 1);
+    document.getElementById("messaggio-comuni").textContent = "";
+    mostraComuni();
+  }
+
+  function svuotaComuni() {
+    comuniInModifica = [];
+    document.getElementById("messaggio-comuni").textContent = "";
+    mostraComuni();
+  }
+
+  // Le grandi città dentro il cerchio disegnato sulla mappa (o tutte, con "tutta Italia").
+  function proponiGrandiCitta() {
+    const tuttaItalia = document.getElementById("campo-tutta-italia").checked;
+    const centro = segnaposto.getLatLng();
+    const raggio = Number(document.getElementById("campo-raggio").value);
+    const dentro = GRANDI_CITTA.filter(([, lat, lon]) => tuttaItalia || centro.distanceTo([lat, lon]) / 1000 <= raggio).map(c => c[0]);
+    const aggiunti = aggiungiComuni(dentro);
+    document.getElementById("messaggio-comuni").textContent = !dentro.length
+      ? "Nessuna grande città dentro l'area: aggiungi i comuni a mano."
+      : `${dentro.length} grandi città nell'area (capoluoghi da circa 80.000 abitanti), ${aggiunti} aggiunte. Togli con la × quelle che non vuoi.`;
+  }
+
+  function aggiornaStatoComuni() {
+    document.getElementById("blocco-comuni").classList.toggle("blocco-spento", !document.getElementById("campo-comuni-attivo").checked);
   }
 
   function aggiornaStatoPagineMassime() {
@@ -1720,6 +1839,12 @@
       document.getElementById("campo-raggio").value = configAttuale.raggio_km;
       document.getElementById("etichetta-raggio").textContent = configAttuale.raggio_km;
       aggiornaAvvisoRaggioAmpio();
+      document.getElementById("campo-comuni-attivo").checked = !!configAttuale.comuni_attivo;
+      comuniInModifica = [...(configAttuale.comuni_inclusi || [])];
+      document.getElementById("campo-nuovo-comune").value = "";
+      document.getElementById("messaggio-comuni").textContent = "";
+      mostraComuni();
+      aggiornaStatoComuni();
     } else if (nome === "prezzo") {
       const minIllimitato = configAttuale.prezzo_base_min === 0;
       document.getElementById("campo-prezzo-minimo-illimitato").checked = minIllimitato;
@@ -1773,7 +1898,15 @@
       document.getElementById("campo-orario-16").checked = pianificazioneAttuale.scanner_orari.includes("16:00");
     }
     _apriModaleOriginale(nome);
-    if (nome === "area") aggiornaStatoTuttaItalia();
+    if (nome === "area") {
+      // Segnaposto e cerchio sul punto e sul raggio salvati: senza questo la
+      // mappa resta su Catania 22 km e "Salva" riscriverebbe quel punto
+      // (la chiamata si era persa col passaggio alle card, 19/09/2026).
+      const lat = Number(configAttuale.lat_riferimento), lon = Number(configAttuale.lon_riferimento), raggio = Number(configAttuale.raggio_km);
+      impostaPuntoMappa(lat, lon, raggio);
+      setTimeout(() => mappa.setView([lat, lon], stimaZoomDaRaggio(raggio)), 80);   // dopo invalidateSize
+      aggiornaStatoTuttaItalia();
+    }
   };
 
   function alternaPrezzoIllimitato() {
@@ -1837,6 +1970,8 @@
         raggio_km: configAttuale.raggio_km,
         cerca_tutta_italia: String(configAttuale.cerca_tutta_italia),
         tipologie_incluse: JSON.stringify(configAttuale.tipologie_incluse),
+        comuni_attivo: String(!!configAttuale.comuni_attivo),
+        comuni_inclusi: JSON.stringify(configAttuale.comuni_inclusi || []),
         occupazioni_escluse: JSON.stringify(configAttuale.occupazioni_escluse),
         esclusioni_attive: String(!!configAttuale.esclusioni_attive),
         esclusione_quote: String(configAttuale.esclusione_quote !== false),
@@ -1897,7 +2032,7 @@
   // Salvati con un nome nel parametro set_filtri: [{nome, salvato_il, valori}].
   // Solo i filtri della scheda Ricerca (scelta dell'utente, 01/10/2026).
   const CHIAVI_SET_FILTRI = ["prezzo_base_min", "prezzo_base_max", "lat_riferimento", "lon_riferimento", "raggio_km",
-    "cerca_tutta_italia", "tipologie_incluse", "occupazioni_escluse", "esclusioni_attive", "esclusione_quote",
+    "cerca_tutta_italia", "comuni_attivo", "comuni_inclusi", "tipologie_incluse", "occupazioni_escluse", "esclusioni_attive", "esclusione_quote",
     "parole_esclusione", "solo_aste_future", "usa_astegiudiziarie_perizia", "pausa_tra_aste_secondi",
     "solo_conteggio", "conteggia_non_analizzate"];
   const MAX_SET_FILTRI = 10;
@@ -1907,7 +2042,8 @@
     return {
       prezzo_base_min: VALORI_PREDEFINITI.prezzoMin, prezzo_base_max: VALORI_PREDEFINITI.prezzoMax,
       lat_riferimento: VALORI_PREDEFINITI.lat, lon_riferimento: VALORI_PREDEFINITI.lon, raggio_km: VALORI_PREDEFINITI.raggio,
-      cerca_tutta_italia: VALORI_PREDEFINITI.cercaTuttaItalia, tipologie_incluse: VALORI_PREDEFINITI.tipologieIncluse,
+      cerca_tutta_italia: VALORI_PREDEFINITI.cercaTuttaItalia, comuni_attivo: false, comuni_inclusi: [],
+      tipologie_incluse: VALORI_PREDEFINITI.tipologieIncluse,
       occupazioni_escluse: VALORI_PREDEFINITI.occupazioniEscluse, esclusioni_attive: VALORI_PREDEFINITI.esclusioniAttive,
       esclusione_quote: true, parole_esclusione: PAROLE_ESCLUSIONE_PREDEFINITE, solo_aste_future: VALORI_PREDEFINITI.soloFuture,
       usa_astegiudiziarie_perizia: VALORI_PREDEFINITI.astegiudiziarie, pausa_tra_aste_secondi: VALORI_PREDEFINITI.pausa,
@@ -1921,7 +2057,10 @@
     const forma = (v) => Array.isArray(v) ? JSON.stringify(v.map(String).sort())
       : (v === null || v === undefined || v === "") ? "" : typeof v === "boolean" ? String(v)
       : (typeof v === "number" || !isNaN(Number(v))) ? String(Number(v)) : String(v);
-    return CHIAVI_SET_FILTRI.every(k => valori[k] === undefined || forma(valori[k]) === forma(configAttuale[k]));
+    // filtro dei comuni: conta solo l'elenco in uso (spento = nessun comune), anche per i set che non hanno la voce
+    const comuniInUso = (v) => forma(v.comuni_attivo ? (v.comuni_inclusi || []) : []);
+    if (comuniInUso(valori) !== comuniInUso(configAttuale)) return false;
+    return CHIAVI_SET_FILTRI.every(k => k === "comuni_attivo" || k === "comuni_inclusi" || valori[k] === undefined || forma(valori[k]) === forma(configAttuale[k]));
   }
 
   // Riga "Filtri attivi": il set salvato che coincide con i filtri attuali, i
@@ -2017,6 +2156,8 @@
     CHIAVI_SET_FILTRI.forEach(k => {
       if (scelto.valori[k] !== undefined) configAttuale[k] = JSON.parse(JSON.stringify(scelto.valori[k]));
     });
+    // un set salvato prima del filtro dei comuni non ha queste voci: vuol dire "tutti i comuni"
+    if (scelto.valori.comuni_attivo === undefined) { configAttuale.comuni_attivo = false; configAttuale.comuni_inclusi = []; }
     messaggioSet("Applicazione in corso…", "attesa");
     if (await salvaConSetFiltri(prima, `Filtri "${scelto.nome}" applicati e salvati.`)) {
       renderizzaTuttiIRiepiloghi();
@@ -2064,6 +2205,8 @@
     configAttuale.lon_riferimento = VALORI_PREDEFINITI.lon;
     configAttuale.raggio_km = VALORI_PREDEFINITI.raggio;
     configAttuale.cerca_tutta_italia = VALORI_PREDEFINITI.cercaTuttaItalia;
+    configAttuale.comuni_attivo = false;
+    configAttuale.comuni_inclusi = [];
     configAttuale.tipologie_incluse = [...VALORI_PREDEFINITI.tipologieIncluse];
     configAttuale.occupazioni_escluse = [...VALORI_PREDEFINITI.occupazioniEscluse];
     configAttuale.esclusioni_attive = VALORI_PREDEFINITI.esclusioniAttive;
@@ -2159,6 +2302,14 @@
         msgEl.className = "messaggio-salvataggio-card messaggio-errore";
         return;
       }
+      const comuniAttivo = document.getElementById("campo-comuni-attivo").checked;
+      if (comuniAttivo && !comuniInModifica.length) {
+        msgEl.textContent = "Solo questi comuni: l'elenco è vuoto. Aggiungi almeno un comune o togli la spunta.";
+        msgEl.className = "messaggio-salvataggio-card messaggio-errore";
+        return;
+      }
+      configAttuale.comuni_attivo = comuniAttivo;
+      configAttuale.comuni_inclusi = [...comuniInModifica];   // spento: l'elenco resta, pronto per la prossima volta
       configAttuale.cerca_tutta_italia = document.getElementById("campo-tutta-italia").checked;
       configAttuale.lat_riferimento = punto.lat;
       configAttuale.lon_riferimento = punto.lng;

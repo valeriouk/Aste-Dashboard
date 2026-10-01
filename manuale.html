@@ -1234,7 +1234,7 @@
   <section class="voce" id="config-set-filtri">
     <h3>Set di filtri salvati</h3>
     <p>In fondo alla scheda Ricerca. Salva con un nome i filtri di quella scheda e rimettili quando vuoi, per esempio "Fidenza 195 conteggio"
-      per un giro di solo conteggio e un secondo set per il giro vero. Un set contiene: area (centro e raggio, o tutta Italia), prezzo base, tipologie,
+      per un giro di solo conteggio e un secondo set per il giro vero. Un set contiene: area (centro e raggio, o tutta Italia, e l'elenco "solo questi comuni"), prezzo base, tipologie,
       altri filtri (occupazione, solo aste future, perizia da astegiudiziarie, pausa, solo conteggio; non "vendita vicina" né il tetto di lettura) ed esclusioni per parole chiave. Modelli Gemini,
       batch, orari e ricerca della perizia non fanno parte del set e restano quelli attuali.</p>
     <ul>
@@ -1244,7 +1244,8 @@
         orari non contano. Si aggiorna a ogni salvataggio.</li>
       <li><strong>Salva set</strong>: scrivi un nome (massimo 40 caratteri) e conferma col secondo tocco; con un nome già usato chiede se sovrascrivere.
         Al massimo 10 set.</li>
-      <li><strong>Applica</strong>: scegli il set e conferma: i filtri vengono scritti e salvati subito, come ogni altra modifica della pagina. Se il
+      <li><strong>Applica</strong>: scegli il set e conferma: i filtri vengono scritti e salvati subito, come ogni altra modifica della pagina. Un set
+        salvato prima che esistesse "solo questi comuni" lo spegne e svuota l'elenco (vuol dire "tutti i comuni"). Se il
         salvataggio non riesce la pagina rilegge dal database i valori veri.</li>
       <li><strong>Elimina</strong>: toglie il set scelto (i filtri attuali non cambiano).</li>
     </ul>
@@ -1262,7 +1263,7 @@
       <thead><tr><th>Voce</th><th>Valore predefinito</th></tr></thead>
       <tbody>
         <tr><td>Prezzo base</td><td>nessun minimo, massimo 110.000 €</td></tr>
-        <tr><td>Area</td><td>Catania centro, raggio 22 km, tutta Italia no</td></tr>
+        <tr><td>Area</td><td>Catania centro, raggio 22 km, tutta Italia no, "solo questi comuni" spento con l'elenco vuoto</td></tr>
         <tr><td>Tipologie</td><td>tutte</td></tr>
         <tr><td>Altri filtri</td><td>tutti gli stati di occupazione, solo aste future, "vendita vicina" spento (2 e 15 giorni), tetto di lettura 40 pagine,
           perizia da astegiudiziarie attiva, pausa 1 s, modalità normale</td></tr>
@@ -1299,6 +1300,19 @@
         sotto la mappa compare un <strong>avviso rosso</strong>: le aste in scadenza potrebbero non essere lette, perché lo scanner parte dalle vendite più
         lontane nel tempo e si ferma al tetto di lettura (vedi <a href="#config-altri-filtri">Altri filtri</a>). Lo stesso avviso resta fisso in cima alla
         pagina di Configurazione finché la zona è ampia e il filtro è spento.</li>
+      <li><strong>"Solo questi comuni"</strong> (spento di partenza): un elenco di comuni dentro l'area. Acceso, lo scanner tiene solo le aste il cui comune
+        è nell'elenco; le altre vengono scartate <strong>prima di qualunque analisi</strong> (nessun costo Gemini) e non entrano nel registro. Serve per
+        cercare su un'area ampia guardando solo le città che interessano.
+        <strong>"Proponi le grandi città nell'area"</strong> riempie l'elenco con i capoluoghi di provincia da circa 80.000 abitanti che cadono dentro il
+        cerchio (o tutti, con "tutta Italia"): poi togli con la × quelli che non vuoi. "Aggiungi un comune" ne aggiunge altri a mano, anche più di uno
+        separati da virgola. Conta il <strong>comune</strong>, non la zona: per la cintura di una città vanno aggiunti i singoli comuni (per esempio Sesto San
+        Giovanni). Il nome deve essere quello del comune come lo scrive il PVP, senza badare a maiuscole, accenti e apostrofi ("Reggio Emilia" e "Reggio
+        Calabria" valgono per i nomi ufficiali "Reggio nell'Emilia" e "Reggio di Calabria"). Con la spunta e l'elenco vuoto non si salva. Il filtro non
+        riduce le pagine lette sul PVP, solo le analisi. Vale anche per il ricontrollo delle perizie: le aste fuori elenco già nel registro restano dove
+        sono ma non vengono ricontrollate (lì il confronto è sull'indirizzo salvato, quindi può passare qualche asta in più, per esempio "Via Modena" a
+        Carpi). Il riepilogo della card mostra "· solo N comuni", il log del giro dice quante aste sono state scartate perché fuori dai comuni scelti e i
+        messaggi Telegram con i filtri riportano "🏙️ Solo comuni: …". Fa parte dei set di filtri salvati; "Ripristina tutti i valori predefiniti" lo spegne
+        e svuota l'elenco.</li>
       <li><strong>"Cerca su tutta Italia"</strong>: ignora punto e raggio e cerca in tutto il paese (legge fino a 300 pagine di annunci). Usa
         <strong>sempre il batch</strong>: le analisi arrivano da pochi minuti a 24 ore dopo, con una notifica all'invio e una per ogni asta quando è
         pronta. La distanza resta calcolata dal punto scelto.</li>
