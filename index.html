@@ -6144,8 +6144,6 @@
                  comparatore: (a, b) => a.offertaMinima - b.offertaMinima },
     data:      { etichetta: "Data", ascLabel: "vicina → lontana", descLabel: "lontana → vicina", direzioneDefault: "asc",
                  comparatore: (a, b) => distanzaGiorni(a.dataVendita) - distanzaGiorni(b.dataVendita) },
-    distanza:  { etichetta: "Distanza", ascLabel: "vicina → lontana", descLabel: "lontana → vicina", direzioneDefault: "asc",
-                 comparatore: (a, b) => (a.distanza ?? 9999) - (b.distanza ?? 9999) },
     inserimento: { etichetta: "Più recenti", ascLabel: "vecchie → nuove", descLabel: "nuove → vecchie", direzioneDefault: "desc",
                  comparatore: (a, b) => (a.dataInserimento ? new Date(a.dataInserimento).getTime() : 0) - (b.dataInserimento ? new Date(b.dataInserimento).getTime() : 0) },
   };
@@ -7057,7 +7055,6 @@
   function cartellaLotto(a, indice) {
     const livello = livelloPunteggio(a.punteggio, a.valoreStima);
     const contenutoSigillo = livello === "non-valutato" ? "Non<br>valutato" : a.punteggio;
-    const distanzaTesto = a.distanza !== null ? `${Etichette.numero(a.distanza)} km` : "distanza N/D";
     const conclusa = astaConclusa(a.dataVendita);
 
     // Celle superficie/€ al mq: solo se il dato è presente nel database (potrebbe
@@ -7136,7 +7133,7 @@
           ${badgeGiudizio(a)}
           ${badgeTentativo(a.storico)}
           ${(a.superanalisiEsterne || []).length ? `<span class="badge-ai" title="Risultati di superanalisi con AI esterne salvati: aprili dalla scheda">🧠 ${(a.superanalisiEsterne || []).length}</span>` : ""}
-          <p class="lotto-meta">${escapeHtml(distanzaTesto)} · vendita ${formattaData(a.dataVendita)}</p>
+          <p class="lotto-meta">Vendita ${formattaData(a.dataVendita)}</p>
         </div>
 ${notaHtml}
         <div class="lotto-margine">
@@ -7294,7 +7291,6 @@ ${notaHtml}
     {etichetta: "Superficie", formatta: a => a.superficieMq !== null ? `${a.superficieMq.toFixed(0)} mq` : "—"},
     {etichetta: "€/mq (offerta)", formatta: a => a.euroMq !== null ? formattaEuro(a.euroMq) + "/mq" : "—"},
     {etichetta: "Stato occupazione", formatta: a => escapeHtml(a.statoOccupazione)},
-    {etichetta: "Distanza", formatta: a => a.distanza !== null ? `${Etichette.numero(a.distanza)} km` : "N/D"},
     {etichetta: "Vendita", formatta: a => formattaData(a.dataVendita)},
     {etichetta: "Tentativo (storico PVP)", formatta: a => testoTentativo(a.storico) || "—"},
   ];
@@ -8804,7 +8800,6 @@ ${notaHtml}
   function contenutoFinestraDettagli(a) {
     const livello = livelloPunteggio(a.punteggio, a.valoreStima);
     const contenutoSigillo = livello === "non-valutato" ? "Non<br>valutato" : a.punteggio;
-    const distanzaTesto = a.distanza !== null ? `${Etichette.numero(a.distanza)} km` : "distanza N/D";
     const conclusa = astaConclusa(a.dataVendita);
 
     const rigaSuperficie = a.superficieMq !== null ? `
@@ -8954,7 +8949,7 @@ ${riquadroProcedura}
               ${badgeGiudizio(a)}
               ${badgeTentativo(a.storico)}
             </div>
-            <p class="lotto-meta">${escapeHtml(distanzaTesto)} · vendita ${formattaData(a.dataVendita)}</p>
+            <p class="lotto-meta">Vendita ${formattaData(a.dataVendita)}</p>
           </div>
         </div>
         <div class="finestra-dettagli-azioni-header">

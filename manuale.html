@@ -441,7 +441,8 @@
       <li><strong>Quando</strong>: alla fine di ogni giro dello scanner, solo se in <a href="#config-perizia">Configurazione → Ricerca della perizia</a>
         sono attive sia la ricerca estesa sia il ricontrollo, e non in modalità "solo conteggio".</li>
       <li><strong>Quali aste</strong>: vendita da oggi in poi; documento attuale "Avviso (PVP)", "Primo allegato disponibile (PVP)" o nessuno; non
-        ricontrollate negli ultimi N giorni (predefinito 2); non in un batch in corso; non scartate; dentro l'area e il prezzo attuali. Ordinate dalla
+        ricontrollate negli ultimi N giorni (predefinito 2); non in un batch in corso; non scartate; dentro l'area e il prezzo attuali (l'area si controlla sulla distanza vera tra l'immobile e il centro di
+        ricerca di oggi, non su quella salvata quando l'asta è entrata; con "solo questi comuni" acceso, anche sul comune). Ordinate dalla
         vendita più vicina, al massimo M per giro (predefinito 15).</li>
       <li><strong>Per ciascuna</strong>: rifà la ricerca del documento (gratis). Se non trova una perizia, segna l'asta come ricontrollata. Se la trova:
         stesso file già analizzato → aggiorna solo la fonte; perizia già analizzata altrove → riusa l'analisi; altrimenti la analizza (sincrono fino a
@@ -667,7 +668,6 @@
         <tr><td>Spazio sull'offerta</td><td>offerta massima − offerta minima dal <a href="#superanalisi-conto">conto completo della Superanalisi</a>, con i parametri che hai impostato in Superanalisi e le tue correzioni; negativo = obiettivo non raggiungibile all'offerta minima</td><td>più → meno</td></tr>
         <tr><td>Offerta</td><td>offerta minima</td><td>bassa → alta</td></tr>
         <tr><td>Data</td><td>giorni tra vendita e oggi (in valore assoluto): la più imminente; tra le concluse la più recente</td><td>vicina → lontana</td></tr>
-        <tr><td>Distanza</td><td>km dal punto di riferimento (mancante = in fondo)</td><td>vicina → lontana</td></tr>
         <tr><td>Più recenti</td><td>data di inserimento nel registro</td><td>nuove → vecchie</td></tr>
       </tbody>
     </table></div>
@@ -936,7 +936,7 @@
       quello che vedevi; mentre stai salvando qualcosa la lettura viene ignorata, così non rimette il valore di prima.</p>
     <p><strong>In alto</strong> (intestazione):</p>
     <ul>
-      <li>punteggio, "Lotto X · tipologia", indirizzo, badge (nuova, visita, tentativo…), distanza e data di vendita;</li>
+      <li>punteggio, "Lotto X · tipologia", indirizzo, badge (nuova, visita, tentativo…) e data di vendita;</li>
       <li>stella, scarto, condividi, stampa (ed espandi su PC); sul telefono stanno in una riga sotto l'indirizzo, con la ✕ di chiusura in alto a destra;</li>
       <li><strong>indice delle sezioni</strong>: Cifre · Descrizione · Rischi · Visita · Operazione · Storico · Dettagli · Costi · Lavori · Mappa · AI · Link e foto
         (solo quelle presenti per l'asta); toccandone una la scheda scorre lì. La voce della sezione che stai guardando è evidenziata (scura) e
@@ -1155,7 +1155,7 @@
   <section class="voce" id="registro-confronta">
     <h3>⇄ Confronta (2 o 3 aste)</h3>
     <p>Affianca 2 o 3 aste selezionate: punteggio, indirizzo, stella/scarto e le righe Margine lordo, Giudizio Superanalisi, Offerta minima, Valore stima, Superficie, €/mq
-      (offerta), Stato occupazione, Distanza, Vendita, Tentativo (storico PVP). Con 1 o più di 3 aste il pulsante è disattivato.</p>
+      (offerta), Stato occupazione, Vendita, Tentativo (storico PVP). Con 1 o più di 3 aste il pulsante è disattivato.</p>
   </section>
 
   <section class="voce" id="registro-csv">
@@ -1295,7 +1295,10 @@
     <h3>Card "Area di ricerca": punto, raggio, tutta Italia</h3>
     <ul>
       <li><strong>Mappa e segnaposto</strong>: il punto di riferimento (clicca sulla mappa o trascina il segnaposto; "Cerca un indirizzo o una città" lo
-        sposta). Il cerchio mostra il raggio. Dal punto si calcola anche la colonna "distanza" di ogni asta.</li>
+        sposta). Il cerchio mostra il raggio. Dal punto si calcola la distanza di ogni asta, che compare solo nella notifica Telegram
+        della nuova asta insieme al nome del punto ("12 km da Fidenza"). Nel registro la distanza non è mostrata e non si può ordinare per distanza:
+        il numero salvato è misurato dal centro di ricerca di quando l'asta è entrata, quindi aste trovate con ricerche diverse non sono confrontabili
+        (il comune è già nell'indirizzo).</li>
       <li><strong>Raggio di ricerca</strong>: da 1 a 300 km. Oltre i 100 km (o con "Cerca su tutta Italia"), se "Solo aste con vendita vicina" è spento,
         sotto la mappa compare un <strong>avviso rosso</strong>: le aste in scadenza potrebbero non essere lette, perché lo scanner parte dalle vendite più
         lontane nel tempo e si ferma al tetto di lettura (vedi <a href="#config-altri-filtri">Altri filtri</a>). Lo stesso avviso resta fisso in cima alla
@@ -2260,7 +2263,7 @@
     <div class="tabella-scroll"><table>
       <thead><tr><th>Messaggio</th><th>Quando arriva</th></tr></thead>
       <tbody>
-        <tr><td>🏠 NUOVA ASTA IMMOBILIARE</td><td>Per ogni asta nuova analizzata (subito, dal batch o riusando un'analisi). Contiene indirizzo, zona segnalata, distanza, tipologia,
+        <tr><td>🏠 NUOVA ASTA IMMOBILIARE</td><td>Per ogni asta nuova analizzata (subito, dal batch o riusando un'analisi). Contiene indirizzo, zona segnalata, distanza dal centro di ricerca con il suo nome ("12 km da Fidenza"; la riga manca se il nome non è disponibile), tipologia,
           superficie ed €/mq, tribunale, data, disponibilità, offerta minima, prezzo base, <a href="#registro-tentativo">tentativo</a>, valore di stima, margine,
           punteggio, occupazione, sanatoria, formalità, fonte, modello, note e link. Arriva solo la prima volta che l'asta entra nel registro (e di nuovo solo
           se un nuovo tentativo di analisi riesce), e solo se l'asta è stata salvata davvero nel database. La riga del tentativo viene dallo
