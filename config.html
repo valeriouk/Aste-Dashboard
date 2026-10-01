@@ -621,6 +621,7 @@
       <div class="barra-ripristino" data-scheda="ricerca" id="blocco-set-filtri" style="border-style:solid;margin-bottom:14px">
         <p class="card-riepilogo-titolo">Set di filtri salvati</p>
         <p class="nota-campo">Salva con un nome i filtri di questa scheda (area, prezzo, tipologie, altri filtri compreso "solo conteggio", esclusioni) e rimettili quando vuoi. Modelli, orari e ricerca della perizia non cambiano. "Applica" salva subito, come ogni altra modifica in questa pagina.</p>
+        <p class="nota-campo" id="filtri-attivi"></p>
         <div class="campo-form">
           <label for="campo-set-filtri">Set salvati</label>
           <select id="campo-set-filtri"></select>
@@ -1888,6 +1889,39 @@
     "solo_conteggio", "conteggia_non_analizzate"];
   const MAX_SET_FILTRI = 10;
 
+  // Le stesse chiavi dei set, con i valori di "Ripristina tutti i valori predefiniti".
+  function valoriPredefinitiDeiSet() {
+    return {
+      prezzo_base_min: VALORI_PREDEFINITI.prezzoMin, prezzo_base_max: VALORI_PREDEFINITI.prezzoMax,
+      lat_riferimento: VALORI_PREDEFINITI.lat, lon_riferimento: VALORI_PREDEFINITI.lon, raggio_km: VALORI_PREDEFINITI.raggio,
+      cerca_tutta_italia: VALORI_PREDEFINITI.cercaTuttaItalia, tipologie_incluse: VALORI_PREDEFINITI.tipologieIncluse,
+      occupazioni_escluse: VALORI_PREDEFINITI.occupazioniEscluse, esclusioni_attive: VALORI_PREDEFINITI.esclusioniAttive,
+      esclusione_quote: true, parole_esclusione: PAROLE_ESCLUSIONE_PREDEFINITE, solo_aste_future: VALORI_PREDEFINITI.soloFuture,
+      usa_astegiudiziarie_perizia: VALORI_PREDEFINITI.astegiudiziarie, pausa_tra_aste_secondi: VALORI_PREDEFINITI.pausa,
+      solo_conteggio: VALORI_PREDEFINITI.soloConteggio, conteggia_non_analizzate: VALORI_PREDEFINITI.conteggiaNonAnalizzate
+    };
+  }
+
+  // I filtri attuali coincidono con questi valori? Gli elenchi si confrontano
+  // senza badare all'ordine; una chiave che il set non ha non conta (come in "Applica").
+  function filtriAttualiUgualiA(valori) {
+    const forma = (v) => Array.isArray(v) ? JSON.stringify(v.map(String).sort())
+      : (v === null || v === undefined || v === "") ? "" : typeof v === "boolean" ? String(v)
+      : (typeof v === "number" || !isNaN(Number(v))) ? String(Number(v)) : String(v);
+    return CHIAVI_SET_FILTRI.every(k => valori[k] === undefined || forma(valori[k]) === forma(configAttuale[k]));
+  }
+
+  // Riga "Filtri attivi": il set salvato che coincide con i filtri attuali, i
+  // predefiniti, oppure "personalizzati". Solo un confronto, niente nel database.
+  function mostraFiltriAttivi() {
+    const uguali = (configAttuale.set_filtri || []).filter(x => x.valori && filtriAttualiUgualiA(x.valori)).map(x => x.nome);
+    const predefiniti = filtriAttualiUgualiA(valoriPredefinitiDeiSet());
+    const nomi = [...uguali.map(n => `set "${n}"`), ...(predefiniti ? ["predefiniti"] : [])];
+    const el = document.getElementById("filtri-attivi");
+    el.innerHTML = `Filtri attivi: <strong>${escapeHtml(nomi.length ? nomi.join(" = ") : "personalizzati")}</strong>`
+      + (nomi.length ? "" : " (non coincidono con nessun set salvato né con i predefiniti)");
+  }
+
   function mostraSetFiltri(scelto) {
     const campo = document.getElementById("campo-set-filtri");
     const set = configAttuale.set_filtri || [];
@@ -1898,6 +1932,7 @@
     campo.disabled = !set.length;
     document.getElementById("bottone-applica-set").disabled = !set.length;
     document.getElementById("bottone-elimina-set").disabled = !set.length;
+    mostraFiltriAttivi();
   }
 
   function messaggioSet(testo, tipo) {
@@ -2085,6 +2120,7 @@
       renderizzaRiepilogoModelli();
       renderizzaRiepilogoPianificazioneScanner();
       renderizzaRiepilogoRicercaPerizia();
+      mostraFiltriAttivi();
     } catch (e) {
       msgEl.textContent = "Richiesta non riuscita. Controlla la connessione e riprova.";
       msgEl.className = "messaggio-salvataggio-card messaggio-errore";
@@ -2261,6 +2297,8 @@
           ricercaPerizia: renderizzaRiepilogoRicercaPerizia
         };
         funzioniRiepilogo[nomeCard]();
+        renderizzaAvvisiConfig();
+        mostraFiltriAttivi();
         setTimeout(() => chiudiModale(nomeCard), 700);
       } else {
         ripristina();
