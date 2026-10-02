@@ -118,7 +118,9 @@
   th { font-size: .74rem; color: var(--ink-faint); text-transform: uppercase; letter-spacing: .04em; font-weight: 600; }
   mark { background: #ffe58a; color: inherit; border-radius: 2px; padding: 0 1px; }
   .nessun-risultato { background: var(--surface); border: 1px dashed var(--border); border-radius: 12px; padding: 24px; text-align: center; color: var(--ink-muted); }
-  .torna-su { position: fixed; right: 16px; bottom: 16px; background: var(--ink); color: var(--surface); border: none; border-radius: 999px; width: 42px; height: 42px; font-size: 1.1rem; cursor: pointer; z-index: 25; }
+  /* Tasto "torna su": lo aggiunge menu.js, uguale a quello del registro.
+     Con l'indice aperto su telefono resta nascosto (starebbe sopra il velo). */
+  body.indice-aperto .menu-torna-su { display: none; }
 
   @media (max-width: 900px) {
     .impaginazione { grid-template-columns: minmax(0, 1fr); padding: 0 16px; }
@@ -140,7 +142,7 @@
     .voce { padding: 14px 14px 10px; }
   }
   @media print {
-    .barra, nav.indice, .torna-su, .gate { display: none !important; }
+    .barra, nav.indice, .gate { display: none !important; }
     .impaginazione { display: block; }
     .voce { break-inside: avoid; }
   }
@@ -149,7 +151,7 @@
 <link rel="stylesheet" href="grafica-app.css?v=20261001">
 </head>
 <body>
-<script src="menu.js?v=20261001"></script>
+<script src="menu.js?v=20261002b"></script>
 
 <div id="gate" class="gate">
   <div class="riquadro-gate">
@@ -2701,7 +2703,6 @@
       <div id="nessun-risultato" class="nessun-risultato nascosto">Nessuna voce contiene tutte le parole cercate. Prova con meno parole o con un sinonimo.</div>
     </main>
   </div>
-  <button type="button" class="torna-su" onclick="window.scrollTo({top: 0, behavior: 'smooth'})" aria-label="Torna all'inizio">↑</button>
 </div>
 
 <script>

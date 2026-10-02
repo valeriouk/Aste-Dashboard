@@ -46,16 +46,18 @@
   }
   @media print { .menu-pagine { display: none !important; } }`;
 
-  // Pagine lunghe dove compare il tasto "torna su" (index.html e
-  // manuale.html hanno già il loro e restano fuori da questo elenco).
-  const PAGINE_TORNA_SU = ['statistiche.html', 'superanalisi.html', 'risultato-superanalisi.html'];
+  // Pagine lunghe dove compare il tasto "torna su" (index.html ha già il
+  // suo e resta fuori da questo elenco). Posizione, colori e soglia di
+  // comparsa sono gli stessi del tasto del registro (.bottone-torna-su).
+  const PAGINE_TORNA_SU = ['statistiche.html', 'superanalisi.html', 'risultato-superanalisi.html', 'superanalisi-gruppo.html', 'manuale.html'];
 
   const STILE_TORNA_SU = `
-  .menu-torna-su { position: fixed; right: 20px; bottom: calc(20px + env(safe-area-inset-bottom)); z-index: 850; width: 42px; height: 42px;
+  .menu-torna-su { position: fixed; right: 20px; bottom: 70px; z-index: 850; width: 42px; height: 42px;
     padding: 0; border-radius: 50%; border: 1px solid var(--border, #d5dad1); background: var(--surface, #fff);
     color: var(--ink-muted, #5b615a); font-size: 1.1rem; cursor: pointer; box-shadow: 0 6px 16px -4px rgba(0,0,0,.2); }
   .menu-torna-su:hover { color: var(--primary, var(--ink, #1e2320)); border-color: var(--primary, var(--ink, #1e2320)); }
   .menu-torna-su.nascosto { display: none; }
+  @media (max-width: 640px) { .menu-torna-su { bottom: calc(76px + env(safe-area-inset-bottom)); } }
   @media print { .menu-torna-su { display: none !important; } }`;
 
   // Stessa soglia del registro: compare dopo 600px di scroll.
