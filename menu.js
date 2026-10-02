@@ -6,6 +6,9 @@
  * sottile (che scorre via con la pagina) ed evidenzia la pagina attuale.
  * Colori dalle variabili CSS della pagina, con valori di riserva.
  *
+ * Sulle pagine lunghe elencate in PAGINE_TORNA_SU aggiunge anche il tasto
+ * "↑" in basso a destra, che riporta all'inizio della pagina.
+ *
  * MenuPagine.torna(evento, pagina): per i link "← Dettaglio asta" /
  * "← Registro". Se si arriva da quella pagina dello stesso sito torna
  * indietro nella cronologia (la pagina ricompare com'era, per esempio il
@@ -43,6 +46,35 @@
   }
   @media print { .menu-pagine { display: none !important; } }`;
 
+  // Pagine lunghe dove compare il tasto "torna su" (index.html e
+  // manuale.html hanno già il loro e restano fuori da questo elenco).
+  const PAGINE_TORNA_SU = ['statistiche.html', 'superanalisi.html', 'risultato-superanalisi.html'];
+
+  const STILE_TORNA_SU = `
+  .menu-torna-su { position: fixed; right: 20px; bottom: calc(20px + env(safe-area-inset-bottom)); z-index: 850; width: 42px; height: 42px;
+    padding: 0; border-radius: 50%; border: 1px solid var(--border, #d5dad1); background: var(--surface, #fff);
+    color: var(--ink-muted, #5b615a); font-size: 1.1rem; cursor: pointer; box-shadow: 0 6px 16px -4px rgba(0,0,0,.2); }
+  .menu-torna-su:hover { color: var(--primary, var(--ink, #1e2320)); border-color: var(--primary, var(--ink, #1e2320)); }
+  .menu-torna-su.nascosto { display: none; }
+  @media print { .menu-torna-su { display: none !important; } }`;
+
+  // Stessa soglia del registro: compare dopo 600px di scroll.
+  function montaTornaSu() {
+    const stile = document.createElement('style');
+    stile.textContent = STILE_TORNA_SU;
+    document.head.appendChild(stile);
+    const bottone = document.createElement('button');
+    bottone.type = 'button';
+    bottone.className = 'menu-torna-su nascosto';
+    bottone.setAttribute('aria-label', "Torna all'inizio");
+    bottone.textContent = '↑';
+    bottone.addEventListener('click', () => window.scrollTo({ top: 0, behavior: 'smooth' }));
+    document.body.appendChild(bottone);
+    const aggiorna = () => bottone.classList.toggle('nascosto', window.scrollY < 600);
+    window.addEventListener('scroll', aggiorna, { passive: true });
+    aggiorna();
+  }
+
   function monta() {
     if (document.querySelector('.menu-pagine')) return;
     const stile = document.createElement('style');
@@ -55,6 +87,7 @@
     nav.innerHTML = `<div class="menu-pagine-interno">${VOCI.map((v) =>
       `<a href="${v.pagina}"${v.pagina === attuale ? ' aria-current="page"' : ''}>${v.testo}</a>`).join('')}</div>`;
     document.body.prepend(nav);
+    if (PAGINE_TORNA_SU.includes(attuale)) montaTornaSu();
   }
 
   function torna(evento, pagina) {
