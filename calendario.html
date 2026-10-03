@@ -1,0 +1,1129 @@
+<!DOCTYPE html>
+<html lang="it">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+<title>Calendario · Aste Scan</title>
+
+<link rel="manifest" href="manifest.json">
+<link rel="icon" href="favicon-32.png" sizes="32x32">
+<link rel="apple-touch-icon" href="apple-touch-icon.png">
+<meta name="theme-color" content="#ffffff">
+<script src="tema.js?v=20261001"></script>
+<script src="sessione.js?v=20261001"></script>
+
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,400;9..144,500;9..144,600&family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500;600&display=swap" rel="stylesheet">
+
+<!--
+  calendario.html — tutte le date importanti delle aste che segui, in un
+  unico calendario (anno, mese, settimana, giorno, agenda). SOLA LETTURA:
+  non scrive nulla sul database. Pagina pubblica su GitHub Pages: NON deve
+  contenere password, chiavi private, token né indirizzi di servizi interni.
+  Legge con la password di LETTURA del registro (stessa chiave pubblica
+  "anon" delle altre pagine) due funzioni già usate dal registro:
+  leggi_dati_personali (stelle, note, visite, operazioni) e leggi_aste
+  (data di vendita, termine offerte, link), solo per le aste che interessano.
+  Va aggiornato insieme a ogni modifica che cambia ciò che mostra (vedi il
+  capitolo "Calendario" di manuale.html).
+-->
+
+<style>
+  :root {
+    --bg: #eef1ec;
+    --surface: #ffffff;
+    --surface-2: #e3e7e0;
+    --border: #d5dad1;
+    --primary: #234c6a;
+    --primary-soft: rgba(35, 76, 106, .10);
+    --secondary: #a15c3e;
+    --secondary-soft: rgba(161, 92, 62, .10);
+    --ok: #3f6b4a;
+    --ok-soft: rgba(63, 107, 74, .12);
+    --danger: #8b3d2e;
+    --danger-soft: rgba(139, 61, 46, .10);
+    --warn-soft: rgba(230, 162, 60, .16);
+    --ink: #1e2320;
+    --ink-muted: #5b615a;
+    --ink-faint: #696f67;
+    --font-display: 'Fraunces', Georgia, serif;
+    --font-body: 'Inter', system-ui, -apple-system, sans-serif;
+    --font-mono: 'JetBrains Mono', ui-monospace, monospace;
+    /* colori dei quattro tipi di data (sempre accompagnati da icona e testo) */
+    --c-vendita: #234c6a;    --c-vendita-soft: rgba(35, 76, 106, .13);
+    --c-scadenza: #9a6a12;   --c-scadenza-soft: rgba(230, 162, 60, .22);
+    --c-visita: #3f6b4a;     --c-visita-soft: rgba(63, 107, 74, .15);
+    --c-operazione: #6b4f8a; --c-operazione-soft: rgba(107, 79, 138, .14);
+  }
+  @media screen {
+    html.tema-scuro {
+      --c-vendita: #5d95bf;    --c-vendita-soft: rgba(93, 149, 191, .20);
+      --c-scadenza: #e0b252;   --c-scadenza-soft: rgba(224, 178, 82, .20);
+      --c-visita: #6fbf88;     --c-visita-soft: rgba(111, 191, 136, .18);
+      --c-operazione: #b79ddb; --c-operazione-soft: rgba(183, 157, 219, .20);
+      --warn-soft: rgba(224, 178, 82, .16);
+    }
+  }
+  * { box-sizing: border-box; }
+  html, body { margin: 0; padding: 0; }
+  body { background: var(--bg); color: var(--ink); font-family: var(--font-body); line-height: 1.5; -webkit-font-smoothing: antialiased; }
+  a { color: var(--secondary); }
+  button { font-family: inherit; }
+  :focus-visible { outline: 2px solid var(--primary); outline-offset: 2px; border-radius: 4px; }
+  .nascosto { display: none !important; }
+
+  .cat-vendita { --cc: var(--c-vendita); --cs: var(--c-vendita-soft); }
+  .cat-scadenza { --cc: var(--c-scadenza); --cs: var(--c-scadenza-soft); }
+  .cat-visita { --cc: var(--c-visita); --cs: var(--c-visita-soft); }
+  .cat-operazione { --cc: var(--c-operazione); --cs: var(--c-operazione-soft); }
+
+  /* Gate password (stessa password di lettura del registro) */
+  .gate { position: fixed; inset: 0; background: var(--bg); display: flex; align-items: center; justify-content: center; z-index: 950; padding: 16px; }
+  .riquadro-gate { max-width: 380px; width: 100%; background: var(--surface); border: 1px solid var(--border); border-radius: 12px; padding: 32px; text-align: center; }
+  .riquadro-gate h2 { font-family: var(--font-display); font-size: 1.3rem; margin: 0 0 8px; }
+  .riquadro-gate p { color: var(--ink-muted); font-size: .9rem; margin: 0 0 20px; }
+  .riquadro-gate form { display: flex; flex-direction: column; gap: 10px; }
+  input[type="password"] { background: var(--bg); border: 1px solid var(--border); border-radius: 8px; padding: 9px 12px; font-family: var(--font-body); font-size: 1rem; color: var(--ink); }
+  .bottone { background: var(--ink); color: var(--surface); border: none; border-radius: 8px; padding: 10px 14px; font-family: var(--font-body); font-size: .88rem; font-weight: 600; cursor: pointer; }
+  .messaggio-errore { color: var(--danger); font-size: .85rem; margin: 6px 0 0; min-height: 1em; }
+
+  /* Intestazione e comandi */
+  .contenitore-cal { max-width: 1440px; margin: 0 auto; padding: 22px 16px 110px; }
+  .eyebrow { font-family: var(--font-mono); font-size: .72rem; letter-spacing: .12em; text-transform: uppercase; color: var(--primary); margin: 0 0 6px; }
+  h1 { font-family: var(--font-display); font-size: 1.9rem; font-weight: 500; margin: 0 0 6px; }
+  .sottotitolo { color: var(--ink-muted); margin: 0; max-width: 70ch; }
+  .barra-cal { display: flex; flex-wrap: wrap; gap: 10px 16px; align-items: center; justify-content: space-between; margin: 16px 0 10px; }
+  .navigazione { display: flex; align-items: center; gap: 6px; flex-wrap: wrap; min-width: 0; }
+  .btn { background: var(--surface); color: var(--ink); border: 1px solid var(--border); border-radius: 8px; padding: 8px 12px; min-height: 40px; font-size: .88rem; font-weight: 600; cursor: pointer; }
+  .btn:hover { border-color: var(--primary); color: var(--primary); }
+  .btn[aria-pressed="true"] { background: var(--ink); color: var(--surface); border-color: var(--ink); }
+  .btn-freccia { min-width: 40px; font-size: 1.15rem; line-height: 1; padding: 6px 10px; }
+  .btn:disabled { opacity: .45; cursor: default; }
+  .btn:disabled:hover { border-color: var(--border); color: var(--ink); }
+  .titolo-periodo { font-family: var(--font-display); font-size: 1.35rem; font-weight: 500; margin: 0 0 0 8px; }
+  .viste { display: inline-flex; border: 1px solid var(--border); border-radius: 10px; overflow: hidden; background: var(--surface); }
+  .viste .btn { border: 0; border-radius: 0; border-right: 1px solid var(--border); }
+  .viste .btn:last-child { border-right: 0; }
+
+  .filtri { display: flex; flex-wrap: wrap; gap: 8px 10px; align-items: center; margin-bottom: 8px; }
+  .filtro { display: inline-flex; align-items: center; gap: 6px; border: 1px solid var(--border); border-left: 4px solid var(--cc); background: var(--surface); color: var(--ink);
+    border-radius: 8px; padding: 6px 10px; min-height: 36px; font-size: .82rem; font-weight: 600; cursor: pointer; }
+  .filtro[aria-pressed="false"] { background: transparent; color: var(--ink-muted); border-left-color: var(--border); border-style: dashed; }
+  .filtro .n { font-weight: 500; color: var(--ink-muted); font-size: .78rem; }
+  .spunta { display: inline-flex; gap: 6px; align-items: center; font-size: .82rem; color: var(--ink-muted); cursor: pointer; min-height: 36px; }
+  .spunta input { width: 18px; height: 18px; accent-color: var(--primary); }
+  .riepilogo { margin: 0 0 8px; font-size: .85rem; color: var(--ink-muted); }
+  .avviso { background: var(--warn-soft); border-radius: 8px; padding: 8px 12px; font-size: .88rem; margin: 6px 0; }
+  .avviso.errore { background: var(--danger-soft); }
+  .avviso button { margin-left: 8px; }
+  .da-fissare { background: var(--surface); border: 1px solid var(--border); border-radius: 10px; padding: 8px 12px; margin: 8px 0; font-size: .88rem; }
+  .da-fissare summary { cursor: pointer; font-weight: 600; }
+  .da-fissare ul { list-style: none; margin: 8px 0 2px; padding: 0; display: flex; flex-direction: column; gap: 4px; }
+  .da-fissare li button { background: none; border: 0; padding: 4px 0; text-align: left; cursor: pointer; color: var(--ink); font-size: .88rem; }
+  .da-fissare li button:hover { color: var(--primary); text-decoration: underline; }
+
+  .area { display: grid; grid-template-columns: minmax(0, 1fr) 400px; gap: 16px; align-items: start; }
+  .area.senza-pannello { grid-template-columns: minmax(0, 1fr); }
+  .area.senza-pannello .pannello { display: none; }
+  .vista { min-width: 0; }
+  .stato-vista { background: var(--surface); border: 1px dashed var(--border); border-radius: 12px; padding: 28px 20px; text-align: center; color: var(--ink-muted); }
+
+  /* Pannello dei dettagli (a destra sul computer, foglio dal basso su telefono) */
+  .pannello { position: sticky; top: 12px; max-height: calc(100vh - 24px); overflow-y: auto; background: var(--surface); border: 1px solid var(--border); border-radius: 14px; padding: 16px 18px; }
+  .pannello:focus { outline: none; }
+  .pannello-vuoto { margin: 0; color: var(--ink-muted); font-size: .92rem; }
+  .pannello-testa { display: flex; justify-content: space-between; align-items: flex-start; gap: 8px; margin-bottom: 8px; }
+  .btn-chiudi { background: var(--surface-2); border: 0; border-radius: 999px; width: 34px; height: 34px; cursor: pointer; color: var(--ink); font-size: .95rem; flex: none; }
+  .btn-indietro { background: none; border: 0; padding: 4px 0; color: var(--primary); font-weight: 600; font-size: .85rem; cursor: pointer; margin-bottom: 8px; }
+  .velo { position: fixed; inset: 0; background: rgba(30, 35, 32, .35); z-index: 890; }
+
+  /* Mese */
+  .mese-griglia { display: grid; grid-template-columns: repeat(7, minmax(0, 1fr)); border: 1px solid var(--border); border-radius: 12px; overflow: hidden; background: var(--surface); }
+  .intest-sett { text-align: center; font-size: .72rem; font-weight: 600; letter-spacing: .06em; text-transform: uppercase; color: var(--ink-muted); padding: 7px 0; background: var(--surface-2); border-bottom: 1px solid var(--border); }
+  .cella { min-height: 118px; padding: 4px; display: flex; flex-direction: column; gap: 3px; border-right: 1px solid var(--border); border-bottom: 1px solid var(--border); cursor: pointer; min-width: 0; background: var(--surface); }
+  .cella:nth-child(7n) { border-right: 0; }
+  .cella.we { background: color-mix(in srgb, var(--surface-2) 35%, var(--surface)); }
+  .cella.altro-mese .numero { color: var(--ink-faint); font-weight: 400; }
+  .cella.sel, .g-anno.sel, .sett-giorno.sel { box-shadow: inset 0 0 0 2px var(--primary); }
+  .numero { align-self: flex-start; min-width: 26px; height: 26px; padding: 0 6px; border: 0; background: none; border-radius: 999px; font-size: .82rem; font-weight: 600; color: var(--ink); cursor: pointer; }
+  .cella.oggi .numero, .g-anno.oggi > span:first-child { background: var(--primary); color: var(--surface); }
+  .chips { display: flex; flex-direction: column; gap: 2px; min-width: 0; }
+  .puntini { display: none; flex-wrap: wrap; gap: 3px; padding: 0 2px; }
+  .puntino { width: 8px; height: 8px; border-radius: 50%; background: var(--cc); }
+  .piu { background: none; border: 0; padding: 1px 4px; font-size: .72rem; color: var(--ink-muted); text-align: left; cursor: pointer; }
+  .piu:hover { color: var(--primary); text-decoration: underline; }
+
+  .chip, .evento-lungo { border: 0; border-left: 4px solid var(--cc); background: var(--cs); color: var(--ink); border-radius: 6px; text-align: left; cursor: pointer; font-size: .74rem; }
+  .chip { display: flex; align-items: center; gap: 4px; width: 100%; min-height: 22px; padding: 2px 6px; line-height: 1.3; }
+  .chip-testo { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; min-width: 0; }
+  .chip-icona { flex: none; }
+  .passato { opacity: .72; }
+  .spento { opacity: .66; border-left-style: dashed; }
+  /* nelle schede lunghe il testo (note) resta leggibile: si attenuano solo sfondo e bordo */
+  .evento-lungo.passato, .evento-lungo.spento { opacity: 1; background: color-mix(in srgb, var(--cs) 55%, transparent); border-left-color: color-mix(in srgb, var(--cc) 55%, transparent); }
+  .u-oggi { box-shadow: 0 0 0 2px var(--cc); }
+  .u-vicina { box-shadow: 0 0 0 1px var(--cc); font-weight: 600; }
+  .u-scaduta { --cc: var(--danger); --cs: var(--danger-soft); box-shadow: 0 0 0 1px var(--danger); }
+  .chip.sel, .evento-lungo.sel { outline: 2px solid var(--ink); outline-offset: 1px; }
+  .tag { display: inline-block; background: var(--danger); color: var(--surface); border-radius: 999px; font-size: .66rem; font-weight: 700; padding: 0 6px; margin-left: 4px; text-transform: uppercase; letter-spacing: .03em; }
+  .tag-nota { color: var(--ink-muted); font-size: .76rem; }
+
+  /* Eventi "lunghi": settimana, agenda, elenco del giorno */
+  .evento-lungo { display: flex; flex-direction: column; gap: 2px; width: 100%; padding: 6px 8px; font-size: .84rem; margin: 0 0 6px; }
+  .el-riga { display: flex; align-items: center; gap: 6px; flex-wrap: wrap; }
+  .el-ora { font-family: var(--font-mono); font-size: .78rem; }
+  .el-tipo { font-weight: 600; min-width: 0; overflow-wrap: anywhere; }
+  .el-titolo { font-weight: 500; overflow-wrap: anywhere; }
+  .el-nota { color: var(--ink-muted); font-size: .8rem; display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden; overflow-wrap: anywhere; }
+
+  /* Settimana */
+  .sett-griglia { display: grid; grid-template-columns: repeat(7, minmax(0, 1fr)); gap: 8px; }
+  .sett-giorno { background: var(--surface); border: 1px solid var(--border); border-radius: 12px; padding: 8px; min-height: 160px; cursor: pointer; min-width: 0; }
+  .sett-giorno.we { background: color-mix(in srgb, var(--surface-2) 35%, var(--surface)); }
+  .sett-giorno.oggi { border-color: var(--primary); }
+  .intest-giorno { display: block; width: 100%; background: none; border: 0; border-bottom: 1px solid var(--border); padding: 0 0 6px; margin-bottom: 8px; text-align: left; font-size: .82rem; color: var(--ink-muted); cursor: pointer; }
+  .intest-giorno b { font-size: 1.1rem; color: var(--ink); }
+  .sett-giorno.oggi .intest-giorno b { background: var(--primary); color: var(--surface); border-radius: 999px; padding: 0 8px; }
+  .vuoto { margin: 0; color: var(--ink-faint); font-size: .8rem; }
+
+  /* Anno */
+  .anno-griglia { display: grid; grid-template-columns: repeat(auto-fill, minmax(236px, 1fr)); gap: 12px; }
+  .mini-mese { background: var(--surface); border: 1px solid var(--border); border-radius: 12px; padding: 10px 10px 8px; }
+  .mini-mese h3 { margin: 0 0 6px; font-size: .95rem; display: flex; justify-content: space-between; align-items: baseline; gap: 8px; }
+  .titolo-mini { background: none; border: 0; padding: 0; font-family: var(--font-display); font-size: 1rem; font-weight: 500; color: var(--ink); cursor: pointer; }
+  .titolo-mini:hover { color: var(--primary); text-decoration: underline; }
+  .conta { font-size: .74rem; color: var(--ink-muted); font-weight: 400; }
+  .mini-intest, .mini-griglia { display: grid; grid-template-columns: repeat(7, 1fr); text-align: center; }
+  .mini-intest span { font-size: .66rem; color: var(--ink-faint); padding-bottom: 2px; }
+  .g-vuoto { display: block; }
+  .g-anno { display: flex; flex-direction: column; align-items: center; gap: 1px; min-height: 36px; padding: 2px 0; border: 0; background: none; border-radius: 8px; cursor: pointer; font-size: .78rem; color: var(--ink); }
+  .g-anno > span:first-child { min-width: 22px; border-radius: 999px; line-height: 22px; }
+  .g-anno.con-eventi > span:first-child { font-weight: 700; }
+  .g-anno:hover { background: var(--surface-2); }
+  .g-puntini { display: flex; gap: 2px; min-height: 6px; }
+  .g-puntini i { width: 6px; height: 6px; border-radius: 50%; background: var(--cc); }
+
+  /* Giorno e agenda */
+  .giorno-schede { display: grid; grid-template-columns: repeat(auto-fill, minmax(min(100%, 380px), 1fr)); gap: 12px; align-items: start; }
+  .giorno-schede .scheda { background: var(--surface); border: 1px solid var(--border); border-radius: 12px; padding: 14px 16px; }
+  .agenda-giorno { margin-bottom: 14px; }
+  .agenda-data { position: sticky; top: 0; z-index: 5; margin: 0 0 6px; padding: 6px 2px; background: var(--bg); font-size: .95rem; font-weight: 600; border-bottom: 1px solid var(--border); }
+  .agenda-data small { font-weight: 400; color: var(--ink-muted); margin-left: 6px; }
+  .agenda-giorno.oggi .agenda-data { color: var(--primary); }
+  .agenda-giorno .evento-lungo { scroll-margin-top: 48px; }   /* l'intestazione del giorno è fissa in alto: non copre il focus */
+  .agenda-giorno.passato { opacity: 1; }
+  .agenda-lista { max-width: 860px; }
+
+  /* Scheda di un'asta */
+  .scheda { display: flex; flex-direction: column; gap: 12px; }
+  .scheda-titolo { font-family: var(--font-display); font-size: 1.12rem; font-weight: 500; margin: 0; line-height: 1.3; overflow-wrap: anywhere; }
+  .scheda-sotto { margin: 2px 0 0; color: var(--ink-muted); font-size: .86rem; }
+  .scheda-badge { display: flex; flex-wrap: wrap; gap: 6px; margin: 8px 0 0; }
+  .badge { font-size: .74rem; font-weight: 600; border-radius: 999px; padding: 2px 9px; background: var(--surface-2); color: var(--ink); }
+  .badge.avviso-b { background: var(--warn-soft); }
+  .scheda-sez h4 { font-size: .72rem; letter-spacing: .06em; text-transform: uppercase; color: var(--primary); margin: 0 0 6px; }
+  .elenco-date { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; gap: 4px; }
+  .riga-data { display: flex; gap: 8px; align-items: baseline; padding: 5px 8px; border-left: 4px solid var(--cc); background: var(--cs); border-radius: 6px; font-size: .86rem; }
+  .riga-data.evid { box-shadow: 0 0 0 2px var(--ink); }
+  .riga-data small { color: var(--ink-muted); }
+  .testo-nota { white-space: pre-wrap; overflow-wrap: anywhere; background: var(--bg); border: 1px solid var(--border); border-radius: 8px; padding: 8px 10px; font-size: .9rem; }
+  .piccolo { color: var(--ink-muted); font-size: .78rem; margin: 4px 0 0; }
+  .cifre { display: grid; grid-template-columns: auto 1fr; gap: 2px 12px; font-size: .86rem; margin: 0 0 8px; }
+  .cifre dt { color: var(--ink-muted); }
+  .cifre dd { margin: 0; font-weight: 600; }
+  .lista-voci { margin: 4px 0 0; padding-left: 18px; font-size: .86rem; }
+  .lista-voci li { margin: 2px 0; overflow-wrap: anywhere; }
+  .scheda-link { display: flex; flex-wrap: wrap; gap: 8px; }
+  .link-azione { display: inline-flex; align-items: center; min-height: 40px; padding: 0 12px; border: 1px solid var(--border); border-radius: 8px; background: var(--surface); color: var(--primary); font-weight: 600; text-decoration: none; font-size: .86rem; }
+  .link-azione:hover { border-color: var(--primary); }
+  .link-utile { overflow-wrap: anywhere; }
+
+  @media (max-width: 1000px) {
+    .area { grid-template-columns: minmax(0, 1fr); }
+    .pannello { position: fixed; left: 0; right: 0; bottom: 0; top: auto; max-height: 82vh; max-height: 82dvh; z-index: 900; border-radius: 16px 16px 0 0;
+      padding-bottom: calc(18px + env(safe-area-inset-bottom)); padding-left: calc(18px + env(safe-area-inset-left)); padding-right: calc(18px + env(safe-area-inset-right)); transform: translateY(110%); transition: transform .2s ease; box-shadow: 0 -8px 30px rgba(0, 0, 0, .2); }
+    body.pannello-aperto .pannello { transform: none; }
+    body.pannello-aperto { overflow: hidden; }
+    .area.senza-pannello .pannello { display: block; transform: translateY(110%); }
+  }
+  @media (min-width: 1001px) { .velo { display: none !important; } }
+  @media (max-width: 700px) {
+    .contenitore-cal { padding: 16px 12px 100px; }
+    h1 { font-size: 1.5rem; margin-bottom: 0; }
+    .eyebrow, .sottotitolo { display: none; }   /* su telefono il calendario deve stare subito sotto il titolo */
+    .barra-cal { margin-top: 10px; }
+    .filtri { gap: 6px 8px; }
+    .filtro { padding: 4px 8px; min-height: 34px; font-size: .78rem; }
+    .spunta { font-size: .78rem; min-height: 32px; }
+    .titolo-periodo { font-size: 1.15rem; margin-left: 4px; }
+    .viste { width: 100%; }
+    .viste .btn { flex: 1 1 0; padding: 8px 2px; font-size: .78rem; }
+    .cella { min-height: 58px; padding: 3px; }
+    .cella .chips { display: none; }
+    .cella .puntini { display: flex; }
+    .sett-griglia { grid-template-columns: minmax(0, 1fr); }
+    .sett-giorno { min-height: 0; }
+    .anno-griglia { grid-template-columns: repeat(auto-fill, minmax(150px, 1fr)); }
+    .g-anno { min-height: 32px; }
+  }
+  @media (prefers-reduced-motion: reduce) { .pannello { transition: none; } }
+  @media print {
+    .gate, .velo, .barra-cal .btn, .viste, .filtri, .pannello, .da-fissare { display: none !important; }
+    .titolo-periodo { margin-left: 0; }
+    .area { display: block; }
+    body { background: #fff; }
+  }
+</style>
+<link rel="stylesheet" href="colori.css?v=20261001b">
+<link rel="stylesheet" href="grafica-app.css?v=20261001">
+</head>
+<body>
+<script src="menu.js?v=20261003"></script>
+<script src="etichette.js?v=20261001"></script>
+<script src="operazioni.js?v=20260930"></script>
+
+<div id="gate" class="gate">
+  <div class="riquadro-gate">
+    <h2>Calendario</h2>
+    <p id="testo-gate">Verifica dell'accesso…</p>
+    <form id="modulo-gate" class="nascosto" onsubmit="event.preventDefault(); sblocca();">
+      <input type="password" id="campo-password" autocomplete="current-password" placeholder="Password di lettura del registro" aria-label="Password di lettura del registro">
+      <button class="bottone" type="submit">Sblocca</button>
+      <p id="errore-gate" class="messaggio-errore" role="alert"></p>
+    </form>
+  </div>
+</div>
+
+<div id="pagina" class="nascosto">
+  <div class="contenitore-cal">
+    <header>
+      <p class="eyebrow">Calendario</p>
+      <h1>Le date delle tue aste</h1>
+      <p class="sottotitolo">Vendite, visite, scadenze e passi dell'operazione delle aste con la stella o con dati aggiunti da te (note, visite, operazioni). Solo lettura: per modificare qualcosa usa il registro.</p>
+    </header>
+
+    <div class="barra-cal">
+      <div class="navigazione">
+        <button type="button" class="btn btn-freccia" data-azione="prec" aria-label="Periodo precedente">‹</button>
+        <button type="button" class="btn" data-azione="oggi">Oggi</button>
+        <button type="button" class="btn btn-freccia" data-azione="succ" aria-label="Periodo successivo">›</button>
+        <h2 id="titolo-periodo" class="titolo-periodo" aria-live="polite"></h2>
+      </div>
+      <div class="viste" role="group" aria-label="Vista del calendario">
+        <button type="button" class="btn" data-azione="vista" data-vista="anno" aria-pressed="false">Anno</button>
+        <button type="button" class="btn" data-azione="vista" data-vista="mese" aria-pressed="false">Mese</button>
+        <button type="button" class="btn" data-azione="vista" data-vista="settimana" aria-pressed="false">Settimana</button>
+        <button type="button" class="btn" data-azione="vista" data-vista="giorno" aria-pressed="false">Giorno</button>
+        <button type="button" class="btn" data-azione="vista" data-vista="agenda" aria-pressed="false">Agenda</button>
+      </div>
+    </div>
+
+    <div id="filtri" class="filtri"></div>
+    <p id="riepilogo" class="riepilogo" aria-live="polite"></p>
+    <div id="avvisi"></div>
+    <div id="da-fissare"></div>
+
+    <div id="area" class="area">
+      <div id="vista" class="vista"></div>
+      <aside id="pannello" class="pannello" tabindex="-1" aria-label="Dettagli"></aside>
+    </div>
+  </div>
+</div>
+<div id="velo" class="velo nascosto" data-azione="chiudi-pannello"></div>
+
+<script>
+  // Stessa chiave pubblica (anon) e stessa password di lettura del registro.
+  const SUPABASE_URL = "https://igemwrrcmsgaotoqvdzt.supabase.co";
+  const SUPABASE_ANON_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImlnZW13cnJjbXNnYW90b3F2ZHp0Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODkzMDc2MjksImV4cCI6MjEwNDg4MzYyOX0.YkUOBTOb40C-N0TkuDN0o5N7fVvI_qX2F1grUp-SVe8";
+  const CHIAVE_PASSWORD_LETTURA = "aste_password_lettura_v1";
+  const CHIAVE_IMPOSTAZIONI = "aste_calendario_v1";
+  // Ultimo giorno utile per chiedere la visita: vendita − 16 giorni (15 di
+  // risposta del custode + 1 di margine). Stessa regola di notifica_preferiti.py
+  // (SOGLIA_VISITA_GIORNI): se cambia là, va cambiata anche qui.
+  const GIORNI_ULTIMO_VISITA = 16;
+  const GIORNI_VICINA = 7;     // una scadenza o una visita entro 7 giorni è "vicina"
+  const BLOCCO_ID = 100;       // aste chieste al database per volta
+  const COLONNE_ASTE = "id_annuncio,comune__indirizzo,tipologia,tribunale,n__lotto,offerta_minima,data_vendita,termine_offerte,link_asta";
+
+  // Tipi di data. "cat" = gruppo del filtro e colore.
+  const TIPI = {
+    vendita:            { cat: "vendita",    icona: "⚖️", etichetta: "Vendita" },
+    termine_offerte:    { cat: "scadenza",   icona: "⏰", etichetta: "Termine per le offerte" },
+    ultimo_visita:      { cat: "scadenza",   icona: "⏳", etichetta: "Ultimo giorno per chiedere la visita" },
+    scadenza_saldo:     { cat: "scadenza",   icona: "💶", etichetta: "Scadenza del saldo" },
+    visita:             { cat: "visita",     icona: "📅", etichetta: "Visita" },
+    offerta_depositata: { cat: "operazione", icona: "📨", etichetta: "Offerta depositata" },
+    aggiudicata:        { cat: "operazione", icona: "🏆", etichetta: "Aggiudicata" },
+    saldo_versato:      { cat: "operazione", icona: "✔️", etichetta: "Saldo versato" },
+    consegna:           { cat: "operazione", icona: "🔑", etichetta: "Consegna dell'immobile" },
+    cantiere:           { cat: "operazione", icona: "🔨", etichetta: "Inizio lavori" },
+    venduta:            { cat: "operazione", icona: "✅", etichetta: "Rivendita" },
+  };
+  const CATEGORIE = [
+    { chiave: "vendita",    etichetta: "Vendite",   icona: "⚖️" },
+    { chiave: "scadenza",   etichetta: "Scadenze",  icona: "⏰" },
+    { chiave: "visita",     etichetta: "Visite",    icona: "📅" },
+    { chiave: "operazione", etichetta: "Operazione", icona: "🧭" },
+  ];
+  const ORDINE_CAT = { scadenza: 0, vendita: 1, operazione: 2, visita: 3 };
+  // [colonna di operazioni, tipo di data]
+  const CAMPI_DATA_OPERAZIONE = [
+    ["offerta_depositata_il", "offerta_depositata"], ["aggiudicata_il", "aggiudicata"], ["scadenza_saldo", "scadenza_saldo"],
+    ["saldo_versato_il", "saldo_versato"], ["consegna_il", "consegna"], ["cantiere_inizio_il", "cantiere"], ["venduta_il", "venduta"],
+  ];
+  const STATI_VISITA = {
+    richiesta: "Visita richiesta, data da fissare", invito: "Invito ricevuto, da confermare",
+    confermata: "Visita confermata", visitata: "Visita fatta", annullata: "Visita annullata",
+  };
+
+  // ------------------------------------------------------------ utilità
+  function esc(t) {
+    return String(t === null || t === undefined ? "" : t).replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;").replace(/"/g, "&quot;").replace(/'/g, "&#39;");
+  }
+  function urlSicuro(u) { const t = String(u || "").trim(); return /^https?:\/\//i.test(t) ? t : "#"; }
+  function eur(v) {
+    const n = Number(v);
+    if (v === null || v === undefined || v === "" || !Number.isFinite(n)) return "—";
+    return "€ " + (Math.round(n) < 0 ? "-" : "") + String(Math.abs(Math.round(n))).replace(/\B(?=(\d{3})+(?!\d))/g, ".");
+  }
+  function maiuscola(t) { return t.charAt(0).toUpperCase() + t.slice(1); }   // "sabato 3 ottobre" → "Sabato 3 ottobre"
+  function snippet(testo, max) {
+    const t = String(testo || "").replace(/\s+/g, " ").trim();
+    return t.length <= max ? t : t.slice(0, max - 1).trimEnd() + "…";
+  }
+  function leggiLocale(k) { try { return localStorage.getItem(k); } catch (e) { return null; } }
+  function scriviLocale(k, v) { try { localStorage.setItem(k, v); } catch (e) {} }
+
+  // Date: sempre nell'ora del dispositivo, a mano. Mai new Date("AAAA-MM-GG")
+  // (verrebbe letta come UTC e può scivolare di un giorno) né toISOString().
+  function pad(n) { return String(n).padStart(2, "0"); }
+  function chiaveData(d) { return `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}`; }
+  function dataDaChiave(k) { const [a, m, g] = k.split("-").map(Number); return new Date(a, m - 1, g); }
+  function sommaGiorni(d, n) { return new Date(d.getFullYear(), d.getMonth(), d.getDate() + n); }
+  function sommaGiorniChiave(k, n) { return chiaveData(sommaGiorni(dataDaChiave(k), n)); }
+  function giorniTra(chiaveA, chiaveB) {   // giorni di calendario da A a B
+    const a = dataDaChiave(chiaveA), b = dataDaChiave(chiaveB);
+    return Math.round((Date.UTC(b.getFullYear(), b.getMonth(), b.getDate()) - Date.UTC(a.getFullYear(), a.getMonth(), a.getDate())) / 86400000);
+  }
+  function lunedi(d) { const x = new Date(d.getFullYear(), d.getMonth(), d.getDate()); return sommaGiorni(x, -((x.getDay() + 6) % 7)); }
+  function numeroSettimana(d) {
+    const t = new Date(Date.UTC(d.getFullYear(), d.getMonth(), d.getDate()));
+    t.setUTCDate(t.getUTCDate() - ((t.getUTCDay() + 6) % 7) + 3);
+    const primoGiovedi = new Date(Date.UTC(t.getUTCFullYear(), 0, 4));
+    return 1 + Math.round(((t - primoGiovedi) / 86400000 - 3 + ((primoGiovedi.getUTCDay() + 6) % 7)) / 7);
+  }
+  function soloGiorno(v) { const m = String(v || "").match(/^(\d{4}-\d{2}-\d{2})/); return m ? m[1] : null; }
+  function momentoLocale(v) {   // timestamp con fuso → giorno e ora del dispositivo
+    if (!v) return null;
+    const d = new Date(v);
+    return isNaN(d) ? null : { giorno: chiaveData(d), ora: `${pad(d.getHours())}:${pad(d.getMinutes())}` };
+  }
+  const F_LUNGO = new Intl.DateTimeFormat("it-IT", { weekday: "long", day: "numeric", month: "long", year: "numeric" });
+  const F_BREVE = new Intl.DateTimeFormat("it-IT", { weekday: "short", day: "numeric", month: "short" });
+  const F_MESE_ANNO = new Intl.DateTimeFormat("it-IT", { month: "long", year: "numeric" });
+  const F_MESE = new Intl.DateTimeFormat("it-IT", { month: "long" });
+  const F_GIORNO_MESE = new Intl.DateTimeFormat("it-IT", { day: "numeric", month: "short" });
+  const F_GIORNO_SETT = new Intl.DateTimeFormat("it-IT", { weekday: "short" });
+  const INIZIALI_SETT = ["L", "M", "M", "G", "V", "S", "D"];
+  function dataBreve(k) {
+    const d = dataDaChiave(k);
+    return F_BREVE.format(d) + (d.getFullYear() !== new Date().getFullYear() ? " " + d.getFullYear() : "");
+  }
+  function testoTraGiorni(g) {
+    return g === 0 ? "oggi" : g === 1 ? "domani" : g > 0 ? `tra ${g} giorni` : g === -1 ? "ieri" : `${-g} giorni fa`;
+  }
+
+  // ------------------------------------------------------------ rete e accesso
+  async function chiamaRpc(nome, payload, opzioni) {
+    const o = opzioni || {};
+    const controllo = new AbortController();
+    const timer = setTimeout(() => controllo.abort(), o.timeoutMs || 20000);
+    try {
+      const r = await fetch(`${SUPABASE_URL}/rest/v1/rpc/${nome}${o.query || ""}`, {
+        method: "POST",
+        headers: { apikey: SUPABASE_ANON_KEY, Authorization: `Bearer ${SUPABASE_ANON_KEY}`, "Content-Type": "application/json" },
+        body: JSON.stringify(payload),
+        signal: controllo.signal,
+      });
+      if (!r.ok) throw new Error(`HTTP ${r.status}`);
+      return await r.json();
+    } finally { clearTimeout(timer); }
+  }
+
+  let passwordLettura = "";
+  let GIRO = 0;                 // numero dell'ultimo caricamento: solo l'ultimo scrive sulla pagina
+  let sbloccoInCorso = false;   // evita il doppio invio della password
+
+  async function messaggioPasswordRifiutata() {
+    try {
+      const secondi = await chiamaRpc("blocco_password", { p_tipo: "lettura" });
+      if (typeof secondi === "number" && secondi > 0) return `Troppi tentativi errati: riprova tra ${Math.ceil(secondi / 60)} minuti.`;
+    } catch (e) {}
+    return "Password errata.";
+  }
+  function mostraPagina(password) {
+    passwordLettura = password || "";
+    document.getElementById("gate").classList.add("nascosto");
+    document.getElementById("pagina").classList.remove("nascosto");
+    avviaCalendario();
+  }
+  function mostraGate(messaggio) {
+    document.getElementById("pagina").classList.add("nascosto");
+    document.getElementById("gate").classList.remove("nascosto");
+    document.getElementById("testo-gate").textContent = "Inserisci la password di lettura del registro.";
+    document.getElementById("errore-gate").textContent = messaggio || "";
+    document.getElementById("modulo-gate").classList.remove("nascosto");
+    document.getElementById("campo-password").focus();
+  }
+  // Come provaSbloccoLetturaAutomatico del registro: se la password di
+  // lettura non è attiva si entra; se è ricordata e valida, si entra.
+  async function provaSbloccoAutomatico() {
+    try {
+      if (!(await chiamaRpc("serve_password_lettura", {}))) { mostraPagina(""); return; }
+    } catch (e) {}
+    const ricordata = leggiLocale(CHIAVE_PASSWORD_LETTURA);
+    if (ricordata) {
+      try {
+        if (await chiamaRpc("verifica_password_lettura", { password_tentativo: ricordata })) { mostraPagina(ricordata); return; }
+      } catch (e) {}
+    }
+    mostraGate();
+  }
+  async function sblocca() {
+    const password = document.getElementById("campo-password").value;
+    const errore = document.getElementById("errore-gate");
+    errore.textContent = "";
+    if (!password || sbloccoInCorso) return;
+    sbloccoInCorso = true;
+    try {
+      if (await chiamaRpc("verifica_password_lettura", { password_tentativo: password })) {
+        scriviLocale(CHIAVE_PASSWORD_LETTURA, password);
+        mostraPagina(password);
+      } else {
+        errore.textContent = await messaggioPasswordRifiutata();
+      }
+    } catch (e) { errore.textContent = "Impossibile contattare il database. Controlla la connessione."; }
+    finally { sbloccoInCorso = false; }
+  }
+
+  // ------------------------------------------------------------ stato
+  const S = {
+    vista: "mese",
+    cursore: new Date(),
+    selezione: null,        // {tipo:"evento", id} | {tipo:"giorno", giorno} | {tipo:"asta", id}
+    origineGiorno: null,    // giorno da cui si è scelto un evento (per "← tutte le date")
+    filtri: { categorie: { vendita: true, scadenza: true, visita: true, operazione: true }, soloStella: false, nascondiSpente: false },
+    agendaPassate: false,
+    caricato: false,
+  };
+  let OGGI = chiaveData(new Date());
+  let PREFERITI = {}, LINK_UTILI = {}, VISITE = {}, OPERAZIONI = {}, CHECKLIST_MODELLO = null;
+  let SCHEDE = {};            // id asta → scheda (asta + dati personali)
+  let EVENTI = [];            // tutte le date, in ordine
+  let EVENTI_PER_ASTA = {};   // id asta → date di quell'asta
+  let EVENTO_PER_ID = {};
+  let VISIBILI = [];          // date che passano i filtri
+  let PER_GIORNO = new Map(); // giorno → date visibili
+  let AVVISI = [];
+  let FOCUS_PRIMA = null;     // elemento che aveva il focus prima di aprire il pannello
+
+  function caricaImpostazioni() {
+    try {
+      const s = JSON.parse(leggiLocale(CHIAVE_IMPOSTAZIONI) || "null");
+      if (s && ["anno", "mese", "settimana", "giorno", "agenda"].includes(s.vista)) S.vista = s.vista;
+      else S.vista = window.matchMedia("(max-width: 700px)").matches ? "agenda" : "mese";
+      if (s && s.filtri) {
+        CATEGORIE.forEach(c => { if (s.filtri.categorie && typeof s.filtri.categorie[c.chiave] === "boolean") S.filtri.categorie[c.chiave] = s.filtri.categorie[c.chiave]; });
+        S.filtri.soloStella = s.filtri.soloStella === true;
+        S.filtri.nascondiSpente = s.filtri.nascondiSpente === true;
+      }
+      S.agendaPassate = !!(s && s.agendaPassate);
+    } catch (e) { S.vista = window.matchMedia("(max-width: 700px)").matches ? "agenda" : "mese"; }
+  }
+  function salvaImpostazioni() {
+    scriviLocale(CHIAVE_IMPOSTAZIONI, JSON.stringify({ vista: S.vista, filtri: S.filtri, agendaPassate: S.agendaPassate }));
+  }
+
+  // ------------------------------------------------------------ caricamento
+  async function avviaCalendario() {
+    const giro = ++GIRO;
+    caricaImpostazioni();
+    S.cursore = new Date();
+    OGGI = chiaveData(new Date());
+    S.caricato = false;
+    AVVISI = [];
+    renderTutto();
+    document.getElementById("vista").innerHTML = '<div class="stato-vista" role="status">Carico le date…</div>';
+    try {
+      const dp = await chiamaRpc("leggi_dati_personali", { password_tentativo: passwordLettura });
+      if (giro !== GIRO) return;
+      if (!dp || dp.ok !== true) {
+        if (dp && dp.code === "password_errata") { mostraGate("La password non è più valida: inseriscila di nuovo."); return; }
+        throw new Error("risposta non valida");
+      }
+      impostaDati(dp);
+      const ids = idsPerimetro();
+      const { righe, idNonLetti } = await leggiAste(ids);
+      if (giro !== GIRO) return;
+      if (idNonLetti.size) AVVISI.push(`Non sono riuscito a leggere i dati di ${idNonLetti.size} aste (data di vendita e link): ne mostro solo le date personali.`);
+      costruisciSchede(ids, righe, idNonLetti);
+      costruisciEventi();
+      S.caricato = true;
+      renderTutto();
+    } catch (e) {
+      if (giro !== GIRO) return;
+      document.getElementById("vista").innerHTML = '<div class="stato-vista" role="alert">Non sono riuscito a caricare il calendario. Controlla la connessione. <button type="button" class="btn" data-azione="riprova">Riprova</button></div>';
+    }
+  }
+
+  function impostaDati(dp) {
+    const lista = (v) => (Array.isArray(v) ? v : []);
+    const conId = (r) => r && r.id_annuncio !== null && r.id_annuncio !== undefined;
+    PREFERITI = {}; LINK_UTILI = {}; VISITE = {}; OPERAZIONI = {};
+    lista(dp.preferiti).forEach(r => { if (conId(r)) PREFERITI[String(r.id_annuncio)] = { stato: r.stato || "" }; });
+    lista(dp.link_utili).forEach(r => {
+      if (conId(r)) LINK_UTILI[String(r.id_annuncio)] = { links: lista(r.links), nota: String(r.nota || ""), aggiornato: r.aggiornato_il || "" };
+    });
+    lista(dp.visite).forEach(r => { if (conId(r)) VISITE[String(r.id_annuncio)] = r; });
+    lista(dp.operazioni).forEach(r => { if (conId(r)) OPERAZIONI[String(r.id_annuncio)] = r; });
+    CHECKLIST_MODELLO = window.Operazioni ? Operazioni.modelloChecklist(dp.checklist_modello || null) : null;
+  }
+
+  // Quali aste mostrare: con la stella, oppure con dati aggiunti da te
+  // (visita, operazione, nota o link). Le scartate solo se hai una visita o
+  // un'operazione in corso. Nota, visita e operazione esistono anche per aste
+  // senza stella: per questo il perimetro non è la sola stella.
+  function inPerimetro(id) {
+    const stato = (PREFERITI[id] || {}).stato;
+    const v = VISITE[id], o = OPERAZIONI[id], l = LINK_UTILI[id];
+    const visitaViva = !!v && ["richiesta", "invito", "confermata", "visitata"].includes(v.stato);
+    if (stato === "scartato") return visitaViva || (!!o && !!window.Operazioni && Operazioni.IN_CORSO.includes(o.stato));
+    const notaOLink = !!l && (l.nota.trim() !== "" || l.links.length > 0);
+    return stato === "preferito" || visitaViva || !!o || notaOLink;
+  }
+  function idsPerimetro() {
+    const tutti = new Set([...Object.keys(PREFERITI), ...Object.keys(LINK_UTILI), ...Object.keys(VISITE), ...Object.keys(OPERAZIONI)]);
+    return [...tutti].filter(id => /^\d+$/.test(id) && inPerimetro(id)).sort();
+  }
+
+  async function leggiAste(ids) {
+    const blocchi = [];
+    for (let i = 0; i < ids.length; i += BLOCCO_ID) blocchi.push(ids.slice(i, i + BLOCCO_ID));
+    const esiti = await Promise.all(blocchi.map(b =>
+      chiamaRpc("leggi_aste", { password_tentativo: passwordLettura, tipo: "lettura" },
+        { query: `?select=${COLONNE_ASTE}&id_annuncio=in.(${b.join(",")})` })
+        .then(r => { if (!Array.isArray(r)) throw new Error("risposta non valida"); return r; })
+        .catch(() => null)));
+    const righe = [], idNonLetti = new Set();
+    esiti.forEach((r, i) => { if (r) righe.push(...r); else blocchi[i].forEach(id => idNonLetti.add(id)); });
+    return { righe, idNonLetti };
+  }
+
+  function costruisciSchede(ids, righe, idNonLetti) {
+    const E = window.Etichette;
+    const perId = {};
+    righe.forEach(r => { perId[String(r.id_annuncio)] = r; });
+    SCHEDE = {};
+    ids.forEach(id => {
+      const asta = perId[id] || null;
+      const l = LINK_UTILI[id] || { links: [], nota: "", aggiornato: "" };
+      const o = OPERAZIONI[id] || null;
+      const stato = (PREFERITI[id] || {}).stato || "";
+      const parti = [];
+      if (asta) {
+        const tip = E ? E.tipologia(asta.tipologia) : asta.tipologia;
+        if (tip && tip !== "N/D") parti.push(tip);
+        if (asta.tribunale) parti.push(E ? E.tribunale(asta.tribunale) : asta.tribunale);
+        if (asta.n__lotto) parti.push(E ? E.lotto(asta.n__lotto) : asta.n__lotto);
+        if (Number(asta.offerta_minima) > 0) parti.push("offerta minima " + eur(asta.offerta_minima));
+      }
+      SCHEDE[id] = {
+        id, asta,
+        nonLetta: !asta && idNonLetti.has(id), orfana: !asta && !idNonLetti.has(id),
+        titolo: asta ? (asta.comune__indirizzo || `Asta n. ${id}`) : (idNonLetti.has(id) ? `Asta n. ${id} (dati non letti)` : `Asta n. ${id} (non più nel registro)`),
+        sottotitolo: parti.join(" · "),
+        stella: stato === "preferito", scartata: stato === "scartato",
+        nota: l.nota, notaAggiornata: l.aggiornato, links: l.links,
+        visita: VISITE[id] || null, operazione: o,
+        spento: !!o && !!window.Operazioni && !Operazioni.IN_CORSO.includes(o.stato),
+        urlPvp: asta && asta.link_asta ? urlSicuro(asta.link_asta) : "#",
+      };
+    });
+  }
+
+  function visitaFissata(v) {
+    return !!v && ["confermata", "visitata"].includes(v.stato) && !!momentoLocale(v.data_ora);
+  }
+
+  function costruisciEventi() {
+    const lista = [];
+    const aggiungi = (sc, tipo, giorno, ora, extra) => {
+      if (!giorno) return;
+      const t = TIPI[tipo];
+      lista.push(Object.assign({ id: `${sc.id}|${tipo}`, idAsta: sc.id, tipo, cat: t.cat, icona: t.icona, etichetta: t.etichetta, giorno, ora: ora || null }, extra || {}));
+    };
+    Object.values(SCHEDE).forEach(sc => {
+      const a = sc.asta;
+      if (a) {
+        const gv = soloGiorno(a.data_vendita);
+        aggiungi(sc, "vendita", gv, null);
+        // Compare solo finché non hai già mosso la visita (richiesta, invito, appuntamento o fatta).
+        if (sc.stella && gv && !visitaFissata(sc.visita) && !(sc.visita && ["richiesta", "invito"].includes(sc.visita.stato))) {
+          const limite = sommaGiorniChiave(gv, -GIORNI_ULTIMO_VISITA);
+          if (limite >= OGGI) aggiungi(sc, "ultimo_visita", limite, null, { calcolato: true });
+        }
+        const t = momentoLocale(a.termine_offerte);
+        if (t) aggiungi(sc, "termine_offerte", t.giorno, t.ora);
+      }
+      if (visitaFissata(sc.visita)) {
+        const t = momentoLocale(sc.visita.data_ora);
+        aggiungi(sc, "visita", t.giorno, t.ora, {
+          etichetta: sc.visita.stato === "visitata" ? "Visita (fatta)" : "Visita",
+          dettaglio: String(sc.visita.dettagli || "").trim(),
+        });
+      }
+      if (sc.operazione) CAMPI_DATA_OPERAZIONE.forEach(([campo, tipo]) => aggiungi(sc, tipo, soloGiorno(sc.operazione[campo]), null));
+    });
+    lista.forEach(arricchisciEvento);
+    lista.sort(confrontaEventi);
+    EVENTI = lista;
+    EVENTI_PER_ASTA = {}; EVENTO_PER_ID = {};
+    lista.forEach(e => { (EVENTI_PER_ASTA[e.idAsta] = EVENTI_PER_ASTA[e.idAsta] || []).push(e); EVENTO_PER_ID[e.id] = e; });
+  }
+  function arricchisciEvento(ev) {
+    const sc = SCHEDE[ev.idAsta];
+    ev.diff = giorniTra(OGGI, ev.giorno);
+    ev.passato = ev.diff < 0;
+    ev.urgenza = null;
+    const o = sc.operazione;
+    const saldoDaVersare = !!o && o.stato === "aggiudicata" && !soloGiorno(o.saldo_versato_il);
+    // Le scadenze già assolte non si evidenziano: saldo già versato, offerta già presentata.
+    const assolta = (ev.tipo === "scadenza_saldo" && !saldoDaVersare) || (ev.tipo === "termine_offerte" && !!o && o.stato !== "valutazione");
+    if (ev.tipo === "scadenza_saldo" && ev.diff < 0 && saldoDaVersare) ev.urgenza = "scaduta";
+    else if (!sc.spento && !assolta && ev.diff === 0 && ["scadenza", "visita", "vendita"].includes(ev.cat)) ev.urgenza = "oggi";
+    else if (!sc.spento && !assolta && ev.diff > 0 && ev.diff <= GIORNI_VICINA && ["scadenza", "visita"].includes(ev.cat)) ev.urgenza = "vicina";
+  }
+  function confrontaEventi(a, b) {
+    if (a.giorno !== b.giorno) return a.giorno < b.giorno ? -1 : 1;
+    if (!a.ora !== !b.ora) return a.ora ? 1 : -1;          // prima quelle di tutto il giorno
+    if (a.ora !== b.ora) return a.ora < b.ora ? -1 : 1;
+    if (a.cat !== b.cat) return ORDINE_CAT[a.cat] - ORDINE_CAT[b.cat];
+    return SCHEDE[a.idAsta].titolo.localeCompare(SCHEDE[b.idAsta].titolo, "it");
+  }
+
+  // ------------------------------------------------------------ filtri
+  function visibile(ev) {
+    const sc = SCHEDE[ev.idAsta];
+    if (!S.filtri.categorie[ev.cat]) return false;
+    if (S.filtri.soloStella && !sc.stella) return false;
+    if (S.filtri.nascondiSpente && sc.spento) return false;
+    return true;
+  }
+  function ricalcolaVisibili() {
+    VISIBILI = EVENTI.filter(visibile);
+    PER_GIORNO = new Map();
+    VISIBILI.forEach(e => { if (!PER_GIORNO.has(e.giorno)) PER_GIORNO.set(e.giorno, []); PER_GIORNO.get(e.giorno).push(e); });
+  }
+  function eventiDelGiorno(k) { return PER_GIORNO.get(k) || []; }
+
+  // ------------------------------------------------------------ elementi grafici
+  function tooltipEvento(ev) {
+    const sc = SCHEDE[ev.idAsta];
+    return `${ev.etichetta}${ev.ora ? " ore " + ev.ora : ""} — ${sc.titolo}`;
+  }
+  // Stati che altrimenti si vedono solo dal colore: letti anche da chi usa un lettore di schermo.
+  function statoParlato(ev) {
+    return (ev.urgenza === "scaduta" ? ", scaduta" : ev.urgenza === "oggi" ? ", oggi" : ev.urgenza === "vicina" ? `, ${testoTraGiorni(ev.diff)}` : "")
+      + (SCHEDE[ev.idAsta].spento ? ", asta chiusa" : "");
+  }
+  function classiEvento(ev) {
+    const sc = SCHEDE[ev.idAsta];
+    return (ev.passato ? " passato" : "") + (sc.spento ? " spento" : "") + (ev.urgenza ? " u-" + ev.urgenza : "");
+  }
+  function chipHtml(ev) {
+    const sc = SCHEDE[ev.idAsta];
+    const sel = S.selezione && S.selezione.tipo === "evento" && S.selezione.id === ev.id ? " sel" : "";
+    return `<button type="button" class="chip cat-${ev.cat}${classiEvento(ev)}${sel}" data-azione="evento" data-id="${esc(ev.id)}" title="${esc(tooltipEvento(ev))}" aria-label="${esc(tooltipEvento(ev) + (ev.ora ? "" : ", tutto il giorno") + statoParlato(ev))}">`
+      + `<span class="chip-icona" aria-hidden="true">${ev.icona}</span><span class="chip-testo">${ev.ora ? ev.ora + " " : ""}${esc(sc.titolo)}</span></button>`;
+  }
+  function eventoLungoHtml(ev) {
+    const sc = SCHEDE[ev.idAsta];
+    const sel = S.selezione && S.selezione.tipo === "evento" && S.selezione.id === ev.id ? " sel" : "";
+    const nota = snippet(sc.nota, 150), det = ev.dettaglio ? snippet(ev.dettaglio, 120) : "";
+    return `<button type="button" class="evento-lungo cat-${ev.cat}${classiEvento(ev)}${sel}" data-azione="evento" data-id="${esc(ev.id)}" title="${esc(tooltipEvento(ev))}">`
+      + `<span class="el-riga"><span class="chip-icona" aria-hidden="true">${ev.icona}</span>${ev.ora ? `<b class="el-ora">${ev.ora}</b>` : ""}`
+      + `<span class="el-tipo">${esc(ev.etichetta)}</span>${ev.urgenza === "scaduta" ? '<span class="tag">scaduta</span>' : ""}${sc.stella ? '<span title="Preferita">⭐</span>' : ""}</span>`
+      + `<span class="el-titolo">${esc(sc.titolo)}</span>`
+      + (det ? `<span class="el-nota">📍 ${esc(det)}</span>` : "")
+      + (nota ? `<span class="el-nota">📝 ${esc(nota)}</span>` : "") + `</button>`;
+  }
+  function puntiniHtml(evs, max) {
+    const cats = [];
+    evs.forEach(e => { if (!cats.includes(e.cat)) cats.push(e.cat); });
+    return cats.slice(0, max).map(c => `<span class="puntino cat-${c}"></span>`).join("");
+  }
+  function ariaGiorno(k, n) { return `${F_LUNGO.format(dataDaChiave(k))}, ${n === 0 ? "nessuna data" : n === 1 ? "1 data" : n + " date"}`; }
+  function selGiorno(k) { return !!S.selezione && S.selezione.tipo === "giorno" && S.selezione.giorno === k; }
+
+  // ------------------------------------------------------------ viste
+  function htmlAnno() {
+    const anno = S.cursore.getFullYear();
+    let h = '<div class="anno-griglia">';
+    for (let m = 0; m < 12; m++) {
+      const primo = new Date(anno, m, 1);
+      const vuoti = (primo.getDay() + 6) % 7;
+      const nGiorni = new Date(anno, m + 1, 0).getDate();
+      let celle = "", totale = 0;
+      for (let i = 0; i < vuoti; i++) celle += '<span class="g-vuoto"></span>';
+      for (let g = 1; g <= nGiorni; g++) {
+        const k = chiaveData(new Date(anno, m, g));
+        const evs = eventiDelGiorno(k);
+        totale += evs.length;
+        const cats = [];
+        evs.forEach(e => { if (!cats.includes(e.cat)) cats.push(e.cat); });
+        celle += `<button type="button" class="g-anno${k === OGGI ? " oggi" : ""}${evs.length ? " con-eventi" : ""}${selGiorno(k) ? " sel" : ""}" data-azione="giorno" data-giorno="${k}"${k === OGGI ? ' aria-current="date"' : ""} aria-label="${esc(ariaGiorno(k, evs.length))}" title="${esc(ariaGiorno(k, evs.length))}">`
+          + `<span>${g}</span><span class="g-puntini">${cats.map(c => `<i class="cat-${c}"></i>`).join("")}</span></button>`;
+      }
+      h += `<section class="mini-mese"><h3><button type="button" class="titolo-mini" data-azione="mese" data-mese="${anno}-${pad(m + 1)}">${maiuscola(F_MESE.format(primo))}</button>`
+        + `<span class="conta">${totale ? totale + (totale === 1 ? " data" : " date") : ""}</span></h3>`
+        + `<div class="mini-intest" aria-hidden="true">${INIZIALI_SETT.map(l => `<span>${l}</span>`).join("")}</div><div class="mini-griglia">${celle}</div></section>`;
+    }
+    return h + "</div>";
+  }
+
+  function htmlMese() {
+    const anno = S.cursore.getFullYear(), mese = S.cursore.getMonth();
+    const inizio = lunedi(new Date(anno, mese, 1));
+    const fine = sommaGiorni(lunedi(new Date(anno, mese + 1, 0)), 6);
+    let h = '<div class="mese-griglia">' + INIZIALI_SETT.map((l, i) => `<div class="intest-sett" aria-hidden="true">${["Lun", "Mar", "Mer", "Gio", "Ven", "Sab", "Dom"][i]}</div>`).join("");
+    for (let d = inizio; d <= fine; d = sommaGiorni(d, 1)) {
+      const k = chiaveData(d);
+      const evs = eventiDelGiorno(k);
+      const we = d.getDay() === 0 || d.getDay() === 6;
+      h += `<div class="cella${d.getMonth() !== mese ? " altro-mese" : ""}${k === OGGI ? " oggi" : ""}${we ? " we" : ""}${selGiorno(k) ? " sel" : ""}" data-azione="giorno" data-giorno="${k}">`
+        + `<button type="button" class="numero" data-azione="giorno" data-giorno="${k}"${k === OGGI ? ' aria-current="date"' : ""} aria-label="${esc(ariaGiorno(k, evs.length))}">${d.getDate()}</button>`
+        + `<div class="chips">${evs.slice(0, 3).map(chipHtml).join("")}${evs.length > 3 ? `<button type="button" class="piu" data-azione="giorno" data-giorno="${k}">+${evs.length - 3} altri</button>` : ""}</div>`
+        + `<div class="puntini" aria-hidden="true">${puntiniHtml(evs, 4)}${evs.length > 4 ? "+" : ""}</div></div>`;
+    }
+    return h + "</div>";
+  }
+
+  function htmlSettimana() {
+    const inizio = lunedi(S.cursore);
+    let h = '<div class="sett-griglia">';
+    for (let i = 0; i < 7; i++) {
+      const d = sommaGiorni(inizio, i), k = chiaveData(d);
+      const evs = eventiDelGiorno(k);
+      const we = d.getDay() === 0 || d.getDay() === 6;
+      h += `<section class="sett-giorno${k === OGGI ? " oggi" : ""}${we ? " we" : ""}${selGiorno(k) ? " sel" : ""}" data-azione="giorno" data-giorno="${k}">`
+        + `<button type="button" class="intest-giorno" data-azione="giorno" data-giorno="${k}"${k === OGGI ? ' aria-current="date"' : ""} aria-label="${esc(ariaGiorno(k, evs.length))}">${maiuscola(F_GIORNO_SETT.format(d))} <b>${d.getDate()}</b> ${F_GIORNO_MESE.format(d).replace(/^\d+\s*/, "")}</button>`
+        + (evs.length ? evs.map(eventoLungoHtml).join("") : '<p class="vuoto">Nessuna data</p>') + "</section>";
+    }
+    return h + "</div>";
+  }
+
+  function htmlGiorno() {
+    const k = chiaveData(S.cursore);
+    const evs = eventiDelGiorno(k);
+    if (!evs.length) {
+      const prossimo = VISIBILI.find(e => e.giorno > k);
+      return `<div class="stato-vista">Nessuna data in questo giorno.${prossimo ? ` <button type="button" class="btn" data-azione="vai-giorno" data-giorno="${prossimo.giorno}">Vai alla prossima: ${esc(dataBreve(prossimo.giorno))}</button>` : ""}</div>`;
+    }
+    const perAsta = new Map();
+    evs.forEach(e => { if (!perAsta.has(e.idAsta)) perAsta.set(e.idAsta, []); perAsta.get(e.idAsta).push(e.id); });
+    return '<div class="giorno-schede">' + [...perAsta].map(([id, evid]) => schedaHtml(SCHEDE[id], { evidenzia: evid })).join("") + "</div>";
+  }
+
+  function htmlAgenda() {
+    // Un saldo scaduto resta sempre in elenco, anche senza «date passate»: è la scadenza che costa di più.
+    const lista = S.agendaPassate ? VISIBILI : VISIBILI.filter(e => e.giorno >= OGGI || e.urgenza === "scaduta");
+    if (!lista.length) return `<div class="stato-vista">${S.agendaPassate ? "Nessuna data da mostrare con questi filtri." : "Nessuna data da oggi in poi con questi filtri. Spunta «Mostra anche le date passate» per vedere le precedenti."}</div>`;
+    const giorni = new Map();
+    lista.forEach(e => { if (!giorni.has(e.giorno)) giorni.set(e.giorno, []); giorni.get(e.giorno).push(e); });
+    return '<div class="agenda-lista">' + [...giorni].map(([k, evs]) => {
+      const diff = giorniTra(OGGI, k);
+      return `<section class="agenda-giorno${k === OGGI ? " oggi" : ""}${diff < 0 ? " passato" : ""}" id="ag-${k}">`
+        + `<h3 class="agenda-data">${esc(maiuscola(F_LUNGO.format(dataDaChiave(k))))}<small>${testoTraGiorni(diff)}</small></h3>${evs.map(eventoLungoHtml).join("")}</section>`;
+    }).join("") + "</div>";
+  }
+
+  // ------------------------------------------------------------ scheda di un'asta
+  function vociChecklist(sc, gruppo) {
+    const o = sc.operazione;
+    if (!o || !window.Operazioni) return [];
+    const base = (CHECKLIST_MODELLO && CHECKLIST_MODELLO[gruppo]) || [];
+    const extra = (Array.isArray(o.voci_extra) ? o.voci_extra : []).filter(v => v && v.gruppo === gruppo && v.testo).map(v => String(v.testo)).filter(t => !base.includes(t));
+    const testi = [...(gruppo === "prima" ? [Operazioni.VOCE_VISITA] : []), ...base, ...extra];
+    return testi.map(testo => {
+      const c = (o.checklist && o.checklist[testo]) || {};
+      const automatica = testo === Operazioni.VOCE_VISITA && !!sc.visita && sc.visita.stato === "visitata";
+      return { testo, fatto: automatica || !!c.fatto, nota: String(c.nota || "") };
+    });
+  }
+
+  function sezioneOperazione(sc) {
+    const o = sc.operazione;
+    if (!o) return "";
+    const st = (window.Operazioni && Operazioni.STATI[o.stato]) || { etichetta: o.stato, icona: "🧭" };
+    const cifre = [["Offerta presentata", eur(o.offerta_importo), Number(o.offerta_importo) > 0], ["Cauzione", eur(o.cauzione), Number(o.cauzione) > 0],
+      ["Prezzo di aggiudicazione", eur(o.prezzo_aggiudicazione), Number(o.prezzo_aggiudicazione) > 0], ["Offerenti", String(o.numero_offerenti), Number(o.numero_offerenti) > 0],
+      ["Prezzo di rivendita", eur(o.prezzo_vendita), Number(o.prezzo_vendita) > 0]].filter(c => c[2]);
+    const prima = vociChecklist(sc, "prima"), dopo = vociChecklist(sc, "dopo");
+    const fatte = (l) => l.filter(v => v.fatto).length;
+    const dopoInCorso = ["aggiudicata", "saldo", "consegna", "cantiere", "in_vendita"].includes(o.stato);
+    const primaInCorso = ["valutazione", "offerta"].includes(o.stato);
+    const daFare = dopoInCorso ? dopo.filter(v => !v.fatto) : primaInCorso ? prima.filter(v => !v.fatto) : [];
+    const conNote = [...prima, ...dopo].filter(v => v.nota.trim() !== "");
+    let h = `<section class="scheda-sez"><h4>🧭 Operazione</h4><p style="margin:0 0 6px"><b>${st.icona} ${esc(st.etichetta)}</b></p>`;
+    if (cifre.length) h += `<dl class="cifre">${cifre.map(c => `<dt>${esc(c[0])}</dt><dd>${esc(c[1])}</dd>`).join("")}</dl>`;
+    if (prima.length || dopo.length) {
+      h += `<p class="piccolo" style="margin:0">Checklist: prima dell'offerta ${fatte(prima)}/${prima.length} · dopo l'aggiudicazione ${fatte(dopo)}/${dopo.length}</p>`;
+      if (daFare.length) {
+        h += `<p style="margin:8px 0 0;font-size:.86rem"><b>Ancora da fare</b></p><ul class="lista-voci">${daFare.slice(0, 10).map(v => `<li>${esc(v.testo)}</li>`).join("")}${daFare.length > 10 ? `<li>… e altre ${daFare.length - 10}</li>` : ""}</ul>`;
+      }
+      if (conNote.length) h += `<p style="margin:8px 0 0;font-size:.86rem"><b>Note sulle voci</b></p><ul class="lista-voci">${conNote.map(v => `<li><b>${esc(v.testo)}</b>: ${esc(v.nota)}</li>`).join("")}</ul>`;
+    }
+    return h + "</section>";
+  }
+
+  function schedaHtml(sc, opz) {
+    const evid = new Set((opz && opz.evidenzia) || []);
+    const evs = EVENTI_PER_ASTA[sc.id] || [];
+    const badge = [];
+    if (sc.stella) badge.push('<span class="badge">⭐ Preferita</span>');
+    if (sc.scartata) badge.push('<span class="badge">🚫 Scartata</span>');
+    if (sc.operazione && window.Operazioni && Operazioni.STATI[sc.operazione.stato]) {
+      const st = Operazioni.STATI[sc.operazione.stato];
+      badge.push(`<span class="badge">${st.icona} ${esc(st.etichetta)}</span>`);
+    }
+    if (sc.visita && STATI_VISITA[sc.visita.stato]) badge.push(`<span class="badge">📅 ${esc(STATI_VISITA[sc.visita.stato])}</span>`);
+    if (sc.orfana) badge.push('<span class="badge avviso-b">Non più nel registro: senza link né data di vendita</span>');
+    if (sc.nonLetta) badge.push('<span class="badge avviso-b">Dati dell\'asta non letti</span>');
+    let h = `<article class="scheda"><header><h3 class="scheda-titolo">${esc(sc.titolo)}</h3>`
+      + (sc.sottotitolo ? `<p class="scheda-sotto">${esc(sc.sottotitolo)}</p>` : "") + (badge.length ? `<p class="scheda-badge">${badge.join("")}</p>` : "") + "</header>";
+    h += '<section class="scheda-sez"><h4>Date</h4>';
+    h += evs.length ? `<ul class="elenco-date">${evs.map(e => `<li class="riga-data cat-${e.cat}${e.passato ? " passato" : ""}${evid.has(e.id) ? " evid" : ""}${e.urgenza === "scaduta" ? " u-scaduta" : ""}">`
+      + `<span aria-hidden="true">${e.icona}</span><span><b>${esc(e.etichetta)}</b> · ${esc(dataBreve(e.giorno))}${e.ora ? " · " + e.ora : " · tutto il giorno"} <small>${testoTraGiorni(e.diff)}</small>`
+      + `${e.urgenza === "scaduta" ? ' <span class="tag">scaduta</span>' : ""}${e.calcolato ? ` <span class="tag-nota">(vendita − ${GIORNI_ULTIMO_VISITA} giorni)</span>` : ""}</span></li>`).join("")}</ul>`
+      : '<p class="piccolo">Nessuna data registrata per quest\'asta.</p>';
+    h += "</section>";
+    if (sc.nota.trim()) {
+      h += `<section class="scheda-sez"><h4>📝 Nota</h4><div class="testo-nota">${esc(sc.nota.trim())}</div>`
+        + (soloGiorno(sc.notaAggiornata) ? `<p class="piccolo">Aggiornata il ${esc(dataBreve(chiaveData(new Date(sc.notaAggiornata))))}</p>` : "") + "</section>";
+    }
+    const dettagliVisita = sc.visita && String(sc.visita.dettagli || "").trim();
+    if (dettagliVisita) h += `<section class="scheda-sez"><h4>📍 Dettagli della visita</h4><div class="testo-nota">${esc(dettagliVisita)}</div></section>`;
+    h += sezioneOperazione(sc);
+    const links = (sc.links || []).filter(l => l && urlSicuro(l.url) !== "#");
+    if (links.length) h += `<section class="scheda-sez"><h4>🔗 Link utili</h4><ul class="lista-voci">${links.map(l => `<li class="link-utile"><a href="${esc(urlSicuro(l.url))}" target="_blank" rel="noopener noreferrer">${esc(l.etichetta || l.url)}</a></li>`).join("")}</ul></section>`;
+    h += '<div class="scheda-link">';
+    if (!sc.orfana) h += `<a class="link-azione" href="index.html#${encodeURIComponent(sc.id)}" target="_blank" rel="noopener">Apri nel registro ↗</a>`;
+    if (sc.urlPvp !== "#") h += `<a class="link-azione" href="${esc(sc.urlPvp)}" target="_blank" rel="noopener noreferrer">Annuncio PVP ↗</a>`;
+    return h + "</div></article>";
+  }
+
+  // ------------------------------------------------------------ pannello
+  function htmlPannello() {
+    const s = S.selezione;
+    const chiudi = '<button type="button" class="btn-chiudi" data-azione="chiudi-pannello" aria-label="Chiudi">✕</button>';
+    if (!s) return '<p class="pannello-vuoto">Scegli una data o un giorno nel calendario per vedere l\'asta, le note e i link.</p>';
+    if (s.tipo === "giorno") {
+      const k = s.giorno, evs = eventiDelGiorno(k);
+      return `<div class="pannello-testa"><div><h3 class="scheda-titolo">${esc(maiuscola(F_LUNGO.format(dataDaChiave(k))))}</h3>`
+        + `<p class="scheda-sotto">${testoTraGiorni(giorniTra(OGGI, k))} · ${evs.length === 0 ? "nessuna data" : evs.length === 1 ? "1 data" : evs.length + " date"}</p></div>${chiudi}</div>`
+        + (evs.length ? evs.map(eventoLungoHtml).join("") : '<p class="pannello-vuoto">Nessuna data in questo giorno con i filtri attuali.</p>')
+        + `<p style="margin:10px 0 0"><button type="button" class="btn" data-azione="vai-giorno" data-giorno="${k}">Apri la vista Giorno</button></p>`;
+    }
+    if (s.tipo === "evento") {
+      const ev = EVENTO_PER_ID[s.id];
+      if (!ev) return `<div class="pannello-testa"><p class="pannello-vuoto">Data non trovata.</p>${chiudi}</div>`;
+      const indietro = S.origineGiorno ? `<button type="button" class="btn-indietro" data-azione="giorno" data-giorno="${S.origineGiorno}">← Tutte le date del ${esc(dataBreve(S.origineGiorno))}</button>` : "";
+      return `<div class="pannello-testa">${indietro || "<span></span>"}${chiudi}</div>` + schedaHtml(SCHEDE[ev.idAsta], { evidenzia: [ev.id] });
+    }
+    const sc = SCHEDE[s.id];
+    return `<div class="pannello-testa"><span></span>${chiudi}</div>` + (sc ? schedaHtml(sc, {}) : '<p class="pannello-vuoto">Asta non trovata.</p>');
+  }
+
+  // ------------------------------------------------------------ disegno
+  function titoloPeriodo() {
+    const c = S.cursore;
+    if (S.vista === "anno") return String(c.getFullYear());
+    if (S.vista === "mese") return maiuscola(F_MESE_ANNO.format(c));
+    if (S.vista === "giorno") return maiuscola(F_LUNGO.format(c));
+    if (S.vista === "agenda") return S.agendaPassate ? "Tutte le date" : "Prossime date";
+    const i = lunedi(c), f = sommaGiorni(i, 6);
+    const a = i.getFullYear() === f.getFullYear();
+    const intervallo = i.getMonth() === f.getMonth() && a ? `${i.getDate()} – ${f.getDate()} ${F_MESE.format(f)} ${f.getFullYear()}`
+      : a ? `${F_GIORNO_MESE.format(i)} – ${F_GIORNO_MESE.format(f)} ${f.getFullYear()}` : `${F_GIORNO_MESE.format(i)} ${i.getFullYear()} – ${F_GIORNO_MESE.format(f)} ${f.getFullYear()}`;
+    return `Settimana ${numeroSettimana(i)} · ${intervallo}`;
+  }
+  function renderFiltri() {
+    const base = EVENTI.filter(e => (!S.filtri.soloStella || SCHEDE[e.idAsta].stella) && (!S.filtri.nascondiSpente || !SCHEDE[e.idAsta].spento));
+    let h = CATEGORIE.map(c => {
+      const n = base.filter(e => e.cat === c.chiave).length;
+      return `<button type="button" class="filtro cat-${c.chiave}" data-azione="filtro-cat" data-cat="${c.chiave}" aria-pressed="${S.filtri.categorie[c.chiave]}">${c.icona} ${c.etichetta} <span class="n">${n}</span></button>`;
+    }).join("");
+    h += `<label class="spunta"><input type="checkbox" data-azione="solo-stella"${S.filtri.soloStella ? " checked" : ""}> Solo con la stella</label>`;
+    h += `<label class="spunta"><input type="checkbox" data-azione="nascondi-spente"${S.filtri.nascondiSpente ? " checked" : ""}> Nascondi aste chiuse (perse, non partecipo, vendute)</label>`;
+    if (S.vista === "agenda") h += `<label class="spunta"><input type="checkbox" data-azione="agenda-passate"${S.agendaPassate ? " checked" : ""}> Mostra anche le date passate</label>`;
+    // i controlli si riscrivono a ogni cambio: il focus da tastiera resta sullo stesso controllo
+    const att = document.activeElement;
+    const sel = att && att.closest && att.closest("#filtri") ? (att.dataset.cat ? `[data-cat="${att.dataset.cat}"]` : `[data-azione="${att.dataset.azione}"]`) : null;
+    document.getElementById("filtri").innerHTML = h;
+    if (sel) { const n = document.querySelector("#filtri " + sel); if (n) n.focus(); }
+  }
+  function renderRiepilogo() {
+    const schede = Object.values(SCHEDE);
+    document.getElementById("riepilogo").textContent = S.caricato
+      ? `${schede.length} ${schede.length === 1 ? "asta" : "aste"} (${schede.filter(s => s.stella).length} con la stella) · ${EVENTI.length} ${EVENTI.length === 1 ? "data" : "date"} in tutto, ${VISIBILI.length} con i filtri attuali`
+      : "";
+    document.getElementById("avvisi").innerHTML = AVVISI.map(t => `<div class="avviso">${esc(t)} <button type="button" class="btn" data-azione="riprova">Riprova</button></div>`).join("");
+  }
+  function renderDaFissare() {
+    const el = document.getElementById("da-fissare");
+    const era = !!(el.querySelector("details") && el.querySelector("details").open);   // resta aperto tra un ridisegno e l'altro
+    // In vista Giorno il pannello non esiste: l'elenco lì non avrebbe dove aprire l'asta.
+    const lista = S.caricato && S.vista !== "giorno" && S.filtri.categorie.visita
+      ? Object.values(SCHEDE).filter(sc => sc.visita && ["richiesta", "invito"].includes(sc.visita.stato) && (!S.filtri.soloStella || sc.stella) && (!S.filtri.nascondiSpente || !sc.spento)) : [];
+    el.innerHTML = lista.length
+      ? `<details class="da-fissare"${era ? " open" : ""}><summary>📅 Visite da fissare (${lista.length}): richieste o invitate, senza data confermata</summary><ul>${lista.map(sc =>
+        `<li><button type="button" data-azione="asta" data-id="${esc(sc.id)}">${esc(sc.titolo)} — ${esc(STATI_VISITA[sc.visita.stato])}</button></li>`).join("")}</ul></details>` : "";
+  }
+  function renderVista() {
+    const el = document.getElementById("vista");
+    if (!S.caricato) return;
+    if (!Object.keys(SCHEDE).length) {
+      el.innerHTML = '<div class="stato-vista">Non c\'è ancora nessuna data da mostrare. Metti la stella a un\'asta nel registro, oppure aggiungi una visita, una nota o un\'operazione: compariranno qui.</div>';
+      return;
+    }
+    el.innerHTML = { anno: htmlAnno, mese: htmlMese, settimana: htmlSettimana, giorno: htmlGiorno, agenda: htmlAgenda }[S.vista]();
+  }
+  function renderPannello() {
+    const el = document.getElementById("pannello");
+    const aperto = !!S.selezione && S.vista !== "giorno";
+    // Su telefono, alla chiusura il foglio scende con il suo contenuto: il testo si svuota solo dopo la discesa.
+    const chiusuraAnimata = !aperto && document.body.classList.contains("pannello-aperto")
+      && window.matchMedia("(max-width: 1000px)").matches && !window.matchMedia("(prefers-reduced-motion: reduce)").matches;
+    document.getElementById("area").classList.toggle("senza-pannello", S.vista === "giorno");
+    document.body.classList.toggle("pannello-aperto", aperto);
+    document.getElementById("velo").classList.toggle("nascosto", !aperto);
+    if (!aperto) FOCUS_PRIMA = null;
+    if (chiusuraAnimata) setTimeout(() => { if (!S.selezione) el.innerHTML = S.caricato ? htmlPannello() : ""; }, 220);
+    else el.innerHTML = S.caricato ? htmlPannello() : "";
+  }
+  function renderTutto() {
+    ricalcolaVisibili();
+    document.getElementById("titolo-periodo").textContent = S.caricato ? titoloPeriodo() : "";
+    document.querySelectorAll('[data-azione="vista"]').forEach(b => b.setAttribute("aria-pressed", String(b.dataset.vista === S.vista)));
+    const nav = S.vista === "agenda";
+    document.querySelectorAll('[data-azione="prec"], [data-azione="succ"]').forEach(b => { b.disabled = nav; });
+    renderFiltri(); renderRiepilogo(); renderDaFissare(); renderVista(); renderPannello();
+  }
+  function evidenziaSelezione() {
+    document.querySelectorAll("#vista .sel").forEach(el => el.classList.remove("sel"));
+    const s = S.selezione;
+    if (s && s.tipo === "evento") document.querySelectorAll(`#vista [data-azione="evento"][data-id="${s.id}"]`).forEach(el => el.classList.add("sel"));
+    if (s && s.tipo === "giorno") document.querySelectorAll(`#vista .cella[data-giorno="${s.giorno}"], #vista .g-anno[data-giorno="${s.giorno}"], #vista .sett-giorno[data-giorno="${s.giorno}"]`).forEach(el => el.classList.add("sel"));
+    const p = document.getElementById("pannello");
+    // ricorda da dove si è aperto il pannello, per rimettere lì il focus alla chiusura
+    if (s && FOCUS_PRIMA === null && !p.contains(document.activeElement)) FOCUS_PRIMA = document.activeElement;
+    renderPannello();
+    if (s) { p.scrollTop = 0; p.focus({ preventScroll: true }); }
+  }
+
+  // ------------------------------------------------------------ azioni
+  function primoOOggi(anno, mese) {
+    const oggi = dataDaChiave(OGGI);
+    const rif = new Date(anno, mese, 1);   // normalizza mese -1 e 12 (dicembre ↔ gennaio)
+    return oggi.getFullYear() === rif.getFullYear() && oggi.getMonth() === rif.getMonth() ? oggi : rif;
+  }
+  // Se la pagina è rimasta aperta oltre la mezzanotte, "oggi" va riletto e le date ricalcolate.
+  function aggiornaOggi() {
+    const k = chiaveData(new Date());
+    if (k === OGGI) return false;
+    OGGI = k;
+    if (S.caricato) costruisciEventi();
+    return true;
+  }
+  function sposta(dir) {
+    const c = S.cursore;
+    if (S.vista === "anno") S.cursore = primoOOggi(c.getFullYear() + dir, c.getMonth());
+    else if (S.vista === "mese") S.cursore = primoOOggi(c.getFullYear(), c.getMonth() + dir);
+    else if (S.vista === "settimana") S.cursore = sommaGiorni(c, 7 * dir);
+    else if (S.vista === "giorno") S.cursore = sommaGiorni(c, dir);
+    renderTutto();
+  }
+  function impostaVista(v) {
+    S.vista = v;
+    if (v === "giorno") { S.selezione = null; S.origineGiorno = null; }
+    salvaImpostazioni();
+    renderTutto();
+  }
+  function vaiAlGiorno(k) {
+    S.cursore = dataDaChiave(k);
+    S.selezione = null; S.origineGiorno = null;
+    impostaVista("giorno");
+  }
+  function selezionaEvento(id) {
+    const ev = EVENTO_PER_ID[id];
+    if (!ev) return;
+    S.origineGiorno = ev.giorno;
+    S.selezione = { tipo: "evento", id };
+    evidenziaSelezione();
+  }
+  function selezionaGiorno(k) { S.origineGiorno = null; S.selezione = { tipo: "giorno", giorno: k }; evidenziaSelezione(); }
+  function chiudiPannello() {
+    const prima = FOCUS_PRIMA;
+    S.selezione = null; S.origineGiorno = null;
+    evidenziaSelezione();
+    if (prima && prima !== document.body && document.contains(prima)) prima.focus({ preventScroll: true });
+  }
+  function vaiAOggi() {
+    aggiornaOggi();
+    S.cursore = new Date();
+    renderTutto();
+    if (S.vista === "agenda") {
+      const primo = [...document.querySelectorAll(".agenda-giorno")].find(g => g.id.slice(3) >= OGGI);
+      if (primo) primo.scrollIntoView({ block: "start", behavior: "smooth" });
+    }
+  }
+
+  document.addEventListener("click", (e) => {
+    const el = e.target.closest("[data-azione]");
+    if (!el) return;
+    const d = el.dataset;
+    switch (d.azione) {
+      case "prec": sposta(-1); break;
+      case "succ": sposta(1); break;
+      case "oggi": vaiAOggi(); break;
+      case "vista": impostaVista(d.vista); break;
+      case "filtro-cat": S.filtri.categorie[d.cat] = !S.filtri.categorie[d.cat]; salvaImpostazioni(); renderTutto(); break;
+      case "evento": selezionaEvento(d.id); break;
+      case "giorno": selezionaGiorno(d.giorno); break;
+      case "asta": S.origineGiorno = null; S.selezione = { tipo: "asta", id: d.id }; evidenziaSelezione(); break;
+      case "vai-giorno": vaiAlGiorno(d.giorno); break;
+      case "mese": { const [a, m] = d.mese.split("-").map(Number); S.cursore = primoOOggi(a, m - 1); impostaVista("mese"); break; }
+      case "chiudi-pannello": chiudiPannello(); break;
+      case "riprova": avviaCalendario(); break;
+    }
+  });
+  document.addEventListener("change", (e) => {
+    const d = e.target.dataset || {};
+    if (d.azione === "solo-stella") S.filtri.soloStella = e.target.checked;
+    else if (d.azione === "nascondi-spente") S.filtri.nascondiSpente = e.target.checked;
+    else if (d.azione === "agenda-passate") S.agendaPassate = e.target.checked;
+    else return;
+    salvaImpostazioni();
+    renderTutto();
+  });
+  document.addEventListener("keydown", (e) => { if (e.key === "Escape" && S.selezione) chiudiPannello(); });
+  // Se la scheda resta aperta oltre la mezzanotte, al ritorno si aggiorna "oggi".
+  document.addEventListener("visibilitychange", () => {
+    if (document.visibilityState === "visible" && S.caricato && aggiornaOggi()) renderTutto();
+  });
+
+  provaSbloccoAutomatico();
+</script>
+</body>
+</html>

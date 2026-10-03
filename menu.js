@@ -1,6 +1,6 @@
 /**
  * menu.js — menu uguale in tutte le pagine (Registro · Configurazione ·
- * Statistiche · Manuale) e ritorno alla pagina precedente.
+ * Statistiche · Calendario · Manuale) e ritorno alla pagina precedente.
  *
  * Va incluso come PRIMO elemento del <body>: aggiunge in cima una barra
  * sottile (che scorre via con la pagina) ed evidenzia la pagina attuale.
@@ -22,6 +22,7 @@
     { pagina: 'index.html', testo: 'Registro' },
     { pagina: 'config.html', testo: 'Configurazione' },
     { pagina: 'statistiche.html', testo: 'Statistiche' },
+    { pagina: 'calendario.html', testo: 'Calendario' },
     { pagina: 'manuale.html', testo: 'Manuale' },
   ];
 
@@ -41,15 +42,15 @@
   .menu-pagine a { -webkit-user-select: none; user-select: none; -webkit-tap-highlight-color: transparent; transition: transform .1s ease; }
   @media (pointer: coarse) { .menu-pagine a:active { transform: scale(.96); } }
   @media (max-width: 640px) {
-    .menu-pagine-interno { padding: 6px 8px; gap: 2px; }
-    .menu-pagine a { flex: 1 1 0; min-height: 44px; padding: 0 4px; font-size: .8rem; }
+    .menu-pagine-interno { padding: 6px 8px; gap: 2px; overflow-x: auto; }
+    .menu-pagine a { flex: 1 1 0; min-height: 44px; padding: 0 3px; font-size: .74rem; }
   }
   @media print { .menu-pagine { display: none !important; } }`;
 
   // Pagine lunghe dove compare il tasto "torna su" (index.html ha già il
   // suo e resta fuori da questo elenco). Posizione, colori e soglia di
   // comparsa sono gli stessi del tasto del registro (.bottone-torna-su).
-  const PAGINE_TORNA_SU = ['statistiche.html', 'superanalisi.html', 'risultato-superanalisi.html', 'superanalisi-gruppo.html', 'manuale.html'];
+  const PAGINE_TORNA_SU = ['statistiche.html', 'superanalisi.html', 'risultato-superanalisi.html', 'superanalisi-gruppo.html', 'manuale.html', 'calendario.html'];
 
   const STILE_TORNA_SU = `
   .menu-torna-su { position: fixed; right: 20px; bottom: 70px; z-index: 850; width: 42px; height: 42px;

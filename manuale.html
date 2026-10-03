@@ -18,7 +18,7 @@
 
 <!--
   manuale.html — manuale d'uso di tutto il sistema (registro, configurazione,
-  statistiche, superanalisi, analisi delle perizie, OMI, processi automatici,
+  statistiche, calendario, superanalisi, analisi delle perizie, OMI, processi automatici,
   notifiche, glossario). Pagina pubblica su GitHub Pages: NON deve contenere
   password, chiavi, token, indirizzi di servizi (monitoraggio, cron esterno),
   ID Telegram né il testo del prompt Gemini.
@@ -151,7 +151,7 @@
 <link rel="stylesheet" href="grafica-app.css?v=20261001">
 </head>
 <body>
-<script src="menu.js?v=20261002b"></script>
+<script src="menu.js?v=20261003"></script>
 
 <div id="gate" class="gate">
   <div class="riquadro-gate">
@@ -210,7 +210,8 @@
         <a href="#orari-storico">storico delle aste</a> dal PVP, <a href="#omi-assegnazione">assegnazione dei valori OMI</a>, e il lunedì il <a href="#orari-promemoria-omi">promemoria OMI</a>.</li>
     </ol>
     <p>Poi ci sei tu: nel registro filtri, metti le stelle alle aste interessanti, apri la <a href="#superanalisi">Superanalisi</a> per il conto
-      completo dell'operazione, e ricevi i <a href="#orari-preferiti">promemoria</a> prima delle vendite.</p>
+      completo dell'operazione, e ricevi i <a href="#orari-preferiti">promemoria</a> prima delle vendite. Nel <a href="#calendario">Calendario</a> vedi tutte le
+      date importanti (vendite, visite, scadenze) in un colpo d'occhio.</p>
   </section>
 
   <section class="voce" id="sistema-pagine">
@@ -224,6 +225,7 @@
         <tr><td><a href="#superanalisi">Superanalisi</a> (<code>superanalisi.html?id=…</code>)</td><td>Dettaglio di un'asta: perizia, valore di rivendita, conto, seconda opinione AI</td><td>scrittura</td></tr>
         <tr><td><a href="#gruppo">Superanalisi di gruppo</a></td><td>Classifica di 2-10 aste selezionate e prompt per un'AI esterna</td><td>scrittura</td></tr>
         <tr><td><a href="#superanalisi-risultati">Risultato superanalisi</a> (<code>risultato-superanalisi.html?id=…</code>)</td><td>Un risultato di un'AI esterna salvato, a tutta pagina, solo lettura</td><td>lettura del registro</td></tr>
+        <tr><td><a href="#calendario">Calendario</a> (<code>calendario.html</code>)</td><td>Tutte le date delle aste con la stella o con dati tuoi (vendite, visite, scadenze, passi dell'operazione) in vista anno, mese, settimana, giorno e agenda; solo lettura</td><td>lettura del registro</td></tr>
         <tr><td>Manuale (<code>manuale.html</code>)</td><td>Questa pagina</td><td>lettura del registro</td></tr>
       </tbody>
     </table></div>
@@ -232,7 +234,7 @@
   <section class="voce" id="sistema-navigazione">
     <h3>Muoversi tra le pagine: menu, tasto Indietro, stessa scheda</h3>
     <ul>
-      <li><strong>Menu in cima a ogni pagina</strong>: "Registro · Configurazione · Statistiche · Manuale", con la pagina attuale evidenziata. Scorre via
+      <li><strong>Menu in cima a ogni pagina</strong>: "Registro · Configurazione · Statistiche · Calendario · Manuale", con la pagina attuale evidenziata. Scorre via
         con la pagina.</li>
       <li><strong>Tasto Indietro</strong> (del telefono o del browser): nel registro chiude la finestra dei dettagli, il confronto o il pannello dei filtri,
         invece di uscire dal registro. Passando da un'asta all'altra con le frecce non si accumulano passi: un solo Indietro chiude la scheda. Anche la ✕
@@ -252,7 +254,7 @@
       <li><strong>Password di scrittura</strong>: una sola password per Configurazione, Statistiche, Superanalisi e per tutte le modifiche
         nel registro (stella, scarto, nota, link utili, rendita e spese condominiali, azioni in blocco). Si cambia in
         <a href="#config-password">Configurazione → Cambia password</a> (almeno 6 caratteri).</li>
-      <li><strong>Password di lettura</strong> (facoltativa): se attiva, serve per <em>aprire</em> il registro e questo manuale. Si attiva o
+      <li><strong>Password di lettura</strong> (facoltativa): se attiva, serve per <em>aprire</em> il registro, il calendario e questo manuale. Si attiva o
         disattiva in <a href="#config-password-lettura">Configurazione</a>.</li>
       <li><strong>Ricordata sul dispositivo</strong>: una password corretta viene memorizzata nel browser di quel dispositivo e riusata
         alle visite successive (viene ricontrollata col server). Sbloccare Configurazione sblocca anche Statistiche e Superanalisi.</li>
@@ -268,7 +270,7 @@
         resti bloccato, si reimpostano o si sblocca il blocco dall'editor SQL di Supabase con le righe pronte in fondo al file SQL della sicurezza.</li>
       <li>I processi automatici (scanner, controlli) non usano queste password: hanno un accesso di servizio proprio.</li>
       <li><strong>Protezione dei dati</strong>: aste e analisi, stelle e scarti, note, link utili e configurazione si leggono dal database
-        <strong>solo con la password</strong>: quella di lettura per il registro, quella di scrittura per Superanalisi, Superanalisi di gruppo e
+        <strong>solo con la password</strong>: quella di lettura per il registro e il calendario, quella di scrittura per Superanalisi, Superanalisi di gruppo e
         Configurazione. Senza password il database risponde con un elenco vuoto. Se <strong>disattivi</strong> la password di lettura, i dati del
         registro tornano leggibili da chiunque abbia il link.</li>
     </ul>
@@ -580,7 +582,7 @@
     <ul>
       <li>Il titolo "Aste Scan" è un link che ricarica la pagina.</li>
       <li>La riga "v2.xx · letto alle HH:MM": versione della pagina e l'<strong>ora in cui la pagina ha letto i dati</strong> dal database (non l'ora
-        dell'ultima scansione). Configurazione, Statistiche e Manuale sono nel <a href="#sistema-navigazione">menu in cima</a>.</li>
+        dell'ultima scansione). Configurazione, Statistiche, Calendario e Manuale sono nel <a href="#sistema-navigazione">menu in cima</a>.</li>
       <li>Gli importi in euro hanno sempre il punto delle migliaia, anche a 4 cifre ("€ 1.500"), in tutte le pagine; il CSV resta con i numeri senza punti.</li>
       <li><strong>Aste nel registro</strong>: "N attive di TOT" (attive = vendita oggi o futura, o senza data); con "Concluse" attivo, "N concluse di TOT".</li>
       <li><strong>Punteggio più alto</strong>: il massimo <a href="#analisi-score">punteggio</a> tra tutte le aste, "NN/100".</li>
@@ -859,6 +861,8 @@
         gli appuntamenti confermati dal più vicino, poi gli inviti, poi le richieste. Nello stesso menu c'è
         "<a href="#registro-operazione">🧭 Operazioni in corso</a>".</li>
       <li>Promemoria Telegram e chiusura automatica: vedi <a href="#orari-visite">Promemoria delle visite</a>.</li>
+      <li>Gli appuntamenti confermati o fatti compaiono, con data e ora, nel <a href="#calendario">Calendario</a>; le visite richieste o con invito, ancora
+        senza data, compaiono nel riquadro "Visite da fissare".</li>
       <li>I dati delle visite sono protetti come le note: si leggono solo con la password.</li>
     </ul>
   </section>
@@ -1609,11 +1613,125 @@
 
   <section class="voce" id="stat-visite">
     <h3>Visite</h3>
-    <p>Aperture per giorno del registro e della configurazione. Ogni ricaricamento conta come una visita; nessun dato su persone o paese di provenienza.</p>
+    <p>Aperture per giorno del registro e della configurazione. Ogni ricaricamento conta come una visita; nessun dato su persone o paese di provenienza.
+      Il <a href="#calendario">Calendario</a> non viene conteggiato.</p>
+  </section>
+</section>
+<section class="capitolo" id="calendario">
+  <h2>6. Calendario (calendario.html)</h2>
+
+  <section class="voce" id="calendario-panoramica">
+    <h3>Cos'è e come si apre</h3>
+    <p>Tutte le date importanti delle tue aste in un unico calendario: vendite, visite, scadenze e passi dell'operazione. Si apre dal
+      <a href="#sistema-navigazione">menu in cima</a> ("Calendario"). È <strong>solo lettura</strong>: non salva nulla e non ha pulsanti che modificano dati; per
+      cambiare una nota, una visita o un'operazione si usa il <a href="#registro">registro</a>. Serve la <a href="#sistema-password">password di lettura</a>
+      (se attiva), la stessa del registro, ricordata sul dispositivo.</p>
+    <ul>
+      <li>Sopra il calendario una riga riassume quante aste e quante date sono caricate, e quante restano con i filtri attuali.</li>
+      <li>Le scelte fatte (vista, filtri) restano ricordate su quel dispositivo.</li>
+      <li>Dal telefono la vista iniziale è l'<strong>Agenda</strong>; dal computer il <strong>Mese</strong>.</li>
+      <li>Se la lettura delle aste fallisce solo in parte, compare un avviso con "Riprova": le date che hai inserito tu si vedono comunque.</li>
+    </ul>
+  </section>
+
+  <section class="voce" id="calendario-viste">
+    <h3>Le cinque viste: Anno, Mese, Settimana, Giorno, Agenda</h3>
+    <div class="tabella-scroll"><table>
+      <thead><tr><th>Vista</th><th>Cosa mostra</th><th>Come ci si muove</th></tr></thead>
+      <tbody>
+        <tr><td><strong>Anno</strong></td><td>12 mesi in piccolo; sotto ogni giorno con date compaiono i puntini colorati dei tipi di data presenti</td>
+          <td>‹ › cambiano anno; un clic sul nome del mese apre quel mese; un clic su un giorno ne mostra le date nel pannello</td></tr>
+        <tr><td><strong>Mese</strong></td><td>La griglia del mese (lunedì per primo) con le date come etichette colorate; dopo le prime tre, "+N altri"</td>
+          <td>‹ › cambiano mese; clic su un'etichetta = dettaglio dell'asta; clic sul numero del giorno = elenco del giorno. Su telefono al posto delle etichette ci sono i puntini</td></tr>
+        <tr><td><strong>Settimana</strong></td><td>Sette giorni, con tipo di data, ora, titolo dell'asta e anteprima della nota (si numera come nel calendario ISO: "Settimana 41")</td>
+          <td>‹ › cambiano settimana; su telefono i giorni sono impilati</td></tr>
+        <tr><td><strong>Giorno</strong></td><td>Una scheda completa per ogni asta che ha una data quel giorno: tutte le sue date, nota, dettagli della visita, operazione e link</td>
+          <td>‹ › cambiano giorno; se il giorno è vuoto, "Vai alla prossima" porta alla data successiva</td></tr>
+        <tr><td><strong>Agenda</strong></td><td>Elenco cronologico "Prossime date" da oggi in poi, un blocco per giorno, con anteprima della nota. Un saldo scaduto resta sempre in elenco</td>
+          <td>La casella "Mostra anche le date passate" aggiunge quelle precedenti. Le frecce non servono (sono spente)</td></tr>
+      </tbody>
+    </table></div>
+    <ul>
+      <li><strong>Oggi</strong> riporta al periodo corrente (in Agenda scorre al primo giorno da oggi in poi).</li>
+      <li>Nelle viste Anno, Mese, Settimana e Agenda il <strong>pannello dei dettagli</strong> sta a destra (computer) o sale dal basso (telefono). <strong>Esc</strong> o ✕ lo chiudono;
+        con la tastiera il focus torna dove era prima. In vista Giorno le schede sono già a pagina intera e il pannello non serve.</li>
+      <li>Il giorno di oggi è evidenziato; sabato e domenica hanno uno sfondo appena diverso.</li>
+      <li>In stampa compaiono solo il titolo del periodo e il calendario.</li>
+    </ul>
+  </section>
+
+  <section class="voce" id="calendario-date">
+    <h3>Calendario: quali date compaiono e da dove vengono</h3>
+    <div class="tabella-scroll"><table>
+      <thead><tr><th>Data</th><th>Da dove viene</th><th>Da sapere</th></tr></thead>
+      <tbody>
+        <tr><td>⚖️ <strong>Vendita</strong></td><td>La data di vendita dell'annuncio sul PVP</td><td>È un evento "tutto il giorno": <strong>l'ora della vendita non è disponibile</strong> nei dati</td></tr>
+        <tr><td>⏰ <strong>Termine per le offerte</strong></td><td>Letto dal dettaglio del PVP (data e ora, ora italiana; se manca l'ora si usa 23:59)</td>
+          <td>Il sistema lo legge <strong>solo per le aste che hai messo in valutazione</strong> (sezione <a href="#registro-operazione">🧭 Operazione</a>) e una sola volta: per un'asta con la sola stella non c'è. Per questo non sempre compare</td></tr>
+        <tr><td>⏳ <strong>Ultimo giorno per chiedere la visita</strong></td><td>Calcolato: <span class="mono">data di vendita − 16 giorni</span></td>
+          <td>15 giorni per la risposta del custode più 1 di margine (la stessa regola dei <a href="#orari-preferiti">promemoria preferiti</a>). Solo per le aste con la stella, finché la visita non è stata richiesta, confermata o fatta, e solo se il giorno non è già passato</td></tr>
+        <tr><td>📅 <strong>Visita</strong></td><td>L'appuntamento della sezione <a href="#registro-visite">📅 Visita</a>, con data e ora</td>
+          <td>Compare solo se è <strong>confermata</strong> o <strong>fatta</strong>; l'ora è quella del tuo dispositivo. Richiesta e invito, senza data, sono nel riquadro "Visite da fissare"; l'annullata non compare</td></tr>
+        <tr><td>💶 <strong>Scadenza del saldo</strong></td><td>Il campo "Scadenza del saldo" dell'<a href="#registro-operazione">operazione</a></td><td>Se non l'hai cambiata è l'aggiudicazione + 120 giorni, come propone la scheda</td></tr>
+        <tr><td>🧭 <strong>Passi dell'operazione</strong></td><td>Le date che inserisci nell'operazione: offerta depositata, aggiudicata, saldo versato, consegna dell'immobile, inizio lavori, rivendita</td><td>Compaiono solo se compilate</td></tr>
+      </tbody>
+    </table></div>
+    <p class="nota">Le checklist non hanno scadenze: nel dettaglio dell'asta si vede l'avanzamento ("prima dell'offerta 3/10"), le voci ancora da fare e le note scritte sulle singole voci.
+      La nota dell'asta e i dettagli della visita sono testo libero, senza data propria (di una nota si vede l'ultima modifica).</p>
+  </section>
+
+  <section class="voce" id="calendario-aste-mostrate">
+    <h3>Calendario: quali aste compaiono e i filtri</h3>
+    <ul>
+      <li><strong>Compaiono</strong>: le aste con la ⭐ e quelle con dati aggiunti da te, anche senza stella: una visita (richiesta, invito, confermata o fatta), un'operazione in qualunque stato,
+        una nota o dei link utili.</li>
+      <li><strong>Non compaiono</strong>: le aste scartate (🚫), a meno che tu abbia su di esse una visita o un'operazione in corso.</li>
+      <li><strong>Filtri per tipo</strong>: Vendite, Scadenze, Visite, Operazione. Ogni pulsante riporta quante date ci sono; un clic le nasconde o le mostra (bordo tratteggiato = nascoste).</li>
+      <li><strong>Solo con la stella</strong>: toglie le aste senza stella, lasciando solo quelle seguite come preferite.</li>
+      <li><strong>Nascondi aste chiuse</strong>: toglie le aste con operazione persa, "non partecipo" o venduta; senza il filtro restano, attenuate.</li>
+      <li><strong>Visite da fissare</strong>: riquadro a scomparsa con le aste dove hai chiesto la visita o ricevuto l'invito ma l'appuntamento non è ancora confermato; un clic apre l'asta nel pannello (non c'è in vista Giorno).</li>
+    </ul>
+  </section>
+
+  <section class="voce" id="calendario-dettaglio">
+    <h3>Calendario: il dettaglio di un'asta (date, note e link)</h3>
+    <p>Un clic su una data (o su "Visite da fissare") mostra la scheda dell'asta:</p>
+    <ul>
+      <li>titolo, tipologia, tribunale, lotto, offerta minima e distintivi (⭐ preferita, stato dell'operazione, stato della visita);</li>
+      <li><strong>Date</strong>: tutte le date di quell'asta in ordine, con "tra N giorni" o "N giorni fa"; quella scelta è evidenziata;</li>
+      <li><strong>📝 Nota</strong> completa, <strong>📍 dettagli della visita</strong> (punto d'incontro, custode…), operazione con importi, checklist ancora da fare e note sulle voci,
+        <strong>🔗 link utili</strong>;</li>
+      <li><strong>Apri nel registro ↗</strong> (la scheda dell'asta nel <a href="#registro">registro</a>, in una nuova scheda) e <strong>Annuncio PVP ↗</strong>.</li>
+    </ul>
+    <p>Se un'asta è stata tolta dal registro (per esempio con "Elimina scadute" tenendo i tuoi dati), le sue visite, note e operazioni restano e compaiono come
+      "Asta n. … non più nel registro", senza data di vendita e senza link.</p>
+  </section>
+
+  <section class="voce" id="calendario-segnali">
+    <h3>Calendario: colori e segnali</h3>
+    <ul>
+      <li><strong>Colore e icona del tipo</strong>: blu ⚖️ vendite, ambra ⏰⏳💶 scadenze, verde 📅 visite, viola 🧭 passi dell'operazione. Il tipo è sempre scritto o indicato anche con l'icona.</li>
+      <li><strong>Anello</strong> attorno all'etichetta: la data è <strong>oggi</strong> (vendita, scadenza o visita). Contorno più sottile e testo in grassetto: scadenza o visita
+        <strong>entro 7 giorni</strong>.</li>
+      <li><strong>Rosso con "scaduta"</strong>: la scadenza del saldo è passata e l'operazione è ancora "aggiudicata" senza saldo versato. In Agenda resta sempre in elenco.</li>
+      <li><strong>Attenuato</strong>: date passate e aste chiuse (bordo tratteggiato).</li>
+      <li>Le scadenze già assolte non si evidenziano: saldo già versato, termine delle offerte quando l'offerta è già presentata.</li>
+    </ul>
+  </section>
+
+  <section class="voce" id="calendario-limiti">
+    <h3>Limiti e cose da sapere</h3>
+    <ul>
+      <li><strong>Rinvii</strong>: se il tribunale sposta la vendita sullo stesso annuncio, la data nel database non si aggiorna da sola (come nel registro).</li>
+      <li><strong>Nuovo tentativo d'asta</strong>: un'asta riproposta è un annuncio nuovo; stella, note, visite e operazioni restano sul vecchio annuncio e non passano al nuovo.</li>
+      <li><strong>Fusi orari</strong>: le ore delle visite e del termine offerte sono mostrate nell'ora del dispositivo; le date senza ora (vendita, operazione) non cambiano mai giorno.</li>
+      <li>I promemoria Telegram (<a href="#orari-visite">visite</a>, <a href="#orari-operazioni">operazioni</a>, <a href="#orari-preferiti">preferiti</a>) continuano a funzionare come prima: il calendario li affianca, non li sostituisce.</li>
+      <li>Il calendario legge i dati a ogni apertura della pagina: per vedere una modifica fatta nel registro ricarica la pagina.</li>
+    </ul>
   </section>
 </section>
 <section class="capitolo" id="superanalisi">
-  <h2>6. Superanalisi (superanalisi.html)</h2>
+  <h2>7. Superanalisi (superanalisi.html)</h2>
 
   <section class="voce" id="superanalisi-apertura">
     <h3>Cos'è e come si apre</h3>
@@ -1645,7 +1763,7 @@
       lotti usati, <a href="#analisi-quota">quota in vendita</a> e quota secondo la perizia, piano, ascensore, anno), <a href="#analisi-superficie">Superfici</a>,
       <a href="#analisi-catasto">Catasto</a>, <a href="#analisi-urbanistica">Urbanistica</a>, <a href="#analisi-occupazione">Occupazione</a>,
       <a href="#analisi-condominio">Condominio e stato</a>, <a href="#analisi-valori-ctu">Valutazione del CTU</a>,
-      <a href="#analisi-formalita">Formalità, discordanze e rischi</a>. Ogni campo è spiegato nel capitolo 8.</p>
+      <a href="#analisi-formalita">Formalità, discordanze e rischi</a>. Ogni campo è spiegato nel capitolo 9.</p>
   </section>
 
   <section class="voce" id="superanalisi-rivendita">
@@ -1921,7 +2039,7 @@
 </section>
 
 <section class="capitolo" id="gruppo">
-  <h2>7. Superanalisi di gruppo</h2>
+  <h2>8. Superanalisi di gruppo</h2>
 
   <section class="voce" id="gruppo-cose">
     <h3>Cos'è e come si apre</h3>
@@ -1970,7 +2088,7 @@
   </section>
 </section>
 <section class="capitolo" id="analisi">
-  <h2>8. Analisi della perizia (Gemini)</h2>
+  <h2>9. Analisi della perizia (Gemini)</h2>
 
   <section class="voce" id="analisi-ricerca-perizia">
     <h3>Come si trova la perizia</h3>
@@ -2226,7 +2344,7 @@
   </section>
 </section>
 <section class="capitolo" id="omi">
-  <h2>9. OMI (quotazioni dell'Agenzia delle Entrate)</h2>
+  <h2>10. OMI (quotazioni dell'Agenzia delle Entrate)</h2>
 
   <section class="voce" id="omi-cose">
     <h3>Cos'è l'OMI</h3>
@@ -2286,7 +2404,7 @@
 </section>
 
 <section class="capitolo" id="notifiche">
-  <h2>10. Notifiche Telegram</h2>
+  <h2>11. Notifiche Telegram</h2>
 
   <section class="voce" id="notifiche-elenco">
     <h3>Tutti i messaggi e cosa significano</h3>
@@ -2332,7 +2450,7 @@
   </section>
 </section>
 <section class="capitolo" id="glossario">
-  <h2>11. Glossario, norme e abbreviazioni</h2>
+  <h2>12. Glossario, norme e abbreviazioni</h2>
   <p class="nota">Spiegazioni sintetiche per orientarsi, non consulenza legale o fiscale. Le norme cambiano: per decidere un'offerta verifica con il delegato,
     un tecnico, un notaio o un commercialista.</p>
 
@@ -2593,7 +2711,7 @@
   </section>
 </section>
 <section class="capitolo" id="faq">
-  <h2>12. Domande frequenti</h2>
+  <h2>13. Domande frequenti</h2>
 
   <section class="voce" id="faq-margine-diverso">
     <h3>Perché il margine del registro è diverso dall'utile della Superanalisi?</h3>
