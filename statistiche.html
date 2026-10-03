@@ -227,7 +227,7 @@
     <div>
       <p class="eyebrow">Pannello di controllo</p>
       <h1>Statistiche</h1>
-      <p class="sottotitolo">Aste, perizie Gemini, costi stimati e visite — solo lettura, tranne il registro ricariche qui sotto.</p>
+      <p class="sottotitolo">Aste, perizie Gemini e costi stimati — solo lettura, tranne il registro ricariche qui sotto.</p>
       <p class="versione-pagina">v1.1</p>
     </div>
     <a href="index.html" class="link-torna">← Torna al registro</a>
@@ -344,15 +344,6 @@
           <tbody id="corpo-tabella-ricariche"></tbody>
         </table>
         <p id="messaggio-nessuna-ricarica" class="messaggio-attesa nascosto" style="margin-top:14px;">Nessuna ricarica registrata ancora.</p>
-      </div>
-
-      <div class="sezione">
-        <h2 class="sezione-titolo">Visite</h2>
-        <h3 style="font-family:var(--font-body);font-size:.85rem;font-weight:600;color:var(--ink-muted);margin:0 0 8px;">Registro</h3>
-        <div id="barre-visite-index"></div>
-        <h3 style="font-family:var(--font-body);font-size:.85rem;font-weight:600;color:var(--ink-muted);margin:16px 0 8px;">Configurazione (config.html)</h3>
-        <div id="barre-visite-config"></div>
-        <p class="sezione-nota">Un ricaricamento della pagina conta come una nuova visita — nessuna deduplica per persona/sessione. Nessun dato sul paese di provenienza, per scelta.</p>
       </div>
 
       <div class="sezione">
@@ -486,10 +477,9 @@
     const erroreEl = document.getElementById("errore-statistiche");
     erroreEl.classList.add("nascosto");
     try {
-      const [statistiche, ricariche, visite] = await Promise.all([
+      const [statistiche, ricariche] = await Promise.all([
         chiamaRpc("statistiche_aste", {password_tentativo: passwordCorrente}),
         chiamaRpc("leggi_ricariche_gemini", {password_tentativo: passwordCorrente}),
-        chiamaRpc("leggi_visite", {password_tentativo: passwordCorrente}),
       ]);
       if (statistiche && statistiche.code) throw new Error(statistiche.message || "Errore dal database");
 
@@ -497,7 +487,6 @@
       ULTIME_RICARICHE = Array.isArray(ricariche) ? ricariche : [];
 
       renderizzaStatisticheAste(statistiche);
-      renderizzaVisite(Array.isArray(visite) ? visite : []);
       renderizzaRicariche();
       caricaOperazioni();
 
@@ -642,13 +631,6 @@
     listaBarre("barre-perizie-modello", s.perizie_per_modello, "modello", "n");
 
     document.getElementById("num-batch-pendenti").textContent = s.batch_pendenti ?? "—";
-  }
-
-  function renderizzaVisite(righe) {
-    const perIndex = righe.filter(r => r.pagina === "index").map(r => ({giorno: r.giorno, n: r.visite}));
-    const perConfig = righe.filter(r => r.pagina === "config").map(r => ({giorno: r.giorno, n: r.visite}));
-    listaBarre("barre-visite-index", perIndex, "giorno", "n", 14);
-    listaBarre("barre-visite-config", perConfig, "giorno", "n", 14);
   }
 
   // ============================================================

@@ -9125,26 +9125,9 @@ ${riquadroProcedura}
 
   document.getElementById("ricerca").addEventListener("input", applicaFiltri);
 
-  // Registra la visita a questa pagina — vedi statistiche.html. Sempre in
-  // "fire and forget": non aspetta la risposta e ignora qualunque errore,
-  // una visita non registrata non deve mai rallentare o interrompere
-  // l'uso normale della pagina.
-  function registraVisita(pagina) {
-    fetch(`${SUPABASE_URL}/rest/v1/rpc/registra_visita`, {
-      method: "POST",
-      headers: {
-        "apikey": SUPABASE_ANON_KEY,
-        "Authorization": `Bearer ${SUPABASE_ANON_KEY}`,
-        "Content-Type": "application/json"
-      },
-      body: JSON.stringify({pagina_input: pagina})
-    }).catch(() => {});
-  }
-
   aggiornaLinkAnnullaBlocco();
   ripristinaFiltri();
   provaSbloccoLetturaAutomatico();
-  registraVisita("index");
 </script>
 
 <script>

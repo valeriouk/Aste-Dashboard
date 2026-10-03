@@ -221,7 +221,7 @@
       <tbody>
         <tr><td><a href="#registro">Registro</a> (<code>index.html</code>)</td><td>Elenco e mappa delle aste, filtri, stelle, note, costi stimati</td><td>lettura (se attiva) per aprirlo; scrittura per stelle, scarti, note, link, correzioni</td></tr>
         <tr><td><a href="#config">Configurazione</a> (<code>config.html</code>)</td><td>Filtri dello scanner, orari, modelli, avvio manuale dei processi, password</td><td>scrittura</td></tr>
-        <tr><td><a href="#statistiche">Statistiche</a> (<code>statistiche.html</code>)</td><td>Numeri del registro, perizie analizzate, costi Gemini stimati, visite</td><td>scrittura</td></tr>
+        <tr><td><a href="#statistiche">Statistiche</a> (<code>statistiche.html</code>)</td><td>Numeri del registro, perizie analizzate, costi Gemini stimati, operazioni</td><td>scrittura</td></tr>
         <tr><td><a href="#superanalisi">Superanalisi</a> (<code>superanalisi.html?id=…</code>)</td><td>Dettaglio di un'asta: perizia, valore di rivendita, conto, seconda opinione AI</td><td>scrittura</td></tr>
         <tr><td><a href="#gruppo">Superanalisi di gruppo</a></td><td>Classifica di 2-10 aste selezionate e prompt per un'AI esterna</td><td>scrittura</td></tr>
         <tr><td><a href="#superanalisi-risultati">Risultato superanalisi</a> (<code>risultato-superanalisi.html?id=…</code>)</td><td>Un risultato di un'AI esterna salvato, a tutta pagina, solo lettura</td><td>lettura del registro</td></tr>
@@ -1609,12 +1609,6 @@
       perse, la quota di aggiudicazione (aggiudicate su aggiudicate + perse) e le vendute. Per le vendute: utile netto medio e rendimento annualizzato
       medio dal conto reale, e lo scarto medio dei numeri veri dalla stima salvata all'offerta per lavori, prezzo di vendita e tempi (positivo = reale
       più alto), con una tabella per operazione. Servono a tarare i parametri delle stime.</p>
-  </section>
-
-  <section class="voce" id="stat-visite">
-    <h3>Visite</h3>
-    <p>Aperture per giorno del registro e della configurazione. Ogni ricaricamento conta come una visita; nessun dato su persone o paese di provenienza.
-      Il <a href="#calendario">Calendario</a> non viene conteggiato.</p>
   </section>
 </section>
 <section class="capitolo" id="calendario">
