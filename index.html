@@ -7047,15 +7047,21 @@
       // (nessun concetto "simile", solo il testo letterale) — per
       // quello servirebbe un'infrastruttura diversa (embedding),
       // volutamente non questa.
-      const passaRicerca = !ricerca || [
+      // ID annuncio (quello di "ID Annuncio" nei Dettagli, anche una parte): solo da 4 cifre in su, perché un
+      // numero breve (es. "15", "2026") comparirebbe dentro quasi tutti gli ID e inquinerebbe la ricerca di date e percentuali.
+      const passaId = /^\d{4,}$/.test(ricerca) && a.id.includes(ricerca);
+      // Un ID scritto per intero trova sempre quell'asta: ignora il filtro Tipo (anche "Abitazioni" preselezionato)
+      // e il nascondere le concluse. Gli altri filtri (punteggio, giudizio, preferiti…) restano.
+      const idEsatto = ricerca !== "" && a.id === ricerca;
+      const passaRicerca = !ricerca || passaId || [
         a.comune, a.descrizione, a.note, a.notaPreferito, a.tipologia, etichettaTipologia(a.tipologia),
         a.statoOccupazione, a.formalitaPregiudizievoli, a.abusiEdilizi,
         formattaData(a.dataVendita), a.testoTentativoRicerca
       ].some(campo => campo && campo.toLowerCase().includes(ricerca));
-      const passaTipologia = vistaPersonale || categorieTipologiaAttive.size === 0
+      const passaTipologia = idEsatto || vistaPersonale || categorieTipologiaAttive.size === 0
         || categorieDiAsta(a.tipologia).some(c => categorieTipologiaAttive.has(c));
       const passaOccupazione = !filtroOccupazioneAttivo || classificaOccupazione(a.statoOccupazione) === filtroOccupazioneAttivo;
-      const passaConcluse = (filtroSoloOperazioniAttivo && operazioneInCorso(a))
+      const passaConcluse = idEsatto || (filtroSoloOperazioniAttivo && operazioneInCorso(a))
         || (mostraConcluse ? astaConclusa(a.dataVendita) : !astaConclusa(a.dataVendita));
       const passaPreferiti = !filtroPreferitiScartatiAttivo
         || (filtroPreferitiScartatiAttivo === "preferito" ? a.preferito : a.scartato);
