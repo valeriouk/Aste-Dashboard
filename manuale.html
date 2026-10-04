@@ -593,7 +593,7 @@
         quasi tutte le aste e non aiutava a scegliere.</li>
       <li>Questi tre numeri sono calcolati su <strong>tutte</strong> le aste, di ogni tipologia, ignorando i filtri (anche "Abitazioni", preselezionato
         all'apertura: i due numeri sull'offerta massima possono quindi contare aste che l'elenco, ancora filtrato, non mostra). Sotto la barra: "N di TOT aste
-        mostrate" (con i filtri). Passando il mouse su un numero si legge cosa conta; la stella e lo scarto li aggiornano subito.</li>
+        mostrate" (con i filtri). Passando il mouse su "Con spazio sull'offerta" o su "Pulite o Gestibili" si legge cosa conta; la stella e lo scarto li aggiornano subito.</li>
     </ul>
   </section>
 
@@ -630,9 +630,11 @@
       (quello si decide in Configurazione).</p>
     <p><strong>Cosa segue il filtro</strong>: l'elenco, la mappa, "Seleziona tutte" e "Esporta CSV" (il primo CSV scaricato all'apertura contiene solo le
       abitazioni: per esportare tutto scegli prima "Tutte") e le frecce avanti/indietro nella scheda. Un link diretto <code>index.html#ID</code> a un'asta
-      di un altro tipo apre comunque la scheda, ma le frecce non funzionano finché quell'asta non è nell'elenco. <strong>Le tue aste non spariscono mai per
-      colpa di "Tipo"</strong>: con ⭐ Preferite, 🚫 Scartate o 📅 In corso (visite e operazioni) il filtro Tipo non si applica.
-      I due numeri in testata sull'offerta massima contano invece le aste di <em>tutte</em> le tipologie.</p>
+      di un altro tipo apre comunque la scheda, ma le frecce non funzionano finché quell'asta non è nell'elenco. <strong>Nelle viste ⭐ Preferite, 🚫 Scartate
+      e 📅 In corso (visite e operazioni) il filtro Tipo non si applica</strong>: il pulsante "Tipo" diventa grigio e corsivo (e non conta nel numero dei
+      filtri attivi) per dire che è sospeso, e le tue aste si vedono di qualunque tipo. Nell'elenco normale, invece, una tua asta di altro tipo (per esempio un
+      box con la stella o con una visita fissata) resta nascosta finché è attivo "Abitazioni": scegli "Tutte" per vederla.
+      I due numeri in testata sull'offerta massima contano le aste di <em>tutte</em> le tipologie.</p>
   </section>
 
   <section class="voce" id="registro-filtro-occupazione">
@@ -694,8 +696,8 @@
       in fondo, in tutte e due le direzioni, anche le aste <strong>senza analisi v2</strong> (non hanno giudizio né conto).</p>
     <p><strong>"Spazio sull'offerta"</strong> (l'ordine con cui si apre il registro) mette in <strong>tre gruppi</strong>, in tutte e due le direzioni: prima le
       aste con un numero valido; poi quelle col giudizio <strong>Da scartare</strong> (il numero c'è, ma non conta); in fondo quelle senza numero, cioè
-      senza analisi v2 o per cui il conto non si può fare (per esempio una quota parziale o senza valore di rivendita), che restano in ordine di punteggio
-      AI. Tra le aste con un numero valido l'ordine segue la cifra "spazio" (offerta massima − offerta minima), anche per i "non raggiungibile": lì
+      senza analisi v2, o per cui il conto non si può fare (per esempio una quota parziale o senza valore di rivendita), o con l'offerta minima non letta
+      dal PVP (lo spazio non si calcola), che restano in ordine di punteggio AI. Tra le aste con un numero valido l'ordine segue la cifra "spazio" (offerta massima − offerta minima), anche per i "non raggiungibile": lì
       conta l'offerta minima (la card non mostra questa cifra). Il conto si fa una volta per asta e resta in memoria; si rifà se cambi i parametri in
       Superanalisi e torni al registro, se cambi il regime fiscale in Configurazione (quando ricarichi il registro o apri una scheda), o se correggi rendita e spese condominiali nei dettagli. Dopo una
       correzione la card e i due numeri in testata si aggiornano subito, ma <strong>la posizione nell'elenco</strong> solo al prossimo filtro, ordinamento
@@ -798,7 +800,8 @@
     <ul>
       <li><strong>Offerta massima consigliata</strong>: il prezzo più alto che lascia l'utile impostato (il più basso tra scenario centrale e prudenziale: vedi
         <a href="#superanalisi-offerta-massima">Offerta massima e margine sull'offerta minima</a>). Accanto, "minima € Y": l'offerta minima dell'asta. "non
-        raggiungibile" = a nessun prezzo si arriva all'utile richiesto; "—" = il conto non si può fare (per esempio si vende solo una quota, o manca il valore
+        raggiungibile" = non esiste un prezzo che dia l'utile obiettivo, oppure lo scenario prudenziale non raggiunge l'utile minimo a nessun prezzo (la
+        scheda dice quale dei due); "—" = il conto non si può fare (per esempio si vende solo una quota, o manca il valore
         di rivendita), con la spiegazione sotto. Se l'offerta minima non è stata letta dal PVP si legge "Offerta minima non letta dal PVP": l'offerta
         massima c'è, lo spazio no.</li>
       <li><strong>Spazio</strong>: offerta massima − offerta minima. Colore principale e "Spazio +€ X" = l'offerta minima sta sotto la massima, puoi anche
@@ -816,7 +819,8 @@
     </ul>
     <p><strong>Nei dettagli</strong>, la prima sezione "Perché" riporta: lo stesso blocco dell'offerta massima; la frase del verdetto (se c'è lo spazio); i
       <em>motivi del giudizio</em> in elenco; <em>come si arriva al numero</em> (valore di rivendita e sua fonte e affidabilità, quale scenario fissa l'offerta
-      massima, qualità dei dati della perizia da A a D); <em>da controllare</em> (gli avvisi del conto); "✅ Ideale per iniziare" quando l'asta è Pulita, con spazio
+      massima, qualità dei dati della perizia: scritta solo se è A o B, con C o D è già tra i motivi del giudizio); <em>da controllare</em> (gli avvisi del
+      conto; qui finiscono anche la rivendita e la qualità quando il conto non si può fare); "✅ Ideale per iniziare" quando l'asta è Pulita, con spazio
       non negativo, qualità dei dati A o B e rivendita non a bassa affidabilità (l'altra condizione del motore, "in zona", oggi non filtra nulla perché non c'è
       un elenco di comuni obiettivo); e il link al conto completo. Le aste senza analisi v2 mostrano "Perché nessun giudizio": giudizio e offerta massima si
       calcolano solo con l'analisi v2 della perizia. La sezione compare anche nella scheda stampata o salvata in PDF.</p>
@@ -2355,7 +2359,7 @@
 
   <section class="voce" id="analisi-score">
     <h3>Punteggio AI (score flipping 1-100)</h3>
-    <p>Nel registro si chiama "Punteggio AI" (in Statistiche resta "Punteggio medio", nel CSV "Punteggio", nel database "score_flipping"). Quanto l'operazione "compra all'asta, ristruttura, rivendi" sembra <strong>pulita e con margine</strong>, secondo l'AI, dopo aver estratto i fatti.
+    <p>Nel registro si chiama "Punteggio AI" (in Statistiche resta "Punteggio medio", nel CSV e nel testo di condivisione "Punteggio", nel database "score_flipping"). Quanto l'operazione "compra all'asta, ristruttura, rivendi" sembra <strong>pulita e con margine</strong>, secondo l'AI, dopo aver estratto i fatti.
       Considera: valore del CTU rispetto a prezzo base e offerta minima, occupazione e contratti, difformità e costi, condono, pesi non cancellabili, quota,
       stato manutentivo, discordanze e rischi.</p>
     <p>È un <strong>voto dell'AI</strong>, non il conto: per questo nelle card compare anche il

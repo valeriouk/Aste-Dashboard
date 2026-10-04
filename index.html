@@ -415,6 +415,8 @@
   .pillola:last-child { border-right: none; }
   .pillola:hover { color: var(--ink); }
   .pillola.attiva { background: var(--primary-soft); color: var(--primary); font-weight: 600; }
+  /* Tipo scelto ma sospeso: con ⭐/🚫/In corso attivi non si applica (vistaPersonaleAttiva) */
+  .pillola.sospesa { opacity: .55; font-style: italic; }
 
   /* Menu a comparsa per il filtro tipologia: un pulsante dall'ingombro
      fisso (non cresce con quante categorie esistono) che apre un
@@ -5594,9 +5596,13 @@
     if (evento.persisted && idAstaModaleDettagli !== null) aggiornaAstaDalDatabase(idAstaModaleDettagli);
     // I parametri della Superanalisi (utile, minimo, prima casa) si cambiano in un'altra pagina: al ritorno si ricalcola tutto.
     if (evento.persisted && ASTE.length) {
+      // La scheda aperta si ridisegna ("Perché" aggiornato) solo se il suo conto è cambiato: altrimenti si
+      // perderebbero i campi scritti e non salvati (link, visita, conto reale).
+      // Si confronta con ciò che la scheda MOSTRA (CONTO_MOSTRATO), non con la cache: la cache può essere vuota.
+      const aperta = idAstaModaleDettagli !== null ? ASTE.find(a => a.id === idAstaModaleDettagli) : null;
       ASTE.forEach(azzeraCalcoliAsta);
       applicaFiltri();
-      if (idAstaModaleDettagli !== null) aggiornaFinestraSeApertaSu(idAstaModaleDettagli);   // anche la scheda aperta ("Perché")
+      if (aperta && firmaConto(sintesiOccasione(aperta)) !== (CONTO_MOSTRATO.get(aperta.id) ?? "")) aggiornaFinestraSeApertaSu(aperta.id);
     }
   });
 
@@ -5967,6 +5973,10 @@
   }
   // Azzera i calcoli tenuti in memoria di un'asta (giudizio e sintesi).
   function azzeraCalcoliAsta(a) { a._giudizio = undefined; a._sintesi = undefined; }
+  // Firma dei numeri del conto e firma di quelli che la scheda aperta sta mostrando (riquadroPerche): al ritorno
+  // con Indietro la scheda si ridisegna solo se il conto è cambiato (non si perdono i campi non salvati).
+  const CONTO_MOSTRATO = new Map();
+  function firmaConto(s) { return s ? JSON.stringify([s.classe, s.calcolabile, s.offertaMassima, s.spazio, s.euroMqRivendita]) : ""; }
 
   // Le due cifre sul conto in testata (04/10/2026; prima "Punteggio più alto" e
   // "Margine positivo", quasi sempre positivi e quindi inutili per decidere):
@@ -6043,6 +6053,7 @@
   const AFFIDABILITA_RIVENDITA = {bassa: "bassa", screening: "di massima, da verificare con comparabili", media: "media"};
   function riquadroPerche(a) {
     const s = sintesiOccasione(a);
+    CONTO_MOSTRATO.set(a.id, firmaConto(s));
     if (!s) {
       return `<div class="sezione-costi riquadro-perche">
           <h3 class="sezione-costi-titolo">⚖️ Perché nessun giudizio</h3>
@@ -6054,20 +6065,29 @@
     const verdetto = String(e.verdetto || "").replace(/^(PULITA|GESTIBILE|COMPLESSA)\b/, m => NOMI_GIUDIZIO[m]);
     const elenco = voci => `<ul class="perche-elenco">${voci.map(v => `<li>${escapeHtml(v)}</li>`).join("")}</ul>`;
     const conto = [];
+    const avvisi = (e.avvisi || []).slice(0, 8);
+    // Senza conto possibile non c'è un "numero" da spiegare: le righe sulla rivendita e sulla qualità vanno in "Da controllare".
+    const dove = s.calcolabile ? conto : avvisi;
     if (e.arv) {
-      conto.push(`Rivendita stimata (scenario centrale): ${formattaEuro(e.arv.centrale)} — ${e.arv.fonte}${e.arv.affidabilita ? `; affidabilità ${AFFIDABILITA_RIVENDITA[e.arv.affidabilita] || e.arv.affidabilita}` : ""}`);
+      // Stessa fonte della card (nomeFonteRivendita): il motore scrive "OMI" anche per le quotazioni citate dal perito
+      // e "override (comparabili verificati)" per il tuo valore.
+      const fonte = String(e.arv.fonte || "")
+        .replace(/^OMI/, s.fonteRivendita === "quotazioni citate dal perito" ? "Quotazioni citate dal perito" : "OMI")
+        .replace(/^override \(comparabili verificati\)/, "tuo valore");
+      dove.push(`Rivendita stimata (scenario centrale): ${formattaEuro(e.arv.centrale)} — ${fonte}${e.arv.affidabilita ? `; affidabilità ${AFFIDABILITA_RIVENDITA[e.arv.affidabilita] || e.arv.affidabilita}` : ""}`);
     }
     if (s.calcolabile && e.vincoloOffertaMassima) {
+      // offertaMassima è null anche quando l'obiettivo centrale si raggiunge e manca solo il minimo prudenziale (underwriting.js 803-808)
+      const centraleRaggiungibile = !!(e.maxBid && e.maxBid.centrale != null);
       conto.push(e.vincoloOffertaMassima === "scenario prudenziale" ? "L'offerta massima è fissata dallo scenario prudenziale (utile minimo)"
         : e.vincoloOffertaMassima === "scenario centrale" ? "L'offerta massima è fissata dallo scenario centrale (utile obiettivo)"
+        : centraleRaggiungibile ? "Lo scenario prudenziale non raggiunge l'utile minimo a nessun prezzo: non esiste un'offerta massima"
         : "Nessun prezzo raggiunge l'utile obiettivo: non esiste un'offerta massima");
     }
-    const avvisi = (e.avvisi || []).slice(0, 8);
     const q = e.qualita || {};
     // già tra i motivi del giudizio quando la qualità è C o D: non ripeterla
     if (q.livello && !s.motivi.some(m => /^(qualità documentale|documentazione insufficiente)/.test(m))) {
-      const riga = `Qualità dei dati della perizia: ${q.livello} (da A, migliore, a D, insufficiente)${q.motivi && q.motivi.length ? ": " + q.motivi.join("; ") : ""}`;
-      (s.calcolabile ? conto : avvisi).push(riga);   // senza conto non c'è un "numero" da spiegare
+      dove.push(`Qualità dei dati della perizia: ${q.livello} (da A, migliore, a D, insufficiente)${q.motivi && q.motivi.length ? ": " + q.motivi.join("; ") : ""}`);
     }
     return `<div class="sezione-costi riquadro-perche">
           <h3 class="sezione-costi-titolo">⚖️ Perché: ${escapeHtml(nomeClasse)}</h3>
@@ -6140,6 +6160,17 @@
     const unica = n === 1 ? [...categorieTipologiaAttive][0] : "";
     const nome = n === 0 ? "Tipo" : unica && unica.length <= 12 ? unica : `Tipo (${n})`;
     return escapeHtml(nome) + ' <span class="freccia-tipologia">▾</span>';
+  }
+  // Le tue viste (⭐ Preferite, 🚫 Scartate, 📅 In corso) non sono filtrate dal Tipo (vedi applicaFiltri).
+  function vistaPersonaleAttiva() { return !!(filtroPreferitiScartatiAttivo || filtroSoloVisiteAttivo || filtroSoloOperazioniAttivo); }
+  // Aspetto del pulsante Tipo: testo, attivo, oppure "sospeso" (categoria scelta ma non applicata perché è attiva una tua vista).
+  function mostraPulsanteTipo() {
+    const bottone = document.getElementById("bottone-filtro-tipologia");
+    const scelto = categorieTipologiaAttive.size > 0, sospeso = scelto && vistaPersonaleAttiva();
+    bottone.innerHTML = testoBottoneTipo();
+    bottone.classList.toggle("attiva", scelto && !sospeso);
+    bottone.classList.toggle("sospesa", sospeso);
+    bottone.title = sospeso ? "Tipologia: non si applica con ⭐ Preferite, 🚫 Scartate e 📅 In corso (le tue aste si vedono sempre)" : "Tipologia";
   }
   // Spunta "Tutte" solo quando nessuna categoria è scelta.
   function sincronizzaVoceTutte() {
@@ -6325,9 +6356,7 @@
     const spuntate = document.querySelectorAll('#menu-tipologia input[type="checkbox"]:checked');
     categorieTipologiaAttive = new Set([...spuntate].map(c => c.value).filter(v => v !== VOCE_TUTTE_TIPOLOGIE));
 
-    const bottone = document.getElementById("bottone-filtro-tipologia");
-    bottone.innerHTML = testoBottoneTipo();
-    bottone.classList.toggle("attiva", categorieTipologiaAttive.size > 0);
+    mostraPulsanteTipo();
     sincronizzaVoceTutte();
 
     applicaFiltri();
@@ -6624,7 +6653,7 @@
   // punto che modifica un filtro.
   function aggiornaBadgeFiltri() {
     let conteggio = 0;
-    if (categorieTipologiaAttive.size > 0) conteggio++;
+    if (categorieTipologiaAttive.size > 0 && !vistaPersonaleAttiva()) conteggio++;   // sospeso con ⭐/🚫/In corso
     if (giudiziAttivi.size > 0) conteggio++;
     if (filtroOccupazioneAttivo) conteggio++;
     if (filtroPreferitiScartatiAttivo) conteggio++;
@@ -6701,9 +6730,7 @@
     document.getElementById("pillola-concluse").classList.toggle("attiva", mostraConcluse);
     document.getElementById("pillola-aggiornate").classList.toggle("attiva", filtroSoloAggiornateAttivo);
     mostraPillolaInCorso();
-    const bottoneTipo = document.getElementById("bottone-filtro-tipologia");
-    bottoneTipo.innerHTML = testoBottoneTipo();
-    bottoneTipo.classList.toggle("attiva", categorieTipologiaAttive.size > 0);
+    mostraPulsanteTipo();
     document.querySelectorAll('#menu-tipologia input[type="checkbox"]').forEach(c => { c.checked = c.value === VOCE_TUTTE_TIPOLOGIE ? categorieTipologiaAttive.size === 0 : categorieTipologiaAttive.has(c.value); });
     mostraPillolaGiudizio();
     document.getElementById("valore-punteggio-minimo").textContent = document.getElementById("punteggio-minimo").value;
@@ -6795,7 +6822,8 @@
     const punteggioMassimo = Number(document.getElementById("punteggio-massimo").value);
     // ⭐/🚫 e "In corso" (visite, operazioni) sono viste sulle TUE aste: il filtro Tipo, anche quello
     // preselezionato all'apertura (Abitazioni), non le nasconde mai (un box seguito resta visibile).
-    const vistaPersonale = !!(filtroPreferitiScartatiAttivo || filtroSoloVisiteAttivo || filtroSoloOperazioniAttivo);
+    const vistaPersonale = vistaPersonaleAttiva();
+    mostraPulsanteTipo();   // attiva o sospeso, secondo la vista
 
     let filtrate = ASTE.filter(a => {
       // Estesa a più campi (non solo comune) apposta: comune resta il
