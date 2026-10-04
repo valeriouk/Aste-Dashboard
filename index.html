@@ -287,7 +287,7 @@
   /* Numeri a larghezza fissa ("100–100" occupa quanto "0–100"): spostando i
      cursori l'etichetta non si allarga e la barra non va a capo. Su PC la
      parola è abbreviata in "Punt." (la riga è già al limite); nel pannello
-     Filtri del telefono resta "Punteggio" per intero. */
+     Filtri del telefono resta "Punteggio AI" per intero. */
   .filtro-punteggio label span[id^="valore-punteggio"] { display: inline-block; min-width: 3ch; font-variant-numeric: tabular-nums; }
   .filtro-punteggio label #valore-punteggio-minimo { text-align: right; }
   /* "✕ Azzera filtri": compare solo con almeno un filtro attivo o una ricerca. */
@@ -2445,6 +2445,29 @@
   .giudizio-DA_SCARTARE { background: var(--danger-soft); color: var(--danger); }
   .nota-margine { font-size: .74rem; color: var(--ink-faint); margin: 2px 0 0; }
   .nota-margine a { color: var(--secondary); }
+  /* Offerta massima su card e dettagli (04/10/2026): il numero che decide l'acquisto.
+     Colore principale = l'offerta minima sta sotto la massima; rosso = non ci sta (o da scartare). */
+  .lotto-offerta .lotto-offerta-valore { display: flex; flex-wrap: wrap; align-items: baseline; gap: 2px 10px; }
+  .lotto-offerta .lotto-offerta-minima { font-family: var(--font-body); font-size: .78rem; font-weight: 500; color: var(--ink-muted); }
+  .lotto-offerta.negativa .lotto-offerta-valore, .lotto-offerta.scartata .lotto-offerta-valore { color: var(--danger); }
+  .lotto-offerta.neutra .lotto-offerta-valore { color: var(--ink-muted); }
+  .lotto-offerta.scartata .lotto-offerta-importo { text-decoration: line-through; text-decoration-thickness: 1px; }
+  .lotto-spazio { margin: 3px 0 0; font-size: .84rem; font-weight: 600; color: var(--primary); }
+  .lotto-offerta.negativa .lotto-spazio, .lotto-offerta.scartata .lotto-spazio { color: var(--danger); }
+  .lotto-offerta.neutra .lotto-spazio { color: var(--ink-muted); }
+  .lotto-offerta-riga { margin: 2px 0 0; font-size: .76rem; color: var(--ink-muted); overflow-wrap: break-word; }
+  .lotto-perche { margin: 4px 0 0; font-size: .78rem; color: var(--ink-muted); overflow-wrap: break-word;
+    display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden; }
+  .lotto-perche strong { color: var(--ink); font-weight: 600; }
+  .lotto-margine-lordo { margin: 6px 0 0; font-size: .74rem; color: var(--ink-faint); }
+  .lotto-margine.senza-offerta .lotto-margine-valore { font-size: 1.05rem; color: var(--ink-muted); }
+  /* Riquadro "Perché" nei dettagli */
+  .riquadro-perche { margin: 0 0 6px; }
+  .riquadro-perche .lotto-offerta { border-top: none; padding-top: 0; }
+  .perche-verdetto { margin: 8px 0 6px; font-size: .9rem; line-height: 1.45; }
+  .perche-elenco { margin: 4px 0 8px; padding-left: 18px; font-size: .84rem; line-height: 1.45; color: var(--ink); }
+  .perche-elenco li { margin: 2px 0; }
+  .perche-sottotitolo { margin: 10px 0 2px; font-size: .74rem; font-weight: 600; color: var(--ink-faint); text-transform: uppercase; letter-spacing: .03em; }
   /* Descrizione del lotto: prime 4 righe, "Mostra tutto" solo se è più lunga */
   .descrizione-lotto:not(.aperta) { display: -webkit-box; -webkit-line-clamp: 4; -webkit-box-orient: vertical; overflow: hidden; }
   .mostra-descrizione { font: inherit; font-size: .8rem; font-weight: 600; color: var(--secondary); background: none; border: none;
@@ -2486,8 +2509,9 @@
   }
   @media (min-width: 641px) and (hover: hover) and (pointer: fine) {
     .indice-dettagli { flex-wrap: wrap; overflow-x: visible; }
-    /* Più stretto: le 12 voci stanno su una riga a 830 px (a capo solo in
-       finestre più strette). */
+    /* Più stretto: le 12 voci stanno su una riga a 830 px (a capo in
+       finestre più strette, o con 13 voci: da quando c'è "Perché", quando sono
+       presenti quasi tutte le sezioni). */
     .indice-dettagli { gap: 4px; }
     .indice-dettagli button { padding: 6px 8px; }
   }
@@ -2505,6 +2529,8 @@
     .lotto-cifre .cifre-riga-compatta { display: block; }
     .lotto-margine { padding-top: 10px; }
     .lotto-margine-valore { font-size: 1.3rem; }
+    .lotto-spazio { font-size: .8rem; }
+    .lotto-offerta-riga, .lotto-perche, .lotto-margine-lordo { font-size: .72rem; }
     .cifra-valore { font-size: .88rem; }
     .lotto .nota-preferito { margin-bottom: 8px; }
     /* Aree di tocco di almeno 44 px */
@@ -2694,13 +2720,13 @@
         <p class="stat-etichetta">Aste nel registro</p>
         <p class="stat-valore" id="stat-totale">—</p>
       </div>
-      <div class="stat-compatta">
-        <p class="stat-etichetta">Punteggio più alto</p>
-        <p class="stat-valore" id="stat-punteggio">—</p>
+      <div class="stat-compatta" title="Aste attive, di tutte le tipologie, con analisi v2 dove l'offerta massima consigliata arriva almeno all'offerta minima (spazio sull'offerta ≥ 0). Esclusi: giudizio Da scartare, scartate da te e concluse.">
+        <p class="stat-etichetta">Con spazio sull'offerta</p>
+        <p class="stat-valore" id="stat-spazio">—</p>
       </div>
-      <div class="stat-compatta">
-        <p class="stat-etichetta">Margine positivo</p>
-        <p class="stat-valore" id="stat-margine">—</p>
+      <div class="stat-compatta" title="Aste attive, di tutte le tipologie, con giudizio Pulita o Gestibile (solo con analisi v2). Escluse scartate da te e concluse.">
+        <p class="stat-etichetta">Pulite o Gestibili</p>
+        <p class="stat-valore" id="stat-pulite">—</p>
       </div>
     </div>
     <div class="statistiche-mobili-ibride">
@@ -2708,13 +2734,13 @@
         <p class="stat-etichetta">Nel registro</p>
         <p class="stat-valore" id="stat-totale-mobile">—</p>
       </div>
-      <div class="stat-mobile-ibrida">
-        <p class="stat-etichetta">Punteggio</p>
-        <p class="stat-valore" id="stat-punteggio-mobile">—</p>
+      <div class="stat-mobile-ibrida" title="Aste attive, di tutte le tipologie, con analisi v2 dove l'offerta massima arriva almeno all'offerta minima (esclusi Da scartare, scartate e concluse)">
+        <p class="stat-etichetta">Con spazio</p>
+        <p class="stat-valore" id="stat-spazio-mobile">—</p>
       </div>
-      <div class="stat-mobile-ibrida">
-        <p class="stat-etichetta">Margine +</p>
-        <p class="stat-valore" id="stat-margine-mobile">—</p>
+      <div class="stat-mobile-ibrida" title="Aste attive, di tutte le tipologie, con giudizio Pulita o Gestibile">
+        <p class="stat-etichetta">Pulite/Gestib.</p>
+        <p class="stat-valore" id="stat-pulite-mobile">—</p>
       </div>
     </div>
   </div>
@@ -2774,7 +2800,7 @@
         <button type="button" class="pillola" id="pillola-visite" onclick="alternaMenuInCorso(event)" aria-expanded="false" aria-haspopup="true" title="Visite e operazioni in corso" aria-label="Visite e operazioni in corso">📅<span class="testo-pillola-mobile"> In corso</span></button>
       </div>
       <div class="filtro-punteggio">
-        <label title="Punteggio"><span class="testo-punteggio-lungo">Punteggio </span><span id="valore-punteggio-minimo">0</span>–<span id="valore-punteggio-massimo">100</span></label>
+        <label title="Punteggio AI (il voto dell'AI sulla perizia)"><span class="testo-punteggio-lungo">Punteggio AI </span><span id="valore-punteggio-minimo">0</span>–<span id="valore-punteggio-massimo">100</span></label>
         <div class="doppio-slider">
           <div class="doppio-slider-binario"></div>
           <div class="doppio-slider-riempimento" id="riempimento-punteggio"></div>
@@ -2786,7 +2812,7 @@
         <p class="etichetta-foglio">Ordina per</p>
         <div class="gruppo-pillole">
           <button type="button" class="pillola" id="bottone-ordinamento" onclick="alternaMenuOrdinamento(event)" aria-expanded="false" aria-haspopup="true" title="Ordina per">
-            <span id="etichetta-ordinamento-corrente">Punteggio</span> <span class="freccia-direzione" id="freccia-direzione-ordinamento">↓</span>
+            <span id="etichetta-ordinamento-corrente">Spazio</span> <span class="freccia-direzione" id="freccia-direzione-ordinamento">↓</span>
           </button>
         </div>
       </div>
@@ -2859,9 +2885,9 @@
     <div id="mappa-lotti" class="contenitore-mappa-dashboard"></div>
     <div class="controlli-mappa">
       <p class="legenda-mappa">
-        <span class="legenda-voce"><span class="pallino-legenda alto"></span>Punteggio alto</span>
-        <span class="legenda-voce"><span class="pallino-legenda medio"></span>Punteggio medio</span>
-        <span class="legenda-voce"><span class="pallino-legenda basso"></span>Punteggio basso</span>
+        <span class="legenda-voce"><span class="pallino-legenda alto"></span>Punteggio AI alto</span>
+        <span class="legenda-voce"><span class="pallino-legenda medio"></span>Punteggio AI medio</span>
+        <span class="legenda-voce"><span class="pallino-legenda basso"></span>Punteggio AI basso</span>
         <span class="legenda-voce"><span class="pallino-legenda non-valutato"></span>Non valutato</span>
         <span class="legenda-voce"><span class="pallino-legenda anello-nuova"></span>Nuova (24h)</span>
       </p>
@@ -3996,6 +4022,7 @@
         cardEsistente.replaceWith(contenitoreTemp.firstElementChild);
       }
     }
+    aggiornaContatoriConto();
     aggiornaFinestraSeApertaSu(id);
   }
 
@@ -5052,7 +5079,8 @@
 
     asta.renditaCatastaleUtente = renditaValore;
     asta.oneriCondominialiUtente = oneriValore;
-    aggiornaFinestraSeApertaSu(id);
+    azzeraCalcoliAsta(asta);   // rendita e arretrati entrano nel conto: offerta massima da ricalcolare
+    aggiornaCardSingola(id);   // card e scheda aperta
 
     try {
       const risultato = await accodaScritturaProtetta("aggiorna_dati_utente_asta", {
@@ -5075,7 +5103,8 @@
       gestisceErroreAzionePassword(e);
       asta.renditaCatastaleUtente = renditaPrecedente;
       asta.oneriCondominialiUtente = oneriPrecedenti;
-      aggiornaFinestraSeApertaSu(id);
+      azzeraCalcoliAsta(asta);
+      aggiornaCardSingola(id);
       mostraToast(`Non sono riuscita a salvare la correzione: ${dettaglioErrore(e)}`);
     }
   }
@@ -5533,15 +5562,19 @@
       if (!asta) return;
       // giudizio e spazio sull'offerta si ricalcolano sempre: fuori dal confronto,
       // altrimenti la scheda si ridisegnava anche senza nessun cambiamento
-      const firma = () => JSON.stringify({...asta, _giudizio: undefined, _spazio: undefined});
+      const firma = () => JSON.stringify({...asta, _giudizio: undefined, _sintesi: undefined});
       const prima = firma();
+      const contiPrima = JSON.stringify(PARAMETRI_CONTI);
       impostaDatiPersonali(personali.preferiti || [], personali.link_utili || [], personali.visite || [], personali.superanalisi_esterne || [],
         personali.operazioni || [], personali.checklist_modello || null, personali.parametri_conti || null);
       Object.assign(asta, normalizzaRiga(righe[0]));
-      asta._giudizio = undefined;   // giudizio della Superanalisi da ricalcolare
-      asta._spazio = undefined;     // e lo spazio sull'offerta
+      azzeraCalcoliAsta(asta);      // giudizio, spazio e offerta massima della Superanalisi da ricalcolare
       applicaStatoPreferito(asta);
-      if (firma() !== prima) {
+      // Regime fiscale o aliquote cambiati altrove (Configurazione → Conti): i conti di TUTTE le aste in
+      // memoria erano fatti col regime vecchio, si rifanno (e la griglia si ridisegna).
+      const contiCambiati = JSON.stringify(PARAMETRI_CONTI) !== contiPrima;
+      if (contiCambiati) { ASTE.forEach(azzeraCalcoliAsta); applicaFiltri(); }
+      if (contiCambiati || firma() !== prima) {
         // Mentre scrivi in un campo della scheda non si ridisegna (il testo
         // degli editor aperti andrebbe perso): i dati nuovi sono già in
         // memoria e compaiono al prossimo aggiornamento della scheda.
@@ -5559,7 +5592,12 @@
   // (con i dati di prima): si aggiorna la scheda aperta.
   window.addEventListener("pageshow", (evento) => {
     if (evento.persisted && idAstaModaleDettagli !== null) aggiornaAstaDalDatabase(idAstaModaleDettagli);
-    if (evento.persisted && criterioOrdinamento === "spazio") { ASTE.forEach(a => { a._spazio = undefined; }); applicaFiltri(); }
+    // I parametri della Superanalisi (utile, minimo, prima casa) si cambiano in un'altra pagina: al ritorno si ricalcola tutto.
+    if (evento.persisted && ASTE.length) {
+      ASTE.forEach(azzeraCalcoliAsta);
+      applicaFiltri();
+      if (idAstaModaleDettagli !== null) aggiornaFinestraSeApertaSu(idAstaModaleDettagli);   // anche la scheda aperta ("Perché")
+    }
   });
 
   function avvia() {
@@ -5879,11 +5917,169 @@
       utileTargetPct: p.utilePct / 100, utileMinimoPrudenzialePct: p.minimoPrudenzialePct / 100, targetNetto: true, primaCasa: !!p.primaCasa,
       regimeFiscale: PARAMETRI_CONTI.regimeFiscale, aliquotaImpresa: PARAMETRI_CONTI.aliquotaImpresa, registroImpresa: PARAMETRI_CONTI.registroImpresa });
   }
+  // Sintesi per card, dettagli, testata e ordinamento (04/10/2026): il conto
+  // della Superanalisi di un'asta, calcolato UNA volta e tenuto in memoria
+  // (a._sintesi; si azzera dove si azzerava _spazio e quando cambia una
+  // correzione che entra nel conto). Solo i numeri che il motore ha già
+  // calcolato, nessuna formula qui. null senza analisi v2.
+  //   offertaMassima: null = obiettivo di utile non raggiungibile (o conto non possibile)
+  //   spazio: offerta massima − offerta minima (null se manca l'offerta minima o il conto)
+  //   calcolabile: false se il motore non ha potuto fare il conto (es. quota parziale)
+  function nomeFonteRivendita(fonte, a) {
+    const f = String(fonte || "");
+    if (/^comparabili/i.test(f)) return "comparabili";
+    // Il motore scrive "OMI" anche per le quotazioni citate dal perito (ultimo ripiego di esitoSuperanalisi):
+    // è OMI vera solo se l'asta ha la sua quotazione OMI.
+    if (/^OMI/i.test(f)) return a.omi && a.omi.min > 0 && a.omi.max >= a.omi.min ? "OMI" : "quotazioni citate dal perito";
+    if (/^override/i.test(f)) return "tuo valore";
+    if (/^proxy/i.test(f)) return "valore del perito";
+    return "";
+  }
+  function sintesiOccasione(a) {
+    if (a._sintesi !== undefined) return a._sintesi;
+    a._sintesi = null;
+    try {
+      const esito = esitoSuperanalisi(a);
+      if (esito) {
+        const mq = esito.superficie && esito.superficie.mq > 0 ? esito.superficie.mq : null;
+        const rivendita = esito.arv ? esito.arv.centrale : null;
+        const minima = a.offertaMinima > 0 ? a.offertaMinima : null;
+        a._sintesi = {
+          esito,
+          classe: esito.classe,
+          motivi: esito.motivi || [],
+          calcolabile: esito.scenariAlMinimo !== null || esito.maxBid !== null,
+          offertaMassima: esito.offertaMassima != null && esito.offertaMassima > 0 ? Math.round(esito.offertaMassima) : null,
+          spazio: esito.headroom ?? null,
+          offertaMinima: minima,
+          mq,
+          euroMqOfferta: mq && minima ? Math.round(minima / mq) : null,
+          euroMqRivendita: mq && rivendita > 0 ? Math.round(rivendita / mq) : null,
+          fonteRivendita: esito.arv ? nomeFonteRivendita(esito.arv.fonte, a) : "",
+        };
+      }
+    } catch (e) { a._sintesi = null; }
+    return a._sintesi;
+  }
   function spazioSullOfferta(a) {
-    if (a._spazio !== undefined) return a._spazio;
-    a._spazio = null;
-    try { const esito = esitoSuperanalisi(a); a._spazio = esito ? (esito.headroom ?? null) : null; } catch (e) { a._spazio = null; }
-    return a._spazio;
+    const s = sintesiOccasione(a);
+    return s ? s.spazio : null;
+  }
+  // Azzera i calcoli tenuti in memoria di un'asta (giudizio e sintesi).
+  function azzeraCalcoliAsta(a) { a._giudizio = undefined; a._sintesi = undefined; }
+
+  // Le due cifre sul conto in testata (04/10/2026; prima "Punteggio più alto" e
+  // "Margine positivo", quasi sempre positivi e quindi inutili per decidere):
+  // aste attive, non scartate, con analisi v2, di ogni tipologia, con spazio
+  // sull'offerta ≥ 0 (esclusi i Da scartare) e con giudizio Pulita o Gestibile.
+  // Dal conto in memoria (sintesiOccasione). Richiamata da renderizza e da
+  // aggiornaCardSingola (stella, scarto e correzioni cambiano chi conta).
+  function aggiornaContatoriConto() {
+    let conSpazio = 0, pulite = 0;
+    for (const a of ASTE) {
+      if (astaConclusa(a.dataVendita) || a.scartato) continue;
+      const s = sintesiOccasione(a);
+      if (!s) continue;
+      if (s.calcolabile && s.spazio !== null && s.spazio >= 0 && s.classe !== "DA_SCARTARE") conSpazio++;
+      if (s.classe === "PULITA" || s.classe === "GESTIBILE") pulite++;
+    }
+    document.getElementById("stat-spazio").textContent = conSpazio;
+    document.getElementById("stat-spazio-mobile").textContent = conSpazio;
+    document.getElementById("stat-pulite").textContent = pulite;
+    document.getElementById("stat-pulite-mobile").textContent = pulite;
+  }
+
+  // Blocco "Offerta massima" della card e del riquadro "Perché" (04/10/2026).
+  // Con analisi v2: offerta massima, offerta minima, spazio, €/mq contro
+  // rivendita e (card) il primo motivo del giudizio. Senza analisi v2 resta il
+  // solo margine lordo, attenuato e con la spiegazione di cosa manca.
+  // opzioni.motivo: riga "Perché" (card); opzioni.lordo: margine lordo piccolo in fondo.
+  function bloccoOffertaMassima(a, opzioni = {}) {
+    const s = sintesiOccasione(a);
+    const lordo = a.margine !== null ? formattaEuro(a.margine) : "—";
+    if (!s) {
+      return `
+        <div class="lotto-margine senza-offerta">
+          <p class="cifra-etichetta" title="Valore del perito − offerta minima − sanatoria: prima di imposte, lavori, tempi e vendita. Il conto completo è in Superanalisi.">Margine lordo · senza costi</p>
+          <p class="lotto-margine-valore">${lordo}</p>
+          <p class="lotto-offerta-riga">Offerta massima non calcolata: manca l'analisi v2 della perizia.</p>
+        </div>`;
+    }
+    const scartata = s.classe === "DA_SCARTARE";
+    let tono = "";   // vuoto = positivo (l'offerta minima sta sotto la massima)
+    if (!s.calcolabile) tono = "neutra";
+    else if (scartata) tono = "scartata";
+    else if (s.offertaMassima === null) tono = "negativa";
+    else if (s.spazio === null) tono = "neutra";
+    else if (s.spazio < 0) tono = "negativa";
+    const valore = !s.calcolabile ? "—" : s.offertaMassima === null ? "non raggiungibile" : formattaEuro(s.offertaMassima);
+    let spazio;
+    if (!s.calcolabile) spazio = "Conto non possibile";
+    else if (s.offertaMassima === null) spazio = "Obiettivo di utile non raggiungibile";
+    else if (s.spazio === null) spazio = "Offerta minima non letta dal PVP";
+    else spazio = s.spazio >= 0 ? `Spazio +${formattaEuro(s.spazio)}` : `Mancano ${formattaEuro(-s.spazio)} all'offerta minima`;
+    if (scartata && s.calcolabile) spazio += " · da scartare";
+    // La superficie è quella del conto (commerciale): può differire da quella di "€/mq (offerta)" nelle cifre, per questo si scrive.
+    const riga = s.euroMqOfferta && s.euroMqRivendita
+      ? `€/mq su ${Math.round(s.mq)} mq: offerta ${formattaEuro(s.euroMqOfferta)} · rivendita ${formattaEuro(s.euroMqRivendita)}${s.fonteRivendita ? " (" + escapeHtml(s.fonteRivendita) + ")" : ""}` : "";
+    // Il numero dei motivi sta nell'etichetta, davanti: in fondo alla riga (limitata a 2 righe) sparirebbe.
+    const altriMotivi = s.motivi.length > 1 ? ` · ${s.motivi.length} motivi` : "";
+    const primo = s.motivi.length ? escapeHtml(s.motivi[0]) : "nessun segnale rosso nella perizia";
+    return `
+        <div class="lotto-margine lotto-offerta ${tono}">
+          <p class="cifra-etichetta" title="Il prezzo più alto che lascia l'utile impostato in Superanalisi (il più basso fra lo scenario centrale e quello prudenziale). Sotto: quanto resta rispetto all'offerta minima.">Offerta massima consigliata</p>
+          <p class="lotto-margine-valore lotto-offerta-valore"><span class="lotto-offerta-importo">${valore}</span>${s.calcolabile && s.offertaMinima ? `<span class="lotto-offerta-minima">minima ${formattaEuro(s.offertaMinima)}</span>` : ""}</p>
+          <p class="lotto-spazio">${escapeHtml(spazio)}</p>
+          ${riga ? `<p class="lotto-offerta-riga">${riga}</p>` : ""}
+          ${!s.calcolabile ? `<p class="lotto-offerta-riga">${escapeHtml(String(s.esito.verdetto || "").replace(/^(NON CALCOLABILE|CALCOLO NON AFFIDABILE):\s*/, ""))}</p>` : ""}
+          ${opzioni.motivo ? `<p class="lotto-perche" title="${escapeAttributo(s.motivi.length ? s.motivi.join("; ") : "Nessun segnale rosso nella perizia")}"><strong>Perché ${NOMI_GIUDIZIO[s.classe] ? escapeHtml(NOMI_GIUDIZIO[s.classe].toLowerCase()) : "questo giudizio"}${altriMotivi}:</strong> ${primo}</p>` : ""}
+          ${opzioni.lordo ? `<p class="lotto-margine-lordo" title="Valore del perito − offerta minima − sanatoria: prima di imposte, lavori, tempi e vendita.">Margine lordo (senza costi) ${lordo}</p>` : ""}
+        </div>`;
+  }
+
+  // Riquadro "Perché" in cima ai dettagli: il giudizio con tutti i motivi, come
+  // si arriva all'offerta massima e cosa controllare. Tutto già calcolato dal
+  // motore della Superanalisi. Senza analisi v2 spiega perché mancano i numeri.
+  const AFFIDABILITA_RIVENDITA = {bassa: "bassa", screening: "di massima, da verificare con comparabili", media: "media"};
+  function riquadroPerche(a) {
+    const s = sintesiOccasione(a);
+    if (!s) {
+      return `<div class="sezione-costi riquadro-perche">
+          <h3 class="sezione-costi-titolo">⚖️ Perché nessun giudizio</h3>
+          <p class="perche-verdetto">Giudizio e offerta massima si calcolano solo sulle aste con l'analisi v2 della perizia, e questa non ce l'ha. Il margine lordo qui sotto è solo un'indicazione, senza costi.</p>
+        </div>`;
+    }
+    const e = s.esito;
+    const nomeClasse = NOMI_GIUDIZIO[s.classe] || s.classe;
+    const verdetto = String(e.verdetto || "").replace(/^(PULITA|GESTIBILE|COMPLESSA)\b/, m => NOMI_GIUDIZIO[m]);
+    const elenco = voci => `<ul class="perche-elenco">${voci.map(v => `<li>${escapeHtml(v)}</li>`).join("")}</ul>`;
+    const conto = [];
+    if (e.arv) {
+      conto.push(`Rivendita stimata (scenario centrale): ${formattaEuro(e.arv.centrale)} — ${e.arv.fonte}${e.arv.affidabilita ? `; affidabilità ${AFFIDABILITA_RIVENDITA[e.arv.affidabilita] || e.arv.affidabilita}` : ""}`);
+    }
+    if (s.calcolabile && e.vincoloOffertaMassima) {
+      conto.push(e.vincoloOffertaMassima === "scenario prudenziale" ? "L'offerta massima è fissata dallo scenario prudenziale (utile minimo)"
+        : e.vincoloOffertaMassima === "scenario centrale" ? "L'offerta massima è fissata dallo scenario centrale (utile obiettivo)"
+        : "Nessun prezzo raggiunge l'utile obiettivo: non esiste un'offerta massima");
+    }
+    const avvisi = (e.avvisi || []).slice(0, 8);
+    const q = e.qualita || {};
+    // già tra i motivi del giudizio quando la qualità è C o D: non ripeterla
+    if (q.livello && !s.motivi.some(m => /^(qualità documentale|documentazione insufficiente)/.test(m))) {
+      const riga = `Qualità dei dati della perizia: ${q.livello} (da A, migliore, a D, insufficiente)${q.motivi && q.motivi.length ? ": " + q.motivi.join("; ") : ""}`;
+      (s.calcolabile ? conto : avvisi).push(riga);   // senza conto non c'è un "numero" da spiegare
+    }
+    return `<div class="sezione-costi riquadro-perche">
+          <h3 class="sezione-costi-titolo">⚖️ Perché: ${escapeHtml(nomeClasse)}</h3>
+          ${bloccoOffertaMassima(a, {})}
+          ${s.calcolabile && s.spazio !== null ? `<p class="perche-verdetto">${escapeHtml(verdetto)}</p>` : ""}
+          ${e.idealePerIniziare ? `<p class="perche-verdetto"><strong>✅ Ideale per iniziare</strong>: pulita, spazio sull'offerta, dati buoni.</p>` : ""}
+          <p class="perche-sottotitolo">Motivi del giudizio</p>
+          ${s.motivi.length ? elenco(s.motivi) : `<p class="perche-verdetto">Nessun segnale rosso nella perizia.</p>`}
+          ${conto.length ? `<p class="perche-sottotitolo">Come si arriva al numero</p>${elenco(conto)}` : ""}
+          ${avvisi.length ? `<p class="perche-sottotitolo">Da controllare</p>${elenco(avvisi)}` : ""}
+          <p class="nota-margine">${a.id ? `<a href="superanalisi.html?id=${encodeURIComponent(a.id)}">Conto completo, utile e ipotesi in Superanalisi →</a>` : ""}</p>
+        </div>`;
   }
   // Stima della Superanalisi al prezzo offerto, scenario centrale: si salva
   // con l'offerta (operazioni.stima_offerta) per il consuntivo.
@@ -5926,9 +6122,33 @@
     // spento visivamente pur restando davvero applicato ai dati
     // (categorieTipologiaAttive non viene toccata da questa funzione,
     // solo la spunta a schermo lo era).
-    menu.innerHTML = MACROCATEGORIE_TIPOLOGIA.map(categoria =>
+    // "Tutte" in cima: spuntata quando nessuna categoria è scelta (= nessun filtro);
+    // spuntarla toglie le altre spunte (selezionaTutteLeTipologie).
+    menu.innerHTML = `<label class="voce-menu-tipologia"><input type="checkbox" value="${VOCE_TUTTE_TIPOLOGIE}" ${categorieTipologiaAttive.size === 0 ? "checked" : ""} onchange="selezionaTutteLeTipologie()"><span>Tutte</span></label>`
+      + MACROCATEGORIE_TIPOLOGIA.map(categoria =>
       `<label class="voce-menu-tipologia"><input type="checkbox" value="${escapeHtml(categoria)}" ${categorieTipologiaAttive.has(categoria) ? "checked" : ""} onchange="aggiornaFiltroTipologia()"><span>${escapeHtml(categoria)}</span></label>`
     ).join("");
+  }
+
+  const VOCE_TUTTE_TIPOLOGIE = "__tutte";
+  const TIPOLOGIA_PREDEFINITA = "Abitazioni";   // filtro Tipo all'apertura (una voce di MACROCATEGORIE_TIPOLOGIA)
+  // Testo del pulsante "Tipo": con una sola categoria scelta ne mostra il nome,
+  // così il filtro attivo all'apertura (Abitazioni) non resta nascosto. Solo se il
+  // nome è corto: con "Garage e posti auto" la barra dei filtri andrebbe su due righe.
+  function testoBottoneTipo() {
+    const n = categorieTipologiaAttive.size;
+    const unica = n === 1 ? [...categorieTipologiaAttive][0] : "";
+    const nome = n === 0 ? "Tipo" : unica && unica.length <= 12 ? unica : `Tipo (${n})`;
+    return escapeHtml(nome) + ' <span class="freccia-tipologia">▾</span>';
+  }
+  // Spunta "Tutte" solo quando nessuna categoria è scelta.
+  function sincronizzaVoceTutte() {
+    const voce = document.querySelector(`#menu-tipologia input[value="${VOCE_TUTTE_TIPOLOGIE}"]`);
+    if (voce) voce.checked = categorieTipologiaAttive.size === 0;
+  }
+  function selezionaTutteLeTipologie() {
+    document.querySelectorAll('#menu-tipologia input[type="checkbox"]').forEach(c => { c.checked = c.value === VOCE_TUTTE_TIPOLOGIE; });
+    aggiornaFiltroTipologia();
   }
 
   // Nessuna spunta = nessun filtro (mostra tutto), stesso principio già
@@ -6103,12 +6323,12 @@
 
   function aggiornaFiltroTipologia() {
     const spuntate = document.querySelectorAll('#menu-tipologia input[type="checkbox"]:checked');
-    categorieTipologiaAttive = new Set([...spuntate].map(c => c.value));
+    categorieTipologiaAttive = new Set([...spuntate].map(c => c.value).filter(v => v !== VOCE_TUTTE_TIPOLOGIE));
 
     const bottone = document.getElementById("bottone-filtro-tipologia");
-    const n = categorieTipologiaAttive.size;
-    bottone.innerHTML = (n > 0 ? `Tipo (${n})` : "Tipo") + ' <span class="freccia-tipologia">▾</span>';
-    bottone.classList.toggle("attiva", n > 0);
+    bottone.innerHTML = testoBottoneTipo();
+    bottone.classList.toggle("attiva", categorieTipologiaAttive.size > 0);
+    sincronizzaVoceTutte();
 
     applicaFiltri();
   }
@@ -6129,7 +6349,7 @@
   // da criterio a criterio (per la data "vicina → lontana" ha più senso
   // di "basso → alto").
   const DEFINIZIONI_ORDINAMENTO = {
-    punteggio: { etichetta: "Punteggio", ascLabel: "basso → alto", descLabel: "alto → basso", direzioneDefault: "desc",
+    punteggio: { etichetta: "Punteggio AI", ascLabel: "basso → alto", descLabel: "alto → basso", direzioneDefault: "desc",
                  comparatore: (a, b) => a.punteggio - b.punteggio },
     margine:   { etichetta: "Margine lordo", etichettaBreve: "Margine", ascLabel: "basso → alto", descLabel: "alto → basso", direzioneDefault: "desc",
                  comparatore: (a, b) => (a.margine ?? -Infinity) - (b.margine ?? -Infinity) },
@@ -6137,9 +6357,12 @@
     giudizio:  { etichetta: "Giudizio", ascLabel: "Da scartare → Pulita", descLabel: "Pulita → Da scartare", direzioneDefault: "desc",
                  inFondo: a => !giudizioSuperanalisi(a),
                  comparatore: (a, b) => (valoreGiudizio(a) - valoreGiudizio(b)) || (a.punteggio - b.punteggio) },
+    // Tre gruppi (inFondo vale 0, 1 o 2): prima le aste con un numero valido, poi quelle col
+    // giudizio Da scartare (il numero c'è ma non conta), poi quelle senza numero (senza analisi
+    // v2 o conto impossibile), che restano in ordine di punteggio AI e non in ordine casuale.
     spazio:    { etichetta: "Spazio sull'offerta", etichettaBreve: "Spazio", ascLabel: "meno → più", descLabel: "più → meno", direzioneDefault: "desc",
-                 inFondo: a => spazioSullOfferta(a) === null,
-                 comparatore: (a, b) => (spazioSullOfferta(a) ?? 0) - (spazioSullOfferta(b) ?? 0) },
+                 inFondo: a => { const s = sintesiOccasione(a); return !s || s.spazio === null ? 2 : s.classe === "DA_SCARTARE" ? 1 : 0; },
+                 comparatore: (a, b) => ((spazioSullOfferta(a) ?? 0) - (spazioSullOfferta(b) ?? 0)) || (a.punteggio - b.punteggio) },
     prezzo:    { etichetta: "Offerta", ascLabel: "bassa → alta", descLabel: "alta → bassa", direzioneDefault: "asc",
                  comparatore: (a, b) => a.offertaMinima - b.offertaMinima },
     data:      { etichetta: "Data", ascLabel: "vicina → lontana", descLabel: "lontana → vicina", direzioneDefault: "asc",
@@ -6147,7 +6370,9 @@
     inserimento: { etichetta: "Più recenti", ascLabel: "vecchie → nuove", descLabel: "nuove → vecchie", direzioneDefault: "desc",
                  comparatore: (a, b) => (a.dataInserimento ? new Date(a.dataInserimento).getTime() : 0) - (b.dataInserimento ? new Date(b.dataInserimento).getTime() : 0) },
   };
-  let criterioOrdinamento = "punteggio";
+  // Predefinito dal 04/10/2026: "Spazio sull'offerta" (offerta massima − minima), il numero
+  // che decide l'acquisto; prima era il punteggio AI. Il menu "Ordina per" resta com'era.
+  let criterioOrdinamento = "spazio";
   let direzioneOrdinamento = "desc";
 
   function popolaMenuOrdinamento() {
@@ -6476,11 +6701,10 @@
     document.getElementById("pillola-concluse").classList.toggle("attiva", mostraConcluse);
     document.getElementById("pillola-aggiornate").classList.toggle("attiva", filtroSoloAggiornateAttivo);
     mostraPillolaInCorso();
-    const n = categorieTipologiaAttive.size;
     const bottoneTipo = document.getElementById("bottone-filtro-tipologia");
-    bottoneTipo.innerHTML = (n > 0 ? `Tipo (${n})` : "Tipo") + ' <span class="freccia-tipologia">▾</span>';
-    bottoneTipo.classList.toggle("attiva", n > 0);
-    document.querySelectorAll('#menu-tipologia input[type="checkbox"]').forEach(c => { c.checked = categorieTipologiaAttive.has(c.value); });
+    bottoneTipo.innerHTML = testoBottoneTipo();
+    bottoneTipo.classList.toggle("attiva", categorieTipologiaAttive.size > 0);
+    document.querySelectorAll('#menu-tipologia input[type="checkbox"]').forEach(c => { c.checked = c.value === VOCE_TUTTE_TIPOLOGIE ? categorieTipologiaAttive.size === 0 : categorieTipologiaAttive.has(c.value); });
     mostraPillolaGiudizio();
     document.getElementById("valore-punteggio-minimo").textContent = document.getElementById("punteggio-minimo").value;
     document.getElementById("valore-punteggio-massimo").textContent = document.getElementById("punteggio-massimo").value;
@@ -6491,7 +6715,14 @@
   function ripristinaFiltri() {
     let f = null;
     try { f = JSON.parse(sessionStorage.getItem(CHIAVE_FILTRI) || "null"); } catch (e) { f = null; }
-    if (!f || typeof f !== "object") return;
+    if (!f || typeof f !== "object") {
+      // Prima apertura della sessione: parte con "Abitazioni" (si vede nel pulsante
+      // "Tipo"; "Tutte" nel suo menu, o "Azzera filtri", la toglie).
+      categorieTipologiaAttive = new Set([TIPOLOGIA_PREDEFINITA]);
+      mostraStatoFiltri();
+      aggiornaBadgeFiltri();
+      return;
+    }
     document.getElementById("ricerca").value = typeof f.ricerca === "string" ? f.ricerca : "";
     categorieTipologiaAttive = new Set(Array.isArray(f.tipologie) ? f.tipologie : []);
     giudiziAttivi = new Set((Array.isArray(f.giudizi) ? f.giudizi : []).filter(g => VOCI_GIUDIZIO.some(([k]) => k === g)));
@@ -6562,6 +6793,9 @@
     const ricerca = document.getElementById("ricerca").value.trim().toLowerCase();
     const punteggioMinimo = Number(document.getElementById("punteggio-minimo").value);
     const punteggioMassimo = Number(document.getElementById("punteggio-massimo").value);
+    // ⭐/🚫 e "In corso" (visite, operazioni) sono viste sulle TUE aste: il filtro Tipo, anche quello
+    // preselezionato all'apertura (Abitazioni), non le nasconde mai (un box seguito resta visibile).
+    const vistaPersonale = !!(filtroPreferitiScartatiAttivo || filtroSoloVisiteAttivo || filtroSoloOperazioniAttivo);
 
     let filtrate = ASTE.filter(a => {
       // Estesa a più campi (non solo comune) apposta: comune resta il
@@ -6585,7 +6819,7 @@
         a.statoOccupazione, a.formalitaPregiudizievoli, a.abusiEdilizi,
         formattaData(a.dataVendita), a.testoTentativoRicerca
       ].some(campo => campo && campo.toLowerCase().includes(ricerca));
-      const passaTipologia = categorieTipologiaAttive.size === 0
+      const passaTipologia = vistaPersonale || categorieTipologiaAttive.size === 0
         || categorieDiAsta(a.tipologia).some(c => categorieTipologiaAttive.has(c));
       const passaOccupazione = !filtroOccupazioneAttivo || classificaOccupazione(a.statoOccupazione) === filtroOccupazioneAttivo;
       const passaConcluse = (filtroSoloOperazioniAttivo && operazioneInCorso(a))
@@ -6614,7 +6848,8 @@
     // true (1): l'aritmetica del confronto fa il resto come chiave
     // primaria, il criterio scelto resta il comparatore secondario.
     // Per Giudizio e Spazio sull'offerta le aste senza analisi v2 vanno in fondo
-    // in entrambe le direzioni (subito dopo le scartate come chiave).
+    // in entrambe le direzioni (subito dopo le scartate come chiave); per Spazio
+    // inFondo ha tre livelli: numero valido (0), Da scartare (1), senza numero (2).
     const inFondo = definizione.inFondo || (() => false);
     filtrate.sort((a, b) => (a.scartato - b.scartato) || (inFondo(a) - inFondo(b)) || segno * definizione.comparatore(a, b));
     if (filtroSoloVisiteAttivo || filtroSoloOperazioniAttivo) {
@@ -6676,24 +6911,7 @@
     // registro" sopra il numero basta da sola come contesto, senza
     // bisogno di ripetere "attive"/"concluse di N" per esteso qui.
     document.getElementById("stat-totale-mobile").textContent = mostraConcluse ? totaleConcluse : totaleAttive;
-    // Filtri separati apposta: punteggio e margine dipendono da dati diversi.
-    // Un'asta con solo il punteggio inserito (senza valore di stima) ha un
-    // punteggio valido ma nessun margine calcolabile — un filtro unico
-    // farebbe apparire "-Infinity" invece di "—" in quel caso.
-    const conPunteggio = ASTE.filter(a => a.punteggio > 0);
-    // Conteggio, non il valore massimo: un singolo margine sballato (perizia
-    // condivisa da più lotti, letta come se il valore dell'intero complesso
-    // riguardasse un solo lotto — capita, vedi commento su numero_lotto nel
-    // prompt Gemini in app.py) gonfiava il massimo fino a cifre senza senso.
-    // Un conteggio non risente della GRANDEZZA di un singolo valore fuori
-    // scala, solo della sua presenza — molto più robusto come prima cifra
-    // da guardare.
-    const conMarginePositivo = ASTE.filter(a => a.margine !== null && a.margine > 0);
-    const puntoMassimoTesto = conPunteggio.length ? Math.max(...conPunteggio.map(a => a.punteggio)) + "/100" : "—";
-    document.getElementById("stat-punteggio").textContent = puntoMassimoTesto;
-    document.getElementById("stat-punteggio-mobile").textContent = puntoMassimoTesto;
-    document.getElementById("stat-margine").textContent = conMarginePositivo.length;
-    document.getElementById("stat-margine-mobile").textContent = conMarginePositivo.length;
+    aggiornaContatoriConto();
 
     nascondiTuttiGliStati();
     document.getElementById("mostra-risultati-foglio").textContent = elenco.length === 1 ? "Mostra 1 asta" : `Mostra ${elenco.length} aste`;
@@ -6869,7 +7087,7 @@
         <div>Offerta minima: ${formattaOffertaMinima(a.offertaMinima)}</div>
         ${testoSpazio ? `<div>Spazio sull'offerta: ${testoSpazio}</div>` : ""}
         <div>Margine lordo: ${margine}</div>
-        <div>Punteggio: ${a.punteggio > 0 ? a.punteggio + "/100" : "—"}</div>
+        <div>Punteggio AI: ${a.punteggio > 0 ? a.punteggio + "/100" : "—"}</div>
         <div class="popup-lotto-azioni">
           <button type="button" class="bottone-azione-lotto${a.preferito ? ' preferito-attivo' : ''}" title="Preferito" onclick="event.stopPropagation(); onClickStella(event, '${a.id}')">${iconaStella}</button>
           <button type="button" class="bottone-azione-lotto${a.scartato ? ' scartato-attivo' : ''}" title="Non interessa" onclick="event.stopPropagation(); onClickScarta(event, '${a.id}')">${iconaScarta}</button>
@@ -7113,7 +7331,7 @@
       <article class="lotto${conclusa ? ' conclusa' : ''}${a.scartato ? ' scartato' : ''}" id="lotto-${a.id}" onclick="apriDettagliAsta('${a.id}')" tabindex="0" aria-label="Vedi dettagli di ${escapeHtml(a.comune)}" onkeydown="if(event.key==='Enter'){apriDettagliAsta('${a.id}')}">
         <div class="lotto-testata">
           <label class="area-selezione" onclick="event.stopPropagation()"><input type="checkbox" class="checkbox-selezione" aria-label="Seleziona per confronto o azioni multiple" ${astaSelezionate.has(a.id) ? "checked" : ""} onkeydown="event.stopPropagation()" onchange="onCambiaSelezione('${a.id}', this.checked)"></label>
-          <div class="sigillo ${livello}">${contenutoSigillo}</div>
+          <div class="sigillo ${livello}" title="Punteggio AI: il voto che l'AI ha dato all'asta leggendo la perizia. Non è il conto economico: quello è l'offerta massima.">${contenutoSigillo}</div>
           <div>
             <p class="lotto-id">${a.lotto ? escapeHtml(Etichette.lotto(a.lotto)) + " · " : ""}${escapeHtml(etichettaTipologia(a.tipologia))}</p>
             <p class="lotto-comune">${escapeHtml(a.comune)}</p>
@@ -7136,10 +7354,7 @@
           <p class="lotto-meta">Vendita ${formattaData(a.dataVendita)}</p>
         </div>
 ${notaHtml}
-        <div class="lotto-margine">
-          <p class="cifra-etichetta" title="Valore del perito − offerta minima − sanatoria: prima di imposte, lavori, tempi e vendita. Il conto completo è in Superanalisi.">Margine lordo</p>
-          <p class="lotto-margine-valore">${a.margine !== null ? formattaEuro(a.margine) : "—"}</p>
-        </div>
+${bloccoOffertaMassima(a, {motivo: true, lordo: true})}
 
         <div class="lotto-cifre">
           <div>
@@ -8866,6 +9081,7 @@ ${notaHtml}
     const documentoEtichetta = /^perizia/i.test(a.fonteDocumento || "") ? "Perizia" : "Documento";
     const nRisultatiAi = (a.superanalisiEsterne || []).length;
     const sezioni = [
+      ["sez-perche", "Perché", riquadroPerche(a)],
       ["sez-cifre", "Cifre", `
         <div class="lotto-margine">
           <p class="cifra-etichetta">Margine lordo</p>
@@ -8926,7 +9142,7 @@ ${riquadroProcedura}
     return `
       <div class="finestra-dettagli-header">
         <div class="finestra-dettagli-testata">
-          <div class="sigillo ${livello}">${contenutoSigillo}</div>
+          <div class="sigillo ${livello}" title="Punteggio AI: il voto che l'AI ha dato all'asta leggendo la perizia. Non è il conto economico: quello è l'offerta massima.">${contenutoSigillo}</div>
           <div>
             <p class="lotto-id">${a.lotto ? escapeHtml(Etichette.lotto(a.lotto)) + " · " : ""}${escapeHtml(etichettaTipologia(a.tipologia))}</p>
             <div class="contenitore-indirizzo">

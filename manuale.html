@@ -585,10 +585,15 @@
         dell'ultima scansione). Configurazione, Statistiche, Calendario e Manuale sono nel <a href="#sistema-navigazione">menu in cima</a>.</li>
       <li>Gli importi in euro hanno sempre il punto delle migliaia, anche a 4 cifre ("€ 1.500"), in tutte le pagine; il CSV resta con i numeri senza punti.</li>
       <li><strong>Aste nel registro</strong>: "N attive di TOT" (attive = vendita oggi o futura, o senza data); con "Concluse" attivo, "N concluse di TOT".</li>
-      <li><strong>Punteggio più alto</strong>: il massimo <a href="#analisi-score">punteggio</a> tra tutte le aste, "NN/100".</li>
-      <li><strong>Margine positivo</strong>: il <em>numero</em> di aste con <a href="#registro-margine">margine lordo</a> maggiore di zero (non il
-        margine massimo: un margine sballato, per esempio di una perizia condivisa tra più lotti, falsava il massimo).</li>
-      <li>Questi tre numeri sono calcolati su <strong>tutte</strong> le aste, ignorando i filtri. Sotto la barra: "N di TOT aste mostrate" (con i filtri).</li>
+      <li><strong>Con spazio sull'offerta</strong> (sul telefono "Con spazio"): quante aste attive hanno l'<a href="#registro-offerta-massima">offerta massima</a>
+        almeno pari all'offerta minima (spazio sull'offerta ≥ 0). Contano solo le aste con analisi v2; non contano quelle con giudizio "Da scartare", quelle
+        scartate da te e le concluse. Dal 04/10/2026 sostituisce "Punteggio più alto".</li>
+      <li><strong>Pulite o Gestibili</strong> (sul telefono "Pulite/Gestib."): quante aste attive hanno il
+        <a href="#superanalisi-classe">giudizio</a> Pulita o Gestibile (stesse esclusioni). Dal 04/10/2026 sostituisce "Margine positivo", che era positivo in
+        quasi tutte le aste e non aiutava a scegliere.</li>
+      <li>Questi tre numeri sono calcolati su <strong>tutte</strong> le aste, di ogni tipologia, ignorando i filtri (anche "Abitazioni", preselezionato
+        all'apertura: i due numeri sull'offerta massima possono quindi contare aste che l'elenco, ancora filtrato, non mostra). Sotto la barra: "N di TOT aste
+        mostrate" (con i filtri). Passando il mouse su un numero si legge cosa conta; la stella e lo scarto li aggiornano subito.</li>
     </ul>
   </section>
 
@@ -616,8 +621,18 @@
     <h3>Filtro "Tipo" (tipologia)</h3>
     <p>Sette categorie: Abitazioni, Garage e posti auto, Negozi e uffici, Terreni, Depositi e magazzini, Fabbricati e complessi, Altro. Ogni
       codice di tipologia PVP è associato a una categoria; un codice non previsto, o un'asta senza tipologia, va in "Altro". Un'asta con più beni può
-      stare in più categorie (es. abitazione + garage). Nessuna casella spuntata = nessun filtro; con più caselle basta appartenere ad almeno una.
-      Il pulsante diventa "Tipo (n)".</p>
+      stare in più categorie (es. abitazione + garage). Nessuna categoria scelta (cioè "Tutte" spuntata) = nessun filtro; con più categorie basta appartenere
+      ad almeno una. Il pulsante diventa "Tipo (n)", oppure il nome della categoria se ne hai scelta una sola con il nome corto ("Abitazioni", "Terreni"…).</p>
+    <p><strong>All'apertura parte "Abitazioni"</strong> (dal 04/10/2026), perché nel registro la maggior parte delle aste sono box e posti auto, che
+      sommergono le abitazioni: il pulsante mostra "Abitazioni" e sotto la barra si legge "N di TOT aste mostrate". Non è un limite: <strong>"Tutte"</strong>, la prima casella del
+      menu, toglie il filtro (e spuntando una categoria "Tutte" si toglie da sola); anche "✕ Azzera filtri" lo toglie. Chiudendo la scheda del browser e
+      riaprendo il registro si riparte da "Abitazioni". La scelta riguarda solo ciò che vedi: non cambia ciò che lo scanner cerca e salva
+      (quello si decide in Configurazione).</p>
+    <p><strong>Cosa segue il filtro</strong>: l'elenco, la mappa, "Seleziona tutte" e "Esporta CSV" (il primo CSV scaricato all'apertura contiene solo le
+      abitazioni: per esportare tutto scegli prima "Tutte") e le frecce avanti/indietro nella scheda. Un link diretto <code>index.html#ID</code> a un'asta
+      di un altro tipo apre comunque la scheda, ma le frecce non funzionano finché quell'asta non è nell'elenco. <strong>Le tue aste non spariscono mai per
+      colpa di "Tipo"</strong>: con ⭐ Preferite, 🚫 Scartate o 📅 In corso (visite e operazioni) il filtro Tipo non si applica.
+      I due numeri in testata sull'offerta massima contano invece le aste di <em>tutte</em> le tipologie.</p>
   </section>
 
   <section class="voce" id="registro-filtro-occupazione">
@@ -656,8 +671,8 @@
   </section>
 
   <section class="voce" id="registro-filtro-punteggio">
-    <h3>Cursore "Punteggio 0-100"</h3>
-    <p>Doppio cursore a passi di 5 (su PC mostra solo i numeri, per esempio "0–100", e il nome "Punteggio" compare passando il mouse; sul telefono resta "Punteggio"): mostra le aste con punteggio tra il minimo e il massimo. Le aste non valutate hanno punteggio 0 e spariscono appena
+    <h3>Cursore "Punteggio AI 0-100"</h3>
+    <p>Doppio cursore a passi di 5 (su PC mostra solo i numeri, per esempio "0–100", e il nome "Punteggio AI" compare passando il mouse; sul telefono resta "Punteggio AI"): mostra le aste con punteggio AI tra il minimo e il massimo. Le aste non valutate hanno punteggio 0 e spariscono appena
       il minimo supera 0. Vedi <a href="#analisi-score">cos'è il punteggio</a>.</p>
   </section>
 
@@ -666,19 +681,25 @@
     <div class="tabella-scroll"><table>
       <thead><tr><th>Criterio</th><th>Ordina per</th><th>Direzione iniziale</th></tr></thead>
       <tbody>
-        <tr><td>Punteggio (predefinito)</td><td>punteggio</td><td>alto → basso</td></tr>
+        <tr><td>Punteggio AI</td><td>punteggio AI (il voto dell'AI sulla perizia)</td><td>alto → basso</td></tr>
         <tr><td>Margine lordo</td><td><a href="#registro-margine">margine lordo</a>: valore del perito − offerta minima − sanatoria (mancante = in fondo)</td><td>alto → basso</td></tr>
         <tr><td>Giudizio</td><td><a href="#superanalisi-classe">giudizio della Superanalisi</a> (Pulita, Gestibile, Complessa, Da scartare); a parità, il punteggio</td><td>Pulita → Da scartare</td></tr>
-        <tr><td>Spazio sull'offerta</td><td>offerta massima − offerta minima dal <a href="#superanalisi-conto">conto completo della Superanalisi</a>, con i parametri che hai impostato in Superanalisi e le tue correzioni; negativo = obiettivo non raggiungibile all'offerta minima</td><td>più → meno</td></tr>
+        <tr><td>Spazio sull'offerta (predefinito dal 04/10/2026)</td><td>offerta massima − offerta minima dal <a href="#superanalisi-conto">conto completo della Superanalisi</a>, con i parametri che hai impostato in Superanalisi e le tue correzioni; negativo = obiettivo non raggiungibile all'offerta minima</td><td>più → meno</td></tr>
         <tr><td>Offerta</td><td>offerta minima</td><td>bassa → alta</td></tr>
         <tr><td>Data</td><td>giorni tra vendita e oggi (in valore assoluto): la più imminente; tra le concluse la più recente</td><td>vicina → lontana</td></tr>
         <tr><td>Più recenti</td><td>data di inserimento nel registro</td><td>nuove → vecchie</td></tr>
       </tbody>
     </table></div>
-    <p>Cliccare il criterio già attivo inverte la direzione. Le aste <strong>scartate vanno sempre in fondo</strong>, qualunque criterio. Con "Giudizio" e
-      "Spazio sull'offerta" vanno in fondo, in tutte e due le direzioni, anche le aste <strong>senza analisi v2</strong> (non hanno giudizio né conto) e
-      quelle per cui il conto non si può fare (per esempio senza valore di rivendita). "Spazio sull'offerta" si calcola quando lo scegli (pochi decimi di
-      secondo) e si aggiorna se cambi i parametri in Superanalisi e torni al registro.</p>
+    <p>Cliccare il criterio già attivo inverte la direzione. Le aste <strong>scartate vanno sempre in fondo</strong>, qualunque criterio. Con "Giudizio" vanno
+      in fondo, in tutte e due le direzioni, anche le aste <strong>senza analisi v2</strong> (non hanno giudizio né conto).</p>
+    <p><strong>"Spazio sull'offerta"</strong> (l'ordine con cui si apre il registro) mette in <strong>tre gruppi</strong>, in tutte e due le direzioni: prima le
+      aste con un numero valido; poi quelle col giudizio <strong>Da scartare</strong> (il numero c'è, ma non conta); in fondo quelle senza numero, cioè
+      senza analisi v2 o per cui il conto non si può fare (per esempio una quota parziale o senza valore di rivendita), che restano in ordine di punteggio
+      AI. Tra le aste con un numero valido l'ordine segue la cifra "spazio" (offerta massima − offerta minima), anche per i "non raggiungibile": lì
+      conta l'offerta minima (la card non mostra questa cifra). Il conto si fa una volta per asta e resta in memoria; si rifà se cambi i parametri in
+      Superanalisi e torni al registro, se cambi il regime fiscale in Configurazione (quando ricarichi il registro o apri una scheda), o se correggi rendita e spese condominiali nei dettagli. Dopo una
+      correzione la card e i due numeri in testata si aggiornano subito, ma <strong>la posizione nell'elenco</strong> solo al prossimo filtro, ordinamento
+      o ricarica.</p>
     <p>Per tenere su una riga la barra dei filtri, la pillola chiusa dell'ordinamento mostra "Margine" per "Margine lordo" e "Spazio" per
       "Spazio sull'offerta"; il nome completo è nel menu e compare passando il mouse sulla pillola.</p>
   </section>
@@ -690,9 +711,10 @@
         vista (griglia o mappa) restano come li hai lasciati quando torni al registro da un'altra pagina (Superanalisi, risultati AI, Configurazione…), anche se
         il browser ricarica il registro.</li>
       <li><strong>Fino a quando</strong>: finché resta aperta la scheda del browser (o l'app). Chiudendola e riaprendo il registro si riparte puliti, così
-        un filtro dimenticato non nasconde aste il giorno dopo.</li>
+        un filtro dimenticato non nasconde aste il giorno dopo. "Puliti" vuol dire con le due scelte di partenza: <a href="#registro-filtro-tipo">Tipo = Abitazioni</a>
+        e ordine "Spazio sull'offerta".</li>
       <li><strong>"✕ Azzera filtri"</strong>: compare solo se c'è almeno un filtro attivo o un testo cercato, accanto a "N di M aste mostrate", nel pannello
-        "Filtri" del telefono (accanto al titolo) e in "Nessuna corrispondenza". Toglie filtri e ricerca; ordinamento e vista restano.</li>
+        "Filtri" del telefono (accanto al titolo) e in "Nessuna corrispondenza". Toglie filtri e ricerca, compreso "Abitazioni" (resta "Tutte"); ordinamento e vista restano.</li>
     </ul>
   </section>
 
@@ -711,21 +733,25 @@
     <ul>
       <li><strong>Casella</strong> in alto a sinistra: seleziona l'asta per il <a href="#registro-confronta">confronto</a> o le azioni in blocco (sul
         telefono basta toccare vicino alla casella).</li>
-      <li><strong>Sigillo</strong> con il <a href="#registro-sigillo">punteggio</a>.</li>
+      <li><strong>Sigillo</strong> con il <a href="#registro-sigillo">punteggio AI</a> (passandoci sopra col mouse si legge che cos'è).</li>
       <li>"Lotto X · tipologia" (nome leggibile del codice PVP, es. "Abitazione civile + Posto auto"; nel CSV resta il codice), comune/indirizzo; sotto,
         a tutta larghezza, i <a href="#registro-badge">badge</a> e "X km · vendita GG/MM/AAAA".</li>
       <li><strong>Stella</strong> (preferito) e <strong>cerchio con X</strong> (non interessa): vedi <a href="#registro-stella-scarto">qui</a>.</li>
       <li><strong>Nota personale</strong>: vedi <a href="#registro-nota">qui</a>.</li>
-      <li>Cifre: <a href="#registro-margine">Margine lordo</a>, Offerta minima, Valore stima (valore del perito), Superficie ed
+      <li><strong>Offerta massima consigliata</strong> (dal 04/10/2026, al posto del margine lordo in grande): il numero che decide l'acquisto, vedi
+        <a href="#registro-offerta-massima">qui</a>. Solo per le aste con analisi v2; le altre mostrano il margine lordo, attenuato, e "Offerta massima non
+        calcolata: manca l'analisi v2 della perizia".</li>
+      <li>Cifre: Offerta minima, Valore stima (valore del perito), Superficie ed
         <a href="#registro-euro-mq">€/mq (offerta)</a> se la superficie è nota, Stato occupazione. Sul telefono la card è più bassa: offerta minima e valore stima su due colonne,
-        superficie, €/mq e stato di occupazione su una riga sola ("103 mq · € 324/mq · Occupato…").</li>
+        superficie, €/mq e stato di occupazione su una riga sola ("103 mq · € 324/mq · Occupato…"). Il <a href="#registro-margine">margine lordo</a> sta
+        in piccolo sotto l'offerta massima.</li>
       <li>Una card <strong>scartata</strong> è sbiadita e va in fondo; una <strong>selezionata</strong> ha bordo blu.</li>
       <li>Cliccando la card si apre la <a href="#registro-dettaglio">finestra dei dettagli</a>.</li>
     </ul>
   </section>
 
   <section class="voce" id="registro-sigillo">
-    <h3>Sigillo del punteggio e colori</h3>
+    <h3>Sigillo del punteggio AI e colori</h3>
     <div class="tabella-scroll"><table>
       <thead><tr><th>Livello</th><th>Condizione</th><th>Colore</th></tr></thead>
       <tbody>
@@ -755,10 +781,45 @@
       <li><strong>🧠 N</strong>: ci sono N <a href="#superanalisi-risultati">risultati delle AI esterne</a> salvati per l'asta.</li>
       <li><strong>⚖️ Pulita / Gestibile / Complessa / Da scartare</strong> (verde, blu, terracotta, rosso): il
         <a href="#superanalisi-classe">giudizio della Superanalisi</a>, calcolato nel registro con lo stesso motore e le stesse regole fisse sui fatti
-        della perizia (stessa classe che vedi aprendo la Superanalisi). Passandoci sopra col mouse si leggono i primi motivi. Compare anche in alto nei
-        dettagli e come riga "Giudizio Superanalisi" nel confronto. Solo per le aste con analisi v2. È <strong>diverso dal punteggio del sigillo</strong>,
+        della perizia (stessa classe che vedi aprendo la Superanalisi). Passandoci sopra col mouse si leggono i primi motivi; sulla card, sotto
+        l'offerta massima, la riga "Perché …" riporta il primo motivo anche sul telefono (<a href="#registro-offerta-massima">dettagli</a>). Compare anche in alto nei
+        dettagli e come riga "Giudizio Superanalisi" nel confronto. Solo per le aste con analisi v2. È <strong>diverso dal punteggio AI del sigillo</strong>,
         che è il voto dell'AI sulla perizia: i due possono non coincidere (es. 82 e "Complessa").</li>
     </ul>
+  </section>
+
+  <section class="voce" id="registro-offerta-massima">
+    <h3>Offerta massima, spazio e "Perché" (card e dettagli)</h3>
+    <p>Dal 04/10/2026 la card e la scheda mettono davanti il numero che decide l'acquisto, preso dal <a href="#superanalisi-conto">conto della Superanalisi</a>:
+      stesso motore, stessi parametri (utile e minimo prudenziale, prima casa, che imposti in Superanalisi e restano su ogni dispositivo per conto suo; regime
+      fiscale da <a href="#config-conti">Configurazione → Conti</a>) e le tue correzioni. Se cambi i parametri in Superanalisi, tornando al registro i
+      numeri si ricalcolano. Nessuna formula del motore o dei costi è stata cambiata (solo due divisioni per mostrare i €/mq), nessun costo Gemini. Solo per le
+      aste con <strong>analisi v2</strong>.</p>
+    <ul>
+      <li><strong>Offerta massima consigliata</strong>: il prezzo più alto che lascia l'utile impostato (il più basso tra scenario centrale e prudenziale: vedi
+        <a href="#superanalisi-offerta-massima">Offerta massima e margine sull'offerta minima</a>). Accanto, "minima € Y": l'offerta minima dell'asta. "non
+        raggiungibile" = a nessun prezzo si arriva all'utile richiesto; "—" = il conto non si può fare (per esempio si vende solo una quota, o manca il valore
+        di rivendita), con la spiegazione sotto. Se l'offerta minima non è stata letta dal PVP si legge "Offerta minima non letta dal PVP": l'offerta
+        massima c'è, lo spazio no.</li>
+      <li><strong>Spazio</strong>: offerta massima − offerta minima. Colore principale e "Spazio +€ X" = l'offerta minima sta sotto la massima, puoi anche
+        rilanciare di X; rosso e "Mancano € X all'offerta minima" = già al minimo non raggiungi l'obiettivo. "· da scartare" e numero barrato = il
+        giudizio è Da scartare: la sola offerta massima è barrata (non l'offerta minima), il numero c'è ma non va fidato. È il criterio dell'<a href="#registro-ordinamento">ordinamento
+        predefinito</a>.</li>
+      <li><strong>€/mq su N mq: offerta … · rivendita … (fonte)</strong>: offerta minima e valore di rivendita (scenario centrale) divisi per la superficie commerciale
+        usata dal conto (N mq), per vedere a colpo d'occhio se compri molto sotto il mercato. Fonte del valore di rivendita, in ordine di precedenza:
+        <em>comparabili</em> (solo se in Superanalisi hai spuntato "Usa i comparabili come valore di rivendita"), <em>tuo valore</em>, <em>OMI</em> (la quotazione
+        della zona dell'asta), <em>quotazioni citate dal perito</em> (se la perizia ne riporta e manca l'OMI), <em>valore del perito</em> (solo con perizia
+        recente, affidabilità bassa). La superficie del conto può differire da quella di "€/mq (offerta)" nelle cifre: per questo qui si scrive quanti mq sono.</li>
+      <li><strong>Perché …</strong> (card): il primo motivo del <a href="#superanalisi-classe">giudizio</a>, con "· N motivi" accanto alla parola "Perché" se ce ne
+        sono altri (passandoci sopra col mouse si leggono tutti; nei dettagli sono tutti in elenco). Per le aste Pulite: "nessun segnale rosso nella perizia".</li>
+      <li><strong>Margine lordo (senza costi)</strong>: resta, in piccolo, sotto; vedi <a href="#registro-margine">Margine lordo</a>.</li>
+    </ul>
+    <p><strong>Nei dettagli</strong>, la prima sezione "Perché" riporta: lo stesso blocco dell'offerta massima; la frase del verdetto (se c'è lo spazio); i
+      <em>motivi del giudizio</em> in elenco; <em>come si arriva al numero</em> (valore di rivendita e sua fonte e affidabilità, quale scenario fissa l'offerta
+      massima, qualità dei dati della perizia da A a D); <em>da controllare</em> (gli avvisi del conto); "✅ Ideale per iniziare" quando l'asta è Pulita, con spazio
+      non negativo, qualità dei dati A o B e rivendita non a bassa affidabilità (l'altra condizione del motore, "in zona", oggi non filtra nulla perché non c'è
+      un elenco di comuni obiettivo); e il link al conto completo. Le aste senza analisi v2 mostrano "Perché nessun giudizio": giudizio e offerta massima si
+      calcolano solo con l'analisi v2 della perizia. La sezione compare anche nella scheda stampata o salvata in PDF.</p>
   </section>
 
   <section class="voce" id="registro-tentativo">
@@ -788,6 +849,10 @@
       possono avere segno opposto. Nei dettagli, sotto il numero, "Conto completo in Superanalisi →" apre il conto dell'asta. Stesso nome nei messaggi
       Telegram, nel confronto, nella mappa e in Statistiche ("Margine lordo medio"); nel CSV la colonna resta "Margine stimato", per non cambiare i
       fogli che lo usano.</p>
+    <p>Sulla card, dal 04/10/2026, sta in piccolo sotto l'<a href="#registro-offerta-massima">offerta massima</a> ("Margine lordo (senza costi)"); nelle aste senza
+      analisi v2 è l'unico numero e compare attenuato. Prima stava in grande, ma è positivo in quasi tutte le aste (nello snapshot del 28/09: 497 su 520
+      con un valore di stima) e non distingue le buone dalle altre. Può anche essere sballato: una perizia condivisa tra più lotti, con il valore
+      dell'intero complesso letto come se fosse di un solo lotto, dà margini senza senso: diffida dei valori molto grandi.</p>
     <p>È calcolato dallo scanner al momento dell'analisi e salvato; la pagina lo mostra così com'è. È un indicatore <strong>grezzo</strong> per
       confrontare le aste: <strong>non</strong> sottrae imposte, ristrutturazione, spese condominiali, compenso del delegato, rilanci. Non tiene conto
       delle correzioni che fai a rendita e spese condominiali. Vuoto se il valore di stima manca. Il conto completo è nella
@@ -944,16 +1009,18 @@
     <ul>
       <li>punteggio, "Lotto X · tipologia", indirizzo, badge (nuova, visita, tentativo…) e data di vendita;</li>
       <li>stella, scarto, condividi, stampa (ed espandi su PC); sul telefono stanno in una riga sotto l'indirizzo, con la ✕ di chiusura in alto a destra;</li>
-      <li><strong>indice delle sezioni</strong>: Cifre · Descrizione · Rischi · Visita · Operazione · Storico · Dettagli · Costi · Lavori · Mappa · AI · Link e foto
+      <li><strong>indice delle sezioni</strong>: Perché · Cifre · Descrizione · Rischi · Visita · Operazione · Storico · Dettagli · Costi · Lavori · Mappa · AI · Link e foto
         (solo quelle presenti per l'asta); toccandone una la scheda scorre lì. La voce della sezione che stai guardando è evidenziata (scura) e
         cambia da sola mentre scorri; in fondo alla scheda resta evidenziata la voce toccata. Sul telefono l'indice scorre di lato e tiene a vista la
-        voce evidenziata; su PC sta su una riga (va su più righe solo se la finestra è più stretta della scheda);</li>
+        voce evidenziata; su PC sta su una riga (va su più righe se la finestra è più stretta della scheda o se le sezioni presenti sono quasi tutte: sono 13);</li>
       <li>scorrendo la scheda l'intestazione si riduce (restano punteggio, indirizzo, stella, scarto e indice) per lasciare spazio al contenuto.</li>
     </ul>
     <p><strong>Azioni rapide</strong>, subito sotto: "PVP" (annuncio), "Perizia" (o "Documento" se l'AI ha letto un altro documento), "📷 Foto" (porta
       ai <a href="#registro-link-utili">link e foto</a>), "Superanalisi" e "🧠 N" (porta ai risultati delle AI, se ce ne sono). Poi la nota personale.</p>
     <p><strong>Sezioni</strong>, nell'ordine in cui servono per decidere:</p>
     <ul>
+      <li>⚖️ <a href="#registro-offerta-massima">Perché</a> (dal 04/10/2026): offerta massima, spazio, giudizio con i motivi, come si arriva al numero e cosa
+        controllare; per le aste senza analisi v2 spiega perché mancano;</li>
       <li>Cifre: Margine lordo (con "Conto completo in Superanalisi →"), Offerta minima, Valore stima, Stato occupazione;</li>
       <li>📝 Descrizione del lotto (che cosa compri: piano, vani, pertinenze, stato): le prime 4 righe, con "Mostra tutto" se è più lunga ("Mostra
         meno" la richiude; in stampa è sempre intera);</li>
@@ -1129,7 +1196,7 @@
     <ul>
       <li>Mostra tutte le aste filtrate. Posizione: coordinate dell'annuncio; se mancano, il centro del comune (tra circa 33 comuni del Catanese), con un
         piccolo spostamento per non sovrapporre i punti e la scritta "Posizione approssimata (centro comune)" nel popup.</li>
-      <li>Colori come il <a href="#registro-sigillo">sigillo</a>; anello attorno alle aste nuove (24 ore). Legenda: Punteggio alto/medio/basso, Non valutato, Nuova (24h).</li>
+      <li>Colori come il <a href="#registro-sigillo">sigillo</a>; anello attorno alle aste nuove (24 ore). Legenda: Punteggio AI alto/medio/basso, Non valutato, Nuova (24h).</li>
       <li><strong>Preferite e scartate sono nascoste</strong> per non riaprirle per errore: "⭐/🚫 sulla mappa" le rimostra con un distintivo.</li>
       <li>"✨ Solo nuove": solo le aste inserite nelle ultime 24 ore.</li>
       <li>La mappa si adatta ai risultati finché non la sposti o zoomi a mano. Sotto compare quante aste non sono mostrate e perché.</li>
@@ -1474,7 +1541,7 @@
 
   <section class="voce" id="config-conti">
     <h3>Regime fiscale e conti (scheda Conti)</h3>
-    <p>Valgono per la Superanalisi (singola e di gruppo), lo spazio sull'offerta del registro e il <a href="#registro-operazione">conto reale</a>
+    <p>Valgono per la Superanalisi (singola e di gruppo), l'<a href="#registro-offerta-massima">offerta massima e lo spazio sull'offerta</a> del registro e il <a href="#registro-operazione">conto reale</a>
       delle operazioni. La card mostra il riepilogo; "Modifica" apre la finestra con i valori salvati e "Salva" li rende validi da subito nelle
       pagine che apri o ricarichi.</p>
     <ul>
@@ -1788,8 +1855,8 @@
         tutti (con un avviso). Con meno di 3 comparabili compare un avviso.</li>
       <li>"Importa dai link dell'asta" aggiunge una riga per ogni link salvato nei dettagli dell'asta nel registro (serve aver aperto il registro su
         questo dispositivo); mq, prezzo e stato li aggiungi tu.</li>
-      <li>"Usa i comparabili come valore di rivendita" li rende la prima fonte del conto, qui, nella Superanalisi di gruppo, nello spazio
-        sull'offerta del registro e nella stima salvata all'offerta. "Salva" li memorizza nel database (al massimo 30), "Cancella tutti" li toglie.
+      <li>"Usa i comparabili come valore di rivendita" li rende la prima fonte del conto, qui, nella Superanalisi di gruppo, nell'offerta massima e
+        nello spazio sull'offerta del registro e nella stima salvata all'offerta. "Salva" li memorizza nel database (al massimo 30), "Cancella tutti" li toglie.
         Le modifiche finiscono nella <a href="#sistema-cronologia">cronologia</a> e un'asta con comparabili conta come "con i tuoi dati" in
         <a href="#config-manutenzione">Elimina aste scadute</a>.</li>
     </ul>
@@ -2287,8 +2354,8 @@
   </section>
 
   <section class="voce" id="analisi-score">
-    <h3>Punteggio (score flipping 1-100)</h3>
-    <p>Quanto l'operazione "compra all'asta, ristruttura, rivendi" sembra <strong>pulita e con margine</strong>, secondo l'AI, dopo aver estratto i fatti.
+    <h3>Punteggio AI (score flipping 1-100)</h3>
+    <p>Nel registro si chiama "Punteggio AI" (in Statistiche resta "Punteggio medio", nel CSV "Punteggio", nel database "score_flipping"). Quanto l'operazione "compra all'asta, ristruttura, rivendi" sembra <strong>pulita e con margine</strong>, secondo l'AI, dopo aver estratto i fatti.
       Considera: valore del CTU rispetto a prezzo base e offerta minima, occupazione e contratti, difformità e costi, condono, pesi non cancellabili, quota,
       stato manutentivo, discordanze e rischi.</p>
     <p>È un <strong>voto dell'AI</strong>, non il conto: per questo nelle card compare anche il
@@ -2651,8 +2718,10 @@
     <ul>
       <li><strong>Flipping</strong>: comprare, ristrutturare e rivendere in tempi brevi.</li>
       <li><strong>ARV</strong> (After Repair Value): valore di rivendita dopo i lavori.</li>
-      <li><strong>MAX BID / offerta massima</strong>: il prezzo più alto che rispetta gli obiettivi di utile.</li>
-      <li><strong>Headroom</strong> ("margine sull'offerta minima"): offerta massima − offerta minima.</li>
+      <li><strong>MAX BID / offerta massima</strong>: il prezzo più alto che rispetta gli obiettivi di utile (nel registro: <a href="#registro-offerta-massima">Offerta massima consigliata</a>).</li>
+      <li><strong>Headroom</strong> ("margine sull'offerta minima"): offerta massima − offerta minima. Nel registro si chiama <strong>spazio sull'offerta</strong>.</li>
+      <li><strong>Punteggio AI</strong> (voto dato dall'AI leggendo la perizia) e <strong>giudizio</strong> (Pulita…Da scartare, regole fisse) sono due cose diverse
+        dal conto: il conto è l'offerta massima.</li>
       <li><strong>Holding / costi di detenzione</strong>: costi mensili mentre possiedi l'immobile (IMU, utenze, condominio, assicurazione).</li>
       <li><strong>ROI / rendimento sul capitale</strong>: utile diviso capitale investito.</li>
       <li><strong>Scenario prudenziale / centrale / ottimistico</strong>: tre ipotesi su prezzo di vendita, lavori e tempi.</li>
@@ -2803,7 +2872,8 @@
   <section class="voce" id="faq-confrontare">
     <h3>Come scelgo le migliori tra molte aste?</h3>
     <ol>
-      <li>Nel registro filtra per punteggio, tipo e occupazione e metti la stella a quelle interessanti.</li>
+      <li>Nel registro le aste si aprono già ordinate per <a href="#registro-offerta-massima">spazio sull'offerta</a> (le prime sono quelle dove l'offerta
+        massima supera di più l'offerta minima), con "Abitazioni" preselezionata: filtra per giudizio e occupazione e metti la stella a quelle interessanti.</li>
       <li>Seleziona 2-10 aste e apri la <a href="#gruppo">Superanalisi di gruppo</a>: classifica con il nostro conto.</li>
       <li>Passa il prompt di gruppo a un'AI con ricerca web per i prezzi di vendita reali della zona.</li>
       <li>Per le 2-3 migliori apri la Superanalisi singola, controlla la perizia, inserisci il tuo valore di rivendita e chiedi la seconda opinione con la perizia allegata.</li>
