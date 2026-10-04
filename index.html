@@ -2728,7 +2728,7 @@
         <p class="stat-etichetta">Aste nel registro</p>
         <p class="stat-valore" id="stat-totale">—</p>
       </div>
-      <div class="stat-compatta" title="Aste attive, di tutte le tipologie, con analisi v2 dove l'offerta massima consigliata arriva almeno all'offerta minima (spazio sull'offerta ≥ 0). Esclusi: giudizio Da scartare, scartate da te e concluse.">
+      <div class="stat-compatta" title="Aste attive, di tutte le tipologie, con analisi v2 dove l'offerta massima consigliata arriva almeno all'offerta minima (spazio sull'offerta ≥ 0). Esclusi: giudizio Da scartare, rivendita fuori scala rispetto al valore del perito, scartate da te e concluse.">
         <p class="stat-etichetta">Con spazio sull'offerta</p>
         <p class="stat-valore" id="stat-spazio">—</p>
       </div>
@@ -2742,7 +2742,7 @@
         <p class="stat-etichetta">Nel registro</p>
         <p class="stat-valore" id="stat-totale-mobile">—</p>
       </div>
-      <div class="stat-mobile-ibrida" title="Aste attive, di tutte le tipologie, con analisi v2 dove l'offerta massima arriva almeno all'offerta minima (esclusi Da scartare, scartate e concluse)">
+      <div class="stat-mobile-ibrida" title="Aste attive, di tutte le tipologie, con analisi v2 dove l'offerta massima arriva almeno all'offerta minima (esclusi Da scartare, rivendita fuori scala, scartate e concluse)">
         <p class="stat-etichetta">Con spazio</p>
         <p class="stat-valore" id="stat-spazio-mobile">—</p>
       </div>
@@ -5957,6 +5957,11 @@
     if (/^proxy/i.test(f)) return "valore del perito";
     return "";
   }
+  // Guardia "fuori scala" (04/10/2026): se la rivendita del conto, presa dall'OMI del database, è almeno N volte il
+  // valore di mercato del perito, quasi certamente zona OMI, superficie o categoria sono sbagliate (misurato su 169
+  // abitazioni: solo 3 sopra 5×, tra cui le due con lo spazio più alto; le altre stanno al massimo a 4,5×).
+  // Non cambia nessun numero: l'asta resta visibile, ma non conta in "Con spazio" e va in fondo all'ordinamento per spazio.
+  const SOGLIA_RIVENDITA_FUORI_SCALA = 5;
   function sintesiOccasione(a) {
     if (a._sintesi !== undefined) return a._sintesi;
     a._sintesi = null;
@@ -5978,7 +5983,17 @@
           euroMqOfferta: mq && minima ? Math.round(minima / mq) : null,
           euroMqRivendita: mq && rivendita > 0 ? Math.round(rivendita / mq) : null,
           fonteRivendita: esito.arv ? nomeFonteRivendita(esito.arv.fonte, a) : "",
+          // + fuoriScala, rapportoPerito, valorePerito (guardia, qui sotto): solo con fonte OMI e valore di mercato del perito
         };
+        // La guardia ha un try proprio: un guasto qui non deve azzerare la sintesi dell'asta.
+        try {
+          const p = a._sintesi.calcolabile && a._sintesi.fonteRivendita === "OMI" && rivendita > 0 ? datiPerito(a) : null;
+          if (p && p.mercato > 0) {
+            a._sintesi.rapportoPerito = rivendita / p.mercato;
+            a._sintesi.valorePerito = p.mercato;
+            a._sintesi.fuoriScala = a._sintesi.rapportoPerito >= SOGLIA_RIVENDITA_FUORI_SCALA;
+          }
+        } catch (e) { /* guardia solo informativa */ }
       }
     } catch (e) { a._sintesi = null; }
     return a._sintesi;
@@ -6109,6 +6124,17 @@
     return `<p class="lotto-offerta-riga riga-perito">${pc.quotazioni || pc.valore ? `Perito: confronto non valido (${motivo})` : "Nessun confronto col perito"}</p>`;
   }
 
+  // Guardia "fuori scala": una riga rossa sulla card (al posto di "Col perito") e una voce in "Da controllare" nella scheda.
+  function moltiplicatoreTesto(r) { return String(Math.round(r * 10) / 10).replace(".", ","); }
+  function rigaFuoriScala(s) {
+    return s && s.fuoriScala ? `<p class="lotto-offerta-riga riga-perito ko">⚠ Rivendita ${moltiplicatoreTesto(s.rapportoPerito)}× il valore del perito: da verificare</p>` : "";
+  }
+  function avvisiFuoriScala(s) {
+    return s && s.fuoriScala
+      ? [`La rivendita del conto (${formattaEuro(s.esito.arv.centrale)}, OMI) è ${moltiplicatoreTesto(s.rapportoPerito)} volte il valore di mercato del perito (${formattaEuro(s.valorePerito)}): zona OMI, superficie o categoria potrebbero essere sbagliate. ${s.spazio !== null && s.spazio >= 0 ? 'Lo spazio non conta nel contatore "Con spazio" e l\'asta' : "L'asta"} va in fondo all'ordinamento per spazio.`]
+      : [];
+  }
+
   // Blocco della scheda "Perché": le cifre complete dei due controlli.
   function bloccoControlloPerito(a, s) { try { return bloccoControlloPeritoCalcolato(a, s); } catch (e) { return ""; } }
   function bloccoControlloPeritoCalcolato(a, s) {
@@ -6148,7 +6174,7 @@
   // Firma dei numeri del conto e firma di quelli che la scheda aperta sta mostrando (riquadroPerche): al ritorno
   // con Indietro la scheda si ridisegna solo se il conto è cambiato (non si perdono i campi non salvati).
   const CONTO_MOSTRATO = new Map();
-  function firmaConto(s) { return s ? JSON.stringify([s.classe, s.calcolabile, s.offertaMassima, s.spazio, s.euroMqRivendita]) : ""; }
+  function firmaConto(s) { return s ? JSON.stringify([s.classe, s.calcolabile, s.offertaMassima, s.spazio, s.euroMqRivendita, !!s.fuoriScala]) : ""; }
   // Come firmaConto, più i numeri dei controlli col perito (cambiano con i parametri anche quando il conto principale resta uguale).
   function firmaContoAsta(a) {
     const s = sintesiOccasione(a), pc = s ? controlloPerito(a) : null;
@@ -6159,7 +6185,7 @@
   // Le due cifre sul conto in testata (04/10/2026; prima "Punteggio più alto" e
   // "Margine positivo", quasi sempre positivi e quindi inutili per decidere):
   // aste attive, non scartate, con analisi v2, di ogni tipologia, con spazio
-  // sull'offerta ≥ 0 (esclusi i Da scartare) e con giudizio Pulita o Gestibile.
+  // sull'offerta ≥ 0 (esclusi i Da scartare e la rivendita "fuori scala") e con giudizio Pulita o Gestibile.
   // Dal conto in memoria (sintesiOccasione). Richiamata da renderizza e da
   // aggiornaCardSingola (stella, scarto e correzioni cambiano chi conta).
   function aggiornaContatoriConto() {
@@ -6168,7 +6194,7 @@
       if (astaConclusa(a.dataVendita) || a.scartato) continue;
       const s = sintesiOccasione(a);
       if (!s) continue;
-      if (s.calcolabile && s.spazio !== null && s.spazio >= 0 && s.classe !== "DA_SCARTARE") conSpazio++;
+      if (s.calcolabile && s.spazio !== null && s.spazio >= 0 && s.classe !== "DA_SCARTARE" && !s.fuoriScala) conSpazio++;
       if (s.classe === "PULITA" || s.classe === "GESTIBILE") pulite++;
     }
     document.getElementById("stat-spazio").textContent = conSpazio;
@@ -6200,6 +6226,7 @@
     else if (s.offertaMassima === null) tono = "negativa";
     else if (s.spazio === null) tono = "neutra";
     else if (s.spazio < 0) tono = "negativa";
+    if (s.fuoriScala && tono === "") tono = "neutra";   // spazio positivo ma non affidabile: grigio, non blu
     const valore = !s.calcolabile ? "—" : s.offertaMassima === null ? "non raggiungibile" : formattaEuro(s.offertaMassima);
     let spazio;
     if (!s.calcolabile) spazio = "Conto non possibile";
@@ -6207,6 +6234,7 @@
     else if (s.spazio === null) spazio = "Offerta minima non letta dal PVP";
     else spazio = s.spazio >= 0 ? `Spazio +${formattaEuro(s.spazio)}` : `Mancano ${formattaEuro(-s.spazio)} all'offerta minima`;
     if (scartata && s.calcolabile) spazio += " · da scartare";
+    else if (s.fuoriScala && s.calcolabile && s.spazio !== null && s.spazio >= 0) spazio += " · da verificare";
     // La superficie è quella del conto (commerciale): può differire da quella di "€/mq (offerta)" nelle cifre, per questo si scrive.
     const riga = s.euroMqOfferta && s.euroMqRivendita
       ? `€/mq su ${Math.round(s.mq)} mq: offerta ${formattaEuro(s.euroMqOfferta)} · rivendita ${formattaEuro(s.euroMqRivendita)}${s.fonteRivendita ? " (" + escapeHtml(s.fonteRivendita) + ")" : ""}` : "";
@@ -6219,7 +6247,7 @@
           <p class="lotto-margine-valore lotto-offerta-valore"><span class="lotto-offerta-importo">${valore}</span>${s.calcolabile && s.offertaMinima ? `<span class="lotto-offerta-minima">minima ${formattaEuro(s.offertaMinima)}</span>` : ""}</p>
           <p class="lotto-spazio">${escapeHtml(spazio)}</p>
           ${riga ? `<p class="lotto-offerta-riga">${riga}</p>` : ""}
-          ${opzioni.motivo ? rigaPeritoCard(a, s) : ""}
+          ${opzioni.motivo ? (rigaFuoriScala(s) || rigaPeritoCard(a, s)) : ""}
           ${!s.calcolabile ? `<p class="lotto-offerta-riga">${escapeHtml(String(s.esito.verdetto || "").replace(/^(NON CALCOLABILE|CALCOLO NON AFFIDABILE):\s*/, ""))}</p>` : ""}
           ${opzioni.motivo ? `<p class="lotto-perche" title="${escapeAttributo(s.motivi.length ? s.motivi.join("; ") : "Nessun segnale rosso nella perizia")}"><strong>Perché ${NOMI_GIUDIZIO[s.classe] ? escapeHtml(NOMI_GIUDIZIO[s.classe].toLowerCase()) : "questo giudizio"}${altriMotivi}:</strong> ${primo}</p>` : ""}
           ${opzioni.lordo ? `<p class="lotto-margine-lordo" title="Valore del perito − offerta minima − sanatoria: prima di imposte, lavori, tempi e vendita.">Margine lordo (senza costi) ${lordo}</p>` : ""}
@@ -6269,7 +6297,7 @@
     const verdetto = String(e.verdetto || "").replace(/^(PULITA|GESTIBILE|COMPLESSA)\b/, m => NOMI_GIUDIZIO[m]);
     const elenco = voci => `<ul class="perche-elenco">${voci.map(v => `<li>${escapeHtml(v)}</li>`).join("")}</ul>`;
     const conto = [];
-    const avvisi = (e.avvisi || []).slice(0, 8).concat(avvisiStoria(a, true));
+    const avvisi = avvisiFuoriScala(s).concat((e.avvisi || []).slice(0, 8), avvisiStoria(a, true));
     // Senza conto possibile non c'è un "numero" da spiegare: le righe sulla rivendita e sulla qualità vanno in "Da controllare".
     const dove = s.calcolabile ? conto : avvisi;
     if (e.arv) {
@@ -6298,7 +6326,7 @@
           ${bloccoOffertaMassima(a, {})}
           ${bloccoControlloPerito(a, s)}
           ${s.calcolabile && s.spazio !== null ? `<p class="perche-verdetto">${escapeHtml(verdetto)}</p>` : ""}
-          ${e.idealePerIniziare ? `<p class="perche-verdetto"><strong>✅ Ideale per iniziare</strong>: pulita, spazio sull'offerta, dati buoni.</p>` : ""}
+          ${e.idealePerIniziare && !s.fuoriScala ? `<p class="perche-verdetto"><strong>✅ Ideale per iniziare</strong>: pulita, spazio sull'offerta, dati buoni.</p>` : ""}
           <p class="perche-sottotitolo">Motivi del giudizio</p>
           ${s.motivi.length ? elenco(s.motivi) : `<p class="perche-verdetto">Nessun segnale rosso nella perizia.</p>`}
           ${conto.length ? `<p class="perche-sottotitolo">Come si arriva al numero</p>${elenco(conto)}` : ""}
@@ -6592,10 +6620,10 @@
                  inFondo: a => !giudizioSuperanalisi(a),
                  comparatore: (a, b) => (valoreGiudizio(a) - valoreGiudizio(b)) || (a.punteggio - b.punteggio) },
     // Tre gruppi (inFondo vale 0, 1 o 2): prima le aste con un numero valido, poi quelle col
-    // giudizio Da scartare (il numero c'è ma non conta), poi quelle senza numero (senza analisi
+    // giudizio Da scartare o con la rivendita "fuori scala" (il numero c'è ma non conta), poi quelle senza numero (senza analisi
     // v2 o conto impossibile), che restano in ordine di punteggio AI e non in ordine casuale.
     spazio:    { etichetta: "Spazio sull'offerta", etichettaBreve: "Spazio", ascLabel: "meno → più", descLabel: "più → meno", direzioneDefault: "desc",
-                 inFondo: a => { const s = sintesiOccasione(a); return !s || s.spazio === null ? 2 : s.classe === "DA_SCARTARE" ? 1 : 0; },
+                 inFondo: a => { const s = sintesiOccasione(a); return !s || s.spazio === null ? 2 : (s.classe === "DA_SCARTARE" || s.fuoriScala) ? 1 : 0; },
                  comparatore: (a, b) => ((spazioSullOfferta(a) ?? 0) - (spazioSullOfferta(b) ?? 0)) || (a.punteggio - b.punteggio) },
     prezzo:    { etichetta: "Offerta", ascLabel: "bassa → alta", descLabel: "alta → bassa", direzioneDefault: "asc",
                  comparatore: (a, b) => a.offertaMinima - b.offertaMinima },
@@ -7088,7 +7116,7 @@
     // primaria, il criterio scelto resta il comparatore secondario.
     // Per Giudizio e Spazio sull'offerta le aste senza analisi v2 vanno in fondo
     // in entrambe le direzioni (subito dopo le scartate come chiave); per Spazio
-    // inFondo ha tre livelli: numero valido (0), Da scartare (1), senza numero (2).
+    // inFondo ha tre livelli: numero valido (0), Da scartare o rivendita fuori scala (1), senza numero (2).
     const inFondo = definizione.inFondo || (() => false);
     filtrate.sort((a, b) => (a.scartato - b.scartato) || (inFondo(a) - inFondo(b)) || segno * definizione.comparatore(a, b));
     if (filtroSoloVisiteAttivo || filtroSoloOperazioniAttivo) {

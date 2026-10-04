@@ -586,10 +586,11 @@
       <li>Gli importi in euro hanno sempre il punto delle migliaia, anche a 4 cifre ("€ 1.500"), in tutte le pagine; il CSV resta con i numeri senza punti.</li>
       <li><strong>Aste nel registro</strong>: "N attive di TOT" (attive = vendita oggi o futura, o senza data); con "Concluse" attivo, "N concluse di TOT".</li>
       <li><strong>Con spazio sull'offerta</strong> (sul telefono "Con spazio"): quante aste attive hanno l'<a href="#registro-offerta-massima">offerta massima</a>
-        almeno pari all'offerta minima (spazio sull'offerta ≥ 0). Contano solo le aste con analisi v2; non contano quelle con giudizio "Da scartare", quelle
-        scartate da te e le concluse. Dal 04/10/2026 sostituisce "Punteggio più alto".</li>
+        almeno pari all'offerta minima (spazio sull'offerta ≥ 0). Contano solo le aste con analisi v2; non contano quelle con giudizio "Da scartare", quelle con la
+        rivendita <a href="#registro-offerta-massima">"fuori scala" rispetto al valore del perito</a>, quelle scartate da te e le concluse. Dal 04/10/2026 sostituisce
+        "Punteggio più alto".</li>
       <li><strong>Pulite o Gestibili</strong> (sul telefono "Pulite/Gestib."): quante aste attive hanno il
-        <a href="#superanalisi-classe">giudizio</a> Pulita o Gestibile (stesse esclusioni). Dal 04/10/2026 sostituisce "Margine positivo", che era positivo in
+        <a href="#superanalisi-classe">giudizio</a> Pulita o Gestibile (non contano le scartate da te e le concluse; la rivendita "fuori scala" invece conta, perché il giudizio non dipende dall'OMI). Dal 04/10/2026 sostituisce "Margine positivo", che era positivo in
         quasi tutte le aste e non aiutava a scegliere.</li>
       <li>Questi tre numeri sono calcolati su <strong>tutte</strong> le aste, di ogni tipologia, ignorando i filtri (anche "Abitazioni", preselezionato
         all'apertura: i due numeri sull'offerta massima possono quindi contare aste che l'elenco, ancora filtrato, non mostra). Sotto la barra: "N di TOT aste
@@ -700,7 +701,7 @@
     <p>Cliccare il criterio già attivo inverte la direzione. Le aste <strong>scartate vanno sempre in fondo</strong>, qualunque criterio. Con "Giudizio" vanno
       in fondo, in tutte e due le direzioni, anche le aste <strong>senza analisi v2</strong> (non hanno giudizio né conto).</p>
     <p><strong>"Spazio sull'offerta"</strong> (l'ordine con cui si apre il registro) mette in <strong>tre gruppi</strong>, in tutte e due le direzioni: prima le
-      aste con un numero valido; poi quelle col giudizio <strong>Da scartare</strong> (il numero c'è, ma non conta); in fondo quelle senza numero, cioè
+      aste con un numero valido; poi quelle col giudizio <strong>Da scartare</strong> o con la rivendita <a href="#registro-offerta-massima">fuori scala</a> rispetto al valore del perito (il numero c'è, ma non conta); in fondo quelle senza numero, cioè
       senza analisi v2, o per cui il conto non si può fare (per esempio una quota parziale o senza valore di rivendita), o con l'offerta minima non letta
       dal PVP (lo spazio non si calcola), che restano in ordine di punteggio AI. Tra le aste con un numero valido l'ordine segue la cifra "spazio" (offerta massima − offerta minima), anche per i "non raggiungibile": lì
       conta l'offerta minima (la card non mostra questa cifra). Il conto si fa una volta per asta e resta in memoria; si rifà se cambi i parametri in
@@ -802,7 +803,7 @@
     <p>Dal 04/10/2026 la card e la scheda mettono davanti il numero che decide l'acquisto, preso dal <a href="#superanalisi-conto">conto della Superanalisi</a>:
       stesso motore, stessi parametri (utile e minimo prudenziale, prima casa, che imposti in Superanalisi e restano su ogni dispositivo per conto suo; regime
       fiscale da <a href="#config-conti">Configurazione → Conti</a>) e le tue correzioni. Se cambi i parametri in Superanalisi, tornando al registro i
-      numeri si ricalcolano. Nessuna formula del motore o dei costi è stata cambiata (solo due divisioni per mostrare i €/mq), nessun costo Gemini. Solo per le
+      numeri si ricalcolano. Nessuna formula del motore o dei costi è stata cambiata (solo le divisioni per mostrare i €/mq e i rapporti col valore del perito), nessun costo Gemini. Solo per le
       aste con <strong>analisi v2</strong>.</p>
     <ul>
       <li><strong>Offerta massima consigliata</strong>: il prezzo più alto che lascia l'utile impostato (il più basso tra scenario centrale e prudenziale: vedi
@@ -815,6 +816,15 @@
         rilanciare di X; rosso e "Mancano € X all'offerta minima" = già al minimo non raggiungi l'obiettivo. "· da scartare" e numero barrato = il
         giudizio è Da scartare: la sola offerta massima è barrata (non l'offerta minima), il numero c'è ma non va fidato. È il criterio dell'<a href="#registro-ordinamento">ordinamento
         predefinito</a>.</li>
+      <li><strong>⚠ Rivendita N× il valore del perito: da verificare</strong> (card, dal 04/10/2026; se lo spazio è positivo e il giudizio non è Da scartare, accanto allo spazio compare "· da verificare" e spazio e offerta massima diventano grigi):
+        scatta quando la rivendita del conto, presa dall'<strong>OMI del database</strong>, è <strong>almeno 5 volte</strong> il valore di mercato del perito.
+        Di solito indica zona OMI, superficie o categoria sbagliate (esempi veri: coordinate del PVP al centro di un comune turistico per un immobile in campagna,
+        con una zona da 3.700-5.500 €/mq; 369 mq di corte contati dal perito come abitazione). Non cambia nessun numero e non nasconde l'asta, ma lo spazio <strong>non
+        conta</strong> nel contatore "Con spazio sull'offerta", l'asta va in fondo all'<a href="#registro-ordinamento">ordinamento per spazio</a> (nel gruppo delle Da
+        scartare) e nella scheda, in "Da controllare", c'è la spiegazione con i due valori; non compare "Ideale per iniziare". La soglia (5) è stata scelta su
+        169 abitazioni: solo 3 stavano sopra, mentre le altre erano al massimo a 4,5; con pochi dati è una segnalazione, non una prova. Non scatta se la rivendita non
+        viene dall'OMI (comparabili, tuo valore, quotazioni o valore del perito) né senza il valore di mercato del perito. La guardia non guarda lo stato dell'immobile né l'età della perizia e la soglia è stata misurata solo su abitazioni.
+        Sulla card compare al posto della riga "Col perito", e anche dove questa non ci sarebbe (spazio negativo o giudizio Da scartare).</li>
       <li><strong>€/mq su N mq: offerta … · rivendita … (fonte)</strong>: offerta minima e valore di rivendita (scenario centrale) divisi per la superficie commerciale
         usata dal conto (N mq), per vedere a colpo d'occhio se compri molto sotto il mercato. Fonte del valore di rivendita, in ordine di precedenza:
         <em>comparabili</em> (solo se in Superanalisi hai spuntato "Usa i comparabili come valore di rivendita"), <em>tuo valore</em>, <em>OMI</em> (la quotazione
@@ -824,7 +834,7 @@
         sono altri (passandoci sopra col mouse si leggono tutti; nei dettagli sono tutti in elenco). Per le aste Pulite: "nessun segnale rosso nella perizia".</li>
       <li><strong>Col perito …</strong> (card, dal 04/10/2026): una riga in più, solo per le aste con spazio non negativo e giudizio diverso da Da scartare.
         Ricontrolla il conto con due numeri presi dalla perizia. È <strong>solo un'informazione</strong>: non cambia offerta massima, giudizio, ordine
-        né contatori. <em>quotazioni +€ X</em>: rifacendo il conto con le quotazioni di mercato (OMI o simili) citate dal perito al posto dell'OMI del
+        né contatori (l'unica eccezione è la guardia "fuori scala" descritta sopra). <em>quotazioni +€ X</em>: rifacendo il conto con le quotazioni di mercato (OMI o simili) citate dal perito al posto dell'OMI del
         database, lo spazio sarebbe +€ X (con "−€ X" mancherebbero X all'offerta minima; "irraggiungibili" = come "non raggiungibile" del conto principale:
         nessun prezzo dà l'utile obiettivo). Si usano solo quotazioni di compravendita: le voci di affitto, di terreni e (per le abitazioni) di box, negozi,
         uffici e laboratori vengono scartate. <em>valore +€ Y</em>: lo stesso conto con il valore di mercato stimato dal perito come prezzo di rivendita
@@ -851,9 +861,9 @@
       verdetto"; in fondo la riga "non verifica superfici, abusi, tempi né rischi legali"); la frase del verdetto (se c'è lo spazio); i
       <em>motivi del giudizio</em> in elenco; <em>come si arriva al numero</em> (valore di rivendita e sua fonte e affidabilità, quale scenario fissa l'offerta
       massima, qualità dei dati della perizia: scritta solo se è A o B, con C o D è già tra i motivi del giudizio); <em>da controllare</em> (gli avvisi del
-      conto e, dal 04/10/2026, i <a href="#registro-tentativo">segnali sulla storia dell'asta</a>; qui finiscono anche la rivendita e la qualità quando il
+      conto, in prima posizione la spiegazione della rivendita "fuori scala" se scatta, e, dal 04/10/2026, i <a href="#registro-tentativo">segnali sulla storia dell'asta</a>; qui finiscono anche la rivendita e la qualità quando il
       conto non si può fare); "✅ Ideale per iniziare" quando l'asta è Pulita, con spazio
-      non negativo, qualità dei dati A o B e rivendita non a bassa affidabilità (l'altra condizione del motore, "in zona", oggi non filtra nulla perché non c'è
+      non negativo, qualità dei dati A o B, rivendita non a bassa affidabilità e non "fuori scala" (l'altra condizione del motore, "in zona", oggi non filtra nulla perché non c'è
       un elenco di comuni obiettivo); e il link al conto completo. Le aste senza analisi v2 mostrano "Perché nessun giudizio": giudizio e offerta massima si
       calcolano solo con l'analisi v2 della perizia. La sezione compare anche nella scheda stampata o salvata in PDF.</p>
   </section>
@@ -2470,7 +2480,9 @@
     <p>Ogni zona ha un codice (es. "B1", "C1", "D18") e una descrizione con le vie principali. La lettera indica la <strong>fascia</strong>:
       <strong>B</strong> centrale, <strong>C</strong> semicentrale, <strong>D</strong> periferica, <strong>E</strong> suburbana, <strong>R</strong> rurale.
       La zona dell'asta si trova dalle coordinate dell'annuncio PVP: se sono approssimative la zona può essere sbagliata. Controllala su
-      <a href="https://www1.agenziaentrate.gov.it/servizi/geopoi_omi/index.php" target="_blank" rel="noopener">GEOPOI</a> (mappa ufficiale delle zone OMI).</p>
+      <a href="https://www1.agenziaentrate.gov.it/servizi/geopoi_omi/index.php" target="_blank" rel="noopener">GEOPOI</a> (mappa ufficiale delle zone OMI).
+      Le zone rurali (R) sono molto grandi e si sovrappongono a quelle urbane: se il punto cade in più zone, dal 04/10/2026 vince la <strong>più piccola</strong>,
+      cioè la più specifica (prima la scelta non era definita).</p>
   </section>
 
   <section class="voce" id="omi-tipologia-stato">
@@ -2495,13 +2507,16 @@
       catasto non alza mai la fascia. Serve perché un'abitazione classificata "civile" dal PVP ma accatastata come economica finiva nel calcolo con un
       valore di rivendita al mq troppo alto (misurato il 04/10/2026 su 136 abitazioni attive accatastate A/2-A/5: 26 casi, il 19%).</p>
     <p>Se l'asta ha più beni vince l'abitazione, poi il commerciale, poi il deposito, poi il box (es. "abitazione + posto auto" usa l'abitazione). Terreni e
-      lastrici non hanno quotazione OMI. Lo <strong>stato conservativo</strong> preferito è NORMALE (esistono anche OTTIMO e SCADENTE). Limiti: un
+      lastrici non hanno quotazione OMI, e in alcune zone non l'hanno i posti auto (la maggior parte dei casi misurati) e, talvolta, i box, i laboratori e le abitazioni delle zone rurali (R): l'asta resta
+      senza valori OMI (misurato il 04/10/2026: 70 aste future su 728, tutte con la zona trovata ma senza quotazione per quella tipologia; circa 50 sono posti
+      auto). Con l'analisi v2, se la perizia cita quotazioni di mercato, il conto parte da quelle (vedi <a href="#registro-offerta-massima">Offerta massima, spazio e
+      "Perché"</a>). Lo <strong>stato conservativo</strong> preferito è NORMALE (esistono anche OTTIMO e SCADENTE). Limiti: un
       "compendio pignorato" viene valutato come abitazione civile, e un posto auto scoperto quotato come coperto o box risulta sopravvalutato.</p>
   </section>
 
   <section class="voce" id="omi-assegnazione">
     <h3>Assegnazione dei valori OMI alle aste</h3>
-    <p>Riguarda le aste <strong>future con coordinate</strong>. A ogni giro dello scanner (e dopo un controllo batch con risultati, e dopo un'importazione)
+    <p>Riguarda le aste <strong>future con coordinate</strong>. A ogni giro dello scanner (e dopo un controllo batch che ha trovato batch in sospeso, e dopo un'importazione)
       il sistema cerca la zona che contiene il punto dell'asta e salva zona, descrizione, fascia, tipologia, stato, €/mq minimo e massimo e semestre. La
       tipologia viene dalla <a href="#omi-tipologia-stato">tipologia PVP e, per le abitazioni accatastate A/3-A/5, dalla categoria catastale della
       perizia</a>. A ogni assegnazione i valori sono ricalcolati per tutte le aste future: una perizia analizzata dopo l'ingresso dell'asta si riflette
