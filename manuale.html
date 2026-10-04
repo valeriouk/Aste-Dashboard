@@ -2489,6 +2489,11 @@
         <tr><td>garage / posto auto</td><td>box → autorimesse → posti auto coperti / posti auto coperti → scoperti → box</td></tr>
       </tbody>
     </table></div>
+    <p><strong>Categoria catastale</strong> (dal 04/10/2026, solo per le aste con analisi v2): se la perizia dà per l'unità abitativa principale la
+      categoria catastale <strong>A/3, A/4 o A/5</strong> (vedi il <a href="#glossario-categorie">glossario</a>), si usa la tipologia <em>abitazioni
+      economiche</em> anche quando il PVP dice "civile" (e nella zona esiste quella quotazione). Con A/2 o senza categoria resta la tabella qui sopra: il
+      catasto non alza mai la fascia. Serve perché un'abitazione classificata "civile" dal PVP ma accatastata come economica finiva nel calcolo con un
+      valore di rivendita al mq troppo alto (misurato il 04/10/2026 su 136 abitazioni attive accatastate A/2-A/5: 26 casi, il 19%).</p>
     <p>Se l'asta ha più beni vince l'abitazione, poi il commerciale, poi il deposito, poi il box (es. "abitazione + posto auto" usa l'abitazione). Terreni e
       lastrici non hanno quotazione OMI. Lo <strong>stato conservativo</strong> preferito è NORMALE (esistono anche OTTIMO e SCADENTE). Limiti: un
       "compendio pignorato" viene valutato come abitazione civile, e un posto auto scoperto quotato come coperto o box risulta sopravvalutato.</p>
@@ -2497,7 +2502,10 @@
   <section class="voce" id="omi-assegnazione">
     <h3>Assegnazione dei valori OMI alle aste</h3>
     <p>Riguarda le aste <strong>future con coordinate</strong>. A ogni giro dello scanner (e dopo un controllo batch con risultati, e dopo un'importazione)
-      il sistema cerca la zona che contiene il punto dell'asta e salva zona, descrizione, fascia, tipologia, stato, €/mq minimo e massimo e semestre. Le
+      il sistema cerca la zona che contiene il punto dell'asta e salva zona, descrizione, fascia, tipologia, stato, €/mq minimo e massimo e semestre. La
+      tipologia viene dalla <a href="#omi-tipologia-stato">tipologia PVP e, per le abitazioni accatastate A/3-A/5, dalla categoria catastale della
+      perizia</a>. A ogni assegnazione i valori sono ricalcolati per tutte le aste future: una perizia analizzata dopo l'ingresso dell'asta si riflette
+      alla prima assegnazione successiva. Le
       aste passate conservano gli ultimi valori. Le vedi in Superanalisi e nelle colonne OMI del CSV.</p>
   </section>
 
