@@ -2006,6 +2006,7 @@
     .finestra-dettagli-header .badge-nuova,
     .finestra-dettagli-header .badge-aggiornata,
     .finestra-dettagli-header .badge-conclusa,
+    .finestra-dettagli-header .badge-aggiudicata,
     .finestra-dettagli-header .badge-zona { margin: 2px 4px 2px 0; padding: 2px 7px; font-size: .68rem; }
     .finestra-dettagli-header .lotto-meta { font-size: .78rem; }
     .finestra-dettagli-azioni-header { gap: 6px; }
@@ -2463,6 +2464,11 @@
   .lotto-perche strong { color: var(--ink); font-weight: 600; }
   .lotto-margine-lordo { margin: 6px 0 0; font-size: .74rem; color: var(--ink-faint); }
   .lotto-margine.senza-offerta .lotto-margine-valore { font-size: 1.05rem; color: var(--ink-muted); }
+  /* Controlli col perito (04/10/2026): riga della card e badge "già aggiudicata" */
+  .riga-perito.ok { color: var(--primary); font-weight: 600; }
+  .riga-perito.ko { color: var(--danger); font-weight: 600; }
+  .badge-aggiudicata { background: var(--danger-soft); color: var(--danger); font-weight: 600; }
+  .finestra-dettagli-header .badge-tentativo.badge-aggiudicata { display: inline-block; }
   /* Riquadro "Perché" nei dettagli */
   .riquadro-perche { margin: 0 0 6px; }
   .riquadro-perche .lotto-offerta { border-top: none; padding-top: 0; }
@@ -5258,6 +5264,12 @@
     return `<span class="badge-tentativo" title="Dallo storico delle aste sul PVP: ${st.tentativo === 2 ? "1 asta precedente" : `${st.tentativo - 1} aste precedenti`} dello stesso immobile">↓ ${st.tentativo}° tentativo${ribasso}</span>`;
   }
 
+  // Già aggiudicata in un tentativo precedente e tornata in vendita (04/10/2026): rischio che il conto non vede.
+  function badgeAggiudicata(st) {
+    if (!st || !Array.isArray(st.precedenti) || !st.precedenti.some(t => t && t.esito === "AGGIU")) return "";
+    return `<span class="badge-tentativo badge-aggiudicata" title="Dallo storico del PVP: questo immobile è già stato aggiudicato e rimesso in vendita. Capire perché prima di offrire.">⚠ già aggiudicata</span>`;
+  }
+
   function sezioneStoricoAste(a) {
     const st = a.storico;
     if (!st) return "";
@@ -5602,7 +5614,7 @@
       const aperta = idAstaModaleDettagli !== null ? ASTE.find(a => a.id === idAstaModaleDettagli) : null;
       ASTE.forEach(azzeraCalcoliAsta);
       applicaFiltri();
-      if (aperta && firmaConto(sintesiOccasione(aperta)) !== (CONTO_MOSTRATO.get(aperta.id) ?? "")) aggiornaFinestraSeApertaSu(aperta.id);
+      if (aperta && firmaContoAsta(aperta) !== (CONTO_MOSTRATO.get(aperta.id) ?? "")) aggiornaFinestraSeApertaSu(aperta.id);
     }
   });
 
@@ -5894,7 +5906,9 @@
   // parametri salvati in Superanalisi su questo dispositivo e il regime
   // fiscale di Configurazione → Conti. prezzoOfferta: conto a quel prezzo
   // invece che all'offerta minima. null senza analisi v2.
-  function esitoSuperanalisi(a, prezzoOfferta = null) {
+  // rivenditaForzata (solo controlloPerito, 04/10/2026): impone la fonte della rivendita al posto
+  // della solita precedenza: {omi: {min, max}} oppure {arvOverride: {prudenziale, centrale, ottimistico}}.
+  function esitoSuperanalisi(a, prezzoOfferta = null, rivenditaForzata = null) {
     if (!a.analisiV2 || !String(a.versionePrompt || "").startsWith("v2") || !window.Underwriting) return null;
     let p = PARAMETRI_SUPERANALISI_PREDEFINITI;
     try { p = { ...p, ...(JSON.parse(localStorage.getItem("superanalisi_parametri_v1") || "{}")) }; } catch (e) { /* predefiniti */ }
@@ -5904,9 +5918,11 @@
       arretratiOverride: a.oneriCondominialiUtente ?? null,
       livelloLavori: a.livelloLavoriUtente, lavoriOverride: a.importoLavoriUtente };
     const c = a.comparabiliUtente;
-    const comparabili = c && c.usa && Array.isArray(c.righe)
+    const comparabili = !rivenditaForzata && c && c.usa && Array.isArray(c.righe)
       ? Underwriting.forchettaComparabili(c.righe, { scontoTrattativaComparabili: PARAMETRI_CONTI.scontoTrattativaComparabili }) : null;
-    if (comparabili) {
+    if (rivenditaForzata) {
+      if (rivenditaForzata.omi) annuncio.omi = rivenditaForzata.omi; else annuncio.arvOverride = rivenditaForzata.arvOverride;
+    } else if (comparabili) {
       annuncio.arvEuroMq = comparabili;
     } else if (a.valoreRivenditaUtente > 0) {
       const f = FORCHETTA_VALORE_UTENTE_REGISTRO, v = a.valoreRivenditaUtente;
@@ -5971,12 +5987,174 @@
     const s = sintesiOccasione(a);
     return s ? s.spazio : null;
   }
+
+  // ==========================================================
+  // CONTROLLI COL PERITO (04/10/2026) — solo informazione: non toccano il conto
+  // principale, l'ordine, i contatori né il giudizio. Misurati sulle 250 analisi v2
+  // reali: con l'OMI le aste con spazio >= 0 sono spesso ottimiste (fascia "civile"
+  // su unità economiche, zona sbagliata, superfici gonfiate). Due controlli, SOLO
+  // quando la rivendita del conto principale è l'OMI del database:
+  //   1) quotazioni citate dal perito al posto dell'OMI (stessa logica del conto);
+  //   2) valore di mercato del perito (stesso conto con quel valore come rivendita,
+  //      forchetta del "tuo valore"); il perito stima il bene com'è OGGI.
+  // Verdetto (+/−) solo con perizia di non oltre N anni dalla data della STIMA (non
+  // dell'integrazione: il motore usa quella e sottostima l'età) e, per il valore,
+  // solo con lavori nessuna/leggera; altrimenti le cifre sono solo indicative.
+  // ==========================================================
+  const CLASSE_DA_LIVELLO_LAVORI = { nessuna: "A_pronto", leggera: "B_rinfrescare", media: "C_rimodernare", pesante: "D_ristrutturare" };
+  // Copia della regola quotaIntera di underwriting.js (non esportata; vuoto = intera): serve solo a non confondere un prezzo base
+  // "di quota" con un ribasso.
+  const QUOTA_INTERA = /^$|^((piena\s+propriet\S*\s*)?1\s*\/\s*1|inter\w*|100\s*%|piena\s+propriet\S*)$/;
+  function datiPerito(a) {
+    let d;
+    try { d = Underwriting.normalizza(a.analisiV2).d; } catch (e) { return null; }
+    const dataPerizia = d.perizia && d.perizia.data instanceof Date ? d.perizia.data : null;   // data della stima, non dell'integrazione
+    const eta = dataPerizia ? (Date.now() - dataPerizia.getTime()) / (365.25 * 24 * 3600 * 1000) : null;
+    const v = d.valoreCtu || {};
+    // Solo quotazioni di COMPRAVENDITA plausibili: si scartano affitti (€/mq mensili, max < 100), terreni e, per le abitazioni, box/negozi/uffici.
+    const qc = ((a.analisiV2 || {}).valutazione_ctu || {}).quotazioni_citate;
+    const abitazione = /ABITAZIONE|APPARTAMENTO/i.test(String(a.tipologia || ""));
+    const quot = (Array.isArray(qc) ? qc : [])
+      .filter(q => q && Number(q.min_euro_mq) > 0 && Number(q.max_euro_mq) >= 100 && Number(q.max_euro_mq) >= Number(q.min_euro_mq)
+        && !/locazion|affitt|terren/i.test(String(q.tipologia || ""))
+        && !(abitazione && /box|posti?\s+auto|garage|magazzin|negozi|uffici|capannon|laborator/i.test(String(q.tipologia || ""))));
+    const scelta = quot.find(q => /omi/i.test(String(q.fonte || ""))) || quot[0] || null;
+    const dataGrezza = ((a.analisiV2 || {}).perizia || {}).data_perizia;
+    return {
+      dataPerizia, eta,
+      soloAnno: dataPerizia !== null && /^\s*\d{4}\s*$/.test(String(dataGrezza == null ? "" : dataGrezza)),   // "2020": underwriting.js la legge come 1 gennaio
+      quotaIntera: QUOTA_INTERA.test(String(d.quotaInVendita == null ? "" : d.quotaInVendita).trim().toLowerCase()),
+      finaleRiferitoA: v.finaleRiferitoA || null,
+      lavoriUtente: a.importoLavoriUtente !== null && a.importoLavoriUtente !== undefined && a.importoLavoriUtente > 0,
+      stato: CLASSE_DA_LIVELLO_LAVORI[a.livelloLavoriUtente] || d.statoManutentivo,
+      mercato: v.mercato > 0 ? v.mercato : null,       // niente ripiego sul valore finale: è già al netto di riduzioni che il conto sottrae di nuovo
+      finale: v.finale > 0 ? v.finale : null,
+      quotazioni: scelta ? { min: Number(scelta.min_euro_mq), max: Number(scelta.max_euro_mq), fonte: String(scelta.fonte || "").slice(0, 40) } : null,
+    };
+  }
+  // Calcolato una volta per asta e tenuto in s.perito (si azzera con _sintesi). null = nessun controllo possibile.
+  function controlloPerito(a) {
+    const s = sintesiOccasione(a);
+    if (!s) return null;
+    if (s.perito !== undefined) return s.perito;
+    s.perito = null;
+    try {
+      if (!s.calcolabile) return s.perito;
+      if (s.fonteRivendita !== "OMI") {   // tuoi dati o rivendita già dal perito: nessun confronto indipendente
+        s.perito = { applicabile: false, motivo: s.fonteRivendita === "tuo valore" || s.fonteRivendita === "comparabili" ? "tuoi" : "gia-perito" };
+        return s.perito;
+      }
+      const p = datiPerito(a);
+      if (!p) return s.perito;
+      const etaMax = (Underwriting.PARAMETRI_DEFAULT || {}).maxEtaPeriziaAnni || 3;
+      const conto = (forzata) => {
+        const e = esitoSuperanalisi(a, null, forzata);
+        if (!e || (e.scenariAlMinimo === null && e.maxBid === null)) return null;
+        return { offertaMassima: e.offertaMassima != null && e.offertaMassima > 0 ? Math.round(e.offertaMassima) : null, spazio: e.headroom ?? null };
+      };
+      const f = FORCHETTA_VALORE_UTENTE_REGISTRO;
+      const quotazioni = p.quotazioni ? { ...p.quotazioni, ...conto({ omi: { min: p.quotazioni.min, max: p.quotazioni.max } }) } : null;
+      const valore = p.mercato ? { valore: p.mercato, ...conto({ arvOverride: { prudenziale: Math.round(p.mercato * f.prudenziale), centrale: Math.round(p.mercato * f.centrale), ottimistico: Math.round(p.mercato * f.ottimistico) } }),
+        rapporto: s.esito.arv && s.esito.arv.centrale > 0 ? s.esito.arv.centrale / p.mercato : null } : null;
+      s.perito = { applicabile: true, dataPerizia: p.dataPerizia, soloAnno: p.soloAnno, eta: p.eta, etaOk: p.eta !== null && p.eta >= -0.1 && p.eta <= etaMax, etaMax,
+        // Con un importo lavori scritto dall'utente il conto include quei lavori: il valore del perito (bene com'è) non è confrontabile.
+        stato: p.stato, lavoriUtente: p.lavoriUtente, statoOk: !p.lavoriUtente && (p.stato === "A_pronto" || p.stato === "B_rinfrescare"),
+        quotazioni: quotazioni && quotazioni.spazio !== undefined ? quotazioni : null, valore: valore && valore.spazio !== undefined ? valore : null,
+        mercato: p.mercato, finale: p.finale };
+    } catch (e) { s.perito = null; }   // un guasto del controllo non spegne il conto principale
+    return s.perito;
+  }
+  // Positivo = l'obiettivo di utile è raggiungibile e lo spazio è >= 0.
+  function regge(r) { return !!r && r.offertaMassima !== null && r.spazio !== null && r.spazio >= 0; }
+  function testoSpazioPerito(r) {
+    return r.offertaMassima === null ? "non esiste un'offerta massima" : r.spazio === null ? "offerta minima non letta"
+      : r.spazio >= 0 ? `spazio +${formattaEuro(r.spazio)}` : `mancano ${formattaEuro(-r.spazio)} all'offerta minima`;
+  }
+  function anniTesto(eta) { const n = Math.round(eta); return n < 1 ? "meno di 1 anno" : n === 1 ? "1 anno" : `${n} anni`; }
+  // Fuori limite si scrive "oltre N anni" (troncato, mai arrotondato): "3 anni" accanto a "oltre 3 anni" sarebbe contraddittorio.
+  function etichettaEtaPerizia(pc) {
+    if (pc.eta === null) return "perizia senza data";
+    if (pc.eta < -0.1) return "data della perizia non valida";
+    return pc.etaOk ? `perizia di ${anniTesto(pc.eta)}` : `perizia di oltre ${Math.floor(pc.eta)} anni`;
+  }
+  // Perché il confronto sul valore del perito non dà verdetto (il suo valore è per il bene così com'è, non a lavori fatti).
+  function motivoStatoPerito(pc) {
+    if (pc.lavoriUtente) return "lavori inseriti da te";
+    if (pc.stato === "C_rimodernare") return "immobile da rimodernare";
+    if (pc.stato === "D_ristrutturare" || pc.stato === "E_degrado") return "immobile da ristrutturare";
+    return "stato dell'immobile non valutabile";
+  }
+  function numeroMigliaia(n) { return String(Math.round(n)).replace(/\B(?=(\d{3})+(?!\d))/g, "."); }
+  function fasciaMq(min, max) { return min === max ? numeroMigliaia(min) : `${numeroMigliaia(min)}–${numeroMigliaia(max)}`; }
+
+  // Una riga sulla card, solo con spazio >= 0 e giudizio diverso da Da scartare.
+  // Un guasto nei controlli non deve impedire di disegnare la card né la scheda: in caso di errore la riga o il blocco mancano.
+  function rigaPeritoCard(a, s) { try { return rigaPeritoCardCalcolata(a, s); } catch (e) { return ""; } }
+  function rigaPeritoCardCalcolata(a, s) {
+    if (!(s.calcolabile && s.spazio !== null && s.spazio >= 0 && s.classe !== "DA_SCARTARE")) return "";
+    const pc = controlloPerito(a);
+    if (!pc) return "";
+    if (!pc.applicabile) return pc.motivo === "tuoi" ? `<p class="lotto-offerta-riga riga-perito">Confronto col perito non applicato: hai inserito i tuoi dati</p>` : "";
+    const segmenti = [], esiti = [];
+    if (pc.etaOk) {
+      const q = pc.quotazioni, v = pc.valore;
+      if (q && q.spazio !== null) { segmenti.push(`quotazioni ${q.offertaMassima === null ? "irraggiungibili" : q.spazio >= 0 ? "+" + formattaEuro(q.spazio) : "−" + formattaEuro(-q.spazio)}`); esiti.push(regge(q)); }
+      if (pc.statoOk && v && v.spazio !== null) { segmenti.push(`valore ${v.offertaMassima === null ? "irraggiungibile" : v.spazio >= 0 ? "+" + formattaEuro(v.spazio) : "−" + formattaEuro(-v.spazio)}`); esiti.push(regge(v)); }
+    }
+    if (segmenti.length) {
+      const tono = esiti.every(Boolean) ? "ok" : "ko";
+      return `<p class="lotto-offerta-riga riga-perito ${tono}">Col perito: ${segmenti.join(" · ")}</p>`;
+    }
+    const motivo = !pc.etaOk ? etichettaEtaPerizia(pc) : !pc.statoOk ? motivoStatoPerito(pc) : "dati del perito insufficienti";
+    return `<p class="lotto-offerta-riga riga-perito">${pc.quotazioni || pc.valore ? `Perito: confronto non valido (${motivo})` : "Nessun confronto col perito"}</p>`;
+  }
+
+  // Blocco della scheda "Perché": le cifre complete dei due controlli.
+  function bloccoControlloPerito(a, s) { try { return bloccoControlloPeritoCalcolato(a, s); } catch (e) { return ""; } }
+  function bloccoControlloPeritoCalcolato(a, s) {
+    if (!s.calcolabile) return "";
+    const pc = controlloPerito(a);
+    if (!pc) return "";
+    const titolo = `<p class="perche-sottotitolo">Controllo col perito</p>`;
+    const elenco = voci => `<ul class="perche-elenco">${voci.map(v => `<li>${escapeHtml(v)}</li>`).join("")}</ul>`;
+    if (!pc.applicabile) {
+      return titolo + `<p class="perche-verdetto">${pc.motivo === "tuoi" ? "Hai inserito il tuo valore di rivendita o dei comparabili: il confronto col perito non è applicato."
+        : "La rivendita del conto viene già dal perito: non c'è un confronto indipendente."}</p>`;
+    }
+    const righe = [];
+    const dataTesto = pc.dataPerizia ? (pc.soloAnno ? String(pc.dataPerizia.getUTCFullYear()) : formattaData(pc.dataPerizia.toISOString())) : null;
+    righe.push(dataTesto === null ? `Perizia senza data: le cifre sotto sono solo indicative, senza verdetto.`
+      : pc.eta < -0.1 ? `Perizia datata ${dataTesto}, nel futuro: data non valida. Le cifre sotto sono solo indicative, senza verdetto.`
+      : pc.etaOk ? `Perizia del ${dataTesto} (${anniTesto(pc.eta)}).`
+      : `Perizia del ${dataTesto}, più vecchia di ${pc.etaMax} anni: i prezzi possono essere cambiati. Le cifre sotto sono solo indicative, senza verdetto.`);
+    const q = pc.quotazioni;
+    if (q) {
+      righe.push(`Il perito cita ${fasciaMq(q.min, q.max)} €/mq${q.fonte && !/^altro$/i.test(q.fonte) ? " (" + q.fonte + ")" : ""}; il conto usa l'OMI ${fasciaMq(a.omi.min, a.omi.max)} €/mq. Con le quotazioni del perito: ${testoSpazioPerito(q)}.`);
+    } else righe.push("Il perito non cita quotazioni di compravendita utilizzabili.");
+    const v = pc.valore;
+    if (v) {
+      righe.push(`Il perito stima il bene ${formattaEuro(v.valore)}, così com'è e non a lavori fatti. Rivendendo a quel valore: ${testoSpazioPerito(v)}.`);
+      if (v.rapporto !== null) {
+        const r = Math.round(v.rapporto * 10) / 10;
+        righe.push(`La rivendita del conto (${formattaEuro(s.esito.arv.centrale)}, OMI) è ${r === 1 ? "pari al" : String(r).replace(".", ",") + " volte il"} valore del perito.${r >= 1.5 && pc.statoOk && pc.etaOk ? " Controlla fascia OMI (civile o economico), zona e superficie." : ""}`);
+      }
+      if (!pc.statoOk) { const m = motivoStatoPerito(pc); righe.push(`${m.charAt(0).toUpperCase() + m.slice(1)}: il confronto sul valore è severo e non dà verdetto.`); }
+    } else righe.push("Il perito non indica un valore di mercato.");
+    righe.push("Questo confronto non verifica superfici, abusi, tempi né rischi legali.");
+    return titolo + elenco(righe);
+  }
   // Azzera i calcoli tenuti in memoria di un'asta (giudizio e sintesi).
   function azzeraCalcoliAsta(a) { a._giudizio = undefined; a._sintesi = undefined; }
   // Firma dei numeri del conto e firma di quelli che la scheda aperta sta mostrando (riquadroPerche): al ritorno
   // con Indietro la scheda si ridisegna solo se il conto è cambiato (non si perdono i campi non salvati).
   const CONTO_MOSTRATO = new Map();
   function firmaConto(s) { return s ? JSON.stringify([s.classe, s.calcolabile, s.offertaMassima, s.spazio, s.euroMqRivendita]) : ""; }
+  // Come firmaConto, più i numeri dei controlli col perito (cambiano con i parametri anche quando il conto principale resta uguale).
+  function firmaContoAsta(a) {
+    const s = sintesiOccasione(a), pc = s ? controlloPerito(a) : null;
+    const cifre = r => r ? [r.offertaMassima, r.spazio] : null;
+    return firmaConto(s) + (pc ? JSON.stringify([pc.applicabile, pc.motivo || null, pc.etaOk, pc.statoOk, cifre(pc.quotazioni), cifre(pc.valore)]) : "");
+  }
 
   // Le due cifre sul conto in testata (04/10/2026; prima "Punteggio più alto" e
   // "Margine positivo", quasi sempre positivi e quindi inutili per decidere):
@@ -6041,6 +6219,7 @@
           <p class="lotto-margine-valore lotto-offerta-valore"><span class="lotto-offerta-importo">${valore}</span>${s.calcolabile && s.offertaMinima ? `<span class="lotto-offerta-minima">minima ${formattaEuro(s.offertaMinima)}</span>` : ""}</p>
           <p class="lotto-spazio">${escapeHtml(spazio)}</p>
           ${riga ? `<p class="lotto-offerta-riga">${riga}</p>` : ""}
+          ${opzioni.motivo ? rigaPeritoCard(a, s) : ""}
           ${!s.calcolabile ? `<p class="lotto-offerta-riga">${escapeHtml(String(s.esito.verdetto || "").replace(/^(NON CALCOLABILE|CALCOLO NON AFFIDABILE):\s*/, ""))}</p>` : ""}
           ${opzioni.motivo ? `<p class="lotto-perche" title="${escapeAttributo(s.motivi.length ? s.motivi.join("; ") : "Nessun segnale rosso nella perizia")}"><strong>Perché ${NOMI_GIUDIZIO[s.classe] ? escapeHtml(NOMI_GIUDIZIO[s.classe].toLowerCase()) : "questo giudizio"}${altriMotivi}:</strong> ${primo}</p>` : ""}
           ${opzioni.lordo ? `<p class="lotto-margine-lordo" title="Valore del perito − offerta minima − sanatoria: prima di imposte, lavori, tempi e vendita.">Margine lordo (senza costi) ${lordo}</p>` : ""}
@@ -6051,13 +6230,38 @@
   // si arriva all'offerta massima e cosa controllare. Tutto già calcolato dal
   // motore della Superanalisi. Senza analisi v2 spiega perché mancano i numeri.
   const AFFIDABILITA_RIVENDITA = {bassa: "bassa", screening: "di massima, da verificare con comparabili", media: "media"};
+  // Segnali sulla storia dell'asta (04/10/2026), solo informativi: non toccano numeri, ordine o contatori.
+  // 1) già aggiudicata e rimessa in vendita (dallo storico del PVP, che per alcune procedure non ha le aste
+  //    precedenti: misurato su 250 aste, scatta di rado); 2) prezzo base molto sotto il valore finale del
+  //    perito (il primo tentativo parte dal valore finale; ogni asta deserta toglie di solito il 25%): copre
+  //    tutte le aste con v2; tra quelle con prezzo base sotto il valore finale il rapporto è entro l'1% di
+  //    0,75^k in circa 2 casi su 3, quindi è un'indicazione, non una prova. Non si applica se si vende una
+  //    quota e il valore finale è riferito all'intero (il rapporto sarebbe la quota, non i ribassi).
+  function avvisiStoria(a, conValorePerito) {
+    const out = [];
+    const agg = ((a.storico && a.storico.precedenti) || []).filter(t => t && t.esito === "AGGIU");
+    if (agg.length) out.push(`Già aggiudicata${agg.length === 1 ? " il " + formattaData(agg[0].data) : " " + agg.length + " volte"} e rimessa in vendita: capire perché (rinuncia, mancato pagamento del saldo, problemi dell'immobile) prima di offrire.`);
+    if (conValorePerito) {
+      try {
+        const p = datiPerito(a);
+        const rapporto = p && p.finale && a.prezzoBase > 0 ? a.prezzoBase / p.finale : null;
+        if (rapporto !== null && rapporto <= 0.8 + 1e-9 && (p.quotaIntera || p.finaleRiferitoA !== "intero")) {
+          const pct = Math.round(rapporto * 100);
+          out.push(`Il prezzo base è ${[1, 8, 11, 80].includes(pct) ? "l'" : "il "}${pct}% del valore finale del perito: probabilmente già ribassato dopo aste deserte. Lo storico del PVP può non avere le aste precedenti: controlla gli esiti (link "Verifica esito ↗" nel riquadro Procedura).`);
+        }
+      } catch (e) { /* il segnale è solo informativo: se i dati sono anomali non si mostra */ }
+    }
+    return out;
+  }
   function riquadroPerche(a) {
     const s = sintesiOccasione(a);
-    CONTO_MOSTRATO.set(a.id, firmaConto(s));
+    CONTO_MOSTRATO.set(a.id, firmaContoAsta(a));
     if (!s) {
+      const storia = avvisiStoria(a, false);
       return `<div class="sezione-costi riquadro-perche">
           <h3 class="sezione-costi-titolo">⚖️ Perché nessun giudizio</h3>
           <p class="perche-verdetto">Giudizio e offerta massima si calcolano solo sulle aste con l'analisi v2 della perizia, e questa non ce l'ha. Il margine lordo qui sotto è solo un'indicazione, senza costi.</p>
+          ${storia.length ? `<p class="perche-sottotitolo">Da controllare</p><ul class="perche-elenco">${storia.map(v => `<li>${escapeHtml(v)}</li>`).join("")}</ul>` : ""}
         </div>`;
     }
     const e = s.esito;
@@ -6065,7 +6269,7 @@
     const verdetto = String(e.verdetto || "").replace(/^(PULITA|GESTIBILE|COMPLESSA)\b/, m => NOMI_GIUDIZIO[m]);
     const elenco = voci => `<ul class="perche-elenco">${voci.map(v => `<li>${escapeHtml(v)}</li>`).join("")}</ul>`;
     const conto = [];
-    const avvisi = (e.avvisi || []).slice(0, 8);
+    const avvisi = (e.avvisi || []).slice(0, 8).concat(avvisiStoria(a, true));
     // Senza conto possibile non c'è un "numero" da spiegare: le righe sulla rivendita e sulla qualità vanno in "Da controllare".
     const dove = s.calcolabile ? conto : avvisi;
     if (e.arv) {
@@ -6092,6 +6296,7 @@
     return `<div class="sezione-costi riquadro-perche">
           <h3 class="sezione-costi-titolo">⚖️ Perché: ${escapeHtml(nomeClasse)}</h3>
           ${bloccoOffertaMassima(a, {})}
+          ${bloccoControlloPerito(a, s)}
           ${s.calcolabile && s.spazio !== null ? `<p class="perche-verdetto">${escapeHtml(verdetto)}</p>` : ""}
           ${e.idealePerIniziare ? `<p class="perche-verdetto"><strong>✅ Ideale per iniziare</strong>: pulita, spazio sull'offerta, dati buoni.</p>` : ""}
           <p class="perche-sottotitolo">Motivi del giudizio</p>
@@ -7378,6 +7583,7 @@
           ${a.zonaSegnalata ? `<span class="badge-zona">🚩 ${escapeHtml(a.zonaSegnalata)}</span>` : ""}
           ${badgeGiudizio(a)}
           ${badgeTentativo(a.storico)}
+          ${badgeAggiudicata(a.storico)}
           ${(a.superanalisiEsterne || []).length ? `<span class="badge-ai" title="Risultati di superanalisi con AI esterne salvati: aprili dalla scheda">🧠 ${(a.superanalisiEsterne || []).length}</span>` : ""}
           <p class="lotto-meta">Vendita ${formattaData(a.dataVendita)}</p>
         </div>
@@ -9184,6 +9390,7 @@ ${riquadroProcedura}
               </div>
             </div>
             <div class="riga-badge-dettagli">
+              ${badgeAggiudicata(a.storico)}
               ${eNuova(a.dataInserimento) ? `<span class="badge-nuova" title="Trovata nelle ultime 24 ore">✨ Nuova</span>` : ""}
               ${eAggiornata(a) ? `<span class="badge-aggiornata" title="Perizia ricontrollata e rianalizzata nelle ultime 24 ore">📄 Aggiornata</span>` : ""}
               ${badgeVisita(a)}

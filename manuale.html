@@ -767,7 +767,7 @@
   </section>
 
   <section class="voce" id="registro-badge">
-    <h3>Badge: Nuova, Aggiornata, Conclusa, zona segnalata, tentativo</h3>
+    <h3>Badge: Nuova, Aggiornata, Conclusa, zona segnalata, tentativo, già aggiudicata</h3>
     <ul>
       <li><strong>✨ Nuova</strong>: inserita nel registro da meno di 24 ore (all'ora esatta). Sulla mappa ha un anello.</li>
       <li><strong>📄 Aggiornata</strong>: vedi <a href="#registro-aggiornate">Aggiornate</a>.</li>
@@ -775,6 +775,8 @@
       <li><strong>🚩 zona segnalata</strong> (es. "Librino / San Cristoforo"): etichetta informativa decisa dallo scanner per CAP o, se manca il CAP, per
         nome della via. <strong>Non</strong> esclude l'asta e non cambia il punteggio.</li>
       <li><strong>↓ N° tentativo · -X% dal 1°</strong> (blu tenue) oppure <strong>1° tentativo</strong> (grigio): vedi
+        <a href="#registro-tentativo">Tentativo e storico delle aste</a>.</li>
+      <li><strong>⚠ già aggiudicata</strong> (rosso): lo storico del PVP dice che l'immobile è già stato aggiudicato ed è tornato in vendita; vedi
         <a href="#registro-tentativo">Tentativo e storico delle aste</a>.</li>
       <li><strong>🕓 / ✉️ / 📅 / ✅ visita</strong>: stato della visita all'immobile; il badge con la data diventa ambra dai 5 giorni prima e rosso il giorno
         stesso. Vedi <a href="#registro-visite">Gestione delle visite</a>.</li>
@@ -815,12 +817,37 @@
         recente, affidabilità bassa). La superficie del conto può differire da quella di "€/mq (offerta)" nelle cifre: per questo qui si scrive quanti mq sono.</li>
       <li><strong>Perché …</strong> (card): il primo motivo del <a href="#superanalisi-classe">giudizio</a>, con "· N motivi" accanto alla parola "Perché" se ce ne
         sono altri (passandoci sopra col mouse si leggono tutti; nei dettagli sono tutti in elenco). Per le aste Pulite: "nessun segnale rosso nella perizia".</li>
+      <li><strong>Col perito …</strong> (card, dal 04/10/2026): una riga in più, solo per le aste con spazio non negativo e giudizio diverso da Da scartare.
+        Ricontrolla il conto con due numeri presi dalla perizia. È <strong>solo un'informazione</strong>: non cambia offerta massima, giudizio, ordine
+        né contatori. <em>quotazioni +€ X</em>: rifacendo il conto con le quotazioni di mercato (OMI o simili) citate dal perito al posto dell'OMI del
+        database, lo spazio sarebbe +€ X (con "−€ X" mancherebbero X all'offerta minima; "irraggiungibili" = come "non raggiungibile" del conto principale:
+        nessun prezzo dà l'utile obiettivo). Si usano solo quotazioni di compravendita: le voci di affitto, di terreni e (per le abitazioni) di box, negozi,
+        uffici e laboratori vengono scartate. <em>valore +€ Y</em>: lo stesso conto con il valore di mercato stimato dal perito come prezzo di rivendita
+        (forchetta 0,93 / 1 / 1,05, come per "il tuo valore"). Colore principale se tutti i numeri mostrati sono positivi, rosso se anche uno solo non lo è
+        (negativo o irraggiungibile). Il perito stima il bene <strong>così com'è</strong>, non a lavori fatti. Per questo né le quotazioni né il valore
+        danno un segno (+/−) se la perizia ha più di 3 anni (contati dalla data della stima, non da quella dell'integrazione) o non ha data; in più il
+        valore lo dà solo se i lavori sono "nessuna" o "leggera" (stato A o B della perizia, o il livello scelto da te nei dettagli) e non hai scritto un
+        tuo importo lavori. In tutti gli altri casi la riga è grigia: "Perito: confronto non valido (perizia di oltre N anni / perizia senza data /
+        immobile da rimodernare o da ristrutturare / lavori inseriti da te / stato dell'immobile non valutabile)"; "Nessun confronto col perito" se la
+        perizia non riporta né quotazioni utilizzabili né valore di mercato. Se la rivendita del conto non è l'OMI del database non c'è un confronto
+        indipendente: con i comparabili o con il tuo valore la riga dice "Confronto col perito non applicato: hai inserito i tuoi dati"; se la rivendita
+        viene già dal perito (quotazioni citate o suo valore) non compare nulla. <strong>Cosa non vede</strong>: superfici gonfiate, abusi, ostacoli non
+        penalizzati dal motore, fascia OMI sbagliata se anche il perito cita la stessa, tempi e rischio legale: un segno positivo non li verifica.
+        Misura sulle 250 analisi v2 (04/10/2026, abitazioni attive non da scartare, senza considerare l'età della perizia): rivendendo al valore del perito
+        hanno spazio ≥ 0 15 abitazioni su 44 con lavori nessuno o leggeri (stato A/B) e nessuna su 75 con lavori medi o pesanti (stato C/D/E), quindi un
+        "valore −€" su un immobile da ristrutturare non vorrebbe dire nulla: sulla card non viene mostrato, nella scheda compare con l'avvertenza.</li>
       <li><strong>Margine lordo (senza costi)</strong>: resta, in piccolo, sotto; vedi <a href="#registro-margine">Margine lordo</a>.</li>
     </ul>
-    <p><strong>Nei dettagli</strong>, la prima sezione "Perché" riporta: lo stesso blocco dell'offerta massima; la frase del verdetto (se c'è lo spazio); i
+    <p><strong>Nei dettagli</strong>, la prima sezione "Perché" riporta: lo stesso blocco dell'offerta massima; il <em>Controllo col perito</em> (per tutte
+      le aste con analisi v2 e conto calcolabile, anche con spazio negativo o Da scartare: data ed età della perizia, o solo l'anno se è l'unica data
+      scritta; quotazioni citate dal perito contro l'OMI usata dal conto, con lo spazio che ne verrebbe; valore di mercato del perito e spazio che ne
+      verrebbe; quante volte la rivendita del conto è il valore del perito, con l'invito a controllare fascia OMI, zona e superficie da 1,5 volte in su,
+      solo se la perizia ha al massimo 3 anni e i lavori sono nessuno o leggeri; negli altri casi la frase "il confronto sul valore è severo e non dà
+      verdetto"; in fondo la riga "non verifica superfici, abusi, tempi né rischi legali"); la frase del verdetto (se c'è lo spazio); i
       <em>motivi del giudizio</em> in elenco; <em>come si arriva al numero</em> (valore di rivendita e sua fonte e affidabilità, quale scenario fissa l'offerta
       massima, qualità dei dati della perizia: scritta solo se è A o B, con C o D è già tra i motivi del giudizio); <em>da controllare</em> (gli avvisi del
-      conto; qui finiscono anche la rivendita e la qualità quando il conto non si può fare); "✅ Ideale per iniziare" quando l'asta è Pulita, con spazio
+      conto e, dal 04/10/2026, i <a href="#registro-tentativo">segnali sulla storia dell'asta</a>; qui finiscono anche la rivendita e la qualità quando il
+      conto non si può fare); "✅ Ideale per iniziare" quando l'asta è Pulita, con spazio
       non negativo, qualità dei dati A o B e rivendita non a bassa affidabilità (l'altra condizione del motore, "in zona", oggi non filtra nulla perché non c'è
       un elenco di comuni obiettivo); e il link al conto completo. Le aste senza analisi v2 mostrano "Perché nessun giudizio": giudizio e offerta massima si
       calcolano solo con l'analisi v2 della perizia. La sezione compare anche nella scheda stampata o salvata in PDF.</p>
@@ -842,6 +869,19 @@
         25% danno il 56%): forse un'asta intermedia non è stata pubblicata sul PVP; "Il 1° tentativo trovato parte già X% sotto la stima" quando parte
         sotto l'85% della stima: possono esserci aste precedenti non sul PVP; "riconosciute dal numero di lotto" quando mancano i dati catastali
         (abbinamento meno sicuro, da verificare); "storico si completa ai prossimi giri" per le procedure con molti lotti.</li>
+      <li><strong>⚠ già aggiudicata</strong> (dal 04/10/2026): badge rosso nella card e, per primo, nell'intestazione dei dettagli (ma non nel popup della
+        mappa); riga in "Da controllare" nella sezione "Perché" con la data (o "N volte" se sono più di una), quando lo storico del PVP riporta un
+        tentativo precedente con esito "aggiudicata" e l'asta è tornata in vendita: capire perché (rinuncia, mancato saldo, problemi dell'immobile)
+        prima di offrire. Solo informazione: non cambia numeri, ordine né contatori. Il prezzo di aggiudicazione non è nello storico del PVP. Compare
+        anche per le aste senza analisi v2.</li>
+      <li><strong>Prezzo base = N% del valore finale del perito</strong> (dal 04/10/2026, riga in "Da controllare", solo con analisi v2): scatta quando il
+        prezzo base è l'80% o meno del valore finale del perito. Il primo tentativo parte dal valore finale e ogni asta deserta toglie di solito il 25%,
+        quindi il 56% indica due ribassi (0,75 × 0,75) e il 42% tre. Non compare se si vende una quota e il valore finale è riferito all'intero (il
+        rapporto sarebbe la quota, non i ribassi). Serve perché lo storico del PVP può avere buchi: per alcune procedure (verificato per tre del
+        Tribunale di Catania) il PVP restituisce solo l'asta attuale e le aste precedenti stanno su altri portali. Tra le aste con prezzo base sotto il
+        valore finale (circa 130 su 250) il rapporto è entro l'1% di 0,75<sup>k</sup> in circa 2 casi su 3: è un'indicazione, non una prova. Per
+        sapere come sono andate le vendite precedenti usa il link "Verifica esito ↗" nel riquadro Procedura dei Dettagli; il sistema non legge in
+        automatico i portali che pubblicano gli esiti (per esempio astegiudiziarie.it).</li>
     </ul>
   </section>
 
@@ -1023,8 +1063,9 @@
       ai <a href="#registro-link-utili">link e foto</a>), "Superanalisi" e "🧠 N" (porta ai risultati delle AI, se ce ne sono). Poi la nota personale.</p>
     <p><strong>Sezioni</strong>, nell'ordine in cui servono per decidere:</p>
     <ul>
-      <li>⚖️ <a href="#registro-offerta-massima">Perché</a> (dal 04/10/2026): offerta massima, spazio, giudizio con i motivi, come si arriva al numero e cosa
-        controllare; per le aste senza analisi v2 spiega perché mancano;</li>
+      <li>⚖️ <a href="#registro-offerta-massima">Perché</a> (dal 04/10/2026): offerta massima, spazio, controllo col perito, giudizio con i motivi, come si
+        arriva al numero e cosa controllare (compresi i <a href="#registro-tentativo">segnali sulla storia dell'asta</a>); per le aste senza analisi v2
+        spiega perché mancano;</li>
       <li>Cifre: Margine lordo (con "Conto completo in Superanalisi →"), Offerta minima, Valore stima, Stato occupazione;</li>
       <li>📝 Descrizione del lotto (che cosa compri: piano, vani, pertinenze, stato): le prime 4 righe, con "Mostra tutto" se è più lunga ("Mostra
         meno" la richiude; in stampa è sempre intera);</li>
@@ -2729,6 +2770,9 @@
       <li><strong>Holding / costi di detenzione</strong>: costi mensili mentre possiedi l'immobile (IMU, utenze, condominio, assicurazione).</li>
       <li><strong>ROI / rendimento sul capitale</strong>: utile diviso capitale investito.</li>
       <li><strong>Scenario prudenziale / centrale / ottimistico</strong>: tre ipotesi su prezzo di vendita, lavori e tempi.</li>
+      <li><strong>Controllo col perito</strong>: nel registro, il conto rifatto con le quotazioni di mercato citate dal perito e con il suo valore di
+        mercato, come seconda opinione sull'OMI del database; solo informazione, vedi <a href="#registro-offerta-massima">Offerta massima, spazio e "Perché"</a>.
+        Il valore del perito è quello del bene <em>così com'è</em>: per un immobile da ristrutturare non è il valore a lavori fatti.</li>
     </ul>
   </section>
 
