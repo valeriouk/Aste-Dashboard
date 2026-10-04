@@ -683,6 +683,8 @@
   .popup-lotto-meta { font-size: .78rem; }
   .popup-lotto .popup-spazio { font-family: var(--font-mono); font-size: .85rem; display: inline; margin: 0; color: var(--primary); }
   .popup-lotto .popup-spazio.negativo { color: var(--danger); }
+  .popup-lotto .popup-spazio.neutro { color: var(--ink-muted); }
+  .popup-lotto .popup-fuori-scala { color: var(--danger); font-size: .78rem; font-weight: 600; }
   .popup-lotto-link { display: flex; flex-wrap: wrap; gap: 0 14px; }
   /* Riga di azioni dentro il popup della mappa — stella/scarto riusano
      .bottone-azione-lotto (stesso aspetto ovunque nella pagina, zero
@@ -7323,7 +7325,10 @@
     // sull'offerta dal conto completo (solo aste con analisi v2).
     const badgePopup = [badgeGiudizio(a), badgeTentativo(a.storico), badgeVisita(a), badgeOperazione(a)].filter(Boolean).join("");
     const spazio = spazioSullOfferta(a);
-    const testoSpazio = spazio === null ? "" : spazio >= 0 ? `<strong class="popup-spazio">+${formattaEuro(spazio)}</strong>`
+    // Guardia "fuori scala" (stessa della card): spazio positivo in grigio con "· da verificare" e una riga rossa.
+    const sintesiPopup = sintesiOccasione(a);
+    const fuoriScala = !!(sintesiPopup && sintesiPopup.fuoriScala);
+    const testoSpazio = spazio === null ? "" : spazio >= 0 ? `<strong class="popup-spazio${fuoriScala ? " neutro" : ""}">+${formattaEuro(spazio)}</strong>${fuoriScala ? " · da verificare" : ""}`
       : `<strong class="popup-spazio negativo">mancano ${formattaEuro(-spazio)}</strong>`;
 
     // Stesse identiche icone e stessi identici gestori (onClickStella /
@@ -7353,6 +7358,7 @@
         <div>Vendita: ${formattaData(a.dataVendita)}${testoGiorniVendita(a.dataVendita)}</div>
         <div>Offerta minima: ${formattaOffertaMinima(a.offertaMinima)}</div>
         ${testoSpazio ? `<div>Spazio sull'offerta: ${testoSpazio}</div>` : ""}
+        ${fuoriScala ? `<div class="popup-fuori-scala">⚠ Rivendita ${moltiplicatoreTesto(sintesiPopup.rapportoPerito)}× il valore del perito</div>` : ""}
         <div>Margine lordo: ${margine}</div>
         <div>Punteggio AI: ${a.punteggio > 0 ? a.punteggio + "/100" : "—"}</div>
         <div class="popup-lotto-azioni">
@@ -9012,10 +9018,15 @@ ${bloccoOffertaMassima(a, {motivo: true, lordo: true})}
       // spazio = offerta massima − offerta minima; con l'obiettivo di utile non
       // raggiungibile l'offerta massima vale 0 (prima compariva "€ 0")
       const massima = spazio !== null ? asta.offertaMinima + spazio : null;
+      // Guardia "fuori scala": la rivendita del conto è molto sopra il valore del perito, l'offerta massima può essere gonfiata.
+      const sintesiOfferta = sintesiOccasione(asta);
+      const avvisoFuoriScala = sintesiOfferta && sintesiOfferta.fuoriScala
+        ? ` · ATTENZIONE: la rivendita è ${moltiplicatoreTesto(sintesiOfferta.rapportoPerito)}× il valore del perito, la stima della Superanalisi può essere gonfiata (controlla zona OMI e superficie)` : "";
       suggerimento = `Offerta minima ${formattaEuro(asta.offertaMinima)}`
         + (massima === null ? ""
           : massima <= 0 ? " · Superanalisi: obiettivo di utile non raggiungibile"
           : ` · offerta massima dalla Superanalisi ${formattaEuro(massima)}` + (massima < asta.offertaMinima ? " (sotto l'offerta minima)" : ""))
+        + avvisoFuoriScala
         + ". Cauzione vuota = 10% dell'offerta.";
     }
     if (statoTarget === "aggiudicata") suggerimento = `Scadenza del saldo vuota = ${GIORNI_SALDO_PREDEFINITI} giorni dall'aggiudicazione: controlla il termine nell'avviso di vendita.`;
