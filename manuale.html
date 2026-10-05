@@ -1743,10 +1743,13 @@
       <li><strong>Riquadri</strong>: token di oggi, ultimi 7 e 30 giorni (input + output + ragionamento) e la media di token per analisi sugli ultimi 30 giorni
         (comprende i tentativi andati a vuoto sui modelli della cascata, che si pagano). Giorni e periodi sono in UTC.</li>
       <li><strong>Tabella</strong> per modello e per via (diretta o batch) con i token e, se hai inserito i prezzi, gli euro degli ultimi 30 giorni.</li>
-      <li><strong>Prezzi</strong>: euro per milione di token (input, output, cache) di ogni modello presente nei dati e lo sconto del batch. Li prendi dal
-        listino di Google; restano <strong>solo su quel browser</strong> (telefono e PC vanno inseriti separatamente) e non sono scritti nel codice né nel
-        database. Gli output comprendono i token di ragionamento. Cache vuota = pagata come input. Un modello senza prezzo non entra nel saldo: le sue
-        analisi restano al costo medio assunto, con un avviso.</li>
+      <li><strong>Prezzi</strong>: per milione di token (input, output, cache) di ogni modello presente nei dati, più lo sconto del batch (predefinito 50%).
+        Per <code>gemini-3.7-flash</code> sono già impostati i prezzi del listino pubblico di Google (letti il 05/10/2026, in dollari ma usati come euro: la
+        differenza è trascurabile): 0,75 input, 3,75 output, 0,075 cache fino al 31/12/2026, il doppio dal 01/01/2027, e il cambio avviene da solo. Si vedono
+        come numeri grigi nei campi vuoti; il nome del modello si riconosce dall'inizio ("gemini-3.7-flash-001" vale lo stesso). Un valore scritto da te vince
+        sul predefinito e resta <strong>solo su quel browser</strong> (telefono e PC vanno inseriti separatamente); svuotando il campo torna il predefinito.
+        Per gli altri modelli i prezzi vanno inseriti a mano. Gli output comprendono i token di ragionamento. Cache vuota senza predefinito = pagata come
+        input. Un modello senza prezzo non entra nel saldo: le sue analisi restano al costo medio assunto, con un avviso.</li>
       <li><strong>È un minimo</strong>: non comprende le richieste rimaste senza risposta (sovraccarico, timeout, quota: compaiono come "chiamate senza token
         noti"), né i batch scaduti, annullati o riusciti solo in parte. Per un controllo confronta con Google AI Studio e poi registra una "Correzione" del saldo.</li>
       <li>Se la funzione del database non risponde, il riquadro dice "Consumo non disponibile" e il saldo usa il costo medio assunto.</li>

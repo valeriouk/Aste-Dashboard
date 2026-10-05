@@ -359,7 +359,7 @@
             <label for="sconto-batch-gemini">Sconto del batch (%)</label>
             <input type="number" id="sconto-batch-gemini" step="1" min="0" max="100" value="0" onchange="alCambioPrezzi()">
           </div>
-          <p class="sezione-nota">I prezzi li prendi dal listino di Google e restano solo su questo browser (telefono e PC vanno inseriti separatamente). Non sono scritti nel codice né nel database. Gli output comprendono anche i token di ragionamento del modello (da controllare sul listino). Se lasci vuota la cache, i token in cache sono pagati come input normale. Un modello senza prezzo non entra nel saldo: le sue analisi restano calcolate col costo medio assunto.</p>
+          <p class="sezione-nota">Per <code>gemini-3.7-flash</code> sono già impostati i prezzi del listino pubblico di Google (in dollari per milione di token, usati come euro; sono i numeri grigi nei campi vuoti, e dal 01/01/2027 passano da soli ai prezzi nuovi, il doppio). Scrivendo un valore in un campo vince il tuo, e resta solo su questo browser (telefono e PC vanno inseriti separatamente); svuotando il campo torna il predefinito. Gli output comprendono anche i token di ragionamento. Per gli altri modelli i prezzi vanno inseriti a mano; se lasci vuota la cache, i token in cache sono pagati come input normale. Un modello senza prezzo non entra nel saldo: le sue analisi restano calcolate col costo medio assunto. Lo sconto del batch è predefinito al 50%.</p>
         </div>
         <p class="sezione-nota">Token letti dalle risposte di Gemini, dal rilascio in poi (il passato non è recuperabile). Il totale è un minimo: non comprende le richieste rimaste senza risposta (sovraccarico, timeout, quota) né i batch non riusciti. Giorni e periodi sono in UTC. Per un controllo, confronta i numeri con Google AI Studio.</p>
       </div>
@@ -816,7 +816,20 @@
   // ============================================================
   const CHIAVE_LOCALSTORAGE_PREZZI = "aste_prezzi_gemini";
   let ULTIMO_CONSUMO = null;                          // risultato di leggi_consumo_gemini, null se non disponibile
-  let PREZZI_GEMINI = {modelli: {}, sconto_batch: 0};  // € per milione di token, solo su questo browser
+  let PREZZI_GEMINI = {modelli: {}, sconto_batch: 50};  // prezzi scritti da te, solo su questo browser (sconto batch predefinito 50%)
+
+  // Prezzi predefiniti dal listino pubblico di Google (ai.google.dev/gemini-api/docs/pricing, letto il 05/10/2026),
+  // in dollari per milione di token: li usiamo come se fossero euro (differenza trascurabile). Valgono finché nel
+  // modulo il campo è vuoto; quello che scrivi tu vince. Il listino raddoppia dal 01/01/2027: dopo quella data
+  // valgono i prezzi nuovi. Il batch costa la metà (sconto 50%). Si riconoscono dall'inizio del nome del modello.
+  const PREZZI_PREDEFINITI = [
+    {inizio: "gemini-3.7-flash", fino_al: "2026-12-31", input: 0.75, output: 3.75, cache: 0.075},
+    {inizio: "gemini-3.7-flash", fino_al: null,         input: 1.5,  output: 7.5,  cache: 0.15},
+  ];
+  function prezzoPredefinito(modello, oggi) {
+    const giorno = (oggi || new Date()).toISOString().slice(0, 10);
+    return PREZZI_PREDEFINITI.find(p => String(modello || "").startsWith(p.inizio) && (!p.fino_al || giorno <= p.fino_al)) || null;
+  }
 
   function leggiPrezziRicordati() {
     try {
@@ -828,11 +841,13 @@
   }
   function salvaPrezziRicordati() { try { localStorage.setItem(CHIAVE_LOCALSTORAGE_PREZZI, JSON.stringify(PREZZI_GEMINI)); } catch (e) {} }
 
-  // Prezzi del modello, o null se mancano input o output (cache vuota = come l'input)
+  // Prezzi del modello, o null se mancano input o output. Ogni campo: quello scritto da te, altrimenti il
+  // predefinito; cache senza nessuno dei due = come l'input.
   function prezzoModello(modello) {
-    const p = PREZZI_GEMINI.modelli[modello];
-    if (!p) return null;
-    const input = parseFloat(p.input), output = parseFloat(p.output), cache = parseFloat(p.cache);
+    const p = PREZZI_GEMINI.modelli[modello] || {};
+    const pre = prezzoPredefinito(modello) || {};
+    const numero = (scritto, predefinito) => { const v = parseFloat(scritto); return isNaN(v) ? (predefinito === undefined ? NaN : predefinito) : v; };
+    const input = numero(p.input, pre.input), output = numero(p.output, pre.output), cache = numero(p.cache, pre.cache);
     if (isNaN(input) || isNaN(output)) return null;
     return {input, output, cache: isNaN(cache) ? input : cache};
   }
@@ -950,8 +965,10 @@
     const nomeModello = m => m === "" ? "sconosciuto (modello non indicato)" : m;
     const campoPrezzo = (modello, campo) => {
       const v = (PREZZI_GEMINI.modelli[modello] || {})[campo];
+      const predefinito = (prezzoPredefinito(modello) || {})[campo];
       return `<input type="number" step="0.001" min="0" data-modello="${escapeHtml(modello)}" data-campo="${campo}"
-                value="${v === undefined || v === null ? "" : escapeHtml(v)}" onchange="alCambioPrezzi()">`;
+                value="${v === undefined || v === null ? "" : escapeHtml(v)}"
+                placeholder="${predefinito === undefined ? "" : escapeHtml(predefinito)}" onchange="alCambioPrezzi()">`;
     };
     document.getElementById("corpo-prezzi-gemini").innerHTML = modelli.map(m =>
       `<tr><td>${escapeHtml(nomeModello(m))}</td><td>${campoPrezzo(m, "input")}</td><td>${campoPrezzo(m, "output")}</td><td>${campoPrezzo(m, "cache")}</td></tr>`).join("");
