@@ -2544,7 +2544,7 @@
     <div class="tabella-scroll"><table>
       <thead><tr><th>Messaggio</th><th>Quando arriva</th></tr></thead>
       <tbody>
-        <tr><td>🏠 NUOVA ASTA IMMOBILIARE</td><td>Per ogni asta nuova analizzata (subito, dal batch o riusando un'analisi). Contiene indirizzo, zona segnalata, distanza dal centro di ricerca con il suo nome ("12 km da Fidenza"; la riga manca se il nome non è disponibile), tipologia,
+        <tr><td>🏠 NUOVA ASTA IMMOBILIARE</td><td>Per le aste nuove <strong>migliori</strong> (analisi riuscita, punteggio almeno 70 e margine lordo positivo) analizzate subito o riusando un'analisi, e per ogni asta ritirata dal batch (quelle del batch non hanno ancora il filtro "migliori"). Le altre aste del giro compaiono solo nel riepilogo. Contiene indirizzo, zona segnalata, distanza dal centro di ricerca con il suo nome ("12 km da Fidenza"; la riga manca se il nome non è disponibile), tipologia,
           superficie ed €/mq, tribunale, data, disponibilità, offerta minima, prezzo base, <a href="#registro-tentativo">tentativo</a>, valore di stima, margine,
           punteggio, occupazione, sanatoria, formalità, fonte, modello, note e link. Arriva solo la prima volta che l'asta entra nel registro (e di nuovo solo
           se un nuovo tentativo di analisi riesce), e solo se l'asta è stata salvata davvero nel database. La riga del tentativo viene dallo
@@ -2554,7 +2554,8 @@
         <tr><td>✅ nessuna asta entro i filtri</td><td>Lo scanner non ha trovato annunci con i filtri attuali (li elenca).</td></tr>
         <tr><td>✅ tutte già note, nessuna novità</td><td>Tutte le aste trovate erano già analizzate o in un batch.</td></tr>
         <tr><td>🔢 Scanner aste — solo conteggio</td><td>Modalità <a href="#config-altri-filtri">solo conteggio</a>: numeri, nessuna spesa. Se ci sono aste da analizzare, il link "Scegli in Configurazione" porta al <a href="#config-conteggio-in-attesa">conteggio in attesa</a> (6 ore).</td></tr>
-        <tr><td>✅ completato / ⚠️ completato con errori</td><td>Fine di un giro con analisi subito (sincrono): quante aste analizzate e quante con errori.</td></tr>
+        <tr><td>✅ completato / ⚠️ completato con errori</td><td>Fine di un giro con analisi subito (sincrono): quante aste analizzate e quante con errori, seguito dal <strong>riepilogo di tutte le aste del giro</strong> (una riga ciascuna: indirizzo con link, prezzo base, margine, punteggio; ⭐ = notifica singola già inviata). Se non sta in un messaggio, il riepilogo continua nel successivo.</td></tr>
+        <tr><td>📋 Aste già pronte senza batch</td><td>Dopo l'invio di un batch: le aste del giro che non hanno dovuto aspettare Gemini (perizia già analizzata o assente), nello stesso formato del riepilogo.</td></tr>
         <tr><td>📦 Ricerca … completata</td><td>Batch inviato a Gemini: criteri (luogo, prezzo, tipologia, stati di occupazione esclusi, esclusioni per parole), numero di aste, modello; i risultati arriveranno da pochi minuti a 24 ore dopo.</td></tr>
         <tr><td>✅ Ricerca completata, nessun documento leggibile</td><td>Nessuna asta aveva un documento valido da inviare.</td></tr>
         <tr><td>⚠️ invio del batch a Gemini fallito</td><td>Si riproverà al giro successivo.</td></tr>
