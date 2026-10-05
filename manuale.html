@@ -221,7 +221,7 @@
       <tbody>
         <tr><td><a href="#registro">Registro</a> (<code>index.html</code>)</td><td>Elenco e mappa delle aste, filtri, stelle, note, costi stimati</td><td>lettura (se attiva) per aprirlo; scrittura per stelle, scarti, note, link, correzioni</td></tr>
         <tr><td><a href="#config">Configurazione</a> (<code>config.html</code>)</td><td>Filtri dello scanner, orari, modelli, avvio manuale dei processi, password</td><td>scrittura</td></tr>
-        <tr><td><a href="#statistiche">Statistiche</a> (<code>statistiche.html</code>)</td><td>Numeri del registro, perizie analizzate, costi Gemini stimati, operazioni</td><td>scrittura</td></tr>
+        <tr><td><a href="#statistiche">Statistiche</a> (<code>statistiche.html</code>)</td><td>Numeri del registro, perizie analizzate, consumo Gemini in token, costi Gemini stimati, operazioni</td><td>scrittura</td></tr>
         <tr><td><a href="#superanalisi">Superanalisi</a> (<code>superanalisi.html?id=…</code>)</td><td>Dettaglio di un'asta: perizia, valore di rivendita, conto, seconda opinione AI</td><td>scrittura</td></tr>
         <tr><td><a href="#gruppo">Superanalisi di gruppo</a></td><td>Classifica di 2-10 aste selezionate e prompt per un'AI esterna</td><td>scrittura</td></tr>
         <tr><td><a href="#superanalisi-risultati">Risultato superanalisi</a> (<code>risultato-superanalisi.html?id=…</code>)</td><td>Un risultato di un'AI esterna salvato, a tutta pagina, solo lettura</td><td>lettura del registro</td></tr>
@@ -347,7 +347,7 @@
     <h3>Costi: Gemini e minuti GitHub</h3>
     <ul>
       <li><strong>Gemini</strong> (Google) si paga a consumo: ogni perizia analizzata costa. Il costo cresce con le dimensioni della perizia e
-        con le <a href="#analisi-perizie-aggiuntive">perizie aggiuntive</a>. Una stima del consumo è in <a href="#stat-ricariche">Statistiche → Costi Gemini</a>.</li>
+        con le <a href="#analisi-perizie-aggiuntive">perizie aggiuntive</a>. Il consumo in token e una stima del saldo sono in <a href="#stat-consumo">Statistiche → Consumo Gemini</a> e <a href="#stat-ricariche">Costi Gemini</a>.</li>
       <li><strong>Batch</strong>: le analisi inviate "in blocco" costano circa la metà ma arrivano dopo (di solito 20-30 minuti, al massimo 24 ore).
         Vedi <a href="#orari-batch-o-sincrono">Batch o subito</a>.</li>
       <li><strong>Nessuna spesa</strong> per: asta già analizzata (anche se la stessa perizia è su un altro annuncio dello stesso lotto: si riusa
@@ -1720,12 +1720,31 @@
 
   <section class="voce" id="stat-ricariche">
     <h3>Costi Gemini: saldo stimato e registro ricariche</h3>
-    <div class="formula">saldo = ultima "correzione" (o 0) + ricariche successive − perizie nuove da allora × costo medio a perizia</div>
+    <div class="formula">saldo = ultima "correzione" (o 0) + ricariche successive − costo dei token reali dopo la correzione − perizie non coperte dai token × costo medio a perizia</div>
     <ul>
-      <li><strong>Costo medio assunto a perizia</strong> (predefinito 0,01 €): <span class="stima">STIMA</span>. Gemini fattura a "token" (pezzi di testo e
-        immagini) e il sistema non li registra; regolalo confrontando il consumo reale su Google AI Studio. Resta solo su quel browser.</li>
+      <li><strong>Costo medio assunto a perizia</strong> (predefinito 0,01 €): <span class="stima">STIMA</span>. Vale solo per le perizie non coperte dai
+        token registrati: giorni prima del <a href="#stat-consumo">rilascio del conteggio</a> (05/10/2026), giorni parziali e modelli senza prezzo. Regolalo
+        confrontando il consumo reale su Google AI Studio. Resta solo su quel browser.</li>
       <li><strong>Aggiungi al registro</strong>: "Ricarica" (aggiungo credito) oppure "Correzione" (imposto il saldo esatto, da cui il calcolo riparte), con
         importo e nota. Unica parte della pagina che scrive dati. Le voci non si cancellano dalla pagina.</li>
+    </ul>
+  </section>
+
+  <section class="voce" id="stat-consumo">
+    <h3>Consumo Gemini: token reali</h3>
+    <p>Dal 05/10/2026 lo scanner registra, per ogni risposta di Gemini (analisi diretta, <a href="#orari-ricontrollo">ricontrollo</a> e risultati dei batch),
+      i token usati: input (di cui in cache), output e ragionamento. Si registrano token, non euro. Non si recuperano i giorni passati.</p>
+    <ul>
+      <li><strong>Riquadri</strong>: token di oggi, ultimi 7 e 30 giorni (input + output + ragionamento) e la media di token per analisi sugli ultimi 30 giorni
+        (comprende i tentativi andati a vuoto sui modelli della cascata, che si pagano). Giorni e periodi sono in UTC.</li>
+      <li><strong>Tabella</strong> per modello e per via (diretta o batch) con i token e, se hai inserito i prezzi, gli euro degli ultimi 30 giorni.</li>
+      <li><strong>Prezzi</strong>: euro per milione di token (input, output, cache) di ogni modello presente nei dati e lo sconto del batch. Li prendi dal
+        listino di Google; restano <strong>solo su quel browser</strong> (telefono e PC vanno inseriti separatamente) e non sono scritti nel codice né nel
+        database. Gli output comprendono i token di ragionamento. Cache vuota = pagata come input. Un modello senza prezzo non entra nel saldo: le sue
+        analisi restano al costo medio assunto, con un avviso.</li>
+      <li><strong>È un minimo</strong>: non comprende le richieste rimaste senza risposta (sovraccarico, timeout, quota: compaiono come "chiamate senza token
+        noti"), né i batch scaduti, annullati o riusciti solo in parte. Per un controllo confronta con Google AI Studio e poi registra una "Correzione" del saldo.</li>
+      <li>Se la funzione del database non risponde, il riquadro dice "Consumo non disponibile" e il saldo usa il costo medio assunto.</li>
     </ul>
   </section>
 

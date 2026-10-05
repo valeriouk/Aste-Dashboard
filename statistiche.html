@@ -205,7 +205,7 @@
 
   .costo-assunto-riga { display: flex; align-items: center; gap: 10px; margin-bottom: 4px; flex-wrap: wrap; }
   .costo-assunto-riga label { font-size: .82rem; color: var(--ink-muted); }
-  .costo-assunto-riga input { width: 100px; background: var(--bg); border: 1px solid var(--border); border-radius: 8px; padding: 6px 10px; font-family: var(--font-mono); font-size: .85rem; color: var(--ink); }
+  .costo-assunto-riga input, .tabella-ricariche input { width: 100px; background: var(--bg); border: 1px solid var(--border); border-radius: 8px; padding: 6px 10px; font-family: var(--font-mono); font-size: .85rem; color: var(--ink); }
   /* Niente zoom automatico di iPhone toccando un campo (campi a 16 px sul telefono) */
   @media (max-width: 640px) {
     input:not([type="checkbox"]):not([type="radio"]):not([type="range"]), select, textarea {
@@ -315,7 +315,7 @@
           <label for="costo-medio-perizia">Costo medio assunto a perizia (€)</label>
           <input type="number" id="costo-medio-perizia" step="0.001" min="0" value="0.01" onchange="alCambioCostoAssunto()">
         </div>
-        <p class="sezione-nota">Stima, non un dato reale: Gemini fattura a token e il sistema non registra i token di ogni chiamata. Se controlli il consumo reale su Google AI Studio e trovi una media diversa, correggi questo numero: resta solo su questo browser, non viene salvato nel database.</p>
+        <p class="sezione-nota">Stima mista: per i giorni con i token registrati (sezione sotto) il costo è calcolato sui token reali e sui prezzi che inserisci; per le perizie non coperte dai token (giorni prima del rilascio, giorni parziali, modelli senza prezzo) vale il costo medio assunto qui. Se controlli il consumo reale su Google AI Studio e trovi una media diversa, correggi questo numero: resta solo su questo browser, non viene salvato nel database.</p>
 
         <div style="margin-top:22px; padding-top:18px; border-top:1px solid var(--border);">
           <div class="riga-form-due">
@@ -344,6 +344,24 @@
           <tbody id="corpo-tabella-ricariche"></tbody>
         </table>
         <p id="messaggio-nessuna-ricarica" class="messaggio-attesa nascosto" style="margin-top:14px;">Nessuna ricarica registrata ancora.</p>
+      </div>
+
+      <div class="sezione">
+        <h2 class="sezione-titolo">Consumo Gemini — token reali</h2>
+        <div id="consumo-gemini"><p class="messaggio-attesa">Caricamento…</p></div>
+        <div id="prezzi-gemini" class="nascosto">
+          <h3 style="font-family:var(--font-body);font-size:.85rem;font-weight:600;color:var(--ink-muted);margin:18px 0 8px;">Prezzi (€ per milione di token)</h3>
+          <div style="overflow-x:auto"><table class="tabella-ricariche" id="tabella-prezzi-gemini">
+            <thead><tr><th>Modello</th><th>Input</th><th>Output</th><th>Cache</th></tr></thead>
+            <tbody id="corpo-prezzi-gemini"></tbody>
+          </table></div>
+          <div class="costo-assunto-riga">
+            <label for="sconto-batch-gemini">Sconto del batch (%)</label>
+            <input type="number" id="sconto-batch-gemini" step="1" min="0" max="100" value="0" onchange="alCambioPrezzi()">
+          </div>
+          <p class="sezione-nota">I prezzi li prendi dal listino di Google e restano solo su questo browser (telefono e PC vanno inseriti separatamente). Non sono scritti nel codice né nel database. Gli output comprendono anche i token di ragionamento del modello (da controllare sul listino). Se lasci vuota la cache, i token in cache sono pagati come input normale. Un modello senza prezzo non entra nel saldo: le sue analisi restano calcolate col costo medio assunto.</p>
+        </div>
+        <p class="sezione-nota">Token letti dalle risposte di Gemini, dal rilascio in poi (il passato non è recuperabile). Il totale è un minimo: non comprende le richieste rimaste senza risposta (sovraccarico, timeout, quota) né i batch non riusciti. Giorni e periodi sono in UTC. Per un controllo, confronta i numeri con Google AI Studio.</p>
       </div>
 
       <div class="sezione">
@@ -488,6 +506,7 @@
 
       renderizzaStatisticheAste(statistiche);
       renderizzaRicariche();
+      caricaConsumo();
       caricaOperazioni();
 
       document.getElementById("stato-caricamento-statistiche").classList.add("nascosto");
@@ -647,7 +666,17 @@
     renderizzaRicariche();
   }
 
-  function calcolaSaldoStimato(ricariche, perizieNelTempo, costoMedioPerizia) {
+  // Istante dell'ultima "correzione" (ricariche ordinate dalla più recente), o null
+  function dataUltimaCorrezione(ricariche) {
+    const correzione = (ricariche || []).find(r => r.tipo === "correzione");
+    return correzione ? new Date(correzione.creato_il) : null;
+  }
+
+  // consumo: risultato di leggi_consumo_gemini (con p_dal = ultima correzione), oppure null.
+  // Regola: per ogni giorno dopo la correzione, le perizie coperte da analisi con token E con
+  // un prezzo noto sono pagate sui token reali (da_correzione, esatti all'istante); le altre
+  // (giorni prima del rilascio, giorni parziali, modelli senza prezzo) restano al costo assunto.
+  function calcolaSaldoStimato(ricariche, perizieNelTempo, costoMedioPerizia, consumo) {
     // ricariche: già ordinate dal più recente al più vecchio (leggi_ricariche_gemini).
     // Trovo l'ultima "correzione" (se c'è): è il punto da cui riparte il conteggio.
     const ultimaCorrezione = ricariche.find(r => r.tipo === "correzione") || null;
@@ -659,15 +688,37 @@
     const sommaRicariche = ricaricheDopo.reduce((s, r) => s + Number(r.importo_euro), 0);
     const baseCorrezione = ultimaCorrezione ? Number(ultimaCorrezione.importo_euro) : 0;
 
-    const perizieDaSottrarre = (perizieNelTempo || []).reduce((s, d) => {
+    let euroToken = 0, modelliSenzaPrezzo = new Set();
+    let analisiConPrezzo = 0;      // analisi con token e con prezzo, dopo la correzione
+    if (consumo && consumo.primo_dato) {
+      (consumo.da_correzione || []).forEach(r => {
+        const euro = euroRiga(r);
+        if (euro === null) { if (Number(r.con_token) > 0) modelliSenzaPrezzo.add(r.modello || "sconosciuto"); }
+        else euroToken += euro;
+      });
+      (consumo.giorni || []).forEach(r => {
+        if (euroRiga(r) !== null && (!dataBase || new Date(r.giorno) > dataBase)) analisiConPrezzo += Number(r.analisi_ok || 0);
+      });
+    }
+
+    // Copertura sul periodo intero e non giorno per giorno: un'analisi che finisce il giorno dopo
+    // l'inserimento della perizia (batch) copre comunque quella perizia.
+    let perizieDaSottrarre = 0;
+    (perizieNelTempo || []).forEach(d => {
       const giornoData = new Date(d.giorno);
-      if (!dataBase || giornoData > dataBase) return s + Number(d.n);
-      return s;
-    }, 0);
+      if (dataBase && !(giornoData > dataBase)) return;
+      perizieDaSottrarre += Number(d.n);
+    });
+    const perizieCoperte = Math.min(perizieDaSottrarre, analisiConPrezzo);
+    const perizieAlCostoAssunto = perizieDaSottrarre - perizieCoperte;
 
     return {
-      saldo: baseCorrezione + sommaRicariche - perizieDaSottrarre * costoMedioPerizia,
+      saldo: baseCorrezione + sommaRicariche - euroToken - perizieAlCostoAssunto * costoMedioPerizia,
       perizie_contate: perizieDaSottrarre,
+      perizie_coperte: perizieCoperte,
+      perizie_al_costo_assunto: perizieAlCostoAssunto,
+      euro_token: euroToken,
+      modelli_senza_prezzo: Array.from(modelliSenzaPrezzo),
       dal: ultimaCorrezione ? ultimaCorrezione.creato_il : (ricariche.length ? ricariche[ricariche.length - 1].creato_il : null),
     };
   }
@@ -675,14 +726,22 @@
   function renderizzaRicariche() {
     const costo = leggiCostoAssunto();
     const perizieNelTempo = ULTIME_STATISTICHE ? ULTIME_STATISTICHE.perizie_nel_tempo : [];
-    const { saldo, perizie_contate, dal } = calcolaSaldoStimato(ULTIME_RICARICHE, perizieNelTempo, costo);
+    const r = calcolaSaldoStimato(ULTIME_RICARICHE, perizieNelTempo, costo, ULTIMO_CONSUMO);
+    const { saldo, perizie_contate, dal } = r;
 
     const numeroEl = document.getElementById("numero-saldo-stimato");
     numeroEl.textContent = `€ ${saldo.toFixed(2)}`;
     numeroEl.classList.toggle("negativo", saldo < 0);
-    document.getElementById("dettaglio-saldo-stimato").textContent = dal
-      ? `Stima: ${perizie_contate} perizie da allora, a € ${costo.toFixed(3)} l'una`
-      : "Nessuna ricarica registrata ancora — aggiungine una qui sotto";
+    let testoDettaglio = "Nessuna ricarica registrata ancora — aggiungine una qui sotto";
+    if (dal) {
+      testoDettaglio = r.perizie_coperte > 0
+        ? `€ ${r.euro_token.toFixed(2)} da token reali (${r.perizie_coperte} perizie) + ${r.perizie_al_costo_assunto} perizie a € ${costo.toFixed(3)} l'una (costo assunto)`
+        : `Stima: ${perizie_contate} perizie da allora, a € ${costo.toFixed(3)} l'una`;
+      if (r.modelli_senza_prezzo.length) {
+        testoDettaglio += ` — ⚠ senza prezzo: ${r.modelli_senza_prezzo.join(", ")} (inserisci i prezzi nella sezione Consumo)`;
+      }
+    }
+    document.getElementById("dettaglio-saldo-stimato").textContent = testoDettaglio;
 
     const corpo = document.getElementById("corpo-tabella-ricariche");
     const nessuna = document.getElementById("messaggio-nessuna-ricarica");
@@ -742,6 +801,7 @@
       const ricaricheAggiornate = await chiamaRpc("leggi_ricariche_gemini", {password_tentativo: passwordCorrente});
       ULTIME_RICARICHE = Array.isArray(ricaricheAggiornate) ? ricaricheAggiornate : [];
       renderizzaRicariche();
+      caricaConsumo();   // una correzione sposta il punto da cui si contano i token
     } catch (e) {
       msgEl.textContent = "Impossibile contattare il database: controlla la connessione e riprova.";
       msgEl.classList.add("messaggio-errore");
@@ -751,8 +811,170 @@
   }
 
   // ============================================================
+  // Consumo Gemini (token reali) — caricato a parte: se la funzione non
+  // esiste ancora o risponde con un errore, il resto della pagina non cambia.
+  // ============================================================
+  const CHIAVE_LOCALSTORAGE_PREZZI = "aste_prezzi_gemini";
+  let ULTIMO_CONSUMO = null;                          // risultato di leggi_consumo_gemini, null se non disponibile
+  let PREZZI_GEMINI = {modelli: {}, sconto_batch: 0};  // € per milione di token, solo su questo browser
+
+  function leggiPrezziRicordati() {
+    try {
+      const salvati = JSON.parse(localStorage.getItem(CHIAVE_LOCALSTORAGE_PREZZI));
+      if (salvati && typeof salvati === "object" && salvati.modelli && typeof salvati.modelli === "object") {
+        PREZZI_GEMINI = {modelli: salvati.modelli, sconto_batch: Number(salvati.sconto_batch) || 0};
+      }
+    } catch (e) {}
+  }
+  function salvaPrezziRicordati() { try { localStorage.setItem(CHIAVE_LOCALSTORAGE_PREZZI, JSON.stringify(PREZZI_GEMINI)); } catch (e) {} }
+
+  // Prezzi del modello, o null se mancano input o output (cache vuota = come l'input)
+  function prezzoModello(modello) {
+    const p = PREZZI_GEMINI.modelli[modello];
+    if (!p) return null;
+    const input = parseFloat(p.input), output = parseFloat(p.output), cache = parseFloat(p.cache);
+    if (isNaN(input) || isNaN(output)) return null;
+    return {input, output, cache: isNaN(cache) ? input : cache};
+  }
+
+  // Euro di una riga aggregata (token_prompt include la cache; output + pensiero al prezzo output), o null senza prezzo
+  function euroRiga(r) {
+    const p = prezzoModello(r.modello);
+    if (!p) return null;
+    const prompt = Number(r.token_prompt) || 0, cache = Number(r.token_cache) || 0;
+    let euro = (Math.max(0, prompt - cache) * p.input + cache * p.cache
+                + ((Number(r.token_output) || 0) + (Number(r.token_pensiero) || 0)) * p.output) / 1e6;
+    if (r.via === "batch") euro *= 1 - (PREZZI_GEMINI.sconto_batch || 0) / 100;
+    return euro;
+  }
+
+  function formatoToken(n) {
+    n = Number(n) || 0;
+    if (n >= 1e6) return (n / 1e6).toLocaleString("it-IT", {maximumFractionDigits: 2}) + " M";
+    if (n >= 1e3) return (n / 1e3).toLocaleString("it-IT", {maximumFractionDigits: 1}) + " k";
+    return String(n);
+  }
+
+  let RICHIESTA_CONSUMO = 0;   // risposte arrivate fuori ordine: vale solo l'ultima richiesta
+
+  async function caricaConsumo() {
+    const el = document.getElementById("consumo-gemini");
+    const numeroRichiesta = ++RICHIESTA_CONSUMO;
+    try {
+      const dataBase = dataUltimaCorrezione(ULTIME_RICARICHE);
+      const risposta = await chiamaRpc("leggi_consumo_gemini", {
+        password_tentativo: passwordCorrente,
+        p_dal: dataBase ? dataBase.toISOString() : null,
+      });
+      if (!risposta || risposta.result !== "success") {
+        throw new Error((risposta && (risposta.message || risposta.code)) || "risposta non valida");
+      }
+      if (numeroRichiesta !== RICHIESTA_CONSUMO) return;
+      ULTIMO_CONSUMO = risposta;
+    } catch (e) {
+      if (numeroRichiesta !== RICHIESTA_CONSUMO) return;
+      ULTIMO_CONSUMO = null;
+      el.innerHTML = `<p class="messaggio-attesa">Consumo non disponibile (${escapeHtml(e.message || e)}). Il saldo usa il costo medio assunto.</p>`;
+      document.getElementById("prezzi-gemini").classList.add("nascosto");
+      renderizzaRicariche();
+      return;
+    }
+    renderizzaConsumo();
+    renderizzaModuloPrezzi();
+    renderizzaRicariche();
+  }
+
+  function renderizzaConsumo() {
+    const el = document.getElementById("consumo-gemini");
+    const c = ULTIMO_CONSUMO;
+    if (!c || !c.primo_dato) {
+      el.innerHTML = `<p class="messaggio-attesa">Nessun dato ancora: i token si registrano a ogni analisi, dal primo giro dello scanner dopo il rilascio.</p>`;
+      document.getElementById("prezzi-gemini").classList.add("nascosto");
+      return;
+    }
+    const oggi = new Date(c.ora).toISOString().slice(0, 10);
+    const giornoMeno = n => { const d = new Date(oggi + "T00:00:00Z"); d.setUTCDate(d.getUTCDate() - n); return d.toISOString().slice(0, 10); };
+    const righe = c.giorni || [];
+    const tokenUsati = r => (Number(r.token_prompt) || 0) + (Number(r.token_output) || 0) + (Number(r.token_pensiero) || 0);
+    const periodo = dalGiorno => righe.filter(r => r.giorno >= dalGiorno);
+    const somma = (lista, campo) => lista.reduce((s, r) => s + (Number(typeof campo === "function" ? campo(r) : r[campo]) || 0), 0);
+
+    const chiamate = n => n === 1 ? "1 chiamata" : n + " chiamate";
+    const ultimi30 = periodo(giornoMeno(29));
+    const carta = (titolo, lista) => `<div class="scheda-statistica"><p class="scheda-statistica-numero">${formatoToken(somma(lista, tokenUsati))}</p>
+      <p class="scheda-statistica-etichetta">${titolo} · ${chiamate(somma(lista, "chiamate"))}</p></div>`;
+    const analisi30 = somma(ultimi30, "analisi_ok");
+    const mediaPerAnalisi = analisi30 > 0 ? somma(ultimi30, tokenUsati) / analisi30 : null;
+    const senzaToken = somma(ultimi30, "chiamate") - somma(ultimi30, "con_token");
+
+    // per modello e via, ultimi 30 giorni
+    const gruppi = {};
+    ultimi30.forEach(r => {
+      const k = (r.modello || "sconosciuto") + "|" + r.via;
+      const g = gruppi[k] || (gruppi[k] = {modello: r.modello || "sconosciuto", via: r.via, chiamate: 0, token_prompt: 0, token_cache: 0, token_output: 0, token_pensiero: 0});
+      g.chiamate += Number(r.chiamate) || 0;
+      g.token_prompt += Number(r.token_prompt) || 0; g.token_cache += Number(r.token_cache) || 0;
+      g.token_output += Number(r.token_output) || 0; g.token_pensiero += Number(r.token_pensiero) || 0;
+    });
+    const elenco = Object.values(gruppi);
+    let euroTotale = 0, euroCompleto = elenco.length > 0;
+    const corpoTabella = elenco.map(g => {
+      const euro = euroRiga(g);
+      if (euro === null) euroCompleto = false; else euroTotale += euro;
+      return `<tr><td>${escapeHtml(g.modello)}</td><td>${g.via === "batch" ? "batch" : "diretta"}</td><td>${g.chiamate}</td>
+        <td>${formatoToken(g.token_prompt)}</td><td>${formatoToken(g.token_cache)}</td><td>${formatoToken(g.token_output)}</td>
+        <td>${formatoToken(g.token_pensiero)}</td><td>${euro === null ? "—" : "€ " + euro.toFixed(2)}</td></tr>`;
+    }).join("");
+
+    el.innerHTML = `
+      <div class="griglia-statistiche">
+        ${carta("Oggi", periodo(oggi))}${carta("Ultimi 7 giorni", periodo(giornoMeno(6)))}${carta("Ultimi 30 giorni", ultimi30)}
+        <div class="scheda-statistica"><p class="scheda-statistica-numero">${mediaPerAnalisi === null ? "—" : formatoToken(Math.round(mediaPerAnalisi))}</p>
+          <p class="scheda-statistica-etichetta">Token per analisi (media, 30 giorni)</p></div>
+      </div>
+      <p class="sezione-nota">Token = input + output + ragionamento. Dati dal ${escapeHtml(Etichette.data(String(c.primo_dato).slice(0, 10)))}.${senzaToken > 0 ? ` In 30 giorni ${senzaToken === 1 ? "1 chiamata" : senzaToken + " chiamate"} senza token noti (nessuna risposta o campo mancante).` : ""}</p>
+      <div style="overflow-x:auto"><table class="tabella-ricariche">
+        <thead><tr><th>Modello</th><th>Via</th><th>Chiamate</th><th>Input</th><th>di cui cache</th><th>Output</th><th>Ragion.</th><th>€ (30 gg)</th></tr></thead>
+        <tbody>${corpoTabella}</tbody>
+      </table></div>
+      ${elenco.length && euroCompleto ? `<p class="sezione-nota">Totale ultimi 30 giorni con i prezzi inseriti: <strong>€ ${euroTotale.toFixed(2)}</strong></p>` : ""}`;
+
+  }
+
+  // Modulo prezzi: un modello per riga, dai modelli presenti nei dati. Disegnato solo quando arrivano i
+  // dati (non a ogni modifica di un prezzo), così il campo che si sta compilando non perde il focus.
+  function renderizzaModuloPrezzi() {
+    const c = ULTIMO_CONSUMO;
+    if (!c || !c.primo_dato) { document.getElementById("prezzi-gemini").classList.add("nascosto"); return; }
+    const modelli = Array.from(new Set((c.giorni || []).concat(c.da_correzione || []).map(r => r.modello || "")));
+    const nomeModello = m => m === "" ? "sconosciuto (modello non indicato)" : m;
+    const campoPrezzo = (modello, campo) => {
+      const v = (PREZZI_GEMINI.modelli[modello] || {})[campo];
+      return `<input type="number" step="0.001" min="0" data-modello="${escapeHtml(modello)}" data-campo="${campo}"
+                value="${v === undefined || v === null ? "" : escapeHtml(v)}" onchange="alCambioPrezzi()">`;
+    };
+    document.getElementById("corpo-prezzi-gemini").innerHTML = modelli.map(m =>
+      `<tr><td>${escapeHtml(nomeModello(m))}</td><td>${campoPrezzo(m, "input")}</td><td>${campoPrezzo(m, "output")}</td><td>${campoPrezzo(m, "cache")}</td></tr>`).join("");
+    document.getElementById("sconto-batch-gemini").value = PREZZI_GEMINI.sconto_batch || 0;
+    document.getElementById("prezzi-gemini").classList.toggle("nascosto", modelli.length === 0);
+  }
+
+  function alCambioPrezzi() {
+    const modelli = {};
+    document.querySelectorAll("#corpo-prezzi-gemini input").forEach(campo => {
+      const m = campo.dataset.modello;
+      (modelli[m] || (modelli[m] = {}))[campo.dataset.campo] = campo.value;
+    });
+    PREZZI_GEMINI = {modelli, sconto_batch: Math.min(100, Math.max(0, parseFloat(document.getElementById("sconto-batch-gemini").value) || 0))};
+    salvaPrezziRicordati();
+    renderizzaConsumo();
+    renderizzaRicariche();
+  }
+
+  // ============================================================
   // Avvio
   // ============================================================
+  leggiPrezziRicordati();
   try {
     const costoRicordato = localStorage.getItem(CHIAVE_LOCALSTORAGE_COSTO);
     if (costoRicordato !== null) document.getElementById("costo-medio-perizia").value = costoRicordato;
