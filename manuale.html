@@ -207,7 +207,7 @@
       <li><strong>Calcoli e scrittura nel database</strong>: margine lordo, €/mq, livello di ristrutturazione, punteggio; l'asta compare nel
         registro e arriva una <a href="#notifiche">notifica Telegram</a>.</li>
       <li><strong>Dopo il giro</strong>: <a href="#orari-ricontrollo">ricontrollo delle perizie</a> per le aste ancora senza perizia,
-        <a href="#orari-storico">storico delle aste</a> dal PVP, <a href="#omi-assegnazione">assegnazione dei valori OMI</a>, e il lunedì il <a href="#orari-promemoria-omi">promemoria OMI</a>.</li>
+        <a href="#orari-storico">storico delle aste</a> dal PVP, <a href="#omi-assegnazione">assegnazione dei valori OMI</a>, e il <a href="#orari-promemoria-omi">promemoria OMI</a> quando esce un nuovo semestre.</li>
     </ol>
     <p>Poi ci sei tu: nel registro filtri, metti le stelle alle aste interessanti, apri la <a href="#superanalisi">Superanalisi</a> per il conto
       completo dell'operazione, e ricevi i <a href="#orari-preferiti">promemoria</a> prima delle vendite. Nel <a href="#calendario">Calendario</a> vedi tutte le
@@ -369,7 +369,7 @@
         <tr><td><a href="#orari-ricontrollo">Ricontrollo perizie</a></td><td>Alla fine di ogni giro dello scanner</td><td>15-30 s per asta</td><td>solo se trova una perizia nuova</td></tr>
         <tr><td><a href="#orari-storico">Storico delle aste</a></td><td>Alla fine di ogni giro dello scanner</td><td>al massimo 4 minuti per giro (circa 3-8 s per asta); di solito meno di un minuto</td><td>no</td></tr>
         <tr><td><a href="#omi-assegnazione">Assegnazione OMI</a></td><td>Alla fine di ogni giro dello scanner; dopo un controllo batch che ha trovato batch; dopo un'importazione OMI</td><td>secondi</td><td>no</td></tr>
-        <tr><td><a href="#orari-promemoria-omi">Promemoria OMI</a></td><td>Il lunedì, dentro il giro dello scanner</td><td>—</td><td>no</td></tr>
+        <tr><td><a href="#orari-promemoria-omi">Promemoria OMI</a></td><td>A ogni giro dello scanner (una sola notifica per semestre)</td><td>—</td><td>no</td></tr>
         <tr><td><a href="#orari-batch">Controllo batch</a></td><td>Circa ogni ora, tutto il giorno; a mano con "Controlla batch ora"</td><td>meno di 1 minuto se non c'è nulla</td><td>no (i batch sono già pagati all'invio)</td></tr>
         <tr><td><a href="#orari-visite">Promemoria delle visite</a></td><td>A ogni controllo batch orario: 3 giorni e 1 giorno prima dalle 9:00, il giorno stesso dalle 7:00, circa 2 ore prima; solleciti dalle 9:00</td><td>secondi</td><td>no</td></tr>
         <tr><td><a href="#orari-operazioni">Promemoria delle operazioni</a></td><td>A ogni controllo batch orario: termine delle offerte, giorno dell'asta, esito, scadenza del saldo</td><td>secondi</td><td>no</td></tr>
@@ -530,16 +530,12 @@
   </section>
 
   <section class="voce" id="orari-promemoria-omi">
-    <h3>Promemoria OMI (il lunedì)</h3>
-    <p>Le quotazioni OMI escono ogni semestre e vanno caricate a mano. Il lunedì, durante il giro dello scanner, il sistema confronta il semestre
-      caricato con quello che dovrebbe essere già pubblicato:</p>
-    <ul>
-      <li>da gennaio a marzo si attende il 1° semestre dell'anno precedente;</li>
-      <li>dal 1° aprile il 2° semestre dell'anno precedente;</li>
-      <li>dal 1° ottobre il 1° semestre dell'anno in corso.</li>
-    </ul>
-    <p>Se quello caricato è più vecchio arriva "🗺️ Nuove quotazioni OMI" su Telegram, ogni lunedì finché non importi il nuovo semestre. Arriva solo se lo
-      scanner gira di lunedì. Vedi <a href="#omi-aggiornamento">come aggiornare l'OMI</a>.</p>
+    <h3>Promemoria OMI (quando esce un nuovo semestre)</h3>
+    <p>Le quotazioni OMI escono ogni semestre e vanno caricate a mano. A ogni giro dello scanner il sistema legge dalla pagina pubblica dell'Agenzia
+      delle Entrate la dicitura "Ultimo semestre pubblicato" e la confronta con il semestre caricato.</p>
+    <p>Se l'Agenzia ha pubblicato un semestre più recente arriva "🗺️ Nuove quotazioni OMI" su Telegram, <strong>una sola volta</strong> per semestre.
+      Se la pagina non si riesce a leggere (o la dicitura è cambiata) arriva invece un messaggio di avviso, solo il lunedì e finché il problema dura.
+      Vedi <a href="#omi-aggiornamento">come aggiornare l'OMI</a>.</p>
   </section>
 
   <section class="voce" id="orari-monitoraggio">
@@ -2530,7 +2526,7 @@
   <section class="voce" id="omi-aggiornamento">
     <h3>Aggiornare l'OMI ogni semestre</h3>
     <ol>
-      <li>Quando arriva il <a href="#orari-promemoria-omi">promemoria del lunedì</a>, entra nell'area riservata dell'Agenzia delle Entrate e scarica, per
+      <li>Quando arriva il <a href="#orari-promemoria-omi">promemoria sul nuovo semestre</a>, entra nell'area riservata dell'Agenzia delle Entrate e scarica, per
         tutto il territorio nazionale e per l'ultimo semestre, le quotazioni e i perimetri delle zone (KML).</li>
       <li>Lancia sul computer lo script di importazione del repository privato (con la password di scrittura; c'è una modalità di prova che legge senza
         caricare). Le istruzioni dettagliate sono nella documentazione del repository privato.</li>
