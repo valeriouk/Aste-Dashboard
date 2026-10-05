@@ -1382,6 +1382,11 @@
     <h3>"🔄 Controlla batch ora"</h3>
     <p>Avvia subito il <a href="#orari-batch">controllo dei batch</a> in sospeso (senza aspettare quello automatico orario, e ignorando il limite dei
       15 minuti): scrive nel registro i risultati già pronti e manda le notifiche. Non consuma Gemini (i batch sono già pagati all'invio).</p>
+    <p><strong>Indicatore "📦 N aste in attesa del batch"</strong> (nel registro, sotto l'intestazione, e in Configurazione sopra le schede): compare quando
+      c'è almeno un batch inviato e non ancora scritto e notificato, con le ore passate dall'invio più vecchio; sparisce da solo quando le aste sono state
+      notificate. Si rilegge ogni minuto e quando torni sulla scheda. Dopo 24 ore diventa un avviso rosso "da più di 24 ore · controlla il batch" (il limite
+      di Google per un batch). Toccandolo, dal registro vai a Configurazione, e da Configurazione al pulsante "Controlla batch ora". La coda comprende anche
+      i batch del <a href="#orari-ricontrollo">ricontrollo delle perizie</a>. Se la password non è nota o la lettura fallisce, la riga resta nascosta.</p>
   </section>
 
   <section class="voce" id="config-controlla-preferiti">

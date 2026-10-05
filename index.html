@@ -2715,6 +2715,7 @@
 <script src="underwriting.js?v=20261001"></script>
 <script src="feedback.js?v=20261001"></script>
 <script src="operazioni.js?v=20260930"></script>
+<script src="batch-sospeso.js?v=20261005"></script>
 
 <div class="contenitore">
 
@@ -2754,6 +2755,8 @@
       </div>
     </div>
   </div>
+
+  <button type="button" id="indicatore-batch" class="indicatore-batch nascosto" aria-live="polite"></button>
 
   <div class="controlli">
     <div class="controlli-riga-compatta">
@@ -5698,6 +5701,16 @@
       griglia.classList.remove("comparsa"); void griglia.offsetWidth; griglia.classList.add("comparsa");
       if (vistaDaRipristinare === "mappa") { vistaDaRipristinare = null; cambiaVista("mappa"); }
       apriDaLinkDiretto();
+      // indicatore "batch in attesa": non blocca mai il registro (vedi batch-sospeso.js)
+      try {
+        if (window.indicatoreBatch) window.indicatoreBatch.aggiorna();
+        else window.indicatoreBatch = BatchInSospeso.avvia({
+          elemento: document.getElementById("indicatore-batch"),
+          url: SUPABASE_URL, chiave: SUPABASE_ANON_KEY, tipo: "lettura",
+          password: () => passwordLetturaCorrente || leggiPasswordLetturaRicordata() || "",
+          alClic: () => { location.href = "config.html"; },
+        });
+      } catch (e) { console.error("Indicatore batch:", e); }
     }).catch(e => {
       // Questo stesso .catch prende SIA un fallimento vero della lettura
       // (rete, timeout) SIA un'eccezione lanciata più avanti dentro il

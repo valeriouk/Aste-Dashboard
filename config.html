@@ -518,6 +518,7 @@
 <script src="feedback.js?v=20261001"></script>
 <script src="operazioni.js?v=20260930"></script>
 <script src="etichette.js?v=20261001"></script>
+<script src="batch-sospeso.js?v=20261005"></script>
 
 <div class="contenitore">
 
@@ -554,6 +555,7 @@
     <div id="contenuto-config" class="nascosto">
 
       <button type="button" id="riga-conteggio" class="riga-conteggio nascosto" onclick="apriConteggio()"></button>
+      <button type="button" id="indicatore-batch" class="indicatore-batch nascosto" aria-live="polite"></button>
       <div id="avvisi-config" class="avvisi-config nascosto" role="status"></div>
 
       <nav class="schede-config" role="tablist" aria-label="Sezioni della configurazione">
@@ -1584,6 +1586,20 @@
       renderizzaTuttiIRiepiloghi();
       caricaStatoEsecuzioniPianificazione();
       caricaConteggio();
+      // indicatore "batch in attesa": non blocca mai la pagina (vedi batch-sospeso.js)
+      try {
+        if (window.indicatoreBatch) window.indicatoreBatch.aggiorna();
+        else window.indicatoreBatch = BatchInSospeso.avvia({
+          elemento: document.getElementById("indicatore-batch"),
+          url: SUPABASE_URL, chiave: SUPABASE_ANON_KEY, tipo: "scrittura",
+          password: () => passwordCorrente || "",
+          alClic: () => {   // porta al pulsante "Controlla batch ora" (scheda Orari)
+            mostraSchedaConfig("orari");
+            const bottone = document.getElementById("bottone-verifica-batch");
+            if (bottone) bottone.scrollIntoView({block: "center", behavior: "smooth"});
+          },
+        });
+      } catch (e2) { console.error("Indicatore batch:", e2); }
     } catch (e) {
       statoEl.textContent = "Impossibile leggere la configurazione attuale: controlla la connessione e ricarica la pagina.";
     }
