@@ -348,6 +348,39 @@
     <ul>
       <li><strong>Gemini</strong> (Google) si paga a consumo: ogni perizia analizzata costa. Il costo cresce con le dimensioni della perizia e
         con le <a href="#analisi-perizie-aggiuntive">perizie aggiuntive</a>. Il consumo in token e una stima del saldo sono in <a href="#stat-consumo">Statistiche → Consumo Gemini</a> e <a href="#stat-ricariche">Costi Gemini</a>.</li>
+      <li><strong>Claude</strong> (Anthropic) al posto di Gemini: <em>lo scegli tu</em>. Chi legge le perizie è deciso dal parametro
+        <code>provider_analisi</code> della tabella <code>config</code>: <code>gemini</code> (predefinito, tutto come sempre) oppure
+        <code>claude</code>, che usa il credito mensile prepagato di Anthropic (serve il secret <code>ANTHROPIC_API_KEY</code> nel repository
+        dello scanner: senza, il giro si ferma con un avviso). Si sceglie in <a href="#config-modelli">Configurazione → Analisi →
+        «Provider e modelli» → «Chi legge le perizie»</a>, e vale dal giro successivo.
+        <strong>Il sistema non passa mai da solo dall'uno all'altro</strong>: con <code>claude</code> Gemini non viene mai chiamato, quindi non
+        c'è nessuna spesa Gemini senza una tua scelta. Un valore scritto male ferma il giro con un avviso (non ricade su Gemini).
+        <ul>
+          <li><em>Cosa cambia con Claude</em>: le perizie si analizzano una per una (il batch di Claude non c'è ancora); «cerca su tutta Italia»
+            non parte, con un avviso (fa eccezione un giro partito da una tua scelta dopo il conteggio: quelle aste vengono analizzate una
+            per una, entro il tetto di tempo); il ricontrollo delle perizie non si esegue (si può attivare solo aggiungendo a mano nella
+            tabella <code>config</code> il parametro <code>usa_claude_ricontrollo</code> con valore <code>true</code>: sconsigliato, perché
+            rilegge le stesse perizie ogni pochi giorni).</li>
+          <li><em>Se Claude ha un problema</em> (credito o limite di spesa finiti, chiave non valida, nessuna risposta dopo qualche tentativo,
+            più risposte inutilizzabili di fila): il giro si ferma e arriva <em>un</em> messaggio Telegram con la causa e il rimando a
+            Configurazione per passare a Gemini, se lo vuoi (se prima dello stop qualche asta era già stata analizzata, segue un secondo
+            messaggio con il loro elenco). Il controllo avviene prima della ricerca sul PVP, per non sprecare minuti di GitHub. Le aste non ancora tentate non vengono
+            salvate né perdono tentativi: restano da analizzare e, quelle già nel registro, passano per prime al giro successivo. Due
+            eccezioni: l'asta su cui Claude ha smesso di rispondere viene salvata come «da riprovare» (se al giro dopo succede di nuovo
+            passa tra le «non leggibili», così non ferma più i giri); una risposta arrivata ma inutilizzabile conta nei 3 tentativi
+            dell'asta, come per Gemini.</li>
+          <li><em>Perizie che Claude non può leggere</em> (troppo grandi o con troppe pagine): l'asta è salvata come «non leggibile da Claude»,
+            compare nel messaggio di fine giro e nei giri successivi viene saltata senza rifare ricerca e download; passando a Gemini viene
+            ripresa normalmente. La nota riporta il modello usato: cambiando modello di Claude quelle aste vengono riprovate. Una perizia
+            che Claude non può leggere, se è condivisa da più lotti, viene inviata una volta sola per giro.</li>
+          <li><em>Tetto di tempo</em>: dopo circa due ore il giro smette di iniziare nuove aste e si chiude in ordine; le rimanenti ripartono al
+            giro successivo. Se il giro era partito da una scelta dopo il conteggio, che vale per un giro solo, le aste rimaste vanno
+            scelte di nuovo (il messaggio lo dice).</li>
+        </ul>
+        Nella notifica la riga "Modello AI" dice chi ha letto la perizia. Il consumo di Claude per ora è nel registro di esecuzione (log) del
+        processo, non in Statistiche; compare anche nel messaggio Telegram che arriva quando il giro si ferma, quando ci sono aste rimaste
+        indietro riprovate o perizie non leggibili. Il saldo vero si controlla nella Console Anthropic. Attenzione: per ora il
+        <a href="#stat-ricariche">saldo stimato di Gemini</a> può scendere anche per le perizie lette da Claude.</li>
       <li><strong>Batch</strong>: le analisi inviate "in blocco" costano circa la metà ma arrivano dopo (di solito 20-30 minuti, al massimo 24 ore).
         Vedi <a href="#orari-batch-o-sincrono">Batch o subito</a>.</li>
       <li><strong>Nessuna spesa</strong> per: asta già analizzata (anche se la stessa perizia è su un altro annuncio dello stesso lotto: si riusa
@@ -443,7 +476,8 @@
       <em>dall'avviso</em> o senza documento.</p>
     <ul>
       <li><strong>Quando</strong>: alla fine di ogni giro dello scanner, solo se in <a href="#config-perizia">Configurazione → Ricerca della perizia</a>
-        sono attive sia la ricerca estesa sia il ricontrollo, e non in modalità "solo conteggio".</li>
+        sono attive sia la ricerca estesa sia il ricontrollo, e non in modalità "solo conteggio". Se le perizie le legge Claude
+        (<a href="#config-modelli">Provider e modelli</a>) il ricontrollo resta fermo: lo dice anche il riepilogo della card.</li>
       <li><strong>Quali aste</strong>: vendita da oggi in poi; documento attuale "Avviso (PVP)", "Primo allegato disponibile (PVP)" o nessuno; non
         ricontrollate negli ultimi N giorni (predefinito 2); non in un batch in corso; non scartate; dentro l'area e il prezzo attuali (l'area si controlla sulla distanza vera tra l'immobile e il centro di
         ricerca di oggi, non su quella salvata quando l'asta è entrata; con "solo questi comuni" acceso, anche sul comune). Ordinate dalla
@@ -1327,7 +1361,7 @@
     <ul>
       <li><strong>Schede</strong> in alto (una riga su PC, due righe da tre sul telefono), ognuna con la sua parte della pagina; l'ultima scelta resta
         su questo dispositivo: <strong>🔍 Ricerca</strong> (area, prezzo, tipologia, altri filtri, esclusioni, ripristino dei predefiniti),
-        <strong>🧠 Analisi</strong> (modelli Gemini, ricerca della perizia), <strong>⏱️ Orari</strong> (pulsanti di avvio e pianificazione),
+        <strong>🧠 Analisi</strong> (provider e modelli, ricerca della perizia), <strong>⏱️ Orari</strong> (pulsanti di avvio e pianificazione),
         <strong>💶 Conti</strong> (regime fiscale e conti, checklist), <strong>📱 Dispositivo</strong> (tema, suoni e vibrazione),
         <strong>🔐 Sicurezza</strong> (manutenzione, password).</li>
       <li>Serve la password di scrittura. Ogni riquadro ("card") mostra il valore attuale; "Modifica" apre una finestra; "Salva" chiede conferma
@@ -1361,7 +1395,8 @@
         offerta minima, data di vendita, stato di occupazione, "da riprovare" e il link al PVP. Tutte spuntate di partenza; "Tutte" e "Nessuna"
         cambiano le spunte in blocco.</li>
       <li><strong>"Analizza le N scelte"</strong> (conferma col secondo tocco): salva la scelta e avvia subito lo scanner, che lavora <strong>solo su quelle
-        aste</strong>, senza rifare la ricerca sul PVP: ricerca della perizia, analisi Gemini (subito o in batch, come da Configurazione) e notifiche. Appena
+        aste</strong>, senza rifare la ricerca sul PVP: ricerca della perizia, analisi (con Gemini subito o in batch, come da Configurazione; con
+        Claude una per una: la finestra dice chi le analizzerà) e notifiche. Appena
         il giro parte, l'elenco viene cancellato. Se ricarichi Configurazione prima di quel momento (uno o due minuti dopo l'avvio) la riga dice
         "Conteggio accettato: scanner avviato…" e la finestra si apre in sola consultazione, con pulsanti e spunte disattivati; la pagina rilegge lo stato
         ogni 30 secondi e la riga sparisce da sola quando lo scanner ha preso in carico la scelta. In quel giro il ricontrollo delle perizie resta fermo: spendi solo per ciò che hai scelto. La modalità
@@ -1399,8 +1434,8 @@
     <h3>Set di filtri salvati</h3>
     <p>In fondo alla scheda Ricerca. Salva con un nome i filtri di quella scheda e rimettili quando vuoi, per esempio "Fidenza 195 conteggio"
       per un giro di solo conteggio e un secondo set per il giro vero. Un set contiene: area (centro e raggio, o tutta Italia, e l'elenco "solo questi comuni"), prezzo base, tipologie,
-      altri filtri (occupazione, solo aste future, perizia da astegiudiziarie, pausa, solo conteggio; non "vendita vicina" né il tetto di lettura) ed esclusioni per parole chiave. Modelli Gemini,
-      batch, orari e ricerca della perizia non fanno parte del set e restano quelli attuali.</p>
+      altri filtri (occupazione, solo aste future, perizia da astegiudiziarie, pausa, solo conteggio; non "vendita vicina" né il tetto di lettura) ed esclusioni per parole chiave. Provider e modelli
+      (chi legge le perizie, cascata, batch), orari e ricerca della perizia non fanno parte del set e restano quelli attuali.</p>
     <ul>
       <li><strong>Filtri attivi</strong>: la riga sopra l'elenco dice a cosa corrispondono i filtri di adesso: il nome del set salvato con gli stessi
         valori, "predefiniti" (Catania 22 km e gli altri valori di partenza) oppure "personalizzati" se non coincidono con nessuno dei due (per esempio dopo
@@ -1437,16 +1472,16 @@
         <tr><td>Ricerca della perizia</td><td>estesa, ricontrollo ogni 2 giorni, massimo 15 aste per giro</td></tr>
       </tbody>
     </table></div>
-    <p>Non cambiano la scelta del prompt (v1/v2), i set di filtri salvati, la scheda Conti e le schede Dispositivo e Sicurezza.</p>
+    <p>Non cambiano chi legge le perizie (Gemini o Claude), la scelta del prompt (v1/v2), i set di filtri salvati, la scheda Conti e le schede Dispositivo e Sicurezza.</p>
     <p><strong>I simboli * e °</strong> accanto ai titoli delle card e ai singoli campi dicono cosa resta fuori: <strong>*</strong> = non torna ai
       predefiniti con "Ripristina"; <strong>°</strong> = non fa parte dei <a href="#config-set-filtri">set di filtri salvati</a>. Senza simbolo = ripristinato e
-      compreso nei set. Una riga in fondo a ogni scheda (e nelle finestre "Altri filtri" e "Ricerca della perizia") ricorda il significato.</p>
+      compreso nei set. Una riga in fondo a ogni scheda (e nelle finestre "Altri filtri", "Provider e modelli" e "Ricerca della perizia") ricorda il significato.</p>
     <div class="tabella-scroll"><table>
       <thead><tr><th>Card</th><th>Scheda</th><th>"Ripristina" la riporta ai predefiniti</th><th>Entra nei set salvati</th></tr></thead>
       <tbody>
         <tr><td>Area di ricerca, Filtri di prezzo, Tipologia immobili, Esclusioni</td><td>Ricerca</td><td>sì</td><td>sì</td></tr>
         <tr><td>Altri filtri</td><td>Ricerca</td><td>sì, tutti</td><td>sì, tranne "vendita vicina" ° e tetto di lettura °</td></tr>
-        <tr><td>Modelli Gemini °</td><td>Analisi</td><td>sì</td><td>no</td></tr>
+        <tr><td>Provider e modelli °</td><td>Analisi</td><td>sì (non la scelta tra Gemini e Claude)</td><td>no</td></tr>
         <tr><td>Ricerca della perizia °</td><td>Analisi</td><td>sì, tranne il prompt di analisi *</td><td>no</td></tr>
         <tr><td>Pianificazione scansione °</td><td>Orari</td><td>sì</td><td>no</td></tr>
         <tr><td>Regime fiscale e conti * °, Checklist delle aste * °</td><td>Conti</td><td>no</td><td>no</td></tr>
@@ -1554,9 +1589,19 @@
   </section>
 
   <section class="voce" id="config-modelli">
-    <h3>Card "Modelli Gemini": cascata e batch</h3>
+    <h3>Card "Provider e modelli": chi legge le perizie, cascata e batch</h3>
     <ul>
-      <li><strong>Cascata dei modelli</strong> (separati da virgola, in ordine di priorità): si usa il primo; se esaurisce la quota o dà errore, si passa al
+      <li><strong>"Chi legge le perizie"</strong> *: Gemini (predefinito) oppure Claude. Lo scegli tu: lo scanner non passa mai da solo
+        dall'uno all'altro. Vale dal giro successivo e non torna ai predefiniti con "Ripristina". Con Claude la cascata e il batch qui sotto
+        non si usano, «cerca su tutta Italia» non parte (la pagina lo segnala in alto, in rosso), il
+        <a href="#orari-ricontrollo">ricontrollo delle perizie</a> resta fermo (lo dice il riepilogo della card "Ricerca della perizia") e, se
+        Claude ha un problema, il giro si ferma con un avviso su Telegram senza usare Gemini. Costi e dettagli in
+        <a href="#sistema-costi">Costi</a>. Se nel database c'è un valore non valido (per esempio scritto a mano), lo scanner non parte e la
+        pagina lo segnala in alto, in rosso: scegli di nuovo Gemini o Claude e salva. Se il provider si salva ma il resto della card no, il
+        messaggio lo dice ("Provider salvato…"). La prima volta serve
+        una funzione nel database: se al salvataggio compare "manca la funzione nel database", va eseguito una volta
+        <code>sql/provider_analisi.sql</code> (repository dello scanner) nell'SQL Editor di Supabase.</li>
+      <li><strong>Cascata dei modelli Gemini</strong> (separati da virgola, in ordine di priorità): si usa il primo; se esaurisce la quota o dà errore, si passa al
         successivo per il resto del giro. Se un modello risponde "vuoto" su un'asta, si prova il successivo solo per quell'asta (può costare di più).
         "↺ Ripristina cascata consigliata" riempie il campo (poi serve Salva). Serve almeno un modello.</li>
       <li><strong>"Usa il batch anche in ricerca locale"</strong> (predefinito attivo): analisi in batch, costo circa dimezzato, risultati di norma entro
@@ -1732,6 +1777,10 @@
         confrontando il consumo reale su Google AI Studio. Resta solo su quel browser.</li>
       <li><strong>Aggiungi al registro</strong>: "Ricarica" (aggiungo credito) oppure "Correzione" (imposto il saldo esatto, da cui il calcolo riparte), con
         importo e nota. Unica parte della pagina che scrive dati. Le voci non si cancellano dalla pagina.</li>
+      <li><strong>Se le perizie le legge Claude</strong> (<a href="#config-modelli">Provider e modelli</a>): per ora il calcolo non sa chi ha letto
+        ogni perizia. Quelle lette da Claude non hanno token Gemini registrati, quindi vengono contate tra le "non coperte" e scalate al costo
+        medio assunto: il saldo stimato può scendere più del vero (circa 1 centesimo a perizia con il valore predefinito), anche se Gemini non è
+        stato usato. Per riallinearlo basta una "Correzione" con il saldo letto su Google AI Studio.</li>
     </ul>
   </section>
 
@@ -2582,6 +2631,12 @@
         <tr><td>✅ tutte già note, nessuna novità</td><td>Tutte le aste trovate erano già analizzate o in un batch.</td></tr>
         <tr><td>🔢 Scanner aste — solo conteggio</td><td>Modalità <a href="#config-altri-filtri">solo conteggio</a>: numeri, nessuna spesa. Se ci sono aste da analizzare, il link "Scegli in Configurazione" porta al <a href="#config-conteggio-in-attesa">conteggio in attesa</a> (6 ore).</td></tr>
         <tr><td>✅ completato / ⚠️ completato con errori</td><td>Fine di un giro con analisi subito (sincrono): quante aste analizzate e quante con errori, seguito dal <strong>riepilogo di tutte le aste del giro</strong> (una riga ciascuna: indirizzo con link, prezzo base, margine, punteggio; ⭐ = notifica singola già inviata). Se non sta in un messaggio, il riepilogo continua nel successivo.</td></tr>
+        <tr><td>⛔ Scanner aste non avviato</td><td>Il giro non è partito e non ha speso nulla. Due casi: in «Chi legge le perizie» c'è un valore non valido (va scelto di nuovo), oppure è scelto Claude con «cerca su tutta Italia» (serve Gemini, o togliere «tutta Italia»). Il messaggio dice cosa fare; vedi <a href="#config-modelli">Provider e modelli</a>.</td></tr>
+        <tr><td>🤖 Credito Claude esaurito / ⚠️ Claude non utilizzabile / ⚠️ Claude non risponde / ⚠️ Claude senza risultati utilizzabili</td><td>Solo con Claude: il giro si è fermato, o non è partito, per un problema di Claude. Dice la causa, quante aste sono state analizzate e quante restano in attesa, che Gemini <strong>non</strong> è stato usato e dove sceglierlo, se lo vuoi. Può arrivare anche dopo il ricontrollo delle perizie, se Claude si ferma lì. Vedi <a href="#sistema-costi">Costi</a>.</td></tr>
+        <tr><td>⏱️ Giro Claude chiuso per tempo</td><td>Solo con Claude: raggiunto il tetto di circa due ore. Le aste rimaste ripartono al giro successivo (se il giro veniva da una scelta dopo il conteggio vanno scelte di nuovo).</td></tr>
+        <tr><td>🤖 Claude — riepilogo del giro</td><td>Solo con Claude, a giro finito senza stop e solo se c'è qualcosa da dire: aste rimaste indietro riprovate, perizie che Claude non può leggere, oppure aste scelte da te dal conteggio e saltate perché già note come non leggibili. Riporta anche quante aste già note sono state saltate e il consumo stimato. Subito dopo arriva il solito messaggio di fine giro.</td></tr>
+        <tr><td>⏸️ Giro interrotto: aste analizzate prima dello stop</td><td>Solo con Claude, dopo il messaggio dello stop: l'elenco delle aste già analizzate in quel giro, nello stesso formato del riepilogo. Non arriva se prima dello stop non era stata analizzata nessuna asta da notificare.</td></tr>
+        <tr><td>✅ completato: nessuna asta analizzabile da Claude</td><td>Solo con Claude: tutte le aste del giro erano già note come «non leggibili da Claude» e sono state saltate; restano in attesa di Gemini.</td></tr>
         <tr><td>📋 Aste già pronte senza batch</td><td>Dopo l'invio di un batch: le aste del giro che non hanno dovuto aspettare Gemini (perizia già analizzata o assente), nello stesso formato del riepilogo.</td></tr>
         <tr><td>📦 Ricerca … completata</td><td>Batch inviato a Gemini: criteri (luogo, prezzo, tipologia, stati di occupazione esclusi, esclusioni per parole), numero di aste, modello; i risultati arriveranno da pochi minuti a 24 ore dopo.</td></tr>
         <tr><td>✅ Ricerca completata, nessun documento leggibile</td><td>Nessuna asta aveva un documento valido da inviare.</td></tr>

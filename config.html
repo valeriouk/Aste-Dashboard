@@ -617,7 +617,7 @@
 
         <div class="card-riepilogo" data-scheda="analisi">
           <div class="card-riepilogo-testo">
-            <p class="card-riepilogo-titolo">Modelli Gemini<span class="simbolo-nota" title="Non fa parte dei set di filtri salvati">°</span></p>
+            <p class="card-riepilogo-titolo">Provider e modelli<span class="simbolo-nota" title="Non fa parte dei set di filtri salvati">°</span></p>
             <p class="card-riepilogo-valore" id="riepilogo-modelli">—</p>
           </div>
           <button type="button" class="card-riepilogo-modifica" onclick="apriModale('modelli')">Modifica</button>
@@ -643,7 +643,7 @@
       </div>
 
       <p class="nota-campo legenda-simboli" data-scheda="ricerca">Tutti i filtri di questa scheda tornano ai predefiniti con "Ripristina" e fanno parte dei set salvati, tranne i due segnati <strong class="simbolo-nota">°</strong> dentro "Altri filtri" ("vendita vicina" e tetto di lettura): tornano ai predefiniti, ma non fanno parte dei set.</p>
-      <p class="nota-campo legenda-simboli" data-scheda="analisi"><strong class="simbolo-nota">*</strong> non torna ai predefiniti con "Ripristina" · <strong class="simbolo-nota">°</strong> non fa parte dei set di filtri salvati. Dentro "Ricerca della perizia" il prompt di analisi è segnato <strong class="simbolo-nota">*</strong>.</p>
+      <p class="nota-campo legenda-simboli" data-scheda="analisi"><strong class="simbolo-nota">*</strong> non torna ai predefiniti con "Ripristina" · <strong class="simbolo-nota">°</strong> non fa parte dei set di filtri salvati. Dentro "Ricerca della perizia" il prompt di analisi è segnato <strong class="simbolo-nota">*</strong>, e dentro "Provider e modelli" lo è "Chi legge le perizie".</p>
       <p class="nota-campo legenda-simboli" data-scheda="orari"><strong class="simbolo-nota">*</strong> non torna ai predefiniti con "Ripristina" · <strong class="simbolo-nota">°</strong> non fa parte dei set di filtri salvati.</p>
 
       <div class="barra-ripristino" data-scheda="ricerca" id="blocco-set-filtri" style="border-style:solid;margin-bottom:14px">
@@ -668,7 +668,7 @@
 
       <div class="barra-ripristino" data-scheda="ricerca">
         <button type="button" class="bottone-secondario" id="bottone-ripristina-predefiniti" onclick="confermaRipristinaPredefiniti()">↺ Ripristina tutti i valori predefiniti</button>
-        <p class="nota-campo">Riporta ai valori predefiniti le card delle schede Ricerca, Analisi e Orari — area, prezzo, tipologia, altri filtri ("vendita vicina" spento, tetto di lettura a 40 pagine), esclusioni (disattivate), modelli, pianificazione (lun-ven alle 10:00) e ricerca della perizia (estesa, con ricontrollo ogni 2 giorni, massimo 15 aste per giro). Restano come sono le voci segnate <strong class="simbolo-nota">*</strong> (scelta del prompt v1/v2, scheda Conti), i set di filtri salvati e le schede Dispositivo e Sicurezza. Salva subito, come ogni altra modifica in questa pagina.</p>
+        <p class="nota-campo">Riporta ai valori predefiniti le card delle schede Ricerca, Analisi e Orari — area, prezzo, tipologia, altri filtri ("vendita vicina" spento, tetto di lettura a 40 pagine), esclusioni (disattivate), modelli, pianificazione (lun-ven alle 10:00) e ricerca della perizia (estesa, con ricontrollo ogni 2 giorni, massimo 15 aste per giro). Restano come sono le voci segnate <strong class="simbolo-nota">*</strong> (chi legge le perizie: Gemini o Claude; scelta del prompt v1/v2; scheda Conti), i set di filtri salvati e le schede Dispositivo e Sicurezza. Salva subito, come ogni altra modifica in questa pagina.</p>
         <p id="messaggio-ripristina-predefiniti" class="messaggio-salvataggio-card"></p>
       </div>
 
@@ -844,7 +844,7 @@
     </div>
     <div class="finestra-modale-corpo">
       <p class="nota-campo" id="conteggio-intestazione" style="margin-top:0"></p>
-      <p class="nota-campo">Scegli le aste da analizzare: lo scanner parte subito e lavora solo su quelle, senza rifare la ricerca sul PVP. Ogni asta analizzata è un'analisi Gemini (a pagamento). In questo giro il ricontrollo delle perizie resta fermo. "Rifiuta tutto" cancella l'elenco senza analizzare nulla.</p>
+      <p class="nota-campo">Scegli le aste da analizzare: lo scanner parte subito e lavora solo su quelle, senza rifare la ricerca sul PVP. Ogni asta analizzata è <span id="conteggio-chi-analizza">un'analisi Gemini (a pagamento)</span>. In questo giro il ricontrollo delle perizie resta fermo. "Rifiuta tutto" cancella l'elenco senza analizzare nulla.</p>
       <div style="display:flex;flex-wrap:wrap;gap:8px;align-items:center;margin:12px 0 4px">
         <button type="button" class="bottone-secondario bottone-spunta-conteggio" onclick="spuntaConteggio(true)">Tutte</button>
         <button type="button" class="bottone-secondario bottone-spunta-conteggio" onclick="spuntaConteggio(false)">Nessuna</button>
@@ -1016,12 +1016,20 @@
 <div id="modale-modelli" class="overlay-modale" onclick="if(event.target===this) chiudiModale('modelli')">
   <div class="finestra-modale">
     <div class="finestra-modale-intestazione">
-      <h2>Modelli Gemini</h2>
+      <h2>Provider e modelli</h2>
       <button type="button" class="finestra-modale-chiudi" onclick="chiudiModale('modelli')" aria-label="Chiudi">×</button>
     </div>
     <div class="finestra-modale-corpo">
       <div class="campo-form">
-        <label for="campo-modelli">Cascata modelli, in ordine di priorità (separati da virgola)</label>
+        <label for="campo-provider-analisi">Chi legge le perizie<span class="simbolo-nota" title="Non torna ai predefiniti con Ripristina">*</span></label>
+        <select id="campo-provider-analisi">
+          <option value="gemini">Gemini (Google): si paga a consumo</option>
+          <option value="claude">Claude (Anthropic): credito mensile</option>
+        </select>
+        <p class="nota-campo">Lo scegli tu: lo scanner non passa mai da solo dall'uno all'altro. Con Claude le perizie si analizzano una per una (la cascata e il batch qui sotto valgono solo per Gemini), «cerca su tutta Italia» non parte e il ricontrollo delle perizie resta fermo. Se Claude ha un problema (credito finito, chiave, nessuna risposta) il giro si ferma e ti avvisa su Telegram, senza usare Gemini. Vale dal prossimo giro dello scanner.</p>
+      </div>
+      <div class="campo-form" style="margin-top:18px; padding-top:16px; border-top:1px solid var(--border);">
+        <label for="campo-modelli">Cascata modelli Gemini, in ordine di priorità (separati da virgola)</label>
         <input type="text" id="campo-modelli" placeholder="gemini-3.7-flash, gemini-3.6-flash">
         <button type="button" class="bottone-secondario" onclick="ripristinaCascataConsigliata()">↺ Ripristina cascata consigliata</button>
       </div>
@@ -1032,6 +1040,7 @@
         </label>
         <p class="nota-campo">Con questa attiva, anche le ricerche locali (non tutta Italia) vengono analizzate in batch invece che una alla volta — stesso sconto sui costi Gemini, ma il risultato non è immediato: arriva con "Controlla batch ora" o al prossimo controllo automatico, di norma entro un'ora, comunque entro le 24 ore che Google garantisce come limite. La ricerca su tutta Italia usa sempre il batch, a prescindere da questa casella.</p>
       </div>
+      <p class="nota-campo legenda-simboli"><strong class="simbolo-nota">*</strong> non torna ai predefiniti con "Ripristina". Nessun campo di questa finestra fa parte dei set di filtri salvati.</p>
       <div class="finestra-modale-azioni">
         <button type="button" class="bottone-salva-card" id="bottone-salva-modelli" onclick="confermaSalvaCard('modelli')">Salva</button>
         <span id="messaggio-salva-modelli" class="messaggio-salvataggio-card"></span>
@@ -1450,6 +1459,9 @@
   let configAttuale = {};
   let pianificazioneAttuale = {};
   let ricercaPeriziaAttuale = {estesa: true, ricontrollo_attivo: true, ricontrollo_giorni: 2, ricontrollo_max: 15, prompt: "v1"};
+  // Letti dal database a ogni caricamento, fuori da configAttuale: non entrano nei salvataggi né nei set di filtri.
+  let providerNonValidoNelDatabase = false;   // provider_analisi scritto male (a mano): lo scanner non parte finché non lo riscrivi
+  let usaClaudeRicontrollo = false;           // usa_claude_ricontrollo: il ricontrollo delle perizie gira anche con Claude
 
   async function caricaConfigurazioneAttuale() {
     const statoEl = document.getElementById("stato-caricamento-config");
@@ -1474,6 +1486,11 @@
       configAttuale.raggio_km = Number(config.raggio_km ?? 22);
       configAttuale.cerca_tutta_italia = String(config.cerca_tutta_italia ?? false).toLowerCase() === "true";
       configAttuale.usa_batch_gemini = String(config.usa_batch_gemini ?? true).toLowerCase() === "true";
+      // Stesso predefinito dello scanner (PROVIDER_ANALISI in app.py): gemini se il parametro manca.
+      configAttuale.provider_analisi = String(config.provider_analisi ?? "gemini").trim().toLowerCase() === "claude" ? "claude" : "gemini";
+      // Stesse regole di carica_configurazione in app.py: vuoto = gemini, ogni altro valore ferma il giro.
+      providerNonValidoNelDatabase = !["", "gemini", "claude"].includes(String(config.provider_analisi ?? "").trim().toLowerCase());
+      usaClaudeRicontrollo = ["true", "vero", "1", "si", "sì"].includes(String(config.usa_claude_ricontrollo ?? "").trim().toLowerCase());
 
       const minGrezzo = config.prezzo_base_min;
       configAttuale.prezzo_base_min = (minGrezzo === undefined || Number(minGrezzo) === 0) ? 0 : Number(minGrezzo);
@@ -1713,6 +1730,8 @@
     const accettato = conteggioAttuale.stato === "accettato";
     document.getElementById("conteggio-intestazione").textContent =
       `Conteggio delle ${oraBreve(conteggioAttuale.creato_il)}, valido fino alle ${oraBreve(conteggioAttuale.scade_il)}. Filtri: ${String(conteggioAttuale.filtri || "—").split("\n").join(" · ")}`;
+    document.getElementById("conteggio-chi-analizza").textContent = configAttuale.provider_analisi === "claude"
+      ? "un'analisi Claude (dal credito mensile), una per una" : "un'analisi Gemini (a pagamento)";
     document.getElementById("lista-conteggio").innerHTML = (conteggioAttuale.aste || []).map(a => {
       const stati = String(a.disponibilita || "").split(",").map(c => c.trim()).filter(c => c && c !== "N/D");
       const dettagli = [
@@ -1942,6 +1961,12 @@
     if (Number(configAttuale.pagine_massime_ricerca) > VALORI_PREDEFINITI.pagineMassime) {
       avvisi.push(`⚠️ Tetto di lettura alzato a ${configAttuale.pagine_massime_ricerca} pagine (fino a ${configAttuale.pagine_massime_ricerca * 12} aste lette per giro): più analisi Gemini e giri più lunghi. Si cambia in Ricerca → Altri filtri.`);
     }
+    if (configAttuale.provider_analisi === "claude" && configAttuale.cerca_tutta_italia && !configAttuale.solo_conteggio) {
+      avvisi.push("⚠️ Claude con «cerca su tutta Italia»: lo scanner non parte (per tutta Italia serve il batch, che per Claude non c'è ancora). Scegli Gemini in «Provider e modelli» oppure togli «tutta Italia».");
+    }
+    if (providerNonValidoNelDatabase) {
+      avvisi.push("⚠️ «Chi legge le perizie» ha un valore non valido nel database: lo scanner non parte. Apri Analisi → «Provider e modelli», scegli Gemini o Claude e salva.");
+    }
     const el = document.getElementById("avvisi-config");
     el.innerHTML = avvisi.map(a => `<p>${escapeHtml(a)}</p>`).join("");
     el.classList.toggle("nascosto", !avvisi.length);
@@ -1976,7 +2001,9 @@
     const testoModelli = modelli.length === 0 ? "Nessun modello configurato"
       : modelli.length === 1 ? modelli[0]
       : `Cascata di ${modelli.length} modelli`;
-    document.getElementById("riepilogo-modelli").textContent = testoModelli + " · " + testoBatch;
+    document.getElementById("riepilogo-modelli").textContent = configAttuale.provider_analisi === "claude"
+      ? "Claude (scelto da te) · perizie una per una · cascata e batch Gemini non usati"
+      : "Gemini · " + testoModelli + " · " + testoBatch;
   }
 
   function renderizzaRiepilogoPianificazioneScanner() {
@@ -2004,9 +2031,16 @@
       el.textContent = `Come prima: astegiudiziarie, poi avviso · prompt ${r.prompt}`;
       return;
     }
+    // Con Claude lo scanner non esegue il ricontrollo (_esegui_ricontrollo_perizie in app.py), salvo
+    // usa_claude_ricontrollo: in quel caso al massimo SOGLIA_BATCH_RICONTROLLO aste per giro, mai in batch.
+    const conClaude = configAttuale.provider_analisi === "claude";
+    if (conClaude && r.ricontrollo_attivo && !usaClaudeRicontrollo) {
+      el.textContent = `Ricerca estesa · ricontrollo fermo finché le perizie le legge Claude · prompt ${r.prompt}`;
+      return;
+    }
     el.textContent = "Ricerca estesa · " + (r.ricontrollo_attivo
       ? `ricontrollo ogni ${r.ricontrollo_giorni} ${r.ricontrollo_giorni === 1 ? "giorno" : "giorni"}, max ${r.ricontrollo_max} aste per giro`
-        + (r.ricontrollo_max > SOGLIA_BATCH_RICONTROLLO ? " (in batch)" : "")
+        + (r.ricontrollo_max > SOGLIA_BATCH_RICONTROLLO ? (conClaude ? ` (con Claude al massimo ${SOGLIA_BATCH_RICONTROLLO})` : " (in batch)") : "")
       : "ricontrollo spento") + ` · prompt ${r.prompt}`;
   }
 
@@ -2101,6 +2135,7 @@
       document.getElementById("campo-conteggia-non-analizzate").checked = configAttuale.conteggia_non_analizzate;
       aggiornaStatoConteggiaNonAnalizzate();
     } else if (nome === "modelli") {
+      document.getElementById("campo-provider-analisi").value = configAttuale.provider_analisi;
       document.getElementById("campo-modelli").value = configAttuale.cascata_modelli_gemini.join(", ");
       document.getElementById("campo-batch-locale").checked = configAttuale.usa_batch_gemini;
     } else if (nome === "ricercaPerizia") {
@@ -2613,6 +2648,7 @@
       }
       configAttuale.cascata_modelli_gemini = modelli;
       configAttuale.usa_batch_gemini = document.getElementById("campo-batch-locale").checked;
+      configAttuale.provider_analisi = document.getElementById("campo-provider-analisi").value === "claude" ? "claude" : "gemini";
     } else if (nomeCard === "ricercaPerizia") {
       const giorni = Number(document.getElementById("campo-ricontrollo-giorni").value);
       const massimo = Number(document.getElementById("campo-ricontrollo-max").value);
@@ -2646,6 +2682,7 @@
       pianificazioneAttuale.scanner_orari = orari;
     }
 
+    let providerSalvato = false;   // il provider si salva con una chiamata a parte, prima del resto
     try {
       let risultato;
       if (nomeCard === "ricercaPerizia") {
@@ -2668,8 +2705,28 @@
           verifica_batch_minuti: pianificazioneAttuale.verifica_batch_minuti
         });
       } else {
-        risultato = await salvaConfigCompletaSulServer();
-        if (risultato.result === "success") await salvaRicercaPeriziaSulServer();
+        if (nomeCard === "modelli" && (configAttuale.provider_analisi !== copia.configAttuale.provider_analisi || providerNonValidoNelDatabase)) {
+          // Funzione SQL a parte (sql/provider_analisi.sql in aste-immobiliari), chiamata PRIMA del
+          // resto e solo se il provider è cambiato (o nel database c'è un valore non valido da
+          // riscrivere): se manca non viene salvato nulla e il messaggio lo dice.
+          const esitoProvider = await chiamaRpc("imposta_provider_analisi", {
+            password_tentativo: passwordCorrente, valore: configAttuale.provider_analisi
+          });
+          if (!esitoProvider || esitoProvider.result !== "success") {
+            const motivo = !esitoProvider || esitoProvider.code === "PGRST202"
+              ? "manca la funzione nel database (va eseguito una volta sql/provider_analisi.sql nell'SQL Editor di Supabase)"
+              : (esitoProvider.message || "errore sconosciuto");
+            risultato = {result: "error", message: `Provider non salvato: ${motivo}`};
+          } else {
+            copia.configAttuale.provider_analisi = configAttuale.provider_analisi;   // già salvato: resta anche se il resto fallisce
+            providerNonValidoNelDatabase = false;
+            providerSalvato = true;
+          }
+        }
+        if (!risultato) {
+          risultato = await salvaConfigCompletaSulServer();
+          if (risultato.result === "success") await salvaRicercaPeriziaSulServer();
+        }
       }
 
       if (risultato.result === "success") {
@@ -2682,6 +2739,7 @@
           ricercaPerizia: renderizzaRiepilogoRicercaPerizia
         };
         funzioniRiepilogo[nomeCard]();
+        if (nomeCard === "modelli") renderizzaRiepilogoRicercaPerizia();   // con Claude il ricontrollo resta fermo
         renderizzaAvvisiConfig();
         mostraFiltriAttivi();
         setTimeout(() => chiudiModale(nomeCard), 700);
@@ -2689,12 +2747,24 @@
         ripristina();
         msgEl.textContent = risultato.message || "Errore sconosciuto durante il salvataggio.";
         msgEl.className = "messaggio-salvataggio-card messaggio-errore";
+        if (providerSalvato) segnalaProviderSalvato(msgEl);
       }
     } catch (e) {
       ripristina();
       msgEl.textContent = "Richiesta non riuscita. Controlla la connessione e riprova.";
       msgEl.className = "messaggio-salvataggio-card messaggio-errore";
+      if (providerSalvato) segnalaProviderSalvato(msgEl, true);
     }
+  }
+
+  // Il provider è già nel database ma il resto della card non si è salvato: va detto, e i
+  // riepiloghi che dipendono dal provider vanno aggiornati (dopo ripristina() in memoria c'è quello nuovo).
+  // incerto: la richiesta è caduta a metà, quindi non si sa se il resto è arrivato al database.
+  function segnalaProviderSalvato(msgEl, incerto = false) {
+    msgEl.textContent = `Provider salvato (ora: ${configAttuale.provider_analisi === "claude" ? "Claude" : "Gemini"}), il resto ${incerto ? "forse no" : "no"}. ${msgEl.textContent}`;
+    renderizzaRiepilogoModelli();
+    renderizzaRiepilogoRicercaPerizia();
+    renderizzaAvvisiConfig();
   }
 
   let confermaAvvioInCorso = false, timeoutConfermaAvvio = null;
