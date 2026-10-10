@@ -356,11 +356,22 @@
         <strong>Il sistema non passa mai da solo dall'uno all'altro</strong>: con <code>claude</code> Gemini non viene mai chiamato, quindi non
         c'è nessuna spesa Gemini senza una tua scelta. Un valore scritto male ferma il giro con un avviso (non ricade su Gemini).
         <ul>
-          <li><em>Cosa cambia con Claude</em>: le perizie si analizzano una per una (il batch di Claude non c'è ancora); «cerca su tutta Italia»
-            non parte, con un avviso (fa eccezione un giro partito da una tua scelta dopo il conteggio: quelle aste vengono analizzate una
-            per una, entro il tetto di tempo); il ricontrollo delle perizie non si esegue (si può attivare solo aggiungendo a mano nella
+          <li><em>Cosa cambia con Claude</em>: le perizie si analizzano una per una dentro il giro, oppure in batch se accendi
+            <a href="#config-modelli">«Con Claude: analisi in batch»</a> (punto qui sotto); «cerca su tutta Italia»
+            non parte, con un avviso (fa eccezione un giro partito da una tua scelta dopo il conteggio: quelle aste vengono analizzate
+            comunque, entro il tetto di tempo); il ricontrollo delle perizie non si esegue (si può attivare solo aggiungendo a mano nella
             tabella <code>config</code> il parametro <code>usa_claude_ricontrollo</code> con valore <code>true</code>: sconsigliato, perché
             rilegge le stesse perizie ogni pochi giorni).</li>
+          <li><em>Claude in batch</em> (casella «Con Claude: analisi in batch», spenta in partenza): lo scanner analizza subito la prima
+            asta, come prova che Claude funziona, poi cerca i documenti delle altre, li invia in uno o più batch ed esce. Le analisi in batch
+            costano la metà (la prova è a prezzo pieno) e il giro dura meno, perché la lettura delle perizie non avviene più dentro il giro. I risultati li ritira il
+            <a href="#orari-batch">controllo batch</a>, di solito entro 1-2 ore (al massimo 24): notifica singola per le aste migliori e un
+            riepilogo con tutte, il consumo e la stima in dollari. In un giro partono in batch al massimo 150 aste (le altre al giro dopo) e,
+            allo scadere del tetto di tempo, parte quanto raccolto. Se Claude si ferma durante la prova nessun batch parte. Se in coda c'è un
+            batch Claude inviato da più di 6 ore e non ancora ritirato, il giro non parte e arriva un avviso: prima della ricerca sul PVP e
+            senza consumare un'eventuale scelta dal conteggio. Una risposta arrivata ma inutilizzabile conta nei 3
+            tentativi dell'asta, come sempre; se invece il problema è di Claude (credito, chiave) le aste non vengono scritte e non perdono
+            tentativi. In un batch non esiste "fermati alla terza risposta inutilizzabile": per questo c'è la prova sulla prima asta.</li>
           <li><em>Se Claude ha un problema</em> (credito o limite di spesa finiti, chiave non valida, nessuna risposta dopo qualche tentativo,
             più risposte inutilizzabili di fila): il giro si ferma e arriva <em>un</em> messaggio Telegram con la causa e il rimando a
             Configurazione per passare a Gemini, se lo vuoi (se prima dello stop qualche asta era già stata analizzata, segue un secondo
@@ -372,16 +383,17 @@
           <li><em>Perizie che Claude non può leggere</em> (troppo grandi o con troppe pagine): l'asta è salvata come «non leggibile da Claude»,
             compare nel messaggio di fine giro e nei giri successivi viene saltata senza rifare ricerca e download; passando a Gemini viene
             ripresa normalmente. La nota riporta il modello usato: cambiando modello di Claude quelle aste vengono riprovate. Una perizia
-            che Claude non può leggere, se è condivisa da più lotti, viene inviata una volta sola per giro.</li>
+            che Claude non può leggere, se è condivisa da più lotti, viene inviata una volta sola per giro (nel batch invece ogni lotto è
+            una richiesta a sé: se la perizia non è leggibile viene rifiutata senza costo).</li>
           <li><em>Tetto di tempo</em>: dopo circa due ore il giro smette di iniziare nuove aste e si chiude in ordine; le rimanenti ripartono al
             giro successivo. Se il giro era partito da una scelta dopo il conteggio, che vale per un giro solo, le aste rimaste vanno
             scelte di nuovo (il messaggio lo dice).</li>
         </ul>
         Nella notifica la riga "Modello AI" dice chi ha letto la perizia. Il consumo di Claude per ora è nel registro di esecuzione (log) del
         processo, non in Statistiche; compare anche nel messaggio Telegram che arriva quando il giro si ferma, quando ci sono aste rimaste
-        indietro riprovate o perizie non leggibili. Il saldo vero si controlla nella Console Anthropic. Attenzione: per ora il
+        indietro riprovate o perizie non leggibili, e nel riepilogo di ogni batch ritirato. Il saldo vero si controlla nella Console Anthropic. Attenzione: per ora il
         <a href="#stat-ricariche">saldo stimato di Gemini</a> può scendere anche per le perizie lette da Claude.</li>
-      <li><strong>Batch</strong>: le analisi inviate "in blocco" costano circa la metà ma arrivano dopo (di solito 20-30 minuti, al massimo 24 ore).
+      <li><strong>Batch</strong>: le analisi inviate "in blocco" costano circa la metà ma arrivano dopo (di solito 20-30 minuti con Gemini e 1-2 ore con Claude, al massimo 24 ore).
         Vedi <a href="#orari-batch-o-sincrono">Batch o subito</a>.</li>
       <li><strong>Nessuna spesa</strong> per: asta già analizzata (anche se la stessa perizia è su un altro annuncio dello stesso lotto: si riusa
         l'analisi), modalità "solo conteggio", ricerca del documento, calcoli del registro e della superanalisi, notifiche preferiti, OMI.</li>
@@ -449,6 +461,8 @@
         chiamata a Gemini ha un tempo massimo di 10 minuti.</li>
       <li>Un batch inviato a Gemini ma non registrato nel database viene annullato (così non si paga) e arriva un avviso; lo stesso per i batch
         abbandonati dopo 25 ore di attesa.</li>
+      <li><strong>Con Claude</strong>: una per una (predefinito) oppure in batch con <a href="#config-modelli">«Con Claude: analisi in batch»</a>.
+        Le due caselle del batch sono indipendenti: quella di Gemini non riguarda Claude e viceversa. Regole in <a href="#sistema-costi">Costi</a>.</li>
     </ul>
   </section>
 
@@ -464,8 +478,19 @@
             abbandona: le aste nuove vengono scritte come "analisi non riuscita" e tornano "da riprovare";</li>
           <li><strong>pronto</strong>: scrive i risultati nel registro, calcola margine ed €/mq, manda una notifica "NUOVA ASTA" per ogni asta nuova
             (con 1,2 s di pausa tra i messaggi); le aste del ricontrollo ricevono "📄 Perizia trovata al ricontrollo";</li>
-          <li><strong>fallito o scaduto</strong>: le aste vengono scritte come da riprovare, senza notifica.</li>
+          <li><strong>fallito o scaduto</strong>: le aste vengono scritte come da riprovare; quelle nuove, mai entrate nel registro,
+            ricevono comunque la notifica "NUOVA ASTA" con i dati del portale.</li>
         </ul></li>
+      <li><strong>Batch di Claude</strong>: li riconosce da solo e li ritira da Claude, mai da Gemini (e viceversa), qualunque provider sia
+        scelto in quel momento. Notifica singola solo per le aste migliori e un solo riepilogo per controllo. Un batch Claude ancora in
+        lavorazione non viene abbandonato a 25 ore (si chiude da solo entro 24). Se non si riesce a ritirarlo, o i risultati ci sono ma la
+        scrittura nel database non riesce, resta in coda e arriva un
+        avviso quando l'attesa supera 3, 6, 12, 27 e 51 ore; dopo 72 ore le sue aste tornano libere senza essere scritte. Per liberarle
+        prima: premi intanto "🔄 Controlla batch ora" (se nel frattempo il batch è finito viene ritirato e non serve altro). Se resta in
+        coda, cancella le sue righe nell'SQL Editor di Supabase con
+        <code>delete from "BatchPending" where "Batch Job Name" = 'nome del batch';</code> (il nome è nell'avviso): al giro dopo le aste
+        tornano analizzabili, e vengono pagate di nuovo. Guarda anche nella Console Anthropic (Batches): se quel batch è ancora in
+        lavorazione e la Console lo permette, annullalo, così non viene addebitato.</li>
       <li>Alla fine, se c'erano batch, riassegna i <a href="#omi-assegnazione">valori OMI</a>.</li>
     </ul>
   </section>
@@ -585,7 +610,7 @@
     <ul>
       <li><strong>Scanner</strong>: nessuna asta si perde; il giro successivo la ritrova, purché sia ancora futura e nei filtri. Le aste già analizzate
         prima dell'interruzione non vengono ripagate (la scrittura avviene asta per asta).</li>
-      <li><strong>Controllo batch</strong>: i risultati restano pronti da Google e vengono raccolti al controllo successivo (entro le 25 ore).</li>
+      <li><strong>Controllo batch</strong>: i risultati restano pronti presso Google (batch Gemini, entro le 25 ore) o Anthropic (batch Claude) e vengono raccolti al controllo successivo.</li>
       <li><strong>Promemoria preferiti</strong>: la soglia arriva il giorno dopo; con più giorni saltati si perdono le soglie intermedie.</li>
       <li>In ogni caso il monitoraggio esterno avvisa via email.</li>
     </ul>
@@ -1376,7 +1401,7 @@
   <section class="voce" id="config-avvio-scanner">
     <h3>"▶ Avvia scanner ora"</h3>
     <p>Avvia subito un giro completo dello scanner con i filtri attuali, anche se la pianificazione è in pausa o non è l'orario: ricerca su PVP, analisi
-      Gemini (subito o in batch, secondo le impostazioni), notifiche, poi ricontrollo perizie, storico delle aste e OMI. <strong>Consuma Gemini</strong> per le aste nuove
+      con Gemini o con Claude (subito o in batch, secondo le impostazioni), notifiche, poi ricontrollo perizie, storico delle aste e OMI. <strong>Consuma Gemini o credito Claude</strong> per le aste nuove
       e minuti GitHub. Messaggi: "Avvio in corso…", "Scanner avviato." (con eventuale link "Apri esecuzione"), oppure l'errore.</p>
     <p>Vale anche per "Controlla batch ora" e "Controlla preferiti ora": dopo l'avvio la pagina aspetta fino a circa 20 secondi che GitHub mostri
       l'esecuzione. Se compare: "Avviato — esecuzione confermata su GitHub" con "Apri esecuzione". Se GitHub è lento a mostrarla (succede): "Avvio
@@ -1395,8 +1420,8 @@
         offerta minima, data di vendita, stato di occupazione, "da riprovare" e il link al PVP. Tutte spuntate di partenza; "Tutte" e "Nessuna"
         cambiano le spunte in blocco.</li>
       <li><strong>"Analizza le N scelte"</strong> (conferma col secondo tocco): salva la scelta e avvia subito lo scanner, che lavora <strong>solo su quelle
-        aste</strong>, senza rifare la ricerca sul PVP: ricerca della perizia, analisi (con Gemini subito o in batch, come da Configurazione; con
-        Claude una per una: la finestra dice chi le analizzerà) e notifiche. Appena
+        aste</strong>, senza rifare la ricerca sul PVP: ricerca della perizia, analisi (con Gemini subito o in batch, con Claude una per una o in batch,
+        come da Configurazione: la finestra dice chi le analizzerà e, con Claude, avvisa se le aste scelte sono troppe per un giro) e notifiche. Appena
         il giro parte, l'elenco viene cancellato. Se ricarichi Configurazione prima di quel momento (uno o due minuti dopo l'avvio) la riga dice
         "Conteggio accettato: scanner avviato…" e la finestra si apre in sola consultazione, con pulsanti e spunte disattivati; la pagina rilegge lo stato
         ogni 30 secondi e la riga sparisce da sola quando lo scanner ha preso in carico la scelta. In quel giro il ricontrollo delle perizie resta fermo: spendi solo per ciò che hai scelto. La modalità
@@ -1416,11 +1441,11 @@
   <section class="voce" id="config-controlla-batch">
     <h3>"🔄 Controlla batch ora"</h3>
     <p>Avvia subito il <a href="#orari-batch">controllo dei batch</a> in sospeso (senza aspettare quello automatico orario, e ignorando il limite dei
-      15 minuti): scrive nel registro i risultati già pronti e manda le notifiche. Non consuma Gemini (i batch sono già pagati all'invio).</p>
+      15 minuti): scrive nel registro i risultati già pronti e manda le notifiche. Non consuma né Gemini né Claude (i batch sono già pagati all'invio).</p>
     <p><strong>Indicatore "📦 N aste in attesa del batch"</strong> (nel registro, sotto l'intestazione, e in Configurazione sopra le schede): compare quando
       c'è almeno un batch inviato e non ancora scritto e notificato, con le ore passate dall'invio più vecchio; sparisce da solo quando le aste sono state
       notificate. Si rilegge ogni minuto e quando torni sulla scheda. Dopo 24 ore diventa un avviso rosso "da più di 24 ore · controlla il batch" (il limite
-      di Google per un batch). Toccandolo, dal registro vai a Configurazione, e da Configurazione al pulsante "Controlla batch ora". La coda comprende anche
+      di un batch, per Gemini come per Claude). Toccandolo, dal registro vai a Configurazione, e da Configurazione al pulsante "Controlla batch ora". La coda comprende anche
       i batch del <a href="#orari-ricontrollo">ricontrollo delle perizie</a>. Se la password non è nota o la lettura fallisce, la riga resta nascosta.</p>
   </section>
 
@@ -1472,7 +1497,7 @@
         <tr><td>Ricerca della perizia</td><td>estesa, ricontrollo ogni 2 giorni, massimo 15 aste per giro</td></tr>
       </tbody>
     </table></div>
-    <p>Non cambiano chi legge le perizie (Gemini o Claude), la scelta del prompt (v1/v2), i set di filtri salvati, la scheda Conti e le schede Dispositivo e Sicurezza.</p>
+    <p>Non cambiano chi legge le perizie (Gemini o Claude) né la casella "Con Claude: analisi in batch", la scelta del prompt (v1/v2), i set di filtri salvati, la scheda Conti e le schede Dispositivo e Sicurezza.</p>
     <p><strong>I simboli * e °</strong> accanto ai titoli delle card e ai singoli campi dicono cosa resta fuori: <strong>*</strong> = non torna ai
       predefiniti con "Ripristina"; <strong>°</strong> = non fa parte dei <a href="#config-set-filtri">set di filtri salvati</a>. Senza simbolo = ripristinato e
       compreso nei set. Una riga in fondo a ogni scheda (e nelle finestre "Altri filtri", "Provider e modelli" e "Ricerca della perizia") ricorda il significato.</p>
@@ -1481,7 +1506,7 @@
       <tbody>
         <tr><td>Area di ricerca, Filtri di prezzo, Tipologia immobili, Esclusioni</td><td>Ricerca</td><td>sì</td><td>sì</td></tr>
         <tr><td>Altri filtri</td><td>Ricerca</td><td>sì, tutti</td><td>sì, tranne "vendita vicina" ° e tetto di lettura °</td></tr>
-        <tr><td>Provider e modelli °</td><td>Analisi</td><td>sì (non la scelta tra Gemini e Claude)</td><td>no</td></tr>
+        <tr><td>Provider e modelli °</td><td>Analisi</td><td>sì (non la scelta tra Gemini e Claude, né "Con Claude: analisi in batch")</td><td>no</td></tr>
         <tr><td>Ricerca della perizia °</td><td>Analisi</td><td>sì, tranne il prompt di analisi *</td><td>no</td></tr>
         <tr><td>Pianificazione scansione °</td><td>Orari</td><td>sì</td><td>no</td></tr>
         <tr><td>Regime fiscale e conti * °, Checklist delle aste * °</td><td>Conti</td><td>no</td><td>no</td></tr>
@@ -1592,7 +1617,7 @@
     <h3>Card "Provider e modelli": chi legge le perizie, cascata e batch</h3>
     <ul>
       <li><strong>"Chi legge le perizie"</strong> *: Gemini (predefinito) oppure Claude. Lo scegli tu: lo scanner non passa mai da solo
-        dall'uno all'altro. Vale dal giro successivo e non torna ai predefiniti con "Ripristina". Con Claude la cascata e il batch qui sotto
+        dall'uno all'altro. Vale dal giro successivo e non torna ai predefiniti con "Ripristina". Con Claude la cascata e il batch di Gemini
         non si usano, «cerca su tutta Italia» non parte (la pagina lo segnala in alto, in rosso), il
         <a href="#orari-ricontrollo">ricontrollo delle perizie</a> resta fermo (lo dice il riepilogo della card "Ricerca della perizia") e, se
         Claude ha un problema, il giro si ferma con un avviso su Telegram senza usare Gemini. Costi e dettagli in
@@ -1601,10 +1626,15 @@
         messaggio lo dice ("Provider salvato…"). La prima volta serve
         una funzione nel database: se al salvataggio compare "manca la funzione nel database", va eseguito una volta
         <code>sql/provider_analisi.sql</code> (repository dello scanner) nell'SQL Editor di Supabase.</li>
+      <li><strong>"Con Claude: analisi in batch"</strong> * (spenta in partenza; non torna ai predefiniti con "Ripristina"): vale solo quando le
+        perizie le legge Claude. Spenta: una per una dentro il giro, risultato subito, prezzo pieno, circa un minuto ad asta (un giro regge un
+        centinaio di aste). Accesa: la prima asta subito come prova, le altre in batch a metà prezzo, con i risultati al
+        <a href="#orari-batch">controllo batch</a> dopo 1-2 ore; vale anche per le aste scelte dal conteggio. Regole in
+        <a href="#sistema-costi">Costi</a>.</li>
       <li><strong>Cascata dei modelli Gemini</strong> (separati da virgola, in ordine di priorità): si usa il primo; se esaurisce la quota o dà errore, si passa al
         successivo per il resto del giro. Se un modello risponde "vuoto" su un'asta, si prova il successivo solo per quell'asta (può costare di più).
         "↺ Ripristina cascata consigliata" riempie il campo (poi serve Salva). Serve almeno un modello.</li>
-      <li><strong>"Usa il batch anche in ricerca locale"</strong> (predefinito attivo): analisi in batch, costo circa dimezzato, risultati di norma entro
+      <li><strong>"Usa il batch anche in ricerca locale"</strong> (solo Gemini; predefinito attivo): analisi in batch, costo circa dimezzato, risultati di norma entro
         un'ora (al massimo 24). Spegnilo solo se ti serve la notifica immediata. Vedi <a href="#orari-batch-o-sincrono">Batch o subito</a>.</li>
     </ul>
   </section>
@@ -1744,7 +1774,7 @@
         <tr><td>Da riprovare</td><td>aste senza un'analisi riuscita (punteggio vuoto o ≤ 1); in rosso se più di 0</td></tr>
         <tr><td>Punteggio medio</td><td>media del punteggio delle aste analizzate (punteggio &gt; 1)</td></tr>
         <tr><td>Margine lordo medio</td><td>media del <a href="#registro-margine">margine lordo</a> delle aste analizzate</td></tr>
-        <tr><td>Batch Gemini in sospeso</td><td>batch inviati e non ancora raccolti dal controllo batch</td></tr>
+        <tr><td>Aste in attesa di un batch</td><td>aste inviate in un batch (Gemini o Claude) e non ancora raccolte dal controllo batch</td></tr>
       </tbody>
     </table></div>
     <p>Tutti i numeri riguardano l'intero database, senza filtri di periodo.</p>
@@ -2620,7 +2650,7 @@
     <div class="tabella-scroll"><table>
       <thead><tr><th>Messaggio</th><th>Quando arriva</th></tr></thead>
       <tbody>
-        <tr><td>🏠 NUOVA ASTA IMMOBILIARE</td><td>Per le aste nuove <strong>migliori</strong> (analisi riuscita, punteggio almeno 70 e margine lordo positivo) analizzate subito o riusando un'analisi, e per ogni asta ritirata dal batch (quelle del batch non hanno ancora il filtro "migliori"). Le altre aste del giro compaiono solo nel riepilogo. Contiene indirizzo, zona segnalata, distanza dal centro di ricerca con il suo nome ("12 km da Fidenza"; la riga manca se il nome non è disponibile), tipologia,
+        <tr><td>🏠 NUOVA ASTA IMMOBILIARE</td><td>Per le aste nuove <strong>migliori</strong> (analisi riuscita, punteggio almeno 70 e margine lordo positivo) analizzate subito o riusando un'analisi, e per ogni asta ritirata da un batch Gemini (quelle del batch Gemini non hanno ancora il filtro "migliori"); da un batch Claude solo per le migliori, le altre sono nel riepilogo «Batch Claude ritirato». Le altre aste del giro compaiono solo nel riepilogo. Contiene indirizzo, zona segnalata, distanza dal centro di ricerca con il suo nome ("12 km da Fidenza"; la riga manca se il nome non è disponibile), tipologia,
           superficie ed €/mq, tribunale, data, disponibilità, offerta minima, prezzo base, <a href="#registro-tentativo">tentativo</a>, valore di stima, margine,
           punteggio, occupazione, sanatoria, formalità, fonte, modello, note e link. Arriva solo la prima volta che l'asta entra nel registro (e di nuovo solo
           se un nuovo tentativo di analisi riesce), e solo se l'asta è stata salvata davvero nel database. La riga del tentativo viene dallo
@@ -2637,7 +2667,14 @@
         <tr><td>🤖 Claude — riepilogo del giro</td><td>Solo con Claude, a giro finito senza stop e solo se c'è qualcosa da dire: aste rimaste indietro riprovate, perizie che Claude non può leggere, oppure aste scelte da te dal conteggio e saltate perché già note come non leggibili. Riporta anche quante aste già note sono state saltate e il consumo stimato. Subito dopo arriva il solito messaggio di fine giro.</td></tr>
         <tr><td>⏸️ Giro interrotto: aste analizzate prima dello stop</td><td>Solo con Claude, dopo il messaggio dello stop: l'elenco delle aste già analizzate in quel giro, nello stesso formato del riepilogo. Non arriva se prima dello stop non era stata analizzata nessuna asta da notificare.</td></tr>
         <tr><td>✅ completato: nessuna asta analizzabile da Claude</td><td>Solo con Claude: tutte le aste del giro erano già note come «non leggibili da Claude» e sono state saltate; restano in attesa di Gemini.</td></tr>
-        <tr><td>📋 Aste già pronte senza batch</td><td>Dopo l'invio di un batch: le aste del giro che non hanno dovuto aspettare Gemini (perizia già analizzata o assente), nello stesso formato del riepilogo.</td></tr>
+        <tr><td>📦 Batch Claude inviato</td><td>Con «Con Claude: analisi in batch»: quante aste sono partite e in quanti batch, quante sono state analizzate subito come prova e quante salvate senza passare dal batch, le eventuali aste rimaste fuori (tetto di 150 per giro, tetto di tempo) e il consumo della prova. I risultati arrivano con il <a href="#orari-batch">controllo batch</a>. Se nessuna asta ha avuto bisogno del batch arriva invece «✅ Scanner aste completato: N aste salvate subito, nessun batch necessario» (con ⚠️ e una riga in più se una scrittura nel database non è riuscita).</td></tr>
+        <tr><td>⚠️ Batch Claude non inviato / inviato solo in parte</td><td>La creazione di un batch non è riuscita (credito, chiave, nessuna risposta) oppure il batch non è stato registrato nel database (viene annullato). Le aste non inviate non vengono scritte e non perdono tentativi; se alcuni batch erano già partiti restano validi. Se la creazione è finita senza una risposta utile e il batch non si ritrova tra gli ultimi creati, il messaggio lo dice: va guardato nella Console Anthropic (Batches) se esiste lo stesso.</td></tr>
+        <tr><td>⏸️ Scanner aste non avviato (batch Claude ancora in coda)</td><td>Con «Con Claude: analisi in batch»: in coda c'è un batch Claude inviato da più di 6 ore e non ancora ritirato (può essere ancora in lavorazione, oppure il ritiro non sta funzionando). Finché resta in coda lo scanner non ne invia altri, per non pagare analisi che potrebbero non essere lette: il giro non parte, prima della ricerca, e un'eventuale scelta dal conteggio resta valida fino alla sua scadenza. Riparte da solo quando il batch viene ritirato. Se il messaggio continua ad arrivare per più di un giorno il ritiro è fermo, e il messaggio stesso lo dice: premi "🔄 Controlla batch ora" e, se non basta, libera il batch come spiegato in <a href="#orari-batch">Controllo batch</a>, oppure spegni la casella.</td></tr>
+        <tr><td>⚠️ Giro Claude in batch interrotto da un errore imprevisto</td><td>Un errore non previsto a metà di un giro in batch: quanto già raccolto parte lo stesso, il messaggio dice quante aste sono partite e l'errore (e, se anche quell'invio non riesce, il perché), e il giro risulta fallito su GitHub. Segue l'elenco delle aste già salvate in quel giro, se ce ne sono. Le aste non inviate vengono riprese al giro dopo (se venivano da una scelta dal conteggio vanno scelte di nuovo).</td></tr>
+        <tr><td>✅ Batch Claude ritirato</td><td>Dal controllo batch: quante aste sono state scritte (riuscite, senza analisi, non leggibili), consumo e stima a prezzo batch, quante richieste superano i 100.000 token, e l'elenco delle aste (⭐ = notifica singola già inviata). Uno solo per controllo, anche se i batch chiusi sono più d'uno.</td></tr>
+        <tr><td>⚠️ Problema di Claude nel batch</td><td>Dal controllo batch: alcune richieste non sono state analizzate per un problema di Claude (credito, chiave, parametri, richieste rifiutate). Quelle aste non sono state scritte e non hanno perso tentativi: lo scanner le ritrova al giro dopo (se venivano da una scelta dal conteggio vanno scelte di nuovo).</td></tr>
+        <tr><td>⚠️ Batch Claude in coda da N ore / ⛔ Batch Claude non ritirato</td><td>Il controllo batch non riesce a ritirare un batch Claude, o a scriverne i risultati nel database: avviso a 3, 6, 12, 27 e 51 ore; dopo 72 ore le sue aste vengono tolte dalla coda senza essere scritte. Per liberarle prima vedi <a href="#orari-batch">Controllo batch</a>.</td></tr>
+        <tr><td>📋 Aste già pronte senza batch</td><td>Con il batch attivo, a fine giro: le aste che non hanno dovuto aspettare il batch (perizia già analizzata o assente; con Claude anche la prima, analizzata subito come prova), nello stesso formato del riepilogo. Con Claude arriva anche quando alla fine nessun batch è servito; se invece Claude si ferma durante la prova arriva «⏸️ Giro interrotto: aste analizzate prima dello stop», dopo il messaggio dello stop.</td></tr>
         <tr><td>📦 Ricerca … completata</td><td>Batch inviato a Gemini: criteri (luogo, prezzo, tipologia, stati di occupazione esclusi, esclusioni per parole), numero di aste, modello; i risultati arriveranno da pochi minuti a 24 ore dopo.</td></tr>
         <tr><td>✅ Ricerca completata, nessun documento leggibile</td><td>Nessuna asta aveva un documento valido da inviare.</td></tr>
         <tr><td>⚠️ invio del batch a Gemini fallito</td><td>Si riproverà al giro successivo.</td></tr>
@@ -2662,7 +2699,7 @@
         <tr><td>✅ Controllo preferiti: nessuna in scadenza</td><td>Solo con "Controlla preferiti ora" se nessuna preferita è entro 30 giorni.</td></tr>
       </tbody>
     </table></div>
-    <p>Se Telegram segnala troppi messaggi, il sistema aspetta e riprova. Le aste di un batch fallito o scaduto vengono scritte ma non notificate.</p>
+    <p>Se Telegram segnala troppi messaggi, il sistema aspetta e riprova. Le aste di un batch fallito o scaduto vengono scritte come da riprovare; quelle nuove ricevono comunque la notifica "NUOVA ASTA".</p>
   </section>
 </section>
 <section class="capitolo" id="glossario">
@@ -2980,7 +3017,7 @@
     <h3>Non mi è arrivata una notifica o lo scanner non è partito</h3>
     <ul>
       <li>Controlla in <a href="#config-pianificazione">Configurazione</a> che la scansione automatica sia attiva, con i giorni e gli orari giusti.</li>
-      <li>Con il batch attivo le notifiche delle aste nuove arrivano quando il controllo batch raccoglie i risultati (di norma entro un'ora).</li>
+      <li>Con il batch attivo le notifiche delle aste nuove arrivano quando il controllo batch raccoglie i risultati (di norma entro un'ora con Gemini, 1-2 ore con Claude; con Claude la notifica singola è solo per le aste migliori, le altre sono nel riepilogo).</li>
       <li>Se un automatismo si è fermato, il monitoraggio esterno avvisa via email. Puoi sempre usare "Avvia scanner ora" o "Controlla batch ora".</li>
     </ul>
   </section>

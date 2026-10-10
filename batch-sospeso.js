@@ -1,7 +1,7 @@
 /**
  * batch-sospeso.js — indicatore "batch in attesa" (registro e Configurazione).
  *
- * Le aste inviate a un batch Gemini restano in coda finché verifica_batch.py non
+ * Le aste inviate a un batch (Gemini o Claude) restano in coda finché verifica_batch.py non
  * ha scritto i risultati e mandato le notifiche. Questo script legge solo i
  * numeri (funzione leggi_batch_in_sospeso, sql/batch_in_sospeso.sql nel
  * repository privato, password come le altre letture) e mostra una riga:
@@ -61,7 +61,7 @@
       el.textContent = ritardo
         ? '⚠ ' + nome + ' in attesa del batch da più di ' + SOGLIA_ORE + ' ore · controlla il batch'
         : '📦 ' + nome + ' in attesa del batch' + (ore === null ? '' : ' · ' + testoAttesa(ore));
-      el.title = 'Batch Gemini in corso: le aste vengono scritte e notificate quando il risultato è pronto (da pochi minuti a 24 ore). ' +
+      el.title = 'Batch in corso (Gemini o Claude): le aste vengono scritte e notificate quando il risultato è pronto (da pochi minuti a 24 ore). ' +
                  'Si controlla da solo ogni ora; a mano con "Controlla batch ora" in Configurazione.';
       el.classList.remove('nascosto');
     }
