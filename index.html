@@ -5646,7 +5646,27 @@
       }).then(r => { if (!r.ok) throw new Error(`HTTP ${r.status}`); return r.json(); });
     const passwordLettura = passwordLetturaCorrente || leggiPasswordLetturaRicordata() || "";
 
-    const promessaAste = leggiProtetto("leggi_aste", {password_tentativo: passwordLettura, tipo: "lettura"}, "?select=*");
+    // A pagine: il database restituisce al massimo 1000 righe per richiesta e oltre tronca IN SILENZIO
+    // (stesso motivo di supabase_select_tutte nello scanner). Con una richiesta sola, superate le 1000
+    // aste, le ultime non comparivano nel registro. Si legge finché arriva una pagina vuota, avanzando
+    // di quante righe sono arrivate davvero: funziona qualunque sia quel tetto.
+    const leggiTutteLeAste = async () => {
+      const righe = [], visti = new Set();
+      let lette = 0;
+      for (let pagine = 0; pagine < 200; pagine++) {   // tetto di sicurezza: mai un ciclo senza fine
+        const pagina = await leggiProtetto("leggi_aste", {password_tentativo: passwordLettura, tipo: "lettura"},
+          `?select=*&order=id_annuncio.asc&limit=1000&offset=${lette}`);
+        if (!Array.isArray(pagina)) return pagina;   // risposta inattesa: la gestisce chi la riceve, come prima
+        lette += pagina.length;
+        // una riga già arrivata non si aggiunge due volte (per esempio un'asta inserita mentre si legge)
+        const nuove = pagina.filter(r => r.id_annuncio === null || r.id_annuncio === undefined || !visti.has(r.id_annuncio));
+        nuove.forEach(r => visti.add(r.id_annuncio));
+        righe.push(...nuove);
+        if (!nuove.length) break;                    // pagina vuota: fine
+      }
+      return righe;
+    };
+    const promessaAste = leggiTutteLeAste();
     const promessaPersonali = leggiProtetto("leggi_dati_personali", {password_tentativo: passwordLettura})
       .then(d => (d && d.ok ? d : {preferiti: [], link_utili: []}));
 
