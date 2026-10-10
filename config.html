@@ -1030,7 +1030,7 @@
       </div>
       <div class="campo-form" style="margin-top:18px; padding-top:16px; border-top:1px solid var(--border);">
         <label for="campo-modelli">Cascata modelli Gemini, in ordine di priorità (separati da virgola)</label>
-        <input type="text" id="campo-modelli" placeholder="gemini-3.7-flash, gemini-3.6-flash">
+        <input type="text" id="campo-modelli" placeholder="gemini-3.8-flash, gemini-3.6-flash">
         <button type="button" class="bottone-secondario" onclick="ripristinaCascataConsigliata()">↺ Ripristina cascata consigliata</button>
       </div>
       <div class="campo-form" style="margin-top:18px; padding-top:16px; border-top:1px solid var(--border);">
@@ -1564,7 +1564,7 @@
       configAttuale.solo_conteggio = String(config.solo_conteggio ?? false).toLowerCase() === "true";
       configAttuale.conteggia_non_analizzate = String(config.conteggia_non_analizzate ?? false).toLowerCase() === "true";
 
-      configAttuale.cascata_modelli_gemini = ["gemini-3.7-flash", "gemini-3.6-flash", "gemini-3.5-flash", "gemini-3.5-flash-lite"];
+      configAttuale.cascata_modelli_gemini = ["gemini-3.8-flash", "gemini-3.6-flash", "gemini-3.5-flash", "gemini-3.5-flash-lite"];
       if (config.cascata_modelli_gemini) {
         try {
           const parsed = JSON.parse(config.cascata_modelli_gemini);
@@ -2185,7 +2185,7 @@
     document.getElementById("campo-conteggia-non-analizzate").disabled = document.getElementById("campo-solo-conteggio").value !== "true";
   }
 
-  const CASCATA_CONSIGLIATA = ["gemini-3.7-flash", "gemini-3.6-flash", "gemini-3.5-flash", "gemini-3.5-flash-lite"];
+  const CASCATA_CONSIGLIATA = ["gemini-3.8-flash", "gemini-3.6-flash", "gemini-3.5-flash", "gemini-3.5-flash-lite"];
   function ripristinaCascataConsigliata() {
     document.getElementById("campo-modelli").value = CASCATA_CONSIGLIATA.join(", ");
   }
@@ -2269,7 +2269,7 @@
     pausa: 1,
     soloConteggio: false,
     conteggiaNonAnalizzate: false,
-    cascataModelli: ["gemini-3.7-flash", "gemini-3.6-flash", "gemini-3.5-flash", "gemini-3.5-flash-lite"],
+    cascataModelli: ["gemini-3.8-flash", "gemini-3.6-flash", "gemini-3.5-flash", "gemini-3.5-flash-lite"],
     usaBatchGemini: true,
     scannerAttivo: true,
     scannerGiorni: ["lun", "mar", "mer", "gio", "ven"],

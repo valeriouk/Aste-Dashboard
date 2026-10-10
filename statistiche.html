@@ -359,7 +359,7 @@
             <label for="sconto-batch-gemini">Sconto del batch (%)</label>
             <input type="number" id="sconto-batch-gemini" step="1" min="0" max="100" value="0" onchange="alCambioPrezzi()">
           </div>
-          <p class="sezione-nota">Per <code>gemini-3.7-flash</code> sono già impostati i prezzi del listino pubblico di Google (in dollari per milione di token, usati come euro; sono i numeri grigi nei campi vuoti, e dal 01/01/2027 passano da soli ai prezzi nuovi, il doppio). Scrivendo un valore in un campo vince il tuo, e resta solo su questo browser (telefono e PC vanno inseriti separatamente); svuotando il campo torna il predefinito. Gli output comprendono anche i token di ragionamento. Per gli altri modelli i prezzi vanno inseriti a mano; se lasci vuota la cache, i token in cache sono pagati come input normale. Un modello senza prezzo non entra nel saldo: le sue analisi restano calcolate col costo medio assunto. Lo sconto del batch è predefinito al 50%.</p>
+          <p class="sezione-nota">Per <code>gemini-3.8-flash</code> (e per il precedente <code>gemini-3.7-flash</code>) sono già impostati i prezzi del listino pubblico di Google (in dollari per milione di token, usati come euro; sono i numeri grigi nei campi vuoti, e dal 01/01/2027 passano da soli ai prezzi nuovi, il doppio). Scrivendo un valore in un campo vince il tuo, e resta solo su questo browser (telefono e PC vanno inseriti separatamente); svuotando il campo torna il predefinito. Gli output comprendono anche i token di ragionamento. Per gli altri modelli i prezzi vanno inseriti a mano; se lasci vuota la cache, i token in cache sono pagati come input normale. Un modello senza prezzo non entra nel saldo: le sue analisi restano calcolate col costo medio assunto. Lo sconto del batch è predefinito al 50%.</p>
         </div>
         <p class="sezione-nota">Token letti dalle risposte di Gemini, dal rilascio in poi (il passato non è recuperabile). Il totale è un minimo: non comprende le richieste rimaste senza risposta (sovraccarico, timeout, quota) né i batch non riusciti. Giorni e periodi sono in UTC. Per un controllo, confronta i numeri con Google AI Studio.</p>
       </div>
@@ -822,7 +822,11 @@
   // in dollari per milione di token: li usiamo come se fossero euro (differenza trascurabile). Valgono finché nel
   // modulo il campo è vuoto; quello che scrivi tu vince. Il listino raddoppia dal 01/01/2027: dopo quella data
   // valgono i prezzi nuovi. Il batch costa la metà (sconto 50%). Si riconoscono dall'inizio del nome del modello.
+  // gemini-3.8-flash (10/10/2026) ha preso il posto di gemini-3.7-flash, deprecato: stesso listino. Le righe del
+  // 3.7 restano per le analisi già registrate con quel nome.
   const PREZZI_PREDEFINITI = [
+    {inizio: "gemini-3.8-flash", fino_al: "2026-12-31", input: 0.75, output: 3.75, cache: 0.075},
+    {inizio: "gemini-3.8-flash", fino_al: null,         input: 1.5,  output: 7.5,  cache: 0.15},
     {inizio: "gemini-3.7-flash", fino_al: "2026-12-31", input: 0.75, output: 3.75, cache: 0.075},
     {inizio: "gemini-3.7-flash", fino_al: null,         input: 1.5,  output: 7.5,  cache: 0.15},
   ];
