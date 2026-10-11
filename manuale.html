@@ -476,8 +476,13 @@
         <ul>
           <li><strong>ancora in lavorazione</strong>: non aspetta, riprova al controllo successivo. Dopo <strong>25 ore</strong> dal primo invio lo
             abbandona: le aste nuove vengono scritte come "analisi non riuscita" e tornano "da riprovare";</li>
-          <li><strong>pronto</strong>: scrive i risultati nel registro, calcola margine ed €/mq, manda una notifica "NUOVA ASTA" per ogni asta nuova
-            (con 1,2 s di pausa tra i messaggi); le aste del ricontrollo ricevono "📄 Perizia trovata al ricontrollo";</li>
+          <li><strong>pronto</strong>: scrive i risultati nel registro, calcola margine ed €/mq, toglie subito dalla coda le aste nuove appena
+            scritte e poi manda una notifica "NUOVA ASTA" per ogni asta nuova (con 1,2 s di pausa tra i messaggi); le aste del ricontrollo
+            ricevono "📄 Perizia trovata al ricontrollo" ed escono dalla coda alla fine, insieme a quelle rimaste senza risultato. Se il
+            controllo viene interrotto durante le notifiche, le aste restano nel registro e non vengono rilette, ma le notifiche (e, per
+            Claude, il riepilogo) non ancora partite non arrivano. Ogni controllo ha un limite di 30 minuti su GitHub: se è in corso da
+            più di 18 minuti, un batch Gemini pronto non viene iniziato e lo ritira il controllo successivo, così è raro che venga
+            interrotto a metà;</li>
           <li><strong>fallito o scaduto</strong>: le aste vengono scritte come da riprovare; quelle nuove, mai entrate nel registro,
             ricevono comunque la notifica "NUOVA ASTA" con i dati del portale.</li>
         </ul></li>
@@ -2682,6 +2687,7 @@
         <tr><td>⛔ Scanner aste interrotto</td><td>Il database non rispondeva: il giro si è fermato senza spendere.</td></tr>
         <tr><td>⛔ Scanner aste: PVP non raggiungibile</td><td>La ricerca del PVP non ha risposto: nessuna asta cercata, nessun costo. Se si ripete, il PVP
           potrebbe aver cambiato l'indirizzo interno della ricerca.</td></tr>
+        <tr><td>⚠️ Controllo batch: aste non tolte dalla coda</td><td>Dal controllo batch: un batch è stato ritirato, ma il database non ha accettato la rimozione delle sue aste dalla coda (dopo una riprova). Verranno rilette al controllo successivo: nessuna spesa in più, ma quelle scritte con analisi non riuscita perdono un tentativo a ogni rilettura, e per un batch Claude il riepilogo arriva di nuovo. Un caso isolato si risolve da solo; se il messaggio si ripete, controlla lo stato di Supabase.</td></tr>
         <tr><td>⚠️ Batch Gemini non registrato</td><td>Un batch è partito ma non è stato registrato nel database: viene annullato (così non si paga) e le aste
           vengono riprovate al giro successivo. Se dice "annullamento non riuscito", il batch potrebbe essere addebitato senza che i risultati vengano letti.</td></tr>
         <tr><td>📄 Perizia trovata al ricontrollo</td><td>Il <a href="#orari-ricontrollo">ricontrollo</a> ha trovato la perizia e aggiornato l'analisi.</td></tr>
