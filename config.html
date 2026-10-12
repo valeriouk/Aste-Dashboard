@@ -794,7 +794,7 @@
         <input type="checkbox" id="campo-tutta-italia" onchange="aggiornaStatoTuttaItalia(); aggiornaAvvisoRaggioAmpio()">
         Cerca su tutta Italia (ignora punto e raggio qui sotto)
       </label>
-      <p class="nota-campo nota-tutta-italia">L'analisi in questa modalità è asincrona: le aste trovate vengono inviate a Gemini in un unico batch invece che una alla volta — può volerci da pochi minuti fino a 24 ore. Riceverai una notifica Telegram non appena l'invio è completato, e una notifica separata per ogni asta quando la sua analisi sarà pronta.</p>
+      <p class="nota-campo nota-tutta-italia">L'analisi in questa modalità è asincrona: le aste trovate vengono inviate a Gemini in un unico batch invece che una alla volta — può volerci da pochi minuti fino a 24 ore. Riceverai una notifica Telegram non appena l'invio è completato, e una notifica separata per ogni asta quando la sua analisi sarà pronta. Se le aste da analizzare sono più di 100 lo scanner non parte da solo: ti avvisa su Telegram e l'elenco da confermare compare in cima a questa pagina.</p>
       <div id="blocco-area-locale">
         <div class="riga-ricerca-indirizzo">
           <input type="text" id="campo-indirizzo" placeholder="Cerca un indirizzo o una città..." onkeydown="if(event.key==='Enter') cercaIndirizzo()">
@@ -844,7 +844,7 @@
     </div>
     <div class="finestra-modale-corpo">
       <p class="nota-campo" id="conteggio-intestazione" style="margin-top:0"></p>
-      <p class="nota-campo">Scegli le aste da analizzare: lo scanner parte subito e lavora solo su quelle, senza rifare la ricerca sul PVP. Ogni asta analizzata è <span id="conteggio-chi-analizza">un'analisi Gemini (a pagamento)</span>. In questo giro il ricontrollo delle perizie resta fermo. "Rifiuta tutto" cancella l'elenco senza analizzare nulla.</p>
+      <p class="nota-campo">Scegli le aste da analizzare: lo scanner parte subito e lavora solo su quelle, senza rifare la ricerca sul PVP. Ogni asta analizzata è <span id="conteggio-chi-analizza">un'analisi Gemini (a pagamento)</span>. In questo giro il ricontrollo delle perizie resta fermo. "Rifiuta tutto" cancella l'elenco senza analizzare nulla. Le aste che non scegli non vengono scartate: restano da analizzare. Tornano al conteggio successivo; in modalità Normale, quando le aste da analizzare scendono a 100 o meno, partono senza chiedere. Per escluderle servono i filtri. L'elenco contiene al massimo 400 aste: le prime nell'ordine di analisi.</p>
       <div style="display:flex;flex-wrap:wrap;gap:8px;align-items:center;margin:12px 0 4px">
         <button type="button" class="bottone-secondario bottone-spunta-conteggio" onclick="spuntaConteggio(true)">Tutte</button>
         <button type="button" class="bottone-secondario bottone-spunta-conteggio" onclick="spuntaConteggio(false)">Nessuna</button>
@@ -1692,8 +1692,10 @@
   }
 
   // ---------------------------------------------------------------- conteggio in attesa
-  // Dopo un giro in "solo conteggio" lo scanner salva l'elenco delle aste che
-  // analizzerebbe (sql/conteggio_in_attesa.sql in aste-immobiliari). Qui si
+  // Dopo un giro in "solo conteggio", oppure quando le aste da analizzare sono
+  // più della soglia di conferma dello scanner (100), lo scanner salva l'elenco
+  // delle aste che analizzerebbe, al massimo 400 (sql/conteggio_in_attesa.sql in
+  // aste-immobiliari). Qui si
   // scelgono asta per asta: accettando parte lo scanner, che lavora solo su
   // quelle; rifiutando l'elenco viene cancellato. Vale 6 ore dal conteggio.
   let conteggioAttuale = null;
