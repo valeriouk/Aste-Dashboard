@@ -204,7 +204,7 @@
         quelle senza data). Se un giro si ferma prima della fine (tetto di tempo o di aste, PVP che non risponde) di solito restano fuori
         le più lontane, che il giro successivo ritrova, e non quelle che stanno per scadere. Non vale se lo stop arriva mentre si lavorano
         ancora le aste da riprovare, che passano comunque davanti, né per le aste di un blocco il cui invio non riesce: per questo i
-        messaggi riportano le date di vendita. Con "Includi anche concluse" resta l'ordine di lettura dal PVP.</li>
+        messaggi riportano le date di vendita.</li>
       <li><strong>Ricerca del documento</strong>: per ogni asta nuova si cerca la <a href="#analisi-ricerca-perizia">perizia di stima</a>
         (allegati PVP, siti delle vendite, astegiudiziarie); se non c'è, si ripiega sull'avviso di vendita.</li>
       <li><strong>Analisi della perizia</strong> con Gemini: estrae i fatti (superfici, quota, occupazione, abusi, valori del CTU…) con
@@ -1516,7 +1516,7 @@
     <h3>Set di filtri salvati</h3>
     <p>In fondo alla scheda Ricerca. Salva con un nome i filtri di quella scheda e rimettili quando vuoi, per esempio "Fidenza 195 conteggio"
       per un giro di solo conteggio e un secondo set per il giro vero. Un set contiene: area (centro e raggio, o tutta Italia, e l'elenco "solo questi comuni"), prezzo base, tipologie,
-      altri filtri (occupazione, solo aste future, perizia da astegiudiziarie, pausa, solo conteggio; non "vendita vicina" né il tetto di lettura) ed esclusioni per parole chiave. Provider e modelli
+      altri filtri (occupazione, perizia da astegiudiziarie, pausa, solo conteggio; non "vendita vicina" né il tetto di lettura) ed esclusioni per parole chiave. Provider e modelli
       (chi legge le perizie, cascata, batch), orari e ricerca della perizia non fanno parte del set e restano quelli attuali.</p>
     <ul>
       <li><strong>Filtri attivi</strong>: la riga sopra l'elenco dice a cosa corrispondono i filtri di adesso: il nome del set salvato con gli stessi
@@ -1546,7 +1546,7 @@
         <tr><td>Prezzo base</td><td>nessun minimo, massimo 110.000 €</td></tr>
         <tr><td>Area</td><td>Catania centro, raggio 22 km, tutta Italia no, "solo questi comuni" spento con l'elenco vuoto</td></tr>
         <tr><td>Tipologie</td><td>tutte</td></tr>
-        <tr><td>Altri filtri</td><td>tutti gli stati di occupazione, solo aste future, "vendita vicina" spento (2 e 15 giorni), tetto di lettura 40 pagine,
+        <tr><td>Altri filtri</td><td>tutti gli stati di occupazione, "vendita vicina" spento (2 e 15 giorni), tetto di lettura 40 pagine,
           perizia da astegiudiziarie attiva, pausa 1 s, modalità normale</td></tr>
         <tr><td>Esclusioni</td><td>disattivate, quote escluse, elenco di parole predefinito</td></tr>
         <tr><td>Modelli</td><td>cascata consigliata, batch anche in locale attivo</td></tr>
@@ -1583,7 +1583,7 @@
         sotto la mappa compare un <strong>avviso rosso</strong>: le aste in scadenza potrebbero non essere lette, perché lo scanner parte dalle vendite più
         lontane nel tempo e si ferma al tetto di lettura (vedi <a href="#config-altri-filtri">Altri filtri</a>). Lo stesso avviso resta fisso in cima alla
         pagina di Configurazione finché la zona è ampia e il filtro è spento. Con "Cerca su tutta Italia" l'avviso non compare, perché lì lo
-        scanner legge tutte le aste future; compare solo insieme a "Includi anche concluse", dove la lettura resta quella di prima.</li>
+        scanner legge tutte le aste future.</li>
       <li><strong>"Solo questi comuni"</strong> (spento di partenza): un elenco di comuni dentro l'area. Acceso, lo scanner tiene solo le aste il cui comune
         è nell'elenco; le altre vengono scartate <strong>prima di qualunque analisi</strong> (nessun costo) e non entrano nel registro. Serve per
         cercare su un'area ampia guardando solo le città che interessano.
@@ -1601,8 +1601,7 @@
         a pagine da 100 annunci (al 12/10/2026 circa 11.000 con tutte le tipologie, 5.600 con le sole abitazioni: un centinaio di richieste, uno o
         due minuti; tetto di sicurezza 30.000 annunci). Prezzo, occupazione ed esclusioni si applicano dopo la lettura, quindi in una zona
         mai esplorata le aste da analizzare possono essere molte: sopra 100 lo scanner non parte da solo: ti avvisa e salva l'elenco da confermare
-        (vedi <a href="#config-conteggio-in-attesa">Conteggio in attesa</a>). Con "Includi anche concluse"
-        resta la lettura di prima (3.600 annunci, dalle vendite più lontane). Con Gemini usa
+        (vedi <a href="#config-conteggio-in-attesa">Conteggio in attesa</a>). Con Gemini usa
         <strong>sempre il batch</strong>: le analisi arrivano da pochi minuti a 24 ore dopo, con una notifica all'invio e una per ogni asta quando è
         pronta. Con Claude vale la casella <a href="#config-modelli">«Con Claude: analisi in batch»</a>: accesa, le aste partono in batch; spenta,
         vengono analizzate una per una, a prezzo pieno, entro il tetto di tempo. La distanza resta calcolata dal punto scelto.</li>
@@ -1622,7 +1621,7 @@
   </section>
 
   <section class="voce" id="config-altri-filtri">
-    <h3>Card "Altri filtri": occupazione, aste future, astegiudiziarie, pausa, solo conteggio</h3>
+    <h3>Card "Altri filtri": occupazione, astegiudiziarie, pausa, solo conteggio</h3>
     <ul>
       <li><strong>Stato di occupazione dichiarato su PVP</strong>: una casella per stato (Libero, Non specificato, In corso di liberazione, Occupato senza titolo, Occupato),
         tutte spuntate di partenza = nessun filtro. Le aste degli stati tolti non vengono cercate né analizzate (nessun costo); quelle già nel
@@ -1630,7 +1629,9 @@
         Il dato è quello dichiarato nell'annuncio, spesso "Non specificato" (circa 6 aste su 10 al 30/09/2026); "Occupato" spesso vuol dire occupato
         dal debitore, cioè liberabile dal custode; anche "Occupato senza titolo" è in genere liberabile (nessun contratto opponibile).
         Il riepilogo della card mostra "Occupazione: tutti gli stati" oppure gli stati esclusi, e i messaggi Telegram con i filtri usati (anche quello di invio del batch) mostrano la riga dell'occupazione con i nomi degli stati esclusi (e la riga "🚫 Esclusioni", vedi <a href="#config-esclusioni">Esclusioni per parole chiave</a>).</li>
-      <li><strong>Aste da includere</strong>: "Solo aste future" (predefinito) oppure "Includi anche concluse (analisi storiche)".</li>
+      <li><strong>Solo aste future</strong>: dal 12/10/2026 non è più una scelta. Lo scanner cerca sempre e solo aste future:
+        "Includi anche concluse" faceva analizzare, a pagamento, aste già concluse (data di vendita passata). Le aste già nel registro restano visibili anche dopo la
+        vendita (pulsante <a href="#registro-concluse">"Concluse"</a>).</li>
       <li><strong>Solo aste con vendita vicina</strong> (spento di partenza): "tra X e Y giorni da oggi", predefiniti 2 e 15, numeri interi tra 1 e 30
         (il secondo non più piccolo del primo; lo scanner riporta comunque i valori dentro questi limiti). Acceso, lo scanner cerca e
         analizza solo le aste con vendita in quell'intervallo: le altre vengono scartate prima di qualunque analisi (nessun costo Gemini) e riviste nei giri
@@ -2763,7 +2764,7 @@
         <tr><td>⚠️ Scanner aste: il giro non è finito in modo regolare</td><td>Lo manda GitHub, non lo scanner, quando un giro si ferma per un errore o per il tempo massimo: prima un giro interrotto così restava muto. Se subito prima c'è già un messaggio dello scanner che spiega il motivo (PVP o database non raggiungibili, errore imprevisto), vale quello e questo aggiunge solo il link al giro su GitHub. I batch già inviati restano validi; le aste non ancora inviate ripartono al giro successivo (se venivano da una scelta dopo il conteggio vanno scelte di nuovo).</td></tr>
         <tr><td>⛔ Scanner aste: PVP non raggiungibile</td><td>La ricerca del PVP non ha risposto: nessuna asta cercata, nessun costo. Se si ripete, il PVP
           potrebbe aver cambiato l'indirizzo interno della ricerca.</td></tr>
-        <tr><td>⚠️ Scanner aste: ricerca incompleta</td><td>Subito dopo la ricerca, nei giri che poi analizzano le aste: la ricerca non ha letto tutte le aste future. Due casi, e il messaggio dice quale: «Ricerca fermata al tetto di N pagine» (vedi <a href="#config-altri-filtri">Altri filtri</a>) oppure «Ricerca interrotta da un errore del PVP», con il motivo (per esempio «codice 403») e il numero di aste lette. In entrambi restano fuori le aste più vicine alla vendita (con "Includi anche concluse" il messaggio dice solo che il resto dei risultati non è stato letto). Il giro prosegue con le aste lette; dopo un errore lo scanner ci riprova alla ricerca successiva. Nel conteggio e nei giri senza novità l'avviso è già dentro il loro messaggio, tra i filtri, e questo non parte; nel batch Gemini inviato compare anche nel messaggio «📦 Ricerca … completata».</td></tr>
+        <tr><td>⚠️ Scanner aste: ricerca incompleta</td><td>Subito dopo la ricerca, nei giri che poi analizzano le aste: la ricerca non ha letto tutte le aste future. Due casi, e il messaggio dice quale: «Ricerca fermata al tetto di N pagine» (vedi <a href="#config-altri-filtri">Altri filtri</a>) oppure «Ricerca interrotta da un errore del PVP», con il motivo (per esempio «codice 403») e il numero di aste lette. In entrambi restano fuori le aste più vicine alla vendita. Il giro prosegue con le aste lette; dopo un errore lo scanner ci riprova alla ricerca successiva. Nel conteggio e nei giri senza novità l'avviso è già dentro il loro messaggio, tra i filtri, e questo non parte; nel batch Gemini inviato compare anche nel messaggio «📦 Ricerca … completata».</td></tr>
         <tr><td>⚠️ Controllo batch: aste non tolte dalla coda</td><td>Dal controllo batch: un batch è stato ritirato, ma il database non ha accettato la rimozione delle sue aste dalla coda (dopo una riprova). Verranno rilette al controllo successivo: nessuna spesa in più, ma quelle scritte con analisi non riuscita perdono un tentativo a ogni rilettura, e per un batch Claude il riepilogo arriva di nuovo. Un caso isolato si risolve da solo; se il messaggio si ripete, controlla lo stato di Supabase.</td></tr>
         <tr><td>⚠️ Batch Gemini non registrato</td><td>Un batch è partito ma non è stato registrato nel database: viene annullato (così non si paga) e le aste
           vengono riprovate al giro successivo. Se dice "annullamento non riuscito", il batch potrebbe essere addebitato senza che i risultati vengano letti.</td></tr>

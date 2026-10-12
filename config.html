@@ -929,13 +929,6 @@
         <p class="nota-campo">Le aste degli stati tolti non vengono cercate né analizzate (nessun costo). Il dato del PVP è indicativo: "Occupato" spesso vuol dire occupato dal debitore, liberato dal custode. Un annuncio con più stati è escluso solo se sono tutti tolti.</p>
       </div>
       <div class="campo-form">
-        <label for="campo-solo-future">Aste da includere</label>
-        <select id="campo-solo-future">
-          <option value="true">Solo aste future</option>
-          <option value="false">Includi anche concluse (analisi storiche)</option>
-        </select>
-      </div>
-      <div class="campo-form">
         <label class="etichetta-checkbox" style="margin-top:0">
           <input type="checkbox" id="campo-vendita-vicina" onchange="aggiornaStatoVenditaVicina()">
           Solo aste con vendita vicina
@@ -963,7 +956,7 @@
       </div>
       <div class="campo-form">
         <label for="campo-pagine-massime">Tetto di lettura della ricerca a raggio (pagine del PVP)</label>
-        <p class="nota-campo">Lo scanner legge i risultati del PVP dalle vendite più lontane nel tempo e si ferma a questo tetto: 40 pagine = 480 aste (predefinito), al massimo 300 = 3.600. Con un'area ampia le aste più vicine alla vendita restano oltre il tetto: per quelle c'è "Solo aste con vendita vicina" qui sopra. "Tutta Italia" non usa questo tetto: con "Solo aste future" legge tutte le aste future. Il tetto non fa parte dei set di filtri salvati.</p>
+        <p class="nota-campo">Lo scanner legge i risultati del PVP dalle vendite più lontane nel tempo e si ferma a questo tetto: 40 pagine = 480 aste (predefinito), al massimo 300 = 3.600. Con un'area ampia le aste più vicine alla vendita restano oltre il tetto: per quelle c'è "Solo aste con vendita vicina" qui sopra. "Tutta Italia" non usa questo tetto: legge tutte le aste future. Il tetto non fa parte dei set di filtri salvati.</p>
         <label class="etichetta-checkbox">
           <input type="checkbox" id="campo-accetta-pagine" onchange="aggiornaStatoPagineMassime()">
           Ho capito: alzare il tetto fa leggere più aste, quindi più analisi Gemini (a pagamento) per quelle che passano i filtri e giri più lunghi (minuti GitHub)
@@ -1554,7 +1547,6 @@
         } catch (e) {}
       }
 
-      configAttuale.solo_aste_future = String(config.solo_aste_future ?? true).toLowerCase() === "true";
       // "Solo aste con vendita vicina": spento finché non lo accendi (predefiniti 2 e 15 giorni).
       configAttuale.vendita_giorni_attivo = String(config.vendita_giorni_attivo ?? false).toLowerCase() === "true";
       configAttuale.vendita_giorni_min = Number(config.vendita_giorni_min ?? VALORI_PREDEFINITI.venditaGiorniMin);
@@ -1971,8 +1963,7 @@
 
   // Oltre questo raggio le aste future possono essere più del tetto di lettura:
   // quelle più vicine alla vendita resterebbero fuori. Con tutta Italia lo
-  // scanner legge tutte le aste future (pagine da 100 annunci): l'avviso resta
-  // solo con "Includi anche concluse", dove la lettura è quella di prima.
+  // scanner legge tutte le aste future (pagine da 100 annunci): lì l'avviso non serve.
   const SOGLIA_RAGGIO_AMPIO_KM = 100;
   const testoVenditaVicina = () => `"Solo aste con vendita vicina" (tra ${configAttuale.vendita_giorni_min} e ${configAttuale.vendita_giorni_max} giorni)`;
 
@@ -1981,18 +1972,17 @@
     const el = document.getElementById("avviso-raggio-ampio");
     const tuttaItalia = document.getElementById("campo-tutta-italia").checked;
     const km = Number(document.getElementById("campo-raggio").value);
-    const ampio = tuttaItalia ? !configAttuale.solo_aste_future : km > SOGLIA_RAGGIO_AMPIO_KM;
+    const ampio = !tuttaItalia && km > SOGLIA_RAGGIO_AMPIO_KM;
     el.classList.toggle("nascosto", !ampio || !!configAttuale.vendita_giorni_attivo);
-    el.textContent = `⚠️ Attenzione: con ${tuttaItalia ? "tutta Italia" : "un raggio di " + km + " km"} le aste in scadenza potrebbero non essere lette (lo scanner parte dalle vendite più lontane e si ferma al tetto di lettura). Attiva ${testoVenditaVicina()} in "Altri filtri".`;
+    el.textContent = `⚠️ Attenzione: con un raggio di ${km} km le aste in scadenza potrebbero non essere lette (lo scanner parte dalle vendite più lontane e si ferma al tetto di lettura). Attiva ${testoVenditaVicina()} in "Altri filtri".`;
   }
 
   // Nota fissa in cima alla pagina: zona ampia senza "vendita vicina", tetto di lettura alzato.
   function renderizzaAvvisiConfig() {
     const avvisi = [];
-    const ampio = configAttuale.cerca_tutta_italia ? !configAttuale.solo_aste_future
-                                                    : Number(configAttuale.raggio_km) > SOGLIA_RAGGIO_AMPIO_KM;
+    const ampio = !configAttuale.cerca_tutta_italia && Number(configAttuale.raggio_km) > SOGLIA_RAGGIO_AMPIO_KM;
     if (ampio && !configAttuale.vendita_giorni_attivo) {
-      avvisi.push(`⚠️ Zona di ricerca ampia (${configAttuale.cerca_tutta_italia ? "tutta Italia" : configAttuale.raggio_km + " km"}): le aste in scadenza potrebbero non essere lette. Attiva ${testoVenditaVicina()} in Ricerca → Altri filtri.`);
+      avvisi.push(`⚠️ Zona di ricerca ampia (${configAttuale.raggio_km} km): le aste in scadenza potrebbero non essere lette. Attiva ${testoVenditaVicina()} in Ricerca → Altri filtri.`);
     }
     if (Number(configAttuale.pagine_massime_ricerca) > VALORI_PREDEFINITI.pagineMassime) {
       avvisi.push(`⚠️ Tetto di lettura della ricerca a raggio alzato a ${configAttuale.pagine_massime_ricerca} pagine (fino a ${configAttuale.pagine_massime_ricerca * 12} aste lette per giro): più analisi Gemini e giri più lunghi. Si cambia in Ricerca → Altri filtri.`);
@@ -2026,7 +2016,6 @@
     const parti = [
       configAttuale.occupazioni_escluse.length ? "Occupazione: esclusi " + configAttuale.occupazioni_escluse.map(c => nomiOccupazione[c] || c).join(", ")
         : "Occupazione: tutti gli stati",
-      configAttuale.solo_aste_future ? "Solo future" : "Anche concluse",
       configAttuale.usa_astegiudiziarie_perizia ? "Perizia esterna attiva" : "Perizia esterna disattiva",
       `pausa ${configAttuale.pausa_tra_aste_secondi}s`
     ];
@@ -2172,7 +2161,6 @@
       document.querySelectorAll("#lista-occupazione .checkbox-occupazione").forEach(cb => {
         cb.checked = !configAttuale.occupazioni_escluse.includes(cb.value);
       });
-      document.getElementById("campo-solo-future").value = String(configAttuale.solo_aste_future);
       document.getElementById("campo-vendita-vicina").checked = !!configAttuale.vendita_giorni_attivo;
       document.getElementById("campo-vendita-giorni-min").value = configAttuale.vendita_giorni_min;
       document.getElementById("campo-vendita-giorni-max").value = configAttuale.vendita_giorni_max;
@@ -2297,7 +2285,7 @@
         ...(configAttuale.parametri_conti || {}),
         ...(configAttuale.checklist_modello ? {checklist_modello: JSON.stringify(configAttuale.checklist_modello)} : {}),
         ...(configAttuale.set_filtri ? {set_filtri: JSON.stringify(configAttuale.set_filtri)} : {}),
-        solo_aste_future: String(configAttuale.solo_aste_future),
+        solo_aste_future: "true",   // la scelta non c'è più (12/10/2026) e lo scanner non la legge: nel database resta "true"
         vendita_giorni_attivo: String(!!configAttuale.vendita_giorni_attivo),
         vendita_giorni_min: configAttuale.vendita_giorni_min,
         vendita_giorni_max: configAttuale.vendita_giorni_max,
@@ -2323,7 +2311,6 @@
     tipologieIncluse: [],
     occupazioniEscluse: [],
     esclusioniAttive: false,
-    soloFuture: true,
     venditaGiorniAttivo: false,
     venditaGiorniMin: 2,
     venditaGiorniMax: 15,
@@ -2351,7 +2338,7 @@
   // Solo i filtri della scheda Ricerca (scelta dell'utente, 01/10/2026).
   const CHIAVI_SET_FILTRI = ["prezzo_base_min", "prezzo_base_max", "lat_riferimento", "lon_riferimento", "raggio_km",
     "cerca_tutta_italia", "comuni_attivo", "comuni_inclusi", "tipologie_incluse", "occupazioni_escluse", "esclusioni_attive", "esclusione_quote",
-    "parole_esclusione", "solo_aste_future", "usa_astegiudiziarie_perizia", "pausa_tra_aste_secondi",
+    "parole_esclusione", "usa_astegiudiziarie_perizia", "pausa_tra_aste_secondi",
     "solo_conteggio", "conteggia_non_analizzate"];
   const MAX_SET_FILTRI = 10;
 
@@ -2363,7 +2350,7 @@
       cerca_tutta_italia: VALORI_PREDEFINITI.cercaTuttaItalia, comuni_attivo: false, comuni_inclusi: [],
       tipologie_incluse: VALORI_PREDEFINITI.tipologieIncluse,
       occupazioni_escluse: VALORI_PREDEFINITI.occupazioniEscluse, esclusioni_attive: VALORI_PREDEFINITI.esclusioniAttive,
-      esclusione_quote: true, parole_esclusione: PAROLE_ESCLUSIONE_PREDEFINITE, solo_aste_future: VALORI_PREDEFINITI.soloFuture,
+      esclusione_quote: true, parole_esclusione: PAROLE_ESCLUSIONE_PREDEFINITE,
       usa_astegiudiziarie_perizia: VALORI_PREDEFINITI.astegiudiziarie, pausa_tra_aste_secondi: VALORI_PREDEFINITI.pausa,
       solo_conteggio: VALORI_PREDEFINITI.soloConteggio, conteggia_non_analizzate: VALORI_PREDEFINITI.conteggiaNonAnalizzate
     };
@@ -2530,7 +2517,6 @@
     configAttuale.esclusioni_attive = VALORI_PREDEFINITI.esclusioniAttive;
     configAttuale.esclusione_quote = true;
     configAttuale.parole_esclusione = [...PAROLE_ESCLUSIONE_PREDEFINITE];
-    configAttuale.solo_aste_future = VALORI_PREDEFINITI.soloFuture;
     configAttuale.vendita_giorni_attivo = VALORI_PREDEFINITI.venditaGiorniAttivo;
     configAttuale.vendita_giorni_min = VALORI_PREDEFINITI.venditaGiorniMin;
     configAttuale.vendita_giorni_max = VALORI_PREDEFINITI.venditaGiorniMax;
@@ -2689,7 +2675,6 @@
         ...configAttuale.occupazioni_escluse.filter(c => !STATI_OCCUPAZIONE_PVP.some(([k]) => k === c)),
         ...STATI_OCCUPAZIONE_PVP.map(([k]) => k).filter(k => !statiSpuntati.includes(k))
       ];
-      configAttuale.solo_aste_future = document.getElementById("campo-solo-future").value === "true";
       configAttuale.vendita_giorni_attivo = venditaVicina;
       if (accettaPagine) configAttuale.pagine_massime_ricerca = pagine;
       if (venditaVicina) {   // spento: restano i giorni di prima, pronti per la prossima volta
