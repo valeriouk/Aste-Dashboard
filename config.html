@@ -735,7 +735,7 @@
 
       <section class="blocco-semplice" data-scheda="sicurezza">
         <h2>Manutenzione</h2>
-        <p class="nota-campo">Elimina dal registro le aste con data vendita già passata. Prima mostra quante sono e quante hanno visite, note/link, operazioni o risultati AI, e ti fa scegliere se tenere quelle. Le aste con un'<strong>offerta presentata o oltre</strong> (aggiudicata, persa, saldo…) non vengono eliminate, salvo scelta esplicita. Operazione irreversibile.</p>
+        <p class="nota-campo">Elimina dal registro le aste con vendita già passata. Prima ti mostra quante sono e ti fa scegliere quali tenere; quelle con un'<strong>offerta presentata o oltre</strong> restano, salvo scelta esplicita. Operazione irreversibile.</p>
         <button type="button" class="bottone-secondario" id="bottone-elimina-scadute" onclick="eliminaAsteScadute()" style="background:var(--danger-soft);color:var(--danger)">🗑 Elimina aste scadute…</button>
         <p id="messaggio-elimina-scadute"></p>
         <div id="scelta-elimina-scadute" class="nascosto" style="display:flex;flex-wrap:wrap;gap:8px;margin-top:6px"></div>
@@ -764,7 +764,7 @@
 
       <section class="blocco-semplice" data-scheda="sicurezza">
         <h2>Password di lettura del registro</h2>
-        <p class="nota-campo">Password SEPARATA da quella sopra — se attiva, serve per aprire il registro e leggerne i dati, non solo per stella/scarto/nota. Facoltativa: se disattivata, il registro resta apribile da chiunque abbia il link.</p>
+        <p class="nota-campo">Separata da quella sopra: se attiva serve anche per aprire il registro. Se disattivata, il registro lo apre chiunque abbia il link.</p>
         <form onsubmit="return false;">
           <div class="campo-form">
             <label class="etichetta-checkbox">
@@ -808,7 +808,7 @@
         <input type="checkbox" id="campo-tutta-italia" onchange="aggiornaStatoTuttaItalia(); aggiornaAvvisoRaggioAmpio()">
         Cerca su tutta Italia (ignora punto e raggio qui sotto)
       </label>
-      <p class="nota-campo nota-tutta-italia">Con Gemini l'analisi in questa modalità è sempre in batch, a blocchi: può volerci da pochi minuti fino a 24 ore. Riceverai una notifica Telegram all'invio e una per ogni asta quando la sua analisi sarà pronta. Con Claude vale la casella «Con Claude: analisi in batch» in «Provider e modelli»: accesa, le aste partono in batch; spenta, vengono analizzate una per una, a prezzo pieno, fino a due ore per giro. Se le aste da analizzare sono più di 100 lo scanner non parte da solo: ti avvisa su Telegram e l'elenco da confermare compare in cima a questa pagina.</p>
+      <p class="nota-campo nota-tutta-italia">Con Gemini sempre in batch: risultati da pochi minuti a 24 ore. Con Claude decide la casella del batch in «Provider e modelli». Sopra le 100 aste lo scanner non parte da solo: ti avvisa su Telegram e l'elenco da confermare compare in cima a questa pagina.</p>
       <div id="blocco-area-locale">
         <div class="riga-ricerca-indirizzo">
           <input type="text" id="campo-indirizzo" placeholder="Cerca un indirizzo o una città..." onkeydown="if(event.key==='Enter') cercaIndirizzo()">
@@ -828,7 +828,7 @@
           <input type="checkbox" id="campo-comuni-attivo" onchange="aggiornaStatoComuni()">
           Solo questi comuni
         </label>
-        <p class="nota-campo">Spento: tutti i comuni dell'area. Acceso: dentro l'area lo scanner tiene solo le aste in questi comuni; le altre vengono scartate prima di qualunque analisi (nessun costo Gemini) e non entrano nel registro. Conta il comune, non la zona: per la cintura di una città aggiungi i singoli comuni.</p>
+        <p class="nota-campo">Acceso: dentro l'area lo scanner tiene solo le aste di questi comuni; le altre sono scartate prima dell'analisi (nessun costo) e non entrano nel registro. Conta il comune, non la zona: per la cintura di una città aggiungi i singoli comuni.</p>
         <div id="blocco-comuni">
           <div id="lista-comuni" class="lista-comuni"></div>
           <div class="riga-ricerca-indirizzo" style="margin-top:8px">
@@ -858,7 +858,7 @@
     </div>
     <div class="finestra-modale-corpo">
       <p class="nota-campo" id="conteggio-intestazione" style="margin-top:0"></p>
-      <p class="nota-campo">Scegli le aste da analizzare: lo scanner parte subito e lavora solo su quelle, senza rifare la ricerca sul PVP. Ogni asta analizzata è <span id="conteggio-chi-analizza">un'analisi Gemini (a pagamento)</span>. In questo giro il ricontrollo delle perizie resta fermo. "Rifiuta tutto" cancella l'elenco senza analizzare nulla. Le aste che non scegli non vengono scartate: restano da analizzare. Tornano al conteggio successivo; in modalità Normale, quando le aste da analizzare scendono a 100 o meno, partono senza chiedere. Per escluderle servono i filtri. L'elenco contiene al massimo 400 aste: le prime nell'ordine di analisi.</p>
+      <p class="nota-campo">Scegli le aste da analizzare: lo scanner parte subito e lavora solo su quelle. Ogni asta analizzata è <span id="conteggio-chi-analizza">un'analisi Gemini (a pagamento)</span>. "Rifiuta tutto" cancella l'elenco senza analizzare nulla. Le aste che non scegli restano da analizzare: tornano al prossimo conteggio e, in modalità Normale, partono da sole quando sono 100 o meno. L'elenco contiene al massimo 400 aste.</p>
       <div style="display:flex;flex-wrap:wrap;gap:8px;align-items:center;margin:12px 0 4px">
         <button type="button" class="bottone-secondario bottone-spunta-conteggio" onclick="spuntaConteggio(true)">Tutte</button>
         <button type="button" class="bottone-secondario bottone-spunta-conteggio" onclick="spuntaConteggio(false)">Nessuna</button>
@@ -936,7 +936,7 @@
       <div class="campo-form">
         <label>Stato di occupazione dichiarato su PVP</label>
         <div id="lista-occupazione"></div>
-        <p class="nota-campo">Spunta gli stati da cercare: le aste degli stati tolti non vengono cercate né analizzate (niente costo Gemini). Il dato PVP è indicativo: "Occupato" spesso vuol dire occupato dal debitore, liberato dal custode. Un annuncio con più stati viene escluso solo se sono tutti tolti.</p>
+        <p class="nota-campo">Le aste degli stati tolti non vengono cercate né analizzate (nessun costo). Il dato del PVP è indicativo: "Occupato" spesso vuol dire occupato dal debitore, liberato dal custode. Un annuncio con più stati è escluso solo se sono tutti tolti.</p>
       </div>
       <div class="campo-form">
         <label for="campo-solo-future">Aste da includere</label>
@@ -1007,7 +1007,7 @@
       <button type="button" class="finestra-modale-chiudi" onclick="chiudiModale('esclusioni')" aria-label="Chiudi">×</button>
     </div>
     <div class="finestra-modale-corpo">
-      <p class="nota-campo">Lo scanner scarta, prima di qualunque analisi Gemini, gli annunci il cui testo del lotto contiene una di queste
+      <p class="nota-campo">Lo scanner scarta, prima di qualunque analisi, gli annunci il cui testo del lotto contiene una di queste
         voci. Le aste già nel registro restano. Il testo PVP è scritto dal delegato: una voce troppo generica può scartare aste buone.</p>
       <div class="campo-form">
         <label class="etichetta-checkbox"><input type="checkbox" id="campo-esclusioni-attive"> Attiva le esclusioni</label>
@@ -1087,7 +1087,7 @@
           <input type="checkbox" id="campo-scanner-attivo" checked>
           Scansione automatica attiva
         </label>
-        <p class="nota-campo">Disattivala per mettere in pausa gli avvii automatici senza perdere giorni/orari già scelti — "Avvia scanner ora" resta comunque disponibile in ogni momento, a prescindere da questo interruttore.</p>
+        <p class="nota-campo">Spenta: nessun avvio automatico; giorni e orari restano salvati. "Avvia scanner ora" funziona sempre.</p>
       </div>
       <div class="campo-form" id="blocco-giorni-orari-scanner">
         <label>Giorni</label>
@@ -1104,7 +1104,7 @@
           <input type="checkbox" id="campo-orario-16" value="16:00">
           16:00
         </label>
-        <p class="nota-campo">Due soli orari possibili, uno o entrambi: sono gli unici che il cron esterno è configurato per chiamare. L'avvio arriva puntuale, con al più una ventina di minuti di scarto.</p>
+        <p class="nota-campo">Due orari possibili, uno o entrambi. L'avvio può arrivare con una ventina di minuti di scarto.</p>
       </div>
       <div class="finestra-modale-azioni">
         <button type="button" class="bottone-salva-card" id="bottone-salva-pianificazioneScanner" onclick="confermaSalvaCard('pianificazioneScanner')">Salva</button>
@@ -1127,7 +1127,7 @@
           <input type="checkbox" id="campo-ricontrollo-attivo">
           Ricontrolla le aste future ancora lette dall'avviso
         </label>
-        <p class="nota-campo">Alla fine di ogni giro dello scanner rifà la ricerca per le aste future rimaste sull'avviso: spesso la perizia viene pubblicata dopo. Se la trova, rifà l'analisi e aggiorna l'asta. Escluse le aste scartate e quelle fuori da area e prezzo attuali.</p>
+        <p class="nota-campo">A fine giro rifà la ricerca per le aste future rimaste sull'avviso: spesso la perizia esce dopo. Se la trova, rifà l'analisi e aggiorna l'asta.</p>
       </div>
       <div class="campo-form">
         <label for="campo-ricontrollo-giorni">Ricontrolla ogni (giorni)</label>
@@ -1136,7 +1136,7 @@
       <div class="campo-form">
         <label for="campo-ricontrollo-max">Aste ricontrollate al massimo per giro</label>
         <input type="number" id="campo-ricontrollo-max" min="1" max="100" step="1" oninput="aggiornaAvvisoBatchRicontrollo()">
-        <p class="nota-campo">Circa 15–30 secondi per asta, più l'analisi Gemini quando compare una perizia (fino a 15 aste per giro a prezzo pieno, non in batch). Più alto = arretrato smaltito prima, ma più minuti GitHub Actions.</p>
+        <p class="nota-campo">Circa 15-30 secondi per asta, più l'analisi quando compare una perizia (fino a 15 aste per giro, a prezzo pieno). Più alto: arretrato smaltito prima, ma giri più lunghi.</p>
         <p class="nota-campo" id="avviso-batch-ricontrollo" hidden><strong>Oltre 15 aste per giro il ricontrollo usa sempre la modalità batch di Gemini</strong>, anche se il batch è spento: costo ridotto, ma le analisi arrivano fino a 24 ore dopo.</p>
       </div>
       <p class="nota-campo legenda-simboli">Nessun campo di questa finestra fa parte dei set di filtri salvati.</p>
