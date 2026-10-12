@@ -1555,18 +1555,17 @@
       </tbody>
     </table></div>
     <p>Non cambiano chi legge le perizie (Gemini o Claude) né la casella "Con Claude: analisi in batch", i set di filtri salvati, la scheda Conti e le schede Dispositivo e Sicurezza.</p>
-    <p><strong>I simboli * e °</strong> accanto ai titoli delle card e ai singoli campi dicono cosa resta fuori: <strong>*</strong> = non torna ai
-      predefiniti con "Ripristina"; <strong>°</strong> = non fa parte dei <a href="#config-set-filtri">set di filtri salvati</a>. Senza simbolo = ripristinato e
-      compreso nei set. Una riga in fondo a ogni scheda (e nelle finestre "Altri filtri", "Provider e modelli" e "Ricerca della perizia") ricorda il significato.</p>
+    <p>Cosa torna ai predefiniti con "Ripristina" e cosa entra nei <a href="#config-set-filtri">set di filtri salvati</a>, card per card. In
+      Configurazione lo dicono in parole le due note accanto ai set di filtri e a "Ripristina" (fino al 12/10/2026 c'erano i simboli * e ° con le loro legende).</p>
     <div class="tabella-scroll"><table>
       <thead><tr><th>Card</th><th>Scheda</th><th>"Ripristina" la riporta ai predefiniti</th><th>Entra nei set salvati</th></tr></thead>
       <tbody>
         <tr><td>Area di ricerca, Filtri di prezzo, Tipologia immobili, Esclusioni</td><td>Ricerca</td><td>sì</td><td>sì</td></tr>
-        <tr><td>Altri filtri</td><td>Ricerca</td><td>sì, tutti</td><td>sì, tranne "vendita vicina" ° e tetto di lettura °</td></tr>
-        <tr><td>Provider e modelli °</td><td>Analisi</td><td>sì (non la scelta tra Gemini e Claude, né "Con Claude: analisi in batch")</td><td>no</td></tr>
-        <tr><td>Ricerca della perizia °</td><td>Analisi</td><td>sì</td><td>no</td></tr>
-        <tr><td>Pianificazione scansione °</td><td>Orari</td><td>sì</td><td>no</td></tr>
-        <tr><td>Regime fiscale e conti * °, Checklist delle aste * °</td><td>Conti</td><td>no</td><td>no</td></tr>
+        <tr><td>Altri filtri</td><td>Ricerca</td><td>sì, tutti</td><td>sì, tranne "vendita vicina" e tetto di lettura</td></tr>
+        <tr><td>Provider e modelli</td><td>Analisi</td><td>sì (non la scelta tra Gemini e Claude, né "Con Claude: analisi in batch")</td><td>no</td></tr>
+        <tr><td>Ricerca della perizia</td><td>Analisi</td><td>sì</td><td>no</td></tr>
+        <tr><td>Pianificazione scansione</td><td>Orari</td><td>sì</td><td>no</td></tr>
+        <tr><td>Regime fiscale e conti, Checklist delle aste</td><td>Conti</td><td>no</td><td>no</td></tr>
         <tr><td>Tema, suoni, manutenzione, password, dispositivi</td><td>Dispositivo, Sicurezza</td><td>no</td><td>no</td></tr>
       </tbody>
     </table></div>
@@ -1688,7 +1687,7 @@
         "Con Claude: analisi in batch"; con Gemini la casella "Usa il batch anche in ricerca locale" e il blocco "Avanzate" (chiuso di partenza,
         si apre con un tocco) con la cascata dei modelli. Cambiando il menu cambiano i comandi. Al Salva si salvano solo quelli che si vedono:
         gli altri restano com'erano.</li>
-      <li><strong>"Chi legge le perizie"</strong> *: Gemini (predefinito) oppure Claude. Lo scegli tu: lo scanner non passa mai da solo
+      <li><strong>"Chi legge le perizie"</strong>: Gemini (predefinito) oppure Claude. Lo scegli tu: lo scanner non passa mai da solo
         dall'uno all'altro. Vale dal giro successivo e non torna ai predefiniti con "Ripristina". Con Claude la cascata e il batch di Gemini
         non si usano, il
         <a href="#orari-ricontrollo">ricontrollo delle perizie</a> resta fermo (lo dice il riepilogo della card "Ricerca della perizia") e, se
@@ -1698,7 +1697,7 @@
         messaggio lo dice ("Provider salvato…"). La prima volta serve
         una funzione nel database: se al salvataggio compare "manca la funzione nel database", va eseguito una volta
         <code>sql/provider_analisi.sql</code> (repository dello scanner) nell'SQL Editor di Supabase.</li>
-      <li><strong>"Con Claude: analisi in batch"</strong> * (spenta in partenza; non torna ai predefiniti con "Ripristina"): si vede solo
+      <li><strong>"Con Claude: analisi in batch"</strong> (spenta in partenza; non torna ai predefiniti con "Ripristina"): si vede solo
         con Claude scelto nel menu. Spenta: una per una dentro il giro, risultato subito, prezzo pieno, circa un minuto ad asta (un giro regge un
         centinaio di aste). Accesa: la prima asta subito come prova, le altre in batch a metà prezzo, con i risultati al
         <a href="#orari-batch">controllo batch</a> dopo 1-2 ore; vale anche per le aste scelte dal conteggio. Regole in
