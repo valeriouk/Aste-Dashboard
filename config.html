@@ -1304,9 +1304,21 @@
     azioneVera();
   }
 
+  // Salva a un tocco: la modifica si vede subito nel riepilogo e si rifà con un altro Salva. Resta la conferma
+  // solo quando in «Provider e modelli» cambia chi legge le perizie (cambia chi viene pagato).
   function confermaSalvaCard(nomeCard) {
     const bottone = document.getElementById(`bottone-salva-${nomeCard}`);
-    richiedeDoppioTocco(`salva-${nomeCard}`, bottone, "Salva", "Confermi?", () => salvaCard(nomeCard));
+    if (bottone.disabled) return;
+    const salva = async () => {
+      bottone.disabled = true;   // niente doppio salvataggio mentre la richiesta è in corso
+      try { await salvaCard(nomeCard); } finally { bottone.disabled = false; }
+    };
+    const scelto = nomeCard === "modelli" ? (document.getElementById("campo-provider-analisi").value === "claude" ? "claude" : "gemini") : null;
+    if (scelto && scelto !== configAttuale.provider_analisi) {
+      richiedeDoppioTocco("salva-modelli", bottone, "Salva", `Passare a ${scelto === "claude" ? "Claude" : "Gemini"}?`, salva);
+    } else {
+      salva();
+    }
   }
 
   function inizializzaMappa() {
