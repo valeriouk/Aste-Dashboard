@@ -961,14 +961,10 @@
       </div>
       <div class="campo-form">
         <label for="campo-solo-conteggio">Modalità di esecuzione</label>
-        <select id="campo-solo-conteggio" onchange="aggiornaStatoConteggiaNonAnalizzate()">
+        <select id="campo-solo-conteggio">
           <option value="false">Normale</option>
           <option value="true">Solo conteggio (nessuna analisi né scrittura: arriva solo il messaggio col conteggio)</option>
         </select>
-        <label class="etichetta-checkbox">
-          <input type="checkbox" id="campo-conteggia-non-analizzate" disabled>
-          Conteggia anche le aste non analizzate (tutto il registro)
-        </label>
       </div>
       <div class="finestra-modale-azioni">
         <button type="button" class="bottone-salva-card" id="bottone-salva-altri" onclick="confermaSalvaCard('altri')">Salva</button>
@@ -1551,7 +1547,6 @@
       configAttuale.pagine_massime_ricerca = Number(config.pagine_massime_ricerca ?? VALORI_PREDEFINITI.pagineMassime);
       configAttuale.usa_astegiudiziarie_perizia = String(config.usa_astegiudiziarie_perizia ?? true).toLowerCase() === "true";
       configAttuale.solo_conteggio = String(config.solo_conteggio ?? false).toLowerCase() === "true";
-      configAttuale.conteggia_non_analizzate = String(config.conteggia_non_analizzate ?? false).toLowerCase() === "true";
 
       configAttuale.cascata_modelli_gemini = ["gemini-3.8-flash", "gemini-3.6-flash", "gemini-3.5-flash", "gemini-3.5-flash-lite"];
       if (config.cascata_modelli_gemini) {
@@ -2164,8 +2159,6 @@
       aggiornaStatoPagineMassime();
       document.getElementById("campo-astegiudiziarie").value = String(configAttuale.usa_astegiudiziarie_perizia);
       document.getElementById("campo-solo-conteggio").value = String(configAttuale.solo_conteggio);
-      document.getElementById("campo-conteggia-non-analizzate").checked = configAttuale.conteggia_non_analizzate;
-      aggiornaStatoConteggiaNonAnalizzate();
     } else if (nome === "modelli") {
       document.getElementById("campo-provider-analisi").value = configAttuale.provider_analisi;
       document.getElementById("campo-modelli").value = configAttuale.cascata_modelli_gemini.join(", ");
@@ -2213,9 +2206,6 @@
     document.getElementById("blocco-area-locale").classList.toggle("sezione-disattivata", attivo);
     document.getElementById("campo-indirizzo").disabled = attivo;
     document.getElementById("campo-raggio").disabled = attivo;
-  }
-  function aggiornaStatoConteggiaNonAnalizzate() {
-    document.getElementById("campo-conteggia-non-analizzate").disabled = document.getElementById("campo-solo-conteggio").value !== "true";
   }
 
   const CASCATA_CONSIGLIATA = ["gemini-3.8-flash", "gemini-3.6-flash", "gemini-3.5-flash", "gemini-3.5-flash-lite"];
@@ -2286,7 +2276,6 @@
         usa_astegiudiziarie_perizia: String(configAttuale.usa_astegiudiziarie_perizia),
         pausa_tra_aste_secondi: 1,   // fissa: non si regola più (12/10/2026) e lo scanner non la legge; nel database resta 1
         solo_conteggio: String(configAttuale.solo_conteggio),
-        conteggia_non_analizzate: String(configAttuale.conteggia_non_analizzate),
         cascata_modelli_gemini: JSON.stringify(configAttuale.cascata_modelli_gemini),
         usa_batch_gemini: String(configAttuale.usa_batch_gemini),
         usa_batch_claude: String(!!configAttuale.usa_batch_claude)
@@ -2310,7 +2299,6 @@
     pagineMassime: 40,
     astegiudiziarie: true,
     soloConteggio: false,
-    conteggiaNonAnalizzate: false,
     cascataModelli: ["gemini-3.8-flash", "gemini-3.6-flash", "gemini-3.5-flash", "gemini-3.5-flash-lite"],
     usaBatchGemini: true,
     scannerAttivo: true,
@@ -2331,7 +2319,7 @@
   const CHIAVI_SET_FILTRI = ["prezzo_base_min", "prezzo_base_max", "lat_riferimento", "lon_riferimento", "raggio_km",
     "cerca_tutta_italia", "comuni_attivo", "comuni_inclusi", "tipologie_incluse", "occupazioni_escluse", "esclusioni_attive", "esclusione_quote",
     "parole_esclusione", "usa_astegiudiziarie_perizia",
-    "solo_conteggio", "conteggia_non_analizzate"];
+    "solo_conteggio"];
   const MAX_SET_FILTRI = 10;
 
   // Le stesse chiavi dei set, con i valori di "Ripristina tutti i valori predefiniti".
@@ -2344,7 +2332,7 @@
       occupazioni_escluse: VALORI_PREDEFINITI.occupazioniEscluse, esclusioni_attive: VALORI_PREDEFINITI.esclusioniAttive,
       esclusione_quote: true, parole_esclusione: PAROLE_ESCLUSIONE_PREDEFINITE,
       usa_astegiudiziarie_perizia: VALORI_PREDEFINITI.astegiudiziarie,
-      solo_conteggio: VALORI_PREDEFINITI.soloConteggio, conteggia_non_analizzate: VALORI_PREDEFINITI.conteggiaNonAnalizzate
+      solo_conteggio: VALORI_PREDEFINITI.soloConteggio
     };
   }
 
@@ -2515,7 +2503,6 @@
     configAttuale.pagine_massime_ricerca = VALORI_PREDEFINITI.pagineMassime;
     configAttuale.usa_astegiudiziarie_perizia = VALORI_PREDEFINITI.astegiudiziarie;
     configAttuale.solo_conteggio = VALORI_PREDEFINITI.soloConteggio;
-    configAttuale.conteggia_non_analizzate = VALORI_PREDEFINITI.conteggiaNonAnalizzate;
     configAttuale.cascata_modelli_gemini = [...VALORI_PREDEFINITI.cascataModelli];
     configAttuale.usa_batch_gemini = VALORI_PREDEFINITI.usaBatchGemini;
 
@@ -2667,7 +2654,6 @@
       }
       configAttuale.usa_astegiudiziarie_perizia = document.getElementById("campo-astegiudiziarie").value === "true";
       configAttuale.solo_conteggio = document.getElementById("campo-solo-conteggio").value === "true";
-      configAttuale.conteggia_non_analizzate = document.getElementById("campo-conteggia-non-analizzate").checked;
     } else if (nomeCard === "modelli") {
       // Si salvano solo i comandi che si vedono (aggiornaFinestraProvider): quelli dell'altro restano com'erano.
       const conClaude = document.getElementById("campo-provider-analisi").value === "claude";
