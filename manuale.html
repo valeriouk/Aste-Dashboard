@@ -1555,10 +1555,11 @@
         della nuova asta insieme al nome del punto ("12 km da Fidenza"). Nel registro la distanza non è mostrata e non si può ordinare per distanza:
         il numero salvato è misurato dal centro di ricerca di quando l'asta è entrata, quindi aste trovate con ricerche diverse non sono confrontabili
         (il comune è già nell'indirizzo).</li>
-      <li><strong>Raggio di ricerca</strong>: da 1 a 300 km. Oltre i 100 km (o con "Cerca su tutta Italia"), se "Solo aste con vendita vicina" è spento,
+      <li><strong>Raggio di ricerca</strong>: da 1 a 300 km. Oltre i 100 km, se "Solo aste con vendita vicina" è spento,
         sotto la mappa compare un <strong>avviso rosso</strong>: le aste in scadenza potrebbero non essere lette, perché lo scanner parte dalle vendite più
         lontane nel tempo e si ferma al tetto di lettura (vedi <a href="#config-altri-filtri">Altri filtri</a>). Lo stesso avviso resta fisso in cima alla
-        pagina di Configurazione finché la zona è ampia e il filtro è spento.</li>
+        pagina di Configurazione finché la zona è ampia e il filtro è spento. Con "Cerca su tutta Italia" l'avviso non compare, perché lì lo
+        scanner legge tutte le aste future; compare solo insieme a "Includi anche concluse", dove la lettura resta quella di prima.</li>
       <li><strong>"Solo questi comuni"</strong> (spento di partenza): un elenco di comuni dentro l'area. Acceso, lo scanner tiene solo le aste il cui comune
         è nell'elenco; le altre vengono scartate <strong>prima di qualunque analisi</strong> (nessun costo Gemini) e non entrano nel registro. Serve per
         cercare su un'area ampia guardando solo le città che interessano.
@@ -1572,7 +1573,11 @@
         Carpi). Il riepilogo della card mostra "· solo N comuni", il log del giro dice quante aste sono state scartate perché fuori dai comuni scelti e i
         messaggi Telegram con i filtri riportano "🏙️ Solo comuni: …". Fa parte dei set di filtri salvati; "Ripristina tutti i valori predefiniti" lo spegne
         e svuota l'elenco.</li>
-      <li><strong>"Cerca su tutta Italia"</strong>: ignora punto e raggio e cerca in tutto il paese (legge fino a 300 pagine di annunci). Usa
+      <li><strong>"Cerca su tutta Italia"</strong>: ignora punto e raggio e cerca in tutto il paese. Legge <strong>tutte le aste future</strong>,
+        a pagine da 100 annunci (al 12/10/2026 circa 11.000 con tutte le tipologie, 5.600 con le sole abitazioni: un centinaio di richieste, uno o
+        due minuti; tetto di sicurezza 30.000 annunci). Prezzo, occupazione ed esclusioni si applicano dopo la lettura, quindi in una zona
+        mai esplorata le aste da analizzare possono essere molte: conviene un primo giro in "Solo conteggio". Con "Includi anche concluse"
+        resta la lettura di prima (3.600 annunci, dalle vendite più lontane). Usa
         <strong>sempre il batch</strong>: le analisi arrivano da pochi minuti a 24 ore dopo, con una notifica all'invio e una per ogni asta quando è
         pronta. La distanza resta calcolata dal punto scelto.</li>
     </ul>
@@ -1614,7 +1619,7 @@
         sblocca solo spuntando la casella di accettazione: alzare il tetto fa leggere più aste, quindi più analisi Gemini a pagamento per quelle che
         passano gli altri filtri (prezzo, occupazione, esclusioni restano attivi e riducono il carico) e giri più lunghi (minuti GitHub). Con il tetto
         sopra 40 una <strong>nota rossa resta fissa in cima alla pagina</strong> di Configurazione e il riepilogo della card mostra "tetto N pagine".
-        "Tutta Italia" legge sempre fino a 300 pagine; con "vendita vicina" acceso il tetto non conta (si legge tutto l'intervallo). Non fa parte dei
+        "Tutta Italia" non usa questo tetto: legge tutte le aste future (vedi <a href="#config-area">Area di ricerca</a>); con "vendita vicina" acceso il tetto non conta (si legge tutto l'intervallo). Non fa parte dei
         set salvati; "Ripristina tutti i valori predefiniti" lo riporta a 40.</li>
       <li><strong>Avviso "ricerca fermata al tetto"</strong>: se un giro legge tutte le pagine consentite senza arrivare alla fine delle aste future,
         il log e i messaggi Telegram con i filtri usati riportano "⚠️ Ricerca fermata al tetto di N pagine…: le aste con vendita più vicina NON sono

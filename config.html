@@ -959,7 +959,7 @@
       </div>
       <div class="campo-form">
         <label for="campo-pagine-massime">Tetto di lettura della ricerca a raggio (pagine del PVP)<span class="simbolo-nota" title="Non fa parte dei set di filtri salvati">°</span></label>
-        <p class="nota-campo">Lo scanner legge i risultati del PVP dalle vendite più lontane nel tempo e si ferma a questo tetto: 40 pagine = 480 aste (predefinito), al massimo 300 = 3.600. Con un'area ampia le aste più vicine alla vendita restano oltre il tetto: per quelle c'è "Solo aste con vendita vicina" qui sopra. "Tutta Italia" usa sempre 300 pagine.</p>
+        <p class="nota-campo">Lo scanner legge i risultati del PVP dalle vendite più lontane nel tempo e si ferma a questo tetto: 40 pagine = 480 aste (predefinito), al massimo 300 = 3.600. Con un'area ampia le aste più vicine alla vendita restano oltre il tetto: per quelle c'è "Solo aste con vendita vicina" qui sopra. "Tutta Italia" non usa questo tetto: con "Solo aste future" legge tutte le aste future.</p>
         <label class="etichetta-checkbox">
           <input type="checkbox" id="campo-accetta-pagine" onchange="aggiornaStatoPagineMassime()">
           Ho capito: alzare il tetto fa leggere più aste, quindi più analisi Gemini (a pagamento) per quelle che passano i filtri e giri più lunghi (minuti GitHub)
@@ -1971,8 +1971,10 @@
     document.getElementById("campo-pagine-massime").disabled = !document.getElementById("campo-accetta-pagine").checked;
   }
 
-  // Oltre questo raggio (o su tutta Italia) le aste future possono essere più
-  // del tetto di lettura: quelle più vicine alla vendita resterebbero fuori.
+  // Oltre questo raggio le aste future possono essere più del tetto di lettura:
+  // quelle più vicine alla vendita resterebbero fuori. Con tutta Italia lo
+  // scanner legge tutte le aste future (pagine da 100 annunci): l'avviso resta
+  // solo con "Includi anche concluse", dove la lettura è quella di prima.
   const SOGLIA_RAGGIO_AMPIO_KM = 100;
   const testoVenditaVicina = () => `"Solo aste con vendita vicina" (tra ${configAttuale.vendita_giorni_min} e ${configAttuale.vendita_giorni_max} giorni)`;
 
@@ -1981,7 +1983,7 @@
     const el = document.getElementById("avviso-raggio-ampio");
     const tuttaItalia = document.getElementById("campo-tutta-italia").checked;
     const km = Number(document.getElementById("campo-raggio").value);
-    const ampio = tuttaItalia || km > SOGLIA_RAGGIO_AMPIO_KM;
+    const ampio = tuttaItalia ? !configAttuale.solo_aste_future : km > SOGLIA_RAGGIO_AMPIO_KM;
     el.classList.toggle("nascosto", !ampio || !!configAttuale.vendita_giorni_attivo);
     el.textContent = `⚠️ Attenzione: con ${tuttaItalia ? "tutta Italia" : "un raggio di " + km + " km"} le aste in scadenza potrebbero non essere lette (lo scanner parte dalle vendite più lontane e si ferma al tetto di lettura). Attiva ${testoVenditaVicina()} in "Altri filtri".`;
   }
@@ -1989,12 +1991,13 @@
   // Nota fissa in cima alla pagina: zona ampia senza "vendita vicina", tetto di lettura alzato.
   function renderizzaAvvisiConfig() {
     const avvisi = [];
-    const ampio = configAttuale.cerca_tutta_italia || Number(configAttuale.raggio_km) > SOGLIA_RAGGIO_AMPIO_KM;
+    const ampio = configAttuale.cerca_tutta_italia ? !configAttuale.solo_aste_future
+                                                    : Number(configAttuale.raggio_km) > SOGLIA_RAGGIO_AMPIO_KM;
     if (ampio && !configAttuale.vendita_giorni_attivo) {
       avvisi.push(`⚠️ Zona di ricerca ampia (${configAttuale.cerca_tutta_italia ? "tutta Italia" : configAttuale.raggio_km + " km"}): le aste in scadenza potrebbero non essere lette. Attiva ${testoVenditaVicina()} in Ricerca → Altri filtri.`);
     }
     if (Number(configAttuale.pagine_massime_ricerca) > VALORI_PREDEFINITI.pagineMassime) {
-      avvisi.push(`⚠️ Tetto di lettura alzato a ${configAttuale.pagine_massime_ricerca} pagine (fino a ${configAttuale.pagine_massime_ricerca * 12} aste lette per giro): più analisi Gemini e giri più lunghi. Si cambia in Ricerca → Altri filtri.`);
+      avvisi.push(`⚠️ Tetto di lettura della ricerca a raggio alzato a ${configAttuale.pagine_massime_ricerca} pagine (fino a ${configAttuale.pagine_massime_ricerca * 12} aste lette per giro): più analisi Gemini e giri più lunghi. Si cambia in Ricerca → Altri filtri.`);
     }
     if (configAttuale.provider_analisi === "claude" && configAttuale.cerca_tutta_italia && !configAttuale.solo_conteggio) {
       avvisi.push("⚠️ Claude con «cerca su tutta Italia»: lo scanner non parte (con Claude la ricerca su tutta Italia non è ancora abilitata). Scegli Gemini in «Provider e modelli» oppure togli «tutta Italia».");
