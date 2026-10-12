@@ -224,7 +224,7 @@
     display: flex;
     gap: 12px;
     flex-wrap: wrap;
-    margin-bottom: 28px;
+    margin-bottom: 14px;
   }
   /* Avvisi ben visibili: nota fissa in cima e avviso sotto la mappa */
   .avvisi-config { background: var(--danger-soft); color: var(--danger); border: 1px solid var(--danger); border-radius: 12px; padding: 10px 14px; margin-bottom: 14px; font-size: .9rem; font-weight: 500; }
@@ -256,7 +256,16 @@
   .bottone-avvia:hover { filter: brightness(.88); }   /* prima #7a4530: illeggibile nel tema scuro */
   .bottone-avvia.secondario { background: var(--primary); }
   .bottone-avvia.secondario:hover { filter: brightness(.88); }
+  .bottone-avvia:disabled { opacity: .55; cursor: default; }   /* richiesta in corso: si vede che il tocco è stato preso */
   #messaggio-azioni-principali { flex-basis: 100%; font-size: .85rem; }
+  #messaggio-azioni-principali:empty { display: none; }
+  .bottone-avvia.in-evidenza { outline: 3px solid var(--secondary); outline-offset: 3px; }
+  /* Telefono: «Avvia scanner ora» a tutta larghezza, gli altri due affiancati sotto (107 px invece di 160 sopra le schede) */
+  @media (max-width: 640px) {
+    .azioni-principali { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; }
+    #bottone-avvia-scanner, #messaggio-azioni-principali { grid-column: 1 / -1; }
+    .azioni-principali .bottone-avvia { padding: 11px 8px; }
+  }
 
   .overlay-modale {
     display: none;
@@ -558,6 +567,15 @@
       <button type="button" id="indicatore-batch" class="indicatore-batch nascosto" aria-live="polite"></button>
       <div id="avvisi-config" class="avvisi-config nascosto" role="status"></div>
 
+      <!-- Pulsanti di avvio: sopra le schede, quindi visibili da ognuna (prima stavano nella scheda Orari).
+           Sotto gli avvisi, così si leggono prima di premere. -->
+      <div class="azioni-principali">
+        <button type="button" class="bottone-avvia" id="bottone-avvia-scanner" onclick="avviaScanner()">▶ Avvia scanner ora</button>
+        <button type="button" class="bottone-avvia secondario" id="bottone-verifica-batch" onclick="avviaVerificaBatch()">🔄 Controlla batch ora</button>
+        <button type="button" class="bottone-avvia secondario" id="bottone-controlla-preferiti" onclick="avviaControllaPreferiti()" title="Notifica subito su Telegram i preferiti in scadenza entro 30 giorni, ignorando le soglie già inviate oggi">⭐ Controlla preferiti ora</button>
+        <span id="messaggio-azioni-principali"></span>
+      </div>
+
       <nav class="schede-config" role="tablist" aria-label="Sezioni della configurazione">
         <button type="button" role="tab" data-scheda-bottone="ricerca" onclick="mostraSchedaConfig('ricerca')">🔍 Ricerca</button>
         <button type="button" role="tab" data-scheda-bottone="analisi" onclick="mostraSchedaConfig('analisi')">🧠 Analisi</button>
@@ -566,13 +584,6 @@
         <button type="button" role="tab" data-scheda-bottone="dispositivo" onclick="mostraSchedaConfig('dispositivo')">📱 Dispositivo</button>
         <button type="button" role="tab" data-scheda-bottone="sicurezza" onclick="mostraSchedaConfig('sicurezza')">🔐 Sicurezza</button>
       </nav>
-
-      <div class="azioni-principali" data-scheda="orari">
-        <button type="button" class="bottone-avvia" id="bottone-avvia-scanner" onclick="avviaScanner()">▶ Avvia scanner ora</button>
-        <button type="button" class="bottone-avvia secondario" id="bottone-verifica-batch" onclick="avviaVerificaBatch()">🔄 Controlla batch ora</button>
-        <button type="button" class="bottone-avvia secondario" id="bottone-controlla-preferiti" onclick="avviaControllaPreferiti()" title="Notifica subito su Telegram i preferiti in scadenza entro 30 giorni, ignorando le soglie già inviate oggi">⭐ Controlla preferiti ora</button>
-        <span id="messaggio-azioni-principali"></span>
-      </div>
 
       <div class="elenco-card">
         <div class="card-riepilogo" data-scheda="ricerca">
@@ -1621,10 +1632,12 @@
           elemento: document.getElementById("indicatore-batch"),
           url: SUPABASE_URL, chiave: SUPABASE_ANON_KEY, tipo: "scrittura",
           password: () => passwordCorrente || "",
-          alClic: () => {   // porta al pulsante "Controlla batch ora" (scheda Orari)
-            mostraSchedaConfig("orari");
+          alClic: () => {   // porta al pulsante "Controlla batch ora" (sopra le schede) e lo evidenzia un momento
             const bottone = document.getElementById("bottone-verifica-batch");
-            if (bottone) bottone.scrollIntoView({block: "center", behavior: "smooth"});
+            if (!bottone) return;
+            bottone.scrollIntoView({block: "center", behavior: "smooth"});
+            bottone.classList.add("in-evidenza");
+            setTimeout(() => bottone.classList.remove("in-evidenza"), 1500);
           },
         });
       } catch (e2) { console.error("Indicatore batch:", e2); }
@@ -2839,52 +2852,44 @@
     confermaAvvioInCorso = false;
     bottone.textContent = "▶ Avvia scanner ora";
     bottone.disabled = true;   // niente doppio avvio mentre la richiesta è in corso
-    messaggioEl.textContent = "Avvio in corso…";
+    messaggioEl.textContent = "Scanner: avvio in corso…";
     messaggioEl.className = "messaggio-attesa";
     try {
       const risultato = await avviaWorkflowGitHub("scheduler.yml");
       if (risultato.result === "success") {
-        messaggioEl.innerHTML = escapeHtml(risultato.message || "Scanner avviato.") + (risultato.url ? ` <a href="${escapeHtml(risultato.url)}" target="_blank" rel="noopener">Apri esecuzione</a>` : "");
+        messaggioEl.innerHTML = "Scanner: " + escapeHtml(risultato.message || "Scanner avviato.") + (risultato.url ? ` <a href="${escapeHtml(risultato.url)}" target="_blank" rel="noopener">Apri esecuzione</a>` : "");
         messaggioEl.className = "messaggio-ok";
       } else {
-        messaggioEl.innerHTML = escapeHtml(risultato.message || "Errore sconosciuto durante l'avvio.") + (risultato.url ? ` <a href="${escapeHtml(risultato.url)}" target="_blank" rel="noopener">Apri esecuzione</a>` : "");
+        messaggioEl.innerHTML = "Scanner: " + escapeHtml(risultato.message || "Errore sconosciuto durante l'avvio.") + (risultato.url ? ` <a href="${escapeHtml(risultato.url)}" target="_blank" rel="noopener">Apri esecuzione</a>` : "");
         messaggioEl.className = "messaggio-errore";
       }
     } catch (e) {
-      messaggioEl.textContent = "Richiesta non riuscita. Controlla la connessione e riprova.";
+      messaggioEl.textContent = "Scanner: richiesta non riuscita. Controlla la connessione e riprova.";
       messaggioEl.className = "messaggio-errore";
     } finally {
       bottone.disabled = false;
     }
   }
 
-  let confermaVerificaBatchInCorso = false, timeoutConfermaVerificaBatch = null;
+  // Un tocco solo, senza conferma: il controllo dei batch non spende token (i batch sono già pagati all'invio).
   async function avviaVerificaBatch() {
     const bottone = document.getElementById("bottone-verifica-batch");
     const messaggioEl = document.getElementById("messaggio-azioni-principali");
-    if (!confermaVerificaBatchInCorso) {
-      confermaVerificaBatchInCorso = true;
-      bottone.textContent = "Confermi il controllo?";
-      timeoutConfermaVerificaBatch = setTimeout(() => { confermaVerificaBatchInCorso = false; bottone.textContent = "🔄 Controlla batch ora"; }, 4000);
-      return;
-    }
-    clearTimeout(timeoutConfermaVerificaBatch);
-    confermaVerificaBatchInCorso = false;
-    bottone.textContent = "🔄 Controlla batch ora";
+    if (bottone.disabled) return;
     bottone.disabled = true;   // niente doppio avvio mentre la richiesta è in corso
-    messaggioEl.textContent = "Avvio in corso…";
+    messaggioEl.textContent = "Controllo batch: avvio in corso…";
     messaggioEl.className = "messaggio-attesa";
     try {
       const risultato = await avviaWorkflowGitHub("verifica-batch.yml");
       if (risultato.result === "success") {
-        messaggioEl.innerHTML = escapeHtml(risultato.message || "Controllo avviato.") + (risultato.url ? ` <a href="${escapeHtml(risultato.url)}" target="_blank" rel="noopener">Apri esecuzione</a>` : "");
+        messaggioEl.innerHTML = "Controllo batch: " + escapeHtml(risultato.message || "Controllo avviato.") + (risultato.url ? ` <a href="${escapeHtml(risultato.url)}" target="_blank" rel="noopener">Apri esecuzione</a>` : "");
         messaggioEl.className = "messaggio-ok";
       } else {
-        messaggioEl.innerHTML = escapeHtml(risultato.message || "Errore sconosciuto durante l'avvio.") + (risultato.url ? ` <a href="${escapeHtml(risultato.url)}" target="_blank" rel="noopener">Apri esecuzione</a>` : "");
+        messaggioEl.innerHTML = "Controllo batch: " + escapeHtml(risultato.message || "Errore sconosciuto durante l'avvio.") + (risultato.url ? ` <a href="${escapeHtml(risultato.url)}" target="_blank" rel="noopener">Apri esecuzione</a>` : "");
         messaggioEl.className = "messaggio-errore";
       }
     } catch (e) {
-      messaggioEl.textContent = "Richiesta non riuscita. Controlla la connessione e riprova.";
+      messaggioEl.textContent = "Controllo batch: richiesta non riuscita. Controlla la connessione e riprova.";
       messaggioEl.className = "messaggio-errore";
     } finally {
       bottone.disabled = false;
@@ -2905,19 +2910,19 @@
     confermaControllaPreferitiInCorso = false;
     bottone.textContent = "⭐ Controlla preferiti ora";
     bottone.disabled = true;   // niente doppio avvio mentre la richiesta è in corso
-    messaggioEl.textContent = "Avvio in corso…";
+    messaggioEl.textContent = "Preferiti: avvio in corso…";
     messaggioEl.className = "messaggio-attesa";
     try {
       const risultato = await avviaWorkflowGitHub("notifiche-preferiti.yml", {modalita_immediata: "true"});
       if (risultato.result === "success") {
-        messaggioEl.innerHTML = escapeHtml(risultato.message || "Controllo avviato.") + (risultato.url ? ` <a href="${escapeHtml(risultato.url)}" target="_blank" rel="noopener">Apri esecuzione</a>` : "");
+        messaggioEl.innerHTML = "Preferiti: " + escapeHtml(risultato.message || "Controllo avviato.") + (risultato.url ? ` <a href="${escapeHtml(risultato.url)}" target="_blank" rel="noopener">Apri esecuzione</a>` : "");
         messaggioEl.className = "messaggio-ok";
       } else {
-        messaggioEl.innerHTML = escapeHtml(risultato.message || "Errore sconosciuto durante l'avvio.") + (risultato.url ? ` <a href="${escapeHtml(risultato.url)}" target="_blank" rel="noopener">Apri esecuzione</a>` : "");
+        messaggioEl.innerHTML = "Preferiti: " + escapeHtml(risultato.message || "Errore sconosciuto durante l'avvio.") + (risultato.url ? ` <a href="${escapeHtml(risultato.url)}" target="_blank" rel="noopener">Apri esecuzione</a>` : "");
         messaggioEl.className = "messaggio-errore";
       }
     } catch (e) {
-      messaggioEl.textContent = "Richiesta non riuscita. Controlla la connessione e riprova.";
+      messaggioEl.textContent = "Preferiti: richiesta non riuscita. Controlla la connessione e riprova.";
       messaggioEl.className = "messaggio-errore";
     } finally {
       bottone.disabled = false;

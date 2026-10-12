@@ -1430,13 +1430,16 @@
     <ul>
       <li><strong>Schede</strong> in alto (una riga su PC, due righe da tre sul telefono), ognuna con la sua parte della pagina; l'ultima scelta resta
         su questo dispositivo: <strong>🔍 Ricerca</strong> (area, prezzo, tipologia, altri filtri, esclusioni, ripristino dei predefiniti),
-        <strong>🧠 Analisi</strong> (provider e modelli, ricerca della perizia), <strong>⏱️ Orari</strong> (pulsanti di avvio e pianificazione),
+        <strong>🧠 Analisi</strong> (provider e modelli, ricerca della perizia), <strong>⏱️ Orari</strong> (pianificazione),
         <strong>💶 Conti</strong> (regime fiscale e conti, checklist), <strong>📱 Dispositivo</strong> (tema, suoni e vibrazione),
         <strong>🔐 Sicurezza</strong> (manutenzione, password).</li>
       <li>Serve la password di scrittura. Ogni riquadro ("card") mostra il valore attuale; "Modifica" apre una finestra; "Salva" chiede conferma
         ("Confermi?" per 4 secondi, poi un secondo tocco) e salva subito ("Salvato.", la finestra si chiude da sola).</li>
       <li>Lo scanner rilegge la configurazione all'inizio di ogni giro: le modifiche valgono dal <strong>giro successivo</strong>.</li>
-      <li>I tre pulsanti della scheda Orari funzionano con doppio tocco (conferma entro 4 secondi). Mentre una richiesta è in corso il pulsante resta
+      <li>I <strong>tre pulsanti di avvio</strong> ("▶ Avvia scanner ora", "🔄 Controlla batch ora", "⭐ Controlla preferiti ora") stanno sopra le
+        schede, sotto gli eventuali avvisi rossi: si vedono da ogni scheda. "Avvia scanner ora" e "Controlla preferiti ora" funzionano con doppio
+        tocco (conferma entro 4 secondi); "Controlla batch ora" parte al primo tocco, perché non spende token (né Gemini né Claude). Il messaggio sotto i pulsanti dice
+        di quale azione parla ("Scanner: …", "Controllo batch: …", "Preferiti: …"). Mentre una richiesta è in corso il pulsante resta
         disattivato: un tocco in più non avvia una seconda esecuzione.</li>
       <li>Se il salvataggio di una card non riesce, i valori tornano quelli di prima (non vengono spediti col salvataggio di un'altra card).</li>
     </ul>
@@ -1446,7 +1449,7 @@
     <h3>"▶ Avvia scanner ora"</h3>
     <p>Avvia subito un giro completo dello scanner con i filtri attuali, anche se la pianificazione è in pausa o non è l'orario: ricerca su PVP, analisi
       con Gemini o con Claude (subito o in batch, secondo le impostazioni), notifiche, poi ricontrollo perizie, storico delle aste e OMI. <strong>Consuma Gemini o credito Claude</strong> per le aste nuove
-      e minuti GitHub. Messaggi: "Avvio in corso…", "Scanner avviato." (con eventuale link "Apri esecuzione"), oppure l'errore. Se le aste da
+      e minuti GitHub. Messaggi, sotto i pulsanti: "Scanner: avvio in corso…", poi "Scanner: Avviato…" (con eventuale link "Apri esecuzione"), oppure l'errore. Se le aste da
       analizzare sono più di 100 il giro non le analizza e chiede conferma: vedi <a href="#orari-scanner">Scanner</a>.</p>
     <p>Vale anche per "Controlla batch ora" e "Controlla preferiti ora": dopo l'avvio la pagina aspetta fino a circa 20 secondi che GitHub mostri
       l'esecuzione. Se compare: "Avviato — esecuzione confermata su GitHub" con "Apri esecuzione". Se GitHub è lento a mostrarla (succede): "Avvio
@@ -1499,7 +1502,7 @@
     <p><strong>Indicatore "📦 N aste in attesa del batch"</strong> (nel registro, sotto l'intestazione, e in Configurazione sopra le schede): compare quando
       c'è almeno un batch inviato e non ancora scritto e notificato, con le ore passate dall'invio più vecchio; sparisce da solo quando le aste sono state
       notificate. Si rilegge ogni minuto e quando torni sulla scheda. Dopo 24 ore diventa un avviso rosso "da più di 24 ore · controlla il batch" (il limite
-      di un batch, per Gemini come per Claude). Toccandolo, dal registro vai a Configurazione, e da Configurazione al pulsante "Controlla batch ora". La coda comprende anche
+      di un batch, per Gemini come per Claude). Toccandolo, dal registro vai a Configurazione; in Configurazione la pagina scorre al pulsante "Controlla batch ora" e lo evidenzia per un momento. La coda comprende anche
       i batch del <a href="#orari-ricontrollo">ricontrollo delle perizie</a>. Se la password non è nota o la lettura fallisce, la riga resta nascosta.</p>
   </section>
 
