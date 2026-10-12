@@ -654,7 +654,7 @@
       </div>
 
       <p class="nota-campo legenda-simboli" data-scheda="ricerca">Tutti i filtri di questa scheda tornano ai predefiniti con "Ripristina" e fanno parte dei set salvati, tranne i due segnati <strong class="simbolo-nota">°</strong> dentro "Altri filtri" ("vendita vicina" e tetto di lettura): tornano ai predefiniti, ma non fanno parte dei set.</p>
-      <p class="nota-campo legenda-simboli" data-scheda="analisi"><strong class="simbolo-nota">*</strong> non torna ai predefiniti con "Ripristina" · <strong class="simbolo-nota">°</strong> non fa parte dei set di filtri salvati. Dentro "Ricerca della perizia" il prompt di analisi è segnato <strong class="simbolo-nota">*</strong>, e dentro "Provider e modelli" lo sono "Chi legge le perizie" e "Con Claude: analisi in batch".</p>
+      <p class="nota-campo legenda-simboli" data-scheda="analisi"><strong class="simbolo-nota">*</strong> non torna ai predefiniti con "Ripristina" · <strong class="simbolo-nota">°</strong> non fa parte dei set di filtri salvati. Dentro "Provider e modelli" sono segnati <strong class="simbolo-nota">*</strong> "Chi legge le perizie" e "Con Claude: analisi in batch".</p>
       <p class="nota-campo legenda-simboli" data-scheda="orari"><strong class="simbolo-nota">*</strong> non torna ai predefiniti con "Ripristina" · <strong class="simbolo-nota">°</strong> non fa parte dei set di filtri salvati.</p>
 
       <div class="barra-ripristino" data-scheda="ricerca" id="blocco-set-filtri" style="border-style:solid;margin-bottom:14px">
@@ -679,7 +679,7 @@
 
       <div class="barra-ripristino" data-scheda="ricerca">
         <button type="button" class="bottone-secondario" id="bottone-ripristina-predefiniti" onclick="confermaRipristinaPredefiniti()">↺ Ripristina tutti i valori predefiniti</button>
-        <p class="nota-campo">Riporta ai valori predefiniti le card delle schede Ricerca, Analisi e Orari — area, prezzo, tipologia, altri filtri ("vendita vicina" spento, tetto di lettura a 40 pagine), esclusioni (disattivate), modelli, pianificazione (lun-ven alle 10:00) e ricerca della perizia (estesa, con ricontrollo ogni 2 giorni, massimo 15 aste per giro). Restano come sono le voci segnate <strong class="simbolo-nota">*</strong> (chi legge le perizie, Gemini o Claude, e se Claude lavora in batch; scelta del prompt v1/v2; scheda Conti), i set di filtri salvati e le schede Dispositivo e Sicurezza. Salva subito, come ogni altra modifica in questa pagina.</p>
+        <p class="nota-campo">Riporta ai valori predefiniti le card delle schede Ricerca, Analisi e Orari — area, prezzo, tipologia, altri filtri ("vendita vicina" spento, tetto di lettura a 40 pagine), esclusioni (disattivate), modelli, pianificazione (lun-ven alle 10:00) e ricerca della perizia (ricontrollo acceso, ogni 2 giorni, massimo 15 aste per giro). Restano come sono le voci segnate <strong class="simbolo-nota">*</strong> (chi legge le perizie, Gemini o Claude, e se Claude lavora in batch; scheda Conti), i set di filtri salvati e le schede Dispositivo e Sicurezza. Salva subito, come ogni altra modifica in questa pagina.</p>
         <p id="messaggio-ripristina-predefiniti" class="messaggio-salvataggio-card"></p>
       </div>
 
@@ -1116,27 +1116,11 @@
     </div>
     <div class="finestra-modale-corpo">
       <div class="campo-form">
-        <label for="campo-ricerca-estesa">Dove cercare la perizia</label>
-        <select id="campo-ricerca-estesa">
-          <option value="true">Ricerca estesa: allegati PVP, astegiudiziarie, altri siti collegati, poi avviso</option>
-          <option value="false">Come prima: astegiudiziarie, poi avviso</option>
-        </select>
-        <p class="nota-campo">La ricerca estesa prova anche gli allegati PVP e le pagine dell'asta sui siti collegati all'annuncio (quelli con la bandierina), prima di ripiegare sull'avviso di vendita. Rispetta la scelta su astegiudiziarie fatta in "Altri filtri".</p>
-      </div>
-      <div class="campo-form">
-        <label for="campo-prompt-analisi">Prompt di analisi della perizia<span class="simbolo-nota" title="Non torna ai predefiniti con Ripristina">*</span></label>
-        <select id="campo-prompt-analisi">
-          <option value="v2">v2: fatti con pagina e citazione, lotto giusto, quote, contratti</option>
-          <option value="v1">v1: prompt precedente</option>
-        </select>
-        <p class="nota-campo">Vale dal prossimo giro dello scanner, per le aste nuove e per il ricontrollo. Tornare a v1 riporta tutto come prima; i batch già inviati vengono letti con il prompt con cui sono partiti.</p>
-      </div>
-      <div class="campo-form">
         <label class="etichetta-checkbox" style="margin-top:0">
           <input type="checkbox" id="campo-ricontrollo-attivo">
           Ricontrolla le aste future ancora lette dall'avviso
         </label>
-        <p class="nota-campo">Alla fine di ogni giro dello scanner rifà la ricerca per le aste future rimaste sull'avviso: spesso la perizia viene pubblicata dopo. Se la trova, rifà l'analisi e aggiorna l'asta. Escluse le aste scartate e quelle fuori da area e prezzo attuali. Funziona solo con la ricerca estesa.</p>
+        <p class="nota-campo">Alla fine di ogni giro dello scanner rifà la ricerca per le aste future rimaste sull'avviso: spesso la perizia viene pubblicata dopo. Se la trova, rifà l'analisi e aggiorna l'asta. Escluse le aste scartate e quelle fuori da area e prezzo attuali.</p>
       </div>
       <div class="campo-form">
         <label for="campo-ricontrollo-giorni">Ricontrolla ogni (giorni)</label>
@@ -1148,7 +1132,7 @@
         <p class="nota-campo">Circa 15–30 secondi per asta, più l'analisi Gemini quando compare una perizia (fino a 15 aste per giro a prezzo pieno, non in batch). Più alto = arretrato smaltito prima, ma più minuti GitHub Actions.</p>
         <p class="nota-campo" id="avviso-batch-ricontrollo" hidden><strong>Oltre 15 aste per giro il ricontrollo usa sempre la modalità batch di Gemini</strong>, anche se il batch è spento: costo ridotto, ma le analisi arrivano fino a 24 ore dopo.</p>
       </div>
-      <p class="nota-campo legenda-simboli"><strong class="simbolo-nota">*</strong> non torna ai predefiniti con "Ripristina". Nessun campo di questa finestra fa parte dei set di filtri salvati.</p>
+      <p class="nota-campo legenda-simboli">Nessun campo di questa finestra fa parte dei set di filtri salvati.</p>
       <div class="finestra-modale-azioni">
         <button type="button" class="bottone-salva-card" id="bottone-salva-ricercaPerizia" onclick="confermaSalvaCard('ricercaPerizia')">Salva</button>
         <span id="messaggio-salva-ricercaPerizia" class="messaggio-salvataggio-card"></span>
@@ -1477,9 +1461,11 @@
 
   let configAttuale = {};
   let pianificazioneAttuale = {};
-  let ricercaPeriziaAttuale = {estesa: true, ricontrollo_attivo: true, ricontrollo_giorni: 2, ricontrollo_max: 15, prompt: "v1"};
+  let ricercaPeriziaAttuale = {ricontrollo_attivo: true, ricontrollo_giorni: 2, ricontrollo_max: 15};
   // Letti dal database a ogni caricamento, fuori da configAttuale: non entrano nei salvataggi né nei set di filtri.
   let providerNonValidoNelDatabase = false;   // provider_analisi scritto male (a mano): lo scanner non parte finché non lo riscrivi
+  let promptV1NelDatabase = false;            // prompt_analisi = v1 (messo a mano): lo scanner usa il vecchio prompt; la pagina non lo scrive più
+  let ricercaVecchiaNelDatabase = false;      // ricerca_perizia_estesa non «true» (messo a mano): ricerca di una volta e ricontrollo fermo, fino al primo salvataggio di una card di Ricerca o Analisi (o Ripristina)
   let usaClaudeRicontrollo = false;           // usa_claude_ricontrollo: il ricontrollo delle perizie gira anche con Claude
 
   async function caricaConfigurazioneAttuale() {
@@ -1612,9 +1598,12 @@
       // Non più letta da config: costante fissa, vedi VALORI_PREDEFINITI.verificaBatchMinuti.
       pianificazioneAttuale.verifica_batch_minuti = VALORI_PREDEFINITI.verificaBatchMinuti;
 
-      ricercaPeriziaAttuale.estesa = String(config.ricerca_perizia_estesa ?? true).toLowerCase() === "true";
-      // Stesso default dello scanner (PROMPT_ANALISI in app.py): v1 se il parametro manca.
-      ricercaPeriziaAttuale.prompt = String(config.prompt_analisi ?? "v1").trim().toLowerCase() === "v2" ? "v2" : "v1";
+      // Ricerca «Come prima» e prompt v1 non si scelgono più (12/10/2026): i due parametri si leggono solo per
+      // avvisare se nel database è rimasto un valore vecchio (vedi renderizzaAvvisiConfig), come li legge lo scanner
+      // (carica_configurazione in app.py): senza la riga vale la ricerca estesa, con la riga solo questi valori; senza prompt vale il v2.
+      ricercaVecchiaNelDatabase = config.ricerca_perizia_estesa !== undefined
+        && !["true", "vero", "1", "si", "sì"].includes(String(config.ricerca_perizia_estesa).trim().toLowerCase());
+      promptV1NelDatabase = String(config.prompt_analisi ?? "").trim().toLowerCase() === "v1";
       ricercaPeriziaAttuale.ricontrollo_attivo = String(config.ricontrollo_perizie_attivo ?? true).toLowerCase() !== "false";
       ricercaPeriziaAttuale.ricontrollo_giorni = Number(config.ricontrollo_perizie_giorni ?? 2) || 2;
       ricercaPeriziaAttuale.ricontrollo_max = Number(config.ricontrollo_perizie_max ?? 15) || 15;
@@ -2020,6 +2009,12 @@
     if (providerNonValidoNelDatabase) {
       avvisi.push("⚠️ «Chi legge le perizie» ha un valore non valido nel database: lo scanner non parte. Apri Analisi → «Provider e modelli», scegli Gemini o Claude e salva.");
     }
+    if (promptV1NelDatabase) {
+      avvisi.push("⚠️ Nel database il prompt di analisi è «v1», messo a mano: lo scanner legge le perizie con il vecchio prompt. Da questa pagina non si cambia più: per tornare al v2 va corretto nel database (manuale, «Versioni del prompt»).");
+    }
+    if (ricercaVecchiaNelDatabase) {
+      avvisi.push("⚠️ Nel database la ricerca della perizia è quella vecchia, messa a mano: lo scanner cerca la perizia solo su astegiudiziarie, poi ripiega sull'avviso, e il ricontrollo non gira. Per rimetterla a posto salva una card qualsiasi delle schede Ricerca o Analisi.");
+    }
     const el = document.getElementById("avvisi-config");
     el.innerHTML = avvisi.map(a => `<p>${escapeHtml(a)}</p>`).join("");
     el.classList.toggle("nascosto", !avvisi.length);
@@ -2081,21 +2076,21 @@
   function renderizzaRiepilogoRicercaPerizia() {
     const r = ricercaPeriziaAttuale;
     const el = document.getElementById("riepilogo-ricerca-perizia");
-    if (!r.estesa) {
-      el.textContent = `Come prima: astegiudiziarie, poi avviso · prompt ${r.prompt}`;
+    if (ricercaVecchiaNelDatabase) {
+      el.textContent = "Ricerca vecchia nel database: vedi l'avviso in alto";
       return;
     }
     // Con Claude lo scanner non esegue il ricontrollo (_esegui_ricontrollo_perizie in app.py), salvo
     // usa_claude_ricontrollo: in quel caso al massimo SOGLIA_BATCH_RICONTROLLO aste per giro, mai in batch.
     const conClaude = configAttuale.provider_analisi === "claude";
     if (conClaude && r.ricontrollo_attivo && !usaClaudeRicontrollo) {
-      el.textContent = `Ricerca estesa · ricontrollo fermo finché le perizie le legge Claude · prompt ${r.prompt}`;
+      el.textContent = "Ricerca estesa · ricontrollo fermo finché le perizie le legge Claude";
       return;
     }
     el.textContent = "Ricerca estesa · " + (r.ricontrollo_attivo
       ? `ricontrollo ogni ${r.ricontrollo_giorni} ${r.ricontrollo_giorni === 1 ? "giorno" : "giorni"}, max ${r.ricontrollo_max} aste per giro`
         + (r.ricontrollo_max > SOGLIA_BATCH_RICONTROLLO ? (conClaude ? ` (con Claude al massimo ${SOGLIA_BATCH_RICONTROLLO})` : " (in batch)") : "")
-      : "ricontrollo spento") + ` · prompt ${r.prompt}`;
+      : "ricontrollo spento");
   }
 
   function aggiornaAvvisoBatchRicontrollo() {
@@ -2104,13 +2099,21 @@
   }
 
   async function salvaRicercaPeriziaSulServer() {
-    return chiamaRpc("imposta_ricerca_perizia", {
+    const esito = await chiamaRpc("imposta_ricerca_perizia", {
       password_tentativo: passwordCorrente,
-      estesa: ricercaPeriziaAttuale.estesa,
+      // Sempre true, scritto fisso: la ricerca «Come prima» non si sceglie più (12/10/2026). Il parametro va
+      // mandato comunque: la funzione nel database lo vuole, e con null scriverebbe "false".
+      estesa: true,
       ricontrollo_attivo: ricercaPeriziaAttuale.ricontrollo_attivo,
       ricontrollo_giorni: ricercaPeriziaAttuale.ricontrollo_giorni,
       ricontrollo_max: ricercaPeriziaAttuale.ricontrollo_max
     });
+    if (esito && esito.result === "success" && ricercaVecchiaNelDatabase) {
+      ricercaVecchiaNelDatabase = false;   // ora nel database è «true»: il riepilogo e l'avviso in alto si aggiornano
+      renderizzaRiepilogoRicercaPerizia();
+      renderizzaAvvisiConfig();
+    }
+    return esito;
   }
 
   function renderizzaTuttiIRiepiloghi() {
@@ -2194,8 +2197,6 @@
       document.getElementById("campo-batch-locale").checked = configAttuale.usa_batch_gemini;
       document.getElementById("campo-batch-claude").checked = !!configAttuale.usa_batch_claude;
     } else if (nome === "ricercaPerizia") {
-      document.getElementById("campo-ricerca-estesa").value = String(ricercaPeriziaAttuale.estesa);
-      document.getElementById("campo-prompt-analisi").value = ricercaPeriziaAttuale.prompt;
       document.getElementById("campo-ricontrollo-attivo").checked = ricercaPeriziaAttuale.ricontrollo_attivo;
       document.getElementById("campo-ricontrollo-giorni").value = ricercaPeriziaAttuale.ricontrollo_giorni;
       document.getElementById("campo-ricontrollo-max").value = ricercaPeriziaAttuale.ricontrollo_max;
@@ -2334,7 +2335,6 @@
     // Ricerca della perizia: sempre utile (la perizia a volte è solo tra gli
     // allegati PVP o su siti diversi da astegiudiziarie, e spesso viene
     // pubblicata dopo l'avviso), quindi attiva anche nei predefiniti.
-    ricercaPeriziaEstesa: true,
     ricontrolloAttivo: true,
     ricontrolloGiorni: 2,
     ricontrolloMax: 15
@@ -2541,7 +2541,6 @@
     pianificazioneAttuale.scanner_orari = [...VALORI_PREDEFINITI.scannerOrari];
     pianificazioneAttuale.verifica_batch_minuti = VALORI_PREDEFINITI.verificaBatchMinuti;
 
-    ricercaPeriziaAttuale.estesa = VALORI_PREDEFINITI.ricercaPeriziaEstesa;
     ricercaPeriziaAttuale.ricontrollo_attivo = VALORI_PREDEFINITI.ricontrolloAttivo;
     ricercaPeriziaAttuale.ricontrollo_giorni = VALORI_PREDEFINITI.ricontrolloGiorni;
     ricercaPeriziaAttuale.ricontrollo_max = VALORI_PREDEFINITI.ricontrolloMax;
@@ -2719,11 +2718,9 @@
         msgEl.className = "messaggio-salvataggio-card messaggio-errore";
         return;
       }
-      ricercaPeriziaAttuale.estesa = document.getElementById("campo-ricerca-estesa").value === "true";
       ricercaPeriziaAttuale.ricontrollo_attivo = document.getElementById("campo-ricontrollo-attivo").checked;
       ricercaPeriziaAttuale.ricontrollo_giorni = giorni;
       ricercaPeriziaAttuale.ricontrollo_max = massimo;
-      ricercaPeriziaAttuale.prompt = document.getElementById("campo-prompt-analisi").value;
     } else if (nomeCard === "pianificazioneScanner") {
       const giorni = [...document.querySelectorAll(".checkbox-giorno-scanner:checked")].map(cb => cb.value);
       const orari = [];
@@ -2744,15 +2741,6 @@
       let risultato;
       if (nomeCard === "ricercaPerizia") {
         risultato = await salvaRicercaPeriziaSulServer();
-        if (risultato.result === "success") {
-          // Funzione SQL a parte (sql/prompt_analisi.sql in aste-immobiliari).
-          const esitoPrompt = await chiamaRpc("imposta_prompt_analisi", {
-            password_tentativo: passwordCorrente, valore: ricercaPeriziaAttuale.prompt
-          });
-          if (!esitoPrompt || esitoPrompt.result !== "success") {
-            risultato = {result: "error", message: `Ricerca salvata, prompt no: ${(esitoPrompt && esitoPrompt.message) || "funzione imposta_prompt_analisi non disponibile"}`};
-          }
-        }
       } else if (nomeCard === "pianificazioneScanner") {
         risultato = await chiamaRpc("imposta_pianificazione", {
           password_tentativo: passwordCorrente,

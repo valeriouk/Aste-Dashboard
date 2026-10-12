@@ -543,7 +543,7 @@
       <em>dall'avviso</em> o senza documento.</p>
     <ul>
       <li><strong>Quando</strong>: alla fine di ogni giro dello scanner, solo se in <a href="#config-perizia">Configurazione → Ricerca della perizia</a>
-        sono attive sia la ricerca estesa sia il ricontrollo, e non in modalità "solo conteggio". Se le perizie le legge Claude
+        il ricontrollo è acceso, e non in modalità "solo conteggio". Se le perizie le legge Claude
         (<a href="#config-modelli">Provider e modelli</a>) il ricontrollo resta fermo: lo dice anche il riepilogo della card. Con Gemini non
         parte se il giro è già in corso da più di 80 minuti (un giro grande): le sue aste aspettano il giro successivo. Non parte nemmeno
         se le ultime 5 letture di annunci del giro sono rimaste senza risposta dal PVP: riaprirebbe le sue pagine a vuoto.</li>
@@ -1551,10 +1551,10 @@
         <tr><td>Esclusioni</td><td>disattivate, quote escluse, elenco di parole predefinito</td></tr>
         <tr><td>Modelli</td><td>cascata consigliata, batch anche in locale attivo</td></tr>
         <tr><td>Pianificazione</td><td>attiva, lunedì-venerdì alle 10:00</td></tr>
-        <tr><td>Ricerca della perizia</td><td>estesa, ricontrollo ogni 2 giorni, massimo 15 aste per giro</td></tr>
+        <tr><td>Ricerca della perizia</td><td>ricontrollo acceso, ogni 2 giorni, massimo 15 aste per giro</td></tr>
       </tbody>
     </table></div>
-    <p>Non cambiano chi legge le perizie (Gemini o Claude) né la casella "Con Claude: analisi in batch", la scelta del prompt (v1/v2), i set di filtri salvati, la scheda Conti e le schede Dispositivo e Sicurezza.</p>
+    <p>Non cambiano chi legge le perizie (Gemini o Claude) né la casella "Con Claude: analisi in batch", i set di filtri salvati, la scheda Conti e le schede Dispositivo e Sicurezza.</p>
     <p><strong>I simboli * e °</strong> accanto ai titoli delle card e ai singoli campi dicono cosa resta fuori: <strong>*</strong> = non torna ai
       predefiniti con "Ripristina"; <strong>°</strong> = non fa parte dei <a href="#config-set-filtri">set di filtri salvati</a>. Senza simbolo = ripristinato e
       compreso nei set. Una riga in fondo a ogni scheda (e nelle finestre "Altri filtri", "Provider e modelli" e "Ricerca della perizia") ricorda il significato.</p>
@@ -1564,7 +1564,7 @@
         <tr><td>Area di ricerca, Filtri di prezzo, Tipologia immobili, Esclusioni</td><td>Ricerca</td><td>sì</td><td>sì</td></tr>
         <tr><td>Altri filtri</td><td>Ricerca</td><td>sì, tutti</td><td>sì, tranne "vendita vicina" ° e tetto di lettura °</td></tr>
         <tr><td>Provider e modelli °</td><td>Analisi</td><td>sì (non la scelta tra Gemini e Claude, né "Con Claude: analisi in batch")</td><td>no</td></tr>
-        <tr><td>Ricerca della perizia °</td><td>Analisi</td><td>sì, tranne il prompt di analisi *</td><td>no</td></tr>
+        <tr><td>Ricerca della perizia °</td><td>Analisi</td><td>sì</td><td>no</td></tr>
         <tr><td>Pianificazione scansione °</td><td>Orari</td><td>sì</td><td>no</td></tr>
         <tr><td>Regime fiscale e conti * °, Checklist delle aste * °</td><td>Conti</td><td>no</td><td>no</td></tr>
         <tr><td>Tema, suoni, manutenzione, password, dispositivi</td><td>Dispositivo, Sicurezza</td><td>no</td><td>no</td></tr>
@@ -1718,14 +1718,13 @@
   </section>
 
   <section class="voce" id="config-perizia">
-    <h3>Card "Ricerca della perizia": ricerca estesa, prompt, ricontrollo</h3>
+    <h3>Card "Ricerca della perizia": ricontrollo</h3>
     <ul>
-      <li><strong>Dove cercare la perizia</strong>: "Ricerca estesa" (allegati PVP, astegiudiziarie, altri siti collegati all'annuncio, poi avviso) oppure
-        "Come prima" (astegiudiziarie, poi avviso). Con la ricerca estesa si leggono insieme anche le <a href="#analisi-perizie-aggiuntive">integrazioni</a>.
-        Dettagli in <a href="#analisi-ricerca-perizia">Come si trova la perizia</a>.</li>
-      <li><strong>Prompt di analisi della perizia</strong>: "v2" (fatti con pagina e citazione, lotto giusto, quote, contratti) oppure "v1" (precedente).
-        Vale dal prossimo giro, per le aste nuove e il ricontrollo; i batch già inviati si leggono con il prompt con cui sono partiti.</li>
-      <li><strong>"Ricontrolla le aste future ancora lette dall'avviso"</strong>: vedi <a href="#orari-ricontrollo">Ricontrollo</a>. Funziona solo con la ricerca estesa.</li>
+      <li><strong>Dove cercare la perizia e con quale prompt</strong>: dal 12/10/2026 non si scelgono più. Lo scanner usa sempre la ricerca estesa
+        (allegati PVP, astegiudiziarie, altri siti collegati all'annuncio, poi avviso; si leggono insieme anche le
+        <a href="#analisi-perizie-aggiuntive">integrazioni</a>) e il prompt v2. Dettagli in <a href="#analisi-ricerca-perizia">Come si trova la perizia</a>
+        e <a href="#analisi-versioni">Versioni del prompt</a>, dove c'è anche il ritorno d'emergenza ai vecchi valori.</li>
+      <li><strong>"Ricontrolla le aste future ancora lette dall'avviso"</strong>: vedi <a href="#orari-ricontrollo">Ricontrollo</a>.</li>
       <li><strong>Ricontrolla ogni (giorni)</strong>: 1-30 (predefinito 2), ogni asta al massimo una volta ogni N giorni.</li>
       <li><strong>Aste ricontrollate al massimo per giro</strong>: 1-100 (predefinito 15). Circa 15-30 secondi per asta più l'analisi. <strong>Oltre 15</strong>
         il ricontrollo usa sempre il batch (anche con il batch spento): costa meno ma i risultati arrivano fino a 24 ore dopo. Fino a 15 le analisi sono
@@ -2386,7 +2385,7 @@
 
   <section class="voce" id="analisi-ricerca-perizia">
     <h3>Come si trova la perizia</h3>
-    <p>Con la <a href="#config-perizia">ricerca estesa</a> attiva, lo scanner prova in quest'ordine e si ferma al primo PDF valido (vero PDF, almeno
+    <p>Lo scanner prova in quest'ordine e si ferma al primo PDF valido (vero PDF, almeno
       1.000 byte, al massimo 50 MB):</p>
     <ol>
       <li><strong>Allegati PVP</strong> che dal nome sembrano una perizia ("perizia", "stima", "CTU", "relazione", "elaborato peritale"…), preferendo quelli
@@ -2632,8 +2631,14 @@
         opponibilità non dedotta; v2.2 definizione del valore di mercato, quota parziale → valore finale; v2.4 quotazioni OMI/Borsino citate dal CTU; v2.5
         comproprietari tutti esecutati → intero; v2.6 quota dall'annuncio, "Contenzioso Civile" → intero, valore riferito a intero/quota, punteggio massimo 30
         per terreni e lastrici.</li>
-      <li>La versione usata per ogni asta è nella colonna "Versione prompt" del CSV e nella Superanalisi (riga "Analisi"). Si sceglie in
-        <a href="#config-perizia">Configurazione</a>.</li>
+      <li>La versione usata per ogni asta è nella colonna "Versione prompt" del CSV e nella Superanalisi (riga "Analisi"). Dal 12/10/2026 non si
+        sceglie più in Configurazione: lo scanner usa sempre il v2.</li>
+      <li><strong>Ritorno d'emergenza ai vecchi valori</strong>: solo a mano nel database, tabella <code>config</code>. Per il prompt: parametro
+        <code>prompt_analisi</code>, valore <code>v1</code>; vale dal giro successivo (i batch già inviati si leggono con il prompt con cui sono
+        partiti) e resta finché non rimetti <code>v2</code>. Finché c'è, Configurazione lo segnala in alto, in rosso, e non lo cambia. Per la
+        ricerca vecchia, quella di una volta (astegiudiziarie, poi avviso, senza ricontrollo): parametro <code>ricerca_perizia_estesa</code>,
+        valore <code>false</code>. Anche questa è segnalata in alto, in rosso, ma torna estesa da sola al primo salvataggio di una card delle
+        schede Ricerca o Analisi (o con "Ripristina").</li>
     </ul>
   </section>
 </section>
