@@ -363,8 +363,9 @@
         <ul>
           <li><em>Cosa cambia con Claude</em>: le perizie si analizzano una per una dentro il giro, oppure in batch se accendi
             <a href="#config-modelli">«Con Claude: analisi in batch»</a> (punto qui sotto); «cerca su tutta Italia»
-            non parte, con un avviso (fa eccezione un giro partito da una tua scelta dopo il conteggio: quelle aste vengono analizzate
-            comunque, entro il tetto di tempo); il ricontrollo delle perizie non si esegue (si può attivare solo aggiungendo a mano nella
+            funziona come le altre ricerche (dal 12/10/2026: prima con Claude non partiva), in batch con la casella accesa e una per
+            una, a prezzo pieno ed entro il tetto di tempo, con la casella spenta (in quel caso la pagina di Configurazione lo ricorda in
+            alto, in rosso: fino a 100 aste partono senza chiedere e un giro può durare due ore); il ricontrollo delle perizie non si esegue (si può attivare solo aggiungendo a mano nella
             tabella <code>config</code> il parametro <code>usa_claude_ricontrollo</code> con valore <code>true</code>: sconsigliato, perché
             rilegge le stesse perizie ogni pochi giorni).</li>
           <li><em>Claude in batch</em> (casella «Con Claude: analisi in batch», spenta in partenza): lo scanner analizza subito la prima
@@ -1599,9 +1600,10 @@
         due minuti; tetto di sicurezza 30.000 annunci). Prezzo, occupazione ed esclusioni si applicano dopo la lettura, quindi in una zona
         mai esplorata le aste da analizzare possono essere molte: sopra 100 lo scanner non parte da solo: ti avvisa e salva l'elenco da confermare
         (vedi <a href="#config-conteggio-in-attesa">Conteggio in attesa</a>). Con "Includi anche concluse"
-        resta la lettura di prima (3.600 annunci, dalle vendite più lontane). Usa
+        resta la lettura di prima (3.600 annunci, dalle vendite più lontane). Con Gemini usa
         <strong>sempre il batch</strong>: le analisi arrivano da pochi minuti a 24 ore dopo, con una notifica all'invio e una per ogni asta quando è
-        pronta. La distanza resta calcolata dal punto scelto.</li>
+        pronta. Con Claude vale la casella <a href="#config-modelli">«Con Claude: analisi in batch»</a>: accesa, le aste partono in batch; spenta,
+        vengono analizzate una per una, a prezzo pieno, entro il tetto di tempo. La distanza resta calcolata dal punto scelto.</li>
     </ul>
   </section>
 
@@ -1681,7 +1683,7 @@
     <ul>
       <li><strong>"Chi legge le perizie"</strong> *: Gemini (predefinito) oppure Claude. Lo scegli tu: lo scanner non passa mai da solo
         dall'uno all'altro. Vale dal giro successivo e non torna ai predefiniti con "Ripristina". Con Claude la cascata e il batch di Gemini
-        non si usano, «cerca su tutta Italia» non parte (la pagina lo segnala in alto, in rosso), il
+        non si usano, il
         <a href="#orari-ricontrollo">ricontrollo delle perizie</a> resta fermo (lo dice il riepilogo della card "Ricerca della perizia") e, se
         Claude ha un problema, il giro si ferma con un avviso su Telegram senza usare Gemini. Costi e dettagli in
         <a href="#sistema-costi">Costi</a>. Se nel database c'è un valore non valido (per esempio scritto a mano), lo scanner non parte e la
@@ -2725,7 +2727,7 @@
         <tr><td>🔢 Scanner aste — solo conteggio</td><td>Modalità <a href="#config-altri-filtri">solo conteggio</a>: numeri, nessuna spesa. Se ci sono aste da analizzare, il link "Scegli in Configurazione" porta al <a href="#config-conteggio-in-attesa">conteggio in attesa</a> (6 ore, con l'ora di scadenza). Se l'elenco supera le 400 aste dice che contiene le prime 400; se non è stato salvato lo dice, e basta "Avvia scanner ora" per rifarlo.</td></tr>
         <tr><td>✋ Scanner aste: N aste da analizzare, non parto da solo</td><td>Le aste da analizzare sono più di 100: lo scanner non ne ha analizzata nessuna e aspetta la tua scelta. Stessi numeri e stesso link del solo conteggio; l'elenco vale 6 ore. Quelle che non scegli restano da analizzare. Finché restano più di 100, ogni giro si ferma lì e manda di nuovo questo messaggio. Se la pagina dice che un giro è in corso, riprova dopo qualche minuto: il giro che ha mandato il messaggio sta finendo ricontrollo e storico.</td></tr>
         <tr><td>✅ completato / ⚠️ completato con errori</td><td>Fine di un giro con analisi subito (sincrono): quante aste analizzate e quante con errori, seguito dal <strong>riepilogo di tutte le aste del giro</strong> (una riga ciascuna: indirizzo con link, prezzo base, margine, punteggio; ⭐ = notifica singola già inviata). Se non sta in un messaggio, il riepilogo continua nel successivo.</td></tr>
-        <tr><td>⛔ Scanner aste non avviato</td><td>Il giro non è partito e non ha speso nulla. Due casi: in «Chi legge le perizie» c'è un valore non valido (va scelto di nuovo), oppure è scelto Claude con «cerca su tutta Italia» (serve Gemini, o togliere «tutta Italia»). Il messaggio dice cosa fare; vedi <a href="#config-modelli">Provider e modelli</a>.</td></tr>
+        <tr><td>⛔ Scanner aste non avviato</td><td>Il giro non è partito e non ha speso nulla: in «Chi legge le perizie» c'è un valore non valido, che va scelto di nuovo. Il messaggio dice cosa fare; vedi <a href="#config-modelli">Provider e modelli</a>.</td></tr>
         <tr><td>🤖 Credito Claude esaurito / ⚠️ Claude non utilizzabile / ⚠️ Claude non risponde / ⚠️ Claude senza risultati utilizzabili</td><td>Solo con Claude: il giro si è fermato, o non è partito, per un problema di Claude. Dice la causa, quante aste sono state analizzate e quante restano in attesa, che Gemini <strong>non</strong> è stato usato e dove sceglierlo, se lo vuoi. Può arrivare anche dopo il ricontrollo delle perizie, se Claude si ferma lì. Vedi <a href="#sistema-costi">Costi</a>.</td></tr>
         <tr><td>⏱️ Giro Claude chiuso per tempo</td><td>Solo con Claude: raggiunto il tetto di circa due ore. Le aste rimaste ripartono al giro successivo (se il giro veniva da una scelta dopo il conteggio vanno scelte di nuovo).</td></tr>
         <tr><td>⛔ Scanner aste: giro chiuso, il PVP non risponde / ⛔ Giro Claude chiuso: il PVP non risponde / ⛔ Ricerca … chiusa, il PVP non risponde</td><td>Il PVP non ha dato i dati dell'annuncio per più letture di fila (5 aste mai fallite prima, oppure 15 in tutto: il messaggio dice quante) e il giro ha smesso di cercare. Il primo titolo arriva nei giri con analisi subito, seguito dall'elenco delle aste elaborate prima dello stop; gli altri due nei giri in batch (con Claude e con Gemini) quando nessun batch è partito. Se invece un batch è partito, il titolo resta quello solito e il motivo è nella riga «⏸️ Rimaste fuori». Le aste senza risposta sono segnate come guasto del PVP: non consumano uno dei 3 tentativi e vengono riprovate. Quelle rimaste fuori ripartono al giro successivo (se venivano da una scelta dopo il conteggio vanno scelte di nuovo). Un caso isolato si risolve da solo; se si ripete per più giri, il PVP potrebbe essere fermo, bloccare lo scanner o aver cambiato le sue pagine. Se invece il messaggio dice «quasi tutti di aste già da riprovare» e torna uguale a ogni giro, sono quegli annunci a non farsi leggere, non il PVP: dopo 10 guasti lo scanner smette di riprovarli.</td></tr>

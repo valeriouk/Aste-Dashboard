@@ -794,7 +794,7 @@
         <input type="checkbox" id="campo-tutta-italia" onchange="aggiornaStatoTuttaItalia(); aggiornaAvvisoRaggioAmpio()">
         Cerca su tutta Italia (ignora punto e raggio qui sotto)
       </label>
-      <p class="nota-campo nota-tutta-italia">L'analisi in questa modalità è asincrona: le aste trovate vengono inviate a Gemini in un unico batch invece che una alla volta — può volerci da pochi minuti fino a 24 ore. Riceverai una notifica Telegram non appena l'invio è completato, e una notifica separata per ogni asta quando la sua analisi sarà pronta. Se le aste da analizzare sono più di 100 lo scanner non parte da solo: ti avvisa su Telegram e l'elenco da confermare compare in cima a questa pagina.</p>
+      <p class="nota-campo nota-tutta-italia">Con Gemini l'analisi in questa modalità è sempre in batch, a blocchi: può volerci da pochi minuti fino a 24 ore. Riceverai una notifica Telegram all'invio e una per ogni asta quando la sua analisi sarà pronta. Con Claude vale la casella «Con Claude: analisi in batch» in «Provider e modelli»: accesa, le aste partono in batch; spenta, vengono analizzate una per una, a prezzo pieno, fino a due ore per giro. Se le aste da analizzare sono più di 100 lo scanner non parte da solo: ti avvisa su Telegram e l'elenco da confermare compare in cima a questa pagina.</p>
       <div id="blocco-area-locale">
         <div class="riga-ricerca-indirizzo">
           <input type="text" id="campo-indirizzo" placeholder="Cerca un indirizzo o una città..." onkeydown="if(event.key==='Enter') cercaIndirizzo()">
@@ -1027,7 +1027,7 @@
           <option value="gemini">Gemini (Google): si paga a consumo</option>
           <option value="claude">Claude (Anthropic): credito mensile</option>
         </select>
-        <p class="nota-campo">Lo scegli tu: lo scanner non passa mai da solo dall'uno all'altro. Con Claude le perizie si analizzano una per una, oppure in batch con la casella qui sotto (la cascata e il batch più in basso valgono solo per Gemini); «cerca su tutta Italia» non parte e il ricontrollo delle perizie resta fermo. Se Claude ha un problema (credito finito, chiave, nessuna risposta) il giro si ferma e ti avvisa su Telegram, senza usare Gemini. Vale dal prossimo giro dello scanner.</p>
+        <p class="nota-campo">Lo scegli tu: lo scanner non passa mai da solo dall'uno all'altro. Con Claude le perizie si analizzano una per una, oppure in batch con la casella qui sotto (la cascata e il batch più in basso valgono solo per Gemini); il ricontrollo delle perizie resta fermo. Se Claude ha un problema (credito finito, chiave, nessuna risposta) il giro si ferma e ti avvisa su Telegram, senza usare Gemini. Vale dal prossimo giro dello scanner.</p>
       </div>
       <div class="campo-form" style="margin-top:18px; padding-top:16px; border-top:1px solid var(--border);">
         <label class="etichetta-checkbox" style="margin-top:0">
@@ -2001,8 +2001,8 @@
     if (Number(configAttuale.pagine_massime_ricerca) > VALORI_PREDEFINITI.pagineMassime) {
       avvisi.push(`⚠️ Tetto di lettura della ricerca a raggio alzato a ${configAttuale.pagine_massime_ricerca} pagine (fino a ${configAttuale.pagine_massime_ricerca * 12} aste lette per giro): più analisi Gemini e giri più lunghi. Si cambia in Ricerca → Altri filtri.`);
     }
-    if (configAttuale.provider_analisi === "claude" && configAttuale.cerca_tutta_italia && !configAttuale.solo_conteggio) {
-      avvisi.push("⚠️ Claude con «cerca su tutta Italia»: lo scanner non parte (con Claude la ricerca su tutta Italia non è ancora abilitata). Scegli Gemini in «Provider e modelli» oppure togli «tutta Italia».");
+    if (configAttuale.provider_analisi === "claude" && configAttuale.cerca_tutta_italia && !configAttuale.usa_batch_claude && !configAttuale.solo_conteggio) {
+      avvisi.push("⚠️ Claude con «cerca su tutta Italia» e batch di Claude spento: le aste vengono analizzate una per una, a prezzo pieno, fino a due ore per giro (fino a 100 aste senza chiedere). Per analizzarle in batch accendi «Con Claude: analisi in batch» in Analisi → «Provider e modelli».");
     }
     if (providerNonValidoNelDatabase) {
       avvisi.push("⚠️ «Chi legge le perizie» ha un valore non valido nel database: lo scanner non parte. Apri Analisi → «Provider e modelli», scegli Gemini o Claude e salva.");
