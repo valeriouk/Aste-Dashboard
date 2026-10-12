@@ -1547,7 +1547,7 @@
         <tr><td>Prezzo base</td><td>nessun minimo, massimo 110.000 €</td></tr>
         <tr><td>Area</td><td>Catania centro, raggio 22 km, tutta Italia no, "solo questi comuni" spento con l'elenco vuoto</td></tr>
         <tr><td>Tipologie</td><td>tutte</td></tr>
-        <tr><td>Altri filtri</td><td>tutti gli stati di occupazione, "vendita vicina" spento (2 e 15 giorni), tetto di lettura 40 pagine,
+        <tr><td>Altri filtri</td><td>tutti gli stati di occupazione, "vendita vicina" spento (2 e 15 giorni), tetto di lettura 300 pagine,
           modalità normale</td></tr>
         <tr><td>Esclusioni</td><td>disattivate, quote escluse, elenco di parole predefinito</td></tr>
         <tr><td>Modelli</td><td>cascata consigliata, batch anche in locale attivo</td></tr>
@@ -1643,12 +1643,12 @@
         parte dei set di filtri salvati</strong> (resta com'è quando applichi un set) e "Ripristina tutti i valori predefiniti" lo spegne.</li>
       <li><strong>Tetto di lettura della ricerca a raggio</strong>: quante pagine del PVP (12 aste l'una) lo scanner legge al massimo in un giro, partendo
         dalle vendite più lontane nel tempo (è l'ordine di <em>lettura</em> dal PVP: l'<em>analisi</em> delle aste lette parte invece dalla
-        vendita più vicina). Predefinito 40 pagine = 480 aste; si può alzare fino a 300 = 3.600 (a passi liberi, numero intero). Il campo si
-        sblocca solo spuntando la casella di accettazione: alzare il tetto fa leggere più aste, quindi più analisi Gemini a pagamento per quelle che
-        passano gli altri filtri (prezzo, occupazione, esclusioni restano attivi e riducono il carico) e giri più lunghi (minuti GitHub). Con il tetto
-        sopra 40 una <strong>nota rossa resta fissa in cima alla pagina</strong> di Configurazione e il riepilogo della card mostra "tetto N pagine".
+        vendita più vicina). Dal 13/10/2026 il predefinito è 300 pagine = 3.600 aste, il massimo (prima era 40 = 480): leggere di più non fa
+        partire più analisi da solo, perché sopra 100 aste lo scanner chiede conferma. Il campo sta nel blocco "Avanzate" della finestra, chiuso
+        di partenza; si può abbassare fino a 40. Con il tetto sotto 300 una <strong>nota rossa resta fissa in cima alla pagina</strong> di
+        Configurazione e il riepilogo della card mostra "TETTO N PAGINE": con una zona ampia le aste più vicine alla vendita possono restare non lette.
         "Tutta Italia" non usa questo tetto: legge tutte le aste future (vedi <a href="#config-area">Area di ricerca</a>); con "vendita vicina" acceso il tetto non conta (si legge tutto l'intervallo). Non fa parte dei
-        set salvati; "Ripristina tutti i valori predefiniti" lo riporta a 40.</li>
+        set salvati; "Ripristina tutti i valori predefiniti" lo riporta a 300.</li>
       <li><strong>Avviso "ricerca fermata al tetto"</strong>: se un giro legge tutte le pagine consentite senza arrivare alla fine delle aste future,
         il log e i messaggi Telegram con i filtri usati riportano "⚠️ Ricerca fermata al tetto di N pagine…: le aste con vendita più vicina NON sono
         state lette", con il consiglio di attivare "vendita vicina" o restringere zona o tipologia. Nei giri che poi analizzano le aste (con

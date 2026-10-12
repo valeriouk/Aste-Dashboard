@@ -673,7 +673,7 @@
 
       <div class="barra-ripristino" data-scheda="ricerca">
         <button type="button" class="bottone-secondario" id="bottone-ripristina-predefiniti" onclick="confermaRipristinaPredefiniti()">↺ Ripristina tutti i valori predefiniti</button>
-        <p class="nota-campo">Riporta ai valori predefiniti le schede Ricerca, Analisi e Orari. Attenzione: riaccende la scansione automatica (lun-ven alle 10:00), spegne "vendita vicina" e le esclusioni e rimette il tetto di lettura a 40 pagine. Non cambia chi legge le perizie né il batch di Claude, la scheda Conti, i set di filtri salvati, Dispositivo e Sicurezza. Salva subito.</p>
+        <p class="nota-campo">Riporta ai valori predefiniti le schede Ricerca, Analisi e Orari. Attenzione: riaccende la scansione automatica (lun-ven alle 10:00), spegne "vendita vicina" e le esclusioni e rimette il tetto di lettura a 300 pagine. Non cambia chi legge le perizie né il batch di Claude, la scheda Conti, i set di filtri salvati, Dispositivo e Sicurezza. Salva subito.</p>
         <p id="messaggio-ripristina-predefiniti" class="messaggio-salvataggio-card"></p>
       </div>
 
@@ -940,15 +940,12 @@
         </div>
         <p class="nota-campo">Spento: tutte le aste future. Acceso: lo scanner cerca e analizza solo le aste con vendita in quell'intervallo (le altre non costano Gemini e vengono riviste nei giri successivi, quando ci entrano). Numeri interi tra 1 e 30. Il minimo serve a escludere le aste troppo vicine per preparare l'offerta. Non fa parte dei set di filtri salvati; "Ripristina predefiniti" lo spegne.</p>
       </div>
-      <div class="campo-form">
+      <details class="campo-form blocco-avanzate" id="blocco-avanzate-altri">
+        <summary>Avanzate</summary>
         <label for="campo-pagine-massime">Tetto di lettura della ricerca a raggio (pagine del PVP)</label>
-        <p class="nota-campo">Lo scanner legge i risultati del PVP dalle vendite più lontane nel tempo e si ferma a questo tetto: 40 pagine = 480 aste (predefinito), al massimo 300 = 3.600. Con un'area ampia le aste più vicine alla vendita restano oltre il tetto: per quelle c'è "Solo aste con vendita vicina" qui sopra. "Tutta Italia" non usa questo tetto: legge tutte le aste future. Il tetto non fa parte dei set di filtri salvati.</p>
-        <label class="etichetta-checkbox">
-          <input type="checkbox" id="campo-accetta-pagine" onchange="aggiornaStatoPagineMassime()">
-          Ho capito: alzare il tetto fa leggere più aste, quindi più analisi Gemini (a pagamento) per quelle che passano i filtri e giri più lunghi (minuti GitHub)
-        </label>
+        <p class="nota-campo">Quante pagine del PVP (12 aste l'una) lo scanner legge al massimo, partendo dalle vendite più lontane: 300 pagine = 3.600 aste, il massimo. Più basso: con una zona ampia le aste più vicine alla vendita possono restare non lette. "Tutta Italia" non usa questo tetto. Non fa parte dei set di filtri salvati.</p>
         <input type="number" id="campo-pagine-massime" min="40" max="300" step="10" style="margin-top:8px">
-      </div>
+      </details>
       <div class="campo-form">
         <label for="campo-solo-conteggio">Modalità di esecuzione</label>
         <select id="campo-solo-conteggio">
@@ -1952,9 +1949,6 @@
     document.getElementById("blocco-comuni").classList.toggle("blocco-spento", !document.getElementById("campo-comuni-attivo").checked);
   }
 
-  function aggiornaStatoPagineMassime() {
-    document.getElementById("campo-pagine-massime").disabled = !document.getElementById("campo-accetta-pagine").checked;
-  }
 
   // Oltre questo raggio le aste future possono essere più del tetto di lettura:
   // quelle più vicine alla vendita resterebbero fuori. Con tutta Italia lo
@@ -1972,15 +1966,15 @@
     el.textContent = `⚠️ Attenzione: con un raggio di ${km} km le aste in scadenza potrebbero non essere lette (lo scanner parte dalle vendite più lontane e si ferma al tetto di lettura). Attiva ${testoVenditaVicina()} in "Altri filtri".`;
   }
 
-  // Nota fissa in cima alla pagina: zona ampia senza "vendita vicina", tetto di lettura alzato.
+  // Nota fissa in cima alla pagina: zona ampia senza "vendita vicina", tetto di lettura abbassato.
   function renderizzaAvvisiConfig() {
     const avvisi = [];
     const ampio = !configAttuale.cerca_tutta_italia && Number(configAttuale.raggio_km) > SOGLIA_RAGGIO_AMPIO_KM;
     if (ampio && !configAttuale.vendita_giorni_attivo) {
       avvisi.push(`⚠️ Zona di ricerca ampia (${configAttuale.raggio_km} km): le aste in scadenza potrebbero non essere lette. Attiva ${testoVenditaVicina()} in Ricerca → Altri filtri.`);
     }
-    if (Number(configAttuale.pagine_massime_ricerca) > VALORI_PREDEFINITI.pagineMassime) {
-      avvisi.push(`⚠️ Tetto di lettura della ricerca a raggio alzato a ${configAttuale.pagine_massime_ricerca} pagine (fino a ${configAttuale.pagine_massime_ricerca * 12} aste lette per giro): più analisi Gemini e giri più lunghi. Si cambia in Ricerca → Altri filtri.`);
+    if (Number(configAttuale.pagine_massime_ricerca) < VALORI_PREDEFINITI.pagineMassime) {
+      avvisi.push(`⚠️ Tetto di lettura della ricerca a raggio abbassato a ${configAttuale.pagine_massime_ricerca} pagine (${configAttuale.pagine_massime_ricerca * 12} aste lette per giro al massimo): con una zona ampia le aste più vicine alla vendita possono restare non lette. Per rimetterlo a ${VALORI_PREDEFINITI.pagineMassime}: Ricerca → Altri filtri → Avanzate.`);
     }
     if (configAttuale.provider_analisi === "claude" && configAttuale.cerca_tutta_italia && !configAttuale.usa_batch_claude && !configAttuale.solo_conteggio) {
       avvisi.push("⚠️ Claude con «cerca su tutta Italia» e batch di Claude spento: le aste vengono analizzate una per una, a prezzo pieno, fino a due ore per giro (fino a 100 aste senza chiedere). Per analizzarle in batch accendi «Con Claude: analisi in batch» in Analisi → «Provider e modelli».");
@@ -2016,7 +2010,7 @@
         : "Occupazione: tutti gli stati"
     ];
     if (configAttuale.vendita_giorni_attivo) parti.push(`VENDITA TRA ${configAttuale.vendita_giorni_min} E ${configAttuale.vendita_giorni_max} GIORNI`);
-    if (Number(configAttuale.pagine_massime_ricerca) > VALORI_PREDEFINITI.pagineMassime) parti.push(`tetto ${configAttuale.pagine_massime_ricerca} pagine`);
+    if (Number(configAttuale.pagine_massime_ricerca) < VALORI_PREDEFINITI.pagineMassime) parti.push(`TETTO ${configAttuale.pagine_massime_ricerca} PAGINE`);
     renderizzaAvvisiConfig();
     if (configAttuale.solo_conteggio) parti.push("SOLO CONTEGGIO");
     document.getElementById("riepilogo-altri").textContent = parti.join(" · ");
@@ -2162,8 +2156,7 @@
       document.getElementById("campo-vendita-giorni-max").value = configAttuale.vendita_giorni_max;
       aggiornaStatoVenditaVicina();
       document.getElementById("campo-pagine-massime").value = configAttuale.pagine_massime_ricerca;
-      document.getElementById("campo-accetta-pagine").checked = false;
-      aggiornaStatoPagineMassime();
+      document.getElementById("blocco-avanzate-altri").open = false;
       document.getElementById("campo-solo-conteggio").value = String(configAttuale.solo_conteggio);
     } else if (nome === "modelli") {
       document.getElementById("campo-provider-analisi").value = configAttuale.provider_analisi;
@@ -2301,7 +2294,7 @@
     venditaGiorniAttivo: false,
     venditaGiorniMin: 2,
     venditaGiorniMax: 15,
-    pagineMassime: 40,
+    pagineMassime: 300,
     soloConteggio: false,
     cascataModelli: ["gemini-3.8-flash", "gemini-3.6-flash", "gemini-3.5-flash", "gemini-3.5-flash-lite"],
     usaBatchGemini: true,
@@ -2629,11 +2622,10 @@
         msgEl.className = "messaggio-salvataggio-card messaggio-errore";
         return;
       }
-      // Il tetto si cambia solo con l'avviso accettato; senza, resta quello di prima.
-      const accettaPagine = document.getElementById("campo-accetta-pagine").checked;
       const pagine = Number(document.getElementById("campo-pagine-massime").value);
-      if (accettaPagine && (!Number.isInteger(pagine) || pagine < 40 || pagine > 300)) {
-        msgEl.textContent = "Tetto di lettura: un numero intero tra 40 e 300 pagine.";
+      if (!Number.isInteger(pagine) || pagine < 40 || pagine > 300) {
+        document.getElementById("blocco-avanzate-altri").open = true;   // il campo da correggere sta dentro «Avanzate»
+        msgEl.textContent = "Tetto di lettura (in «Avanzate»): un numero intero tra 40 e 300 pagine.";
         msgEl.className = "messaggio-salvataggio-card messaggio-errore";
         return;
       }
@@ -2649,7 +2641,7 @@
         ...STATI_OCCUPAZIONE_PVP.map(([k]) => k).filter(k => !statiSpuntati.includes(k))
       ];
       configAttuale.vendita_giorni_attivo = venditaVicina;
-      if (accettaPagine) configAttuale.pagine_massime_ricerca = pagine;
+      configAttuale.pagine_massime_ricerca = pagine;
       if (venditaVicina) {   // spento: restano i giorni di prima, pronti per la prossima volta
         configAttuale.vendita_giorni_min = giorniMin;
         configAttuale.vendita_giorni_max = giorniMax;
