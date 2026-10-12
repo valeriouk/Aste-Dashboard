@@ -951,10 +951,6 @@
         <p class="nota-campo">Le condizioni d'uso di astegiudiziarie.it vietano lo scraping automatico — attivala solo se è già una scelta consapevole tua.</p>
       </div>
       <div class="campo-form">
-        <label for="campo-pausa">Pausa tra un'asta e l'altra (secondi)</label>
-        <input type="number" id="campo-pausa" min="0" max="60" step="1">
-      </div>
-      <div class="campo-form">
         <label for="campo-pagine-massime">Tetto di lettura della ricerca a raggio (pagine del PVP)</label>
         <p class="nota-campo">Lo scanner legge i risultati del PVP dalle vendite più lontane nel tempo e si ferma a questo tetto: 40 pagine = 480 aste (predefinito), al massimo 300 = 3.600. Con un'area ampia le aste più vicine alla vendita restano oltre il tetto: per quelle c'è "Solo aste con vendita vicina" qui sopra. "Tutta Italia" non usa questo tetto: legge tutte le aste future. Il tetto non fa parte dei set di filtri salvati.</p>
         <label class="etichetta-checkbox">
@@ -1554,7 +1550,6 @@
       // Tetto di lettura della ricerca a raggio (pagine del PVP): 40 finché non lo alzi.
       configAttuale.pagine_massime_ricerca = Number(config.pagine_massime_ricerca ?? VALORI_PREDEFINITI.pagineMassime);
       configAttuale.usa_astegiudiziarie_perizia = String(config.usa_astegiudiziarie_perizia ?? true).toLowerCase() === "true";
-      configAttuale.pausa_tra_aste_secondi = Number(config.pausa_tra_aste_secondi ?? 1);
       configAttuale.solo_conteggio = String(config.solo_conteggio ?? false).toLowerCase() === "true";
       configAttuale.conteggia_non_analizzate = String(config.conteggia_non_analizzate ?? false).toLowerCase() === "true";
 
@@ -2016,8 +2011,7 @@
     const parti = [
       configAttuale.occupazioni_escluse.length ? "Occupazione: esclusi " + configAttuale.occupazioni_escluse.map(c => nomiOccupazione[c] || c).join(", ")
         : "Occupazione: tutti gli stati",
-      configAttuale.usa_astegiudiziarie_perizia ? "Perizia esterna attiva" : "Perizia esterna disattiva",
-      `pausa ${configAttuale.pausa_tra_aste_secondi}s`
+      configAttuale.usa_astegiudiziarie_perizia ? "Perizia esterna attiva" : "Perizia esterna disattiva"
     ];
     if (configAttuale.vendita_giorni_attivo) parti.push(`VENDITA TRA ${configAttuale.vendita_giorni_min} E ${configAttuale.vendita_giorni_max} GIORNI`);
     if (Number(configAttuale.pagine_massime_ricerca) > VALORI_PREDEFINITI.pagineMassime) parti.push(`tetto ${configAttuale.pagine_massime_ricerca} pagine`);
@@ -2169,7 +2163,6 @@
       document.getElementById("campo-accetta-pagine").checked = false;
       aggiornaStatoPagineMassime();
       document.getElementById("campo-astegiudiziarie").value = String(configAttuale.usa_astegiudiziarie_perizia);
-      document.getElementById("campo-pausa").value = configAttuale.pausa_tra_aste_secondi;
       document.getElementById("campo-solo-conteggio").value = String(configAttuale.solo_conteggio);
       document.getElementById("campo-conteggia-non-analizzate").checked = configAttuale.conteggia_non_analizzate;
       aggiornaStatoConteggiaNonAnalizzate();
@@ -2291,7 +2284,7 @@
         vendita_giorni_max: configAttuale.vendita_giorni_max,
         pagine_massime_ricerca: configAttuale.pagine_massime_ricerca,
         usa_astegiudiziarie_perizia: String(configAttuale.usa_astegiudiziarie_perizia),
-        pausa_tra_aste_secondi: configAttuale.pausa_tra_aste_secondi,
+        pausa_tra_aste_secondi: 1,   // fissa: non si regola più (12/10/2026) e lo scanner non la legge; nel database resta 1
         solo_conteggio: String(configAttuale.solo_conteggio),
         conteggia_non_analizzate: String(configAttuale.conteggia_non_analizzate),
         cascata_modelli_gemini: JSON.stringify(configAttuale.cascata_modelli_gemini),
@@ -2316,7 +2309,6 @@
     venditaGiorniMax: 15,
     pagineMassime: 40,
     astegiudiziarie: true,
-    pausa: 1,
     soloConteggio: false,
     conteggiaNonAnalizzate: false,
     cascataModelli: ["gemini-3.8-flash", "gemini-3.6-flash", "gemini-3.5-flash", "gemini-3.5-flash-lite"],
@@ -2338,7 +2330,7 @@
   // Solo i filtri della scheda Ricerca (scelta dell'utente, 01/10/2026).
   const CHIAVI_SET_FILTRI = ["prezzo_base_min", "prezzo_base_max", "lat_riferimento", "lon_riferimento", "raggio_km",
     "cerca_tutta_italia", "comuni_attivo", "comuni_inclusi", "tipologie_incluse", "occupazioni_escluse", "esclusioni_attive", "esclusione_quote",
-    "parole_esclusione", "usa_astegiudiziarie_perizia", "pausa_tra_aste_secondi",
+    "parole_esclusione", "usa_astegiudiziarie_perizia",
     "solo_conteggio", "conteggia_non_analizzate"];
   const MAX_SET_FILTRI = 10;
 
@@ -2351,7 +2343,7 @@
       tipologie_incluse: VALORI_PREDEFINITI.tipologieIncluse,
       occupazioni_escluse: VALORI_PREDEFINITI.occupazioniEscluse, esclusioni_attive: VALORI_PREDEFINITI.esclusioniAttive,
       esclusione_quote: true, parole_esclusione: PAROLE_ESCLUSIONE_PREDEFINITE,
-      usa_astegiudiziarie_perizia: VALORI_PREDEFINITI.astegiudiziarie, pausa_tra_aste_secondi: VALORI_PREDEFINITI.pausa,
+      usa_astegiudiziarie_perizia: VALORI_PREDEFINITI.astegiudiziarie,
       solo_conteggio: VALORI_PREDEFINITI.soloConteggio, conteggia_non_analizzate: VALORI_PREDEFINITI.conteggiaNonAnalizzate
     };
   }
@@ -2522,7 +2514,6 @@
     configAttuale.vendita_giorni_max = VALORI_PREDEFINITI.venditaGiorniMax;
     configAttuale.pagine_massime_ricerca = VALORI_PREDEFINITI.pagineMassime;
     configAttuale.usa_astegiudiziarie_perizia = VALORI_PREDEFINITI.astegiudiziarie;
-    configAttuale.pausa_tra_aste_secondi = VALORI_PREDEFINITI.pausa;
     configAttuale.solo_conteggio = VALORI_PREDEFINITI.soloConteggio;
     configAttuale.conteggia_non_analizzate = VALORI_PREDEFINITI.conteggiaNonAnalizzate;
     configAttuale.cascata_modelli_gemini = [...VALORI_PREDEFINITI.cascataModelli];
@@ -2639,13 +2630,6 @@
       configAttuale.esclusione_quote = document.getElementById("campo-esclusione-quote").checked;
       configAttuale.parole_esclusione = parole;
     } else if (nomeCard === "altri") {
-      const pausaTesto = document.getElementById("campo-pausa").value;
-      const pausa = Number(pausaTesto);
-      if (pausaTesto === "" || isNaN(pausa) || pausa < 0 || pausa > 60) {
-        msgEl.textContent = "La pausa tra le aste deve essere tra 0 e 60 secondi.";
-        msgEl.className = "messaggio-salvataggio-card messaggio-errore";
-        return;
-      }
       const venditaVicina = document.getElementById("campo-vendita-vicina").checked;
       const giorniMin = Number(document.getElementById("campo-vendita-giorni-min").value);
       const giorniMax = Number(document.getElementById("campo-vendita-giorni-max").value);
@@ -2682,7 +2666,6 @@
         configAttuale.vendita_giorni_max = giorniMax;
       }
       configAttuale.usa_astegiudiziarie_perizia = document.getElementById("campo-astegiudiziarie").value === "true";
-      configAttuale.pausa_tra_aste_secondi = pausa;
       configAttuale.solo_conteggio = document.getElementById("campo-solo-conteggio").value === "true";
       configAttuale.conteggia_non_analizzate = document.getElementById("campo-conteggia-non-analizzate").checked;
     } else if (nomeCard === "modelli") {
