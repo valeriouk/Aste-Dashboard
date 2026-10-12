@@ -1684,6 +1684,10 @@
   <section class="voce" id="config-modelli">
     <h3>Card "Provider e modelli": chi legge le perizie, cascata e batch</h3>
     <ul>
+      <li><strong>La finestra mostra solo i comandi di chi hai scelto</strong> nel menu "Chi legge le perizie": con Claude la casella
+        "Con Claude: analisi in batch"; con Gemini la casella "Usa il batch anche in ricerca locale" e il blocco "Avanzate" (chiuso di partenza,
+        si apre con un tocco) con la cascata dei modelli. Cambiando il menu cambiano i comandi. Al Salva si salvano solo quelli che si vedono:
+        gli altri restano com'erano.</li>
       <li><strong>"Chi legge le perizie"</strong> *: Gemini (predefinito) oppure Claude. Lo scegli tu: lo scanner non passa mai da solo
         dall'uno all'altro. Vale dal giro successivo e non torna ai predefiniti con "Ripristina". Con Claude la cascata e il batch di Gemini
         non si usano, il
@@ -1694,15 +1698,16 @@
         messaggio lo dice ("Provider salvato…"). La prima volta serve
         una funzione nel database: se al salvataggio compare "manca la funzione nel database", va eseguito una volta
         <code>sql/provider_analisi.sql</code> (repository dello scanner) nell'SQL Editor di Supabase.</li>
-      <li><strong>"Con Claude: analisi in batch"</strong> * (spenta in partenza; non torna ai predefiniti con "Ripristina"): vale solo quando le
-        perizie le legge Claude. Spenta: una per una dentro il giro, risultato subito, prezzo pieno, circa un minuto ad asta (un giro regge un
+      <li><strong>"Con Claude: analisi in batch"</strong> * (spenta in partenza; non torna ai predefiniti con "Ripristina"): si vede solo
+        con Claude scelto nel menu. Spenta: una per una dentro il giro, risultato subito, prezzo pieno, circa un minuto ad asta (un giro regge un
         centinaio di aste). Accesa: la prima asta subito come prova, le altre in batch a metà prezzo, con i risultati al
         <a href="#orari-batch">controllo batch</a> dopo 1-2 ore; vale anche per le aste scelte dal conteggio. Regole in
         <a href="#sistema-costi">Costi</a>.</li>
-      <li><strong>Cascata dei modelli Gemini</strong> (separati da virgola, in ordine di priorità): si usa il primo; se esaurisce la quota o dà errore, si passa al
+      <li><strong>Cascata dei modelli Gemini</strong> (dentro "Avanzate", solo con Gemini scelto nel menu; separati da virgola, in ordine di priorità): si usa il primo; se esaurisce la quota o dà errore, si passa al
         successivo per il resto del giro. Se un modello risponde "vuoto" su un'asta, si prova il successivo solo per quell'asta (può costare di più).
-        "↺ Ripristina cascata consigliata" riempie il campo (poi serve Salva). Serve almeno un modello.</li>
-      <li><strong>"Usa il batch anche in ricerca locale"</strong> (solo Gemini; predefinito attivo): analisi in batch, costo circa dimezzato, risultati di norma entro
+        "↺ Ripristina cascata consigliata" riempie il campo (poi serve Salva). Serve almeno un modello: se al Salva il campo è vuoto,
+        "Avanzate" si apre da solo.</li>
+      <li><strong>"Usa il batch anche in ricerca locale"</strong> (si vede solo con Gemini scelto nel menu; predefinito attivo): analisi in batch, costo circa dimezzato, risultati di norma entro
         un'ora (al massimo 24). Spegnilo solo se ti serve la notifica immediata. Vedi <a href="#orari-batch-o-sincrono">Batch o subito</a>.</li>
     </ul>
   </section>
