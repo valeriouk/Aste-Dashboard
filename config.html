@@ -943,14 +943,6 @@
         <p class="nota-campo">Spento: tutte le aste future. Acceso: lo scanner cerca e analizza solo le aste con vendita in quell'intervallo (le altre non costano Gemini e vengono riviste nei giri successivi, quando ci entrano). Numeri interi tra 1 e 30. Il minimo serve a escludere le aste troppo vicine per preparare l'offerta. Non fa parte dei set di filtri salvati; "Ripristina predefiniti" lo spegne.</p>
       </div>
       <div class="campo-form">
-        <label for="campo-astegiudiziarie">Perizia da astegiudiziarie.it</label>
-        <select id="campo-astegiudiziarie">
-          <option value="true">Attiva</option>
-          <option value="false">Disattiva</option>
-        </select>
-        <p class="nota-campo">Le condizioni d'uso di astegiudiziarie.it vietano lo scraping automatico — attivala solo se è già una scelta consapevole tua.</p>
-      </div>
-      <div class="campo-form">
         <label for="campo-pagine-massime">Tetto di lettura della ricerca a raggio (pagine del PVP)</label>
         <p class="nota-campo">Lo scanner legge i risultati del PVP dalle vendite più lontane nel tempo e si ferma a questo tetto: 40 pagine = 480 aste (predefinito), al massimo 300 = 3.600. Con un'area ampia le aste più vicine alla vendita restano oltre il tetto: per quelle c'è "Solo aste con vendita vicina" qui sopra. "Tutta Italia" non usa questo tetto: legge tutte le aste future. Il tetto non fa parte dei set di filtri salvati.</p>
         <label class="etichetta-checkbox">
@@ -1443,6 +1435,7 @@
   let ricercaPeriziaAttuale = {ricontrollo_attivo: true, ricontrollo_giorni: 2, ricontrollo_max: 15};
   // Letti dal database a ogni caricamento, fuori da configAttuale: non entrano nei salvataggi né nei set di filtri.
   let providerNonValidoNelDatabase = false;   // provider_analisi scritto male (a mano): lo scanner non parte finché non lo riscrivi
+  let astegiudiziarieSpentaNelDatabase = false;   // usa_astegiudiziarie_perizia non «true» (messo a mano): la perizia non viene cercata su astegiudiziarie.it
   let promptV1NelDatabase = false;            // prompt_analisi = v1 (messo a mano): lo scanner usa il vecchio prompt; la pagina non lo scrive più
   let ricercaVecchiaNelDatabase = false;      // ricerca_perizia_estesa non «true» (messo a mano): ricerca di una volta e ricontrollo fermo, fino al primo salvataggio di una card di Ricerca o Analisi (o Ripristina)
   let usaClaudeRicontrollo = false;           // usa_claude_ricontrollo: il ricontrollo delle perizie gira anche con Claude
@@ -1545,7 +1538,9 @@
       configAttuale.vendita_giorni_max = Number(config.vendita_giorni_max ?? VALORI_PREDEFINITI.venditaGiorniMax);
       // Tetto di lettura della ricerca a raggio (pagine del PVP): 40 finché non lo alzi.
       configAttuale.pagine_massime_ricerca = Number(config.pagine_massime_ricerca ?? VALORI_PREDEFINITI.pagineMassime);
-      configAttuale.usa_astegiudiziarie_perizia = String(config.usa_astegiudiziarie_perizia ?? true).toLowerCase() === "true";
+      // «Perizia da astegiudiziarie.it» non si spegne più da qui (12/10/2026): si legge solo per avvisare se è spenta nel database.
+      astegiudiziarieSpentaNelDatabase = config.usa_astegiudiziarie_perizia !== undefined
+        && !["true", "vero", "1", "si", "sì"].includes(String(config.usa_astegiudiziarie_perizia).trim().toLowerCase());
       configAttuale.solo_conteggio = String(config.solo_conteggio ?? false).toLowerCase() === "true";
 
       configAttuale.cascata_modelli_gemini = ["gemini-3.8-flash", "gemini-3.6-flash", "gemini-3.5-flash", "gemini-3.5-flash-lite"];
@@ -1983,6 +1978,9 @@
     if (providerNonValidoNelDatabase) {
       avvisi.push("⚠️ «Chi legge le perizie» ha un valore non valido nel database: lo scanner non parte. Apri Analisi → «Provider e modelli», scegli Gemini o Claude e salva.");
     }
+    if (astegiudiziarieSpentaNelDatabase) {
+      avvisi.push("⚠️ Nel database la ricerca della perizia su astegiudiziarie.it è spenta, messa a mano: lo scanner trova meno perizie e ripiega più spesso sull'avviso. Da questa pagina non si cambia più: per riaccenderla va corretto nel database (manuale, «Come si trova la perizia»).");
+    }
     if (promptV1NelDatabase) {
       avvisi.push("⚠️ Nel database il prompt di analisi è «v1», messo a mano: lo scanner legge le perizie con il vecchio prompt. Da questa pagina non si cambia più: per tornare al v2 va corretto nel database (manuale, «Versioni del prompt»).");
     }
@@ -2005,8 +2003,7 @@
     const nomiOccupazione = Object.fromEntries(STATI_OCCUPAZIONE_PVP);
     const parti = [
       configAttuale.occupazioni_escluse.length ? "Occupazione: esclusi " + configAttuale.occupazioni_escluse.map(c => nomiOccupazione[c] || c).join(", ")
-        : "Occupazione: tutti gli stati",
-      configAttuale.usa_astegiudiziarie_perizia ? "Perizia esterna attiva" : "Perizia esterna disattiva"
+        : "Occupazione: tutti gli stati"
     ];
     if (configAttuale.vendita_giorni_attivo) parti.push(`VENDITA TRA ${configAttuale.vendita_giorni_min} E ${configAttuale.vendita_giorni_max} GIORNI`);
     if (Number(configAttuale.pagine_massime_ricerca) > VALORI_PREDEFINITI.pagineMassime) parti.push(`tetto ${configAttuale.pagine_massime_ricerca} pagine`);
@@ -2157,7 +2154,6 @@
       document.getElementById("campo-pagine-massime").value = configAttuale.pagine_massime_ricerca;
       document.getElementById("campo-accetta-pagine").checked = false;
       aggiornaStatoPagineMassime();
-      document.getElementById("campo-astegiudiziarie").value = String(configAttuale.usa_astegiudiziarie_perizia);
       document.getElementById("campo-solo-conteggio").value = String(configAttuale.solo_conteggio);
     } else if (nome === "modelli") {
       document.getElementById("campo-provider-analisi").value = configAttuale.provider_analisi;
@@ -2273,7 +2269,6 @@
         vendita_giorni_min: configAttuale.vendita_giorni_min,
         vendita_giorni_max: configAttuale.vendita_giorni_max,
         pagine_massime_ricerca: configAttuale.pagine_massime_ricerca,
-        usa_astegiudiziarie_perizia: String(configAttuale.usa_astegiudiziarie_perizia),
         pausa_tra_aste_secondi: 1,   // fissa: non si regola più (12/10/2026) e lo scanner non la legge; nel database resta 1
         solo_conteggio: String(configAttuale.solo_conteggio),
         cascata_modelli_gemini: JSON.stringify(configAttuale.cascata_modelli_gemini),
@@ -2297,7 +2292,6 @@
     venditaGiorniMin: 2,
     venditaGiorniMax: 15,
     pagineMassime: 40,
-    astegiudiziarie: true,
     soloConteggio: false,
     cascataModelli: ["gemini-3.8-flash", "gemini-3.6-flash", "gemini-3.5-flash", "gemini-3.5-flash-lite"],
     usaBatchGemini: true,
@@ -2318,7 +2312,7 @@
   // Solo i filtri della scheda Ricerca (scelta dell'utente, 01/10/2026).
   const CHIAVI_SET_FILTRI = ["prezzo_base_min", "prezzo_base_max", "lat_riferimento", "lon_riferimento", "raggio_km",
     "cerca_tutta_italia", "comuni_attivo", "comuni_inclusi", "tipologie_incluse", "occupazioni_escluse", "esclusioni_attive", "esclusione_quote",
-    "parole_esclusione", "usa_astegiudiziarie_perizia",
+    "parole_esclusione",
     "solo_conteggio"];
   const MAX_SET_FILTRI = 10;
 
@@ -2331,7 +2325,6 @@
       tipologie_incluse: VALORI_PREDEFINITI.tipologieIncluse,
       occupazioni_escluse: VALORI_PREDEFINITI.occupazioniEscluse, esclusioni_attive: VALORI_PREDEFINITI.esclusioniAttive,
       esclusione_quote: true, parole_esclusione: PAROLE_ESCLUSIONE_PREDEFINITE,
-      usa_astegiudiziarie_perizia: VALORI_PREDEFINITI.astegiudiziarie,
       solo_conteggio: VALORI_PREDEFINITI.soloConteggio
     };
   }
@@ -2501,7 +2494,6 @@
     configAttuale.vendita_giorni_min = VALORI_PREDEFINITI.venditaGiorniMin;
     configAttuale.vendita_giorni_max = VALORI_PREDEFINITI.venditaGiorniMax;
     configAttuale.pagine_massime_ricerca = VALORI_PREDEFINITI.pagineMassime;
-    configAttuale.usa_astegiudiziarie_perizia = VALORI_PREDEFINITI.astegiudiziarie;
     configAttuale.solo_conteggio = VALORI_PREDEFINITI.soloConteggio;
     configAttuale.cascata_modelli_gemini = [...VALORI_PREDEFINITI.cascataModelli];
     configAttuale.usa_batch_gemini = VALORI_PREDEFINITI.usaBatchGemini;
@@ -2652,7 +2644,6 @@
         configAttuale.vendita_giorni_min = giorniMin;
         configAttuale.vendita_giorni_max = giorniMax;
       }
-      configAttuale.usa_astegiudiziarie_perizia = document.getElementById("campo-astegiudiziarie").value === "true";
       configAttuale.solo_conteggio = document.getElementById("campo-solo-conteggio").value === "true";
     } else if (nomeCard === "modelli") {
       // Si salvano solo i comandi che si vedono (aggiornaFinestraProvider): quelli dell'altro restano com'erano.

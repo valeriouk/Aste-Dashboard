@@ -1516,7 +1516,7 @@
     <h3>Set di filtri salvati</h3>
     <p>In fondo alla scheda Ricerca. Salva con un nome i filtri di quella scheda e rimettili quando vuoi, per esempio "Fidenza 195 conteggio"
       per un giro di solo conteggio e un secondo set per il giro vero. Un set contiene: area (centro e raggio, o tutta Italia, e l'elenco "solo questi comuni"), prezzo base, tipologie,
-      altri filtri (occupazione, perizia da astegiudiziarie, solo conteggio; non "vendita vicina" né il tetto di lettura) ed esclusioni per parole chiave. Provider e modelli
+      altri filtri (occupazione, solo conteggio; non "vendita vicina" né il tetto di lettura) ed esclusioni per parole chiave. Provider e modelli
       (chi legge le perizie, cascata, batch), orari e ricerca della perizia non fanno parte del set e restano quelli attuali.</p>
     <ul>
       <li><strong>Filtri attivi</strong>: la riga sopra l'elenco dice a cosa corrispondono i filtri di adesso: il nome del set salvato con gli stessi
@@ -1547,7 +1547,7 @@
         <tr><td>Area</td><td>Catania centro, raggio 22 km, tutta Italia no, "solo questi comuni" spento con l'elenco vuoto</td></tr>
         <tr><td>Tipologie</td><td>tutte</td></tr>
         <tr><td>Altri filtri</td><td>tutti gli stati di occupazione, "vendita vicina" spento (2 e 15 giorni), tetto di lettura 40 pagine,
-          perizia da astegiudiziarie attiva, modalità normale</td></tr>
+          modalità normale</td></tr>
         <tr><td>Esclusioni</td><td>disattivate, quote escluse, elenco di parole predefinito</td></tr>
         <tr><td>Modelli</td><td>cascata consigliata, batch anche in locale attivo</td></tr>
         <tr><td>Pianificazione</td><td>attiva, lunedì-venerdì alle 10:00</td></tr>
@@ -1621,7 +1621,7 @@
   </section>
 
   <section class="voce" id="config-altri-filtri">
-    <h3>Card "Altri filtri": occupazione, astegiudiziarie, solo conteggio</h3>
+    <h3>Card "Altri filtri": occupazione, vendita vicina, solo conteggio</h3>
     <ul>
       <li><strong>Stato di occupazione dichiarato su PVP</strong>: una casella per stato (Libero, Non specificato, In corso di liberazione, Occupato senza titolo, Occupato),
         tutte spuntate di partenza = nessun filtro. Le aste degli stati tolti non vengono cercate né analizzate (nessun costo); quelle già nel
@@ -1654,8 +1654,8 @@
         Gemini o con Claude, in batch o una per una) lo stesso avviso arriva anche da solo, subito dopo la ricerca, nel messaggio
         "⚠️ Scanner aste: ricerca incompleta". Lo stesso messaggio porta l'avviso "Ricerca interrotta da un errore del PVP…" quando la
         lettura si ferma a metà per un errore.</li>
-      <li><strong>Perizia da astegiudiziarie.it</strong>: attiva/disattiva la ricerca della perizia su quel sito. Le sue condizioni d'uso vietano lo scraping
-        automatico: attivala solo se è una scelta consapevole.</li>
+      <li><strong>Perizia da astegiudiziarie.it</strong>: dal 12/10/2026 non si spegne più da qui, è sempre accesa (vedi
+        <a href="#analisi-ricerca-perizia">Come si trova la perizia</a>, dove c'è anche lo spegnimento d'emergenza).</li>
       <li><strong>Pausa tra un'asta e l'altra</strong>: dal 12/10/2026 non si regola più. È fissa a 1 secondo: un numero alto faceva solo scadere il giro, senza avviso.</li>
       <li><strong>Modalità di esecuzione</strong>: "Normale" oppure "<strong>Solo conteggio</strong>": lo scanner conta le aste nei filtri e si ferma, senza
         browser, senza Gemini (nessun costo) e senza scrivere nel database; arriva comunque un messaggio Telegram col conteggio (da analizzare, da
@@ -2393,8 +2393,10 @@
     <ol>
       <li><strong>Allegati PVP</strong> che dal nome sembrano una perizia ("perizia", "stima", "CTU", "relazione", "elaborato peritale"…), preferendo quelli
         che citano il lotto dell'annuncio. Esclusi avvisi, bandi, ordinanze, relazioni notarili, certificati, planimetrie, foto, visure, decreti.</li>
-      <li><strong>astegiudiziarie.it</strong> (se attivo in <a href="#config-altri-filtri">Altri filtri</a>): link con "perizia", scartando foto,
-        planimetrie, allegati, visure.</li>
+      <li><strong>astegiudiziarie.it</strong>: link con "perizia", scartando foto, planimetrie, allegati, visure. È sempre attivo.
+        Spegnimento d'emergenza, solo a mano nel database: tabella <code>config</code>, parametro <code>usa_astegiudiziarie_perizia</code>,
+        valore <code>false</code>. Finché resta così Configurazione lo segnala in alto, in rosso, e non lo cambia; si riaccende rimettendo
+        <code>true</code>.</li>
       <li><strong>Pagine dell'asta sui siti collegati all'annuncio</strong> (quelli con la bandierina su PVP: gestore della vendita, siti di pubblicità),
         al massimo 4 siti, scartando documenti del sito (listini, manuali, condizioni, privacy…). Un documento senza nome chiaro passa solo se le prime
         pagine contengono il linguaggio tipico di una perizia.</li>
