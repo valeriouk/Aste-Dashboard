@@ -2852,9 +2852,23 @@
     messaggioEl.textContent = "Scanner: avvio in corso…";
     messaggioEl.className = "messaggio-attesa";
     try {
-      const risultato = await avviaWorkflowGitHub("scheduler.yml");
+      // Fotografia dei filtri presa adesso (15/10/2026, sql/avvii_scanner.sql in aste-immobiliari): il giro usa questi
+      // filtri anche se li cambi dopo il tocco o se aspetta in coda. Funzione assente: avvio come prima, con i filtri
+      // del momento in cui il giro parte, e il messaggio lo dice.
+      let inputs = undefined, notaFotografia = "";
+      const fotografia = await chiamaRpc("prepara_avvio", {password_tentativo: passwordCorrente});
+      if (fotografia && fotografia.result === "success" && /^[0-9]+$/.test(String(fotografia.id))) {
+        inputs = {avvio: String(fotografia.id)};
+      } else if (!fotografia || fotografia.code === "PGRST202") {
+        notaFotografia = " (senza fotografia dei filtri: va eseguito una volta sql/avvii_scanner.sql nell'SQL Editor di Supabase)";
+      } else {
+        messaggioEl.textContent = "Scanner: non avviato, fotografia dei filtri non riuscita: " + String(fotografia.message || "errore sconosciuto").replace(/\.$/, "") + ".";
+        messaggioEl.className = "messaggio-errore";
+        return;
+      }
+      const risultato = await avviaWorkflowGitHub("scheduler.yml", inputs);
       if (risultato.result === "success") {
-        messaggioEl.innerHTML = "Scanner: " + escapeHtml(risultato.message || "Scanner avviato.") + (risultato.url ? ` <a href="${escapeHtml(risultato.url)}" target="_blank" rel="noopener">Apri esecuzione</a>` : "");
+        messaggioEl.innerHTML = "Scanner: " + escapeHtml((risultato.message || "Scanner avviato.") + notaFotografia) + (risultato.url ? ` <a href="${escapeHtml(risultato.url)}" target="_blank" rel="noopener">Apri esecuzione</a>` : "");
         messaggioEl.className = "messaggio-ok";
       } else {
         messaggioEl.innerHTML = "Scanner: " + escapeHtml(risultato.message || "Errore sconosciuto durante l'avvio.") + (risultato.url ? ` <a href="${escapeHtml(risultato.url)}" target="_blank" rel="noopener">Apri esecuzione</a>` : "");

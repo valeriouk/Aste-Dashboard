@@ -1467,6 +1467,14 @@
         tocco ("Salvato.", la finestra si chiude da sola). Chiede conferma con un secondo tocco entro 4 secondi solo quando in "Provider e modelli"
         cambi chi legge le perizie ("Passare a Claude?" / "Passare a Gemini?").</li>
       <li>Lo scanner rilegge la configurazione all'inizio di ogni giro: le modifiche valgono dal <strong>giro successivo</strong>.</li>
+      <li><strong>Fotografia dei filtri</strong> (dal 15/10/2026): "▶ Avvia scanner ora" copia i filtri nel momento del tocco (tabella
+        <code>avvii_scanner</code>, funzione <code>prepara_avvio</code>: <code>sql/avvii_scanner.sql</code> nel repository privato, da eseguire una
+        volta) e il giro usa quella copia: puoi cambiare i filtri subito dopo senza toccare il giro avviato. Se un giro è già in corso il nuovo
+        va <strong>in coda</strong> ("In coda — parte quando finisce il giro in corso") con i suoi filtri; con un giro in corso e uno in coda
+        l'avvio viene rifiutato, perché GitHub tiene un solo giro in attesa e uno nuovo annullerebbe quello che aspetta. Per lo stesso motivo un
+        giro programmato che arriva mentre il tuo è in coda lo annulla (e viceversa). I giri programmati e "Ricontrolla N aste" usano i filtri
+        del momento in cui partono. Se la fotografia non si trova (cancellata dopo 7 giorni) il giro si ferma e lo dice su Telegram; se la
+        funzione nel database manca, l'avvio parte come prima e il messaggio lo dice.</li>
       <li>I <strong>pulsanti di avvio</strong> ("▶ Avvia scanner ora", "🔄 Controlla batch ora", "⭐ Controlla preferiti ora",
         <a href="#orari-ricontrollo-pulsante">"🔁 Ricontrolla N aste"</a>) stanno sopra le
         schede, sotto gli eventuali avvisi rossi: si vedono da ogni scheda. Tutti e quattro sulla stessa riga, larghi e alti uguali (sul telefono due per riga). "Avvia scanner ora", "Controlla preferiti ora" e "Ricontrolla N aste" funzionano con doppio
@@ -2813,6 +2821,7 @@
         <tr><td>📄 Perizia trovata al ricontrollo</td><td>Il <a href="#orari-ricontrollo">ricontrollo</a> ha trovato la perizia e aggiornato l'analisi. In fondo il link all'annuncio PVP e quello alla scheda nel registro.</td></tr>
         <tr><td>🔁 Ricontrollo perizie</td><td>Riepilogo del ricontrollo: controllate, trovate, aggiornate, solo fonte, in batch, errori.</td></tr>
         <tr><td>🔁 Ricontrollo perizie (tutto il registro) / ⛔ Ricontrollo perizie non avviato</td><td>Dopo <a href="#orari-ricontrollo-pulsante">"Ricontrolla N aste"</a>: lo stesso riepilogo (anche "nessuna asta da ricontrollare"), con il batch usato e, se l'invio a Claude non è riuscito, la causa. "Non avviato": Claude non era utilizzabile, nessun costo e Gemini non usato.</td></tr>
+        <tr><td>⛔ Scanner aste non avviato: la fotografia dei filtri n. N … non è nel database</td><td>Il giro avviato da "Avvia scanner ora" non trova la copia dei filtri presa al tocco (più vecchia di 7 giorni, o <code>sql/avvii_scanner.sql</code> non eseguito): si ferma senza costi invece di usare i filtri di adesso. Rilancialo dalla pagina.</td></tr>
         <tr><td>🔁 Ricontrollo perizie: N perizie non aggiornate</td><td>Al ritiro di un batch del ricontrollo, se alcune analisi non sono state usate: per ogni asta il motivo (errore dell'analisi, oppure analisi senza stima, superficie né punteggio, con la nota dell'analisi). L'asta resta com'era e torna nel ricontrollo dopo N giorni.</td></tr>
         <tr><td>🗺️ Nuove quotazioni OMI</td><td>Il lunedì, se è uscito un semestre OMI non ancora caricato.</td></tr>
         <tr><td>📅 Visita tra 3 giorni / 📅 Visita domani</td><td>Promemoria dell'appuntamento confermato (dalle 9:00), con dettagli, indirizzo, asta e link.</td></tr>
