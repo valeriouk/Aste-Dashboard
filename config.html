@@ -686,7 +686,7 @@
 
       <div class="barra-ripristino" data-scheda="ricerca">
         <button type="button" class="bottone-secondario" id="bottone-ripristina-predefiniti" onclick="confermaRipristinaPredefiniti()">↺ Ripristina tutti i valori predefiniti</button>
-        <p class="nota-campo">Riporta ai valori predefiniti le schede Ricerca, Analisi e Orari. Attenzione: riaccende la scansione automatica (lun-ven alle 10:00), spegne "vendita vicina" e le esclusioni e rimette il tetto di lettura a 300 pagine. Non cambia chi legge le perizie né il batch di Claude, la scheda Conti, i set di filtri salvati, Dispositivo e Sicurezza. Salva subito.</p>
+        <p class="nota-campo">Riporta ai valori predefiniti le schede Ricerca, Analisi e Orari. Attenzione: riaccende la scansione automatica (lun-ven alle 10:00) e il ricontrollo delle perizie a fine giro, spegne "vendita vicina", le esclusioni e "Solo conteggio" e rimette il tetto di lettura a 300 pagine. Non cambia chi legge le perizie né il batch di Claude, la scheda Conti, i set di filtri salvati, Dispositivo e Sicurezza. Salva subito.</p>
         <p id="messaggio-ripristina-predefiniti" class="messaggio-salvataggio-card"></p>
       </div>
 
@@ -2746,6 +2746,7 @@
     }
 
     let providerSalvato = false;   // il provider si salva con una chiamata a parte, prima del resto
+    let avvisoPerizia = "";        // la card è salvata ma la ricerca della perizia, salvata insieme, no
     try {
       let risultato;
       if (nomeCard === "ricercaPerizia") {
@@ -2779,13 +2780,19 @@
         }
         if (!risultato) {
           risultato = await salvaConfigCompletaSulServer();
-          if (risultato.result === "success") await salvaRicercaPeriziaSulServer();
+          if (risultato.result === "success") {
+            // prima la risposta veniva ignorata e la pagina diceva «Salvato.» anche se questa parte falliva (15/10/2026)
+            const esitoPerizia = await salvaRicercaPeriziaSulServer();
+            if (!esitoPerizia || esitoPerizia.result !== "success") {
+              avvisoPerizia = String((esitoPerizia && esitoPerizia.message) || "errore sconosciuto").replace(/\.$/, "");
+            }
+          }
         }
       }
 
       if (risultato.result === "success") {
-        msgEl.textContent = "Salvato.";
-        msgEl.className = "messaggio-salvataggio-card messaggio-ok";
+        msgEl.textContent = avvisoPerizia ? `Salvato, ma la ricerca della perizia no: ${avvisoPerizia}.` : "Salvato.";
+        msgEl.className = "messaggio-salvataggio-card " + (avvisoPerizia ? "messaggio-errore" : "messaggio-ok");
         const funzioniRiepilogo = {
           area: renderizzaRiepilogoArea, prezzo: renderizzaRiepilogoPrezzo,
           tipologia: renderizzaRiepilogoTipologia, altri: renderizzaRiepilogoAltri, esclusioni: renderizzaRiepilogoEsclusioni,
@@ -2796,7 +2803,7 @@
         if (nomeCard === "modelli") renderizzaRiepilogoRicercaPerizia();   // con Claude il ricontrollo resta fermo
         renderizzaAvvisiConfig();
         mostraFiltriAttivi();
-        setTimeout(() => chiudiModale(nomeCard), 700);
+        if (!avvisoPerizia) setTimeout(() => chiudiModale(nomeCard), 700);   // con l'avviso la finestra resta aperta, da leggere
       } else {
         ripristina();
         msgEl.textContent = risultato.message || "Errore sconosciuto durante il salvataggio.";
