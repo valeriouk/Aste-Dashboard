@@ -1289,6 +1289,9 @@
   }
 
   function apriModale(nome) {
+    // il messaggio dell'ultimo salvataggio («Salvato.», un errore) vale per quella volta: riaprendo la finestra non si vede più
+    const messaggioSalvataggio = document.getElementById(`messaggio-salva-${nome}`);
+    if (messaggioSalvataggio) { messaggioSalvataggio.textContent = ""; messaggioSalvataggio.className = "messaggio-salvataggio-card"; }
     document.getElementById(`modale-${nome}`).classList.add("aperta");
     if (nome === "area") {
       if (!mappa) inizializzaMappa();
