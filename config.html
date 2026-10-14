@@ -259,10 +259,14 @@
   #messaggio-azioni-principali { flex-basis: 100%; font-size: .85rem; }
   #messaggio-azioni-principali:empty { display: none; }
   .bottone-avvia.in-evidenza { outline: 3px solid var(--secondary); outline-offset: 3px; }
+  /* «Ricontrolla N aste»: pulsante, scelta del batch e nota sulla stessa riga */
+  .gruppo-ricontrollo { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; }
+  .gruppo-ricontrollo select { background: var(--bg); color: var(--ink); border: 1px solid var(--border); border-radius: 8px; padding: 10px 8px; font-family: var(--font-body); font-size: .85rem; }
+  .gruppo-ricontrollo .nota-ricontrollo { font-size: .8rem; color: var(--ink-faint); }
   /* Telefono: «Avvia scanner ora» a tutta larghezza, gli altri due affiancati sotto (107 px invece di 160 sopra le schede) */
   @media (max-width: 640px) {
     .azioni-principali { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; }
-    #bottone-avvia-scanner, #messaggio-azioni-principali { grid-column: 1 / -1; }
+    #bottone-avvia-scanner, #messaggio-azioni-principali, .gruppo-ricontrollo { grid-column: 1 / -1; }
     .azioni-principali .bottone-avvia { padding: 11px 8px; }
   }
 
@@ -570,6 +574,14 @@
         <button type="button" class="bottone-avvia" id="bottone-avvia-scanner" onclick="avviaScanner()">▶ Avvia scanner ora</button>
         <button type="button" class="bottone-avvia secondario" id="bottone-verifica-batch" onclick="avviaVerificaBatch()">🔄 Controlla batch ora</button>
         <button type="button" class="bottone-avvia secondario" id="bottone-controlla-preferiti" onclick="avviaControllaPreferiti()" title="Notifica subito su Telegram i preferiti in scadenza entro 30 giorni, ignorando le soglie già inviate oggi">⭐ Controlla preferiti ora</button>
+        <div class="gruppo-ricontrollo">
+          <button type="button" class="bottone-avvia secondario" id="bottone-ricontrollo" onclick="avviaRicontrollo()" title="Cerca la perizia nelle aste future di tutto il registro ancora lette dall'avviso; le perizie trovate vanno in batch">🔁 Ricontrolla le aste</button>
+          <select id="provider-ricontrollo" aria-label="Batch del ricontrollo">
+            <option value="claude" selected>Claude</option>
+            <option value="gemini">Gemini</option>
+          </select>
+          <span class="nota-ricontrollo">fino a 50 per avvio, in batch</span>
+        </div>
         <span id="messaggio-azioni-principali"></span>
       </div>
 
@@ -1478,6 +1490,7 @@
       // Stesse regole di carica_configurazione in app.py: vuoto = gemini, ogni altro valore ferma il giro.
       providerNonValidoNelDatabase = !["", "gemini", "claude"].includes(String(config.provider_analisi ?? "").trim().toLowerCase());
       usaClaudeRicontrollo = ["true", "vero", "1", "si", "sì"].includes(String(config.usa_claude_ricontrollo ?? "").trim().toLowerCase());
+      aggiornaBottoneRicontrollo(config.ricontrollo_da_fare);   // numero sul pulsante «Ricontrolla N aste»
 
       const minGrezzo = config.prezzo_base_min;
       configAttuale.prezzo_base_min = (minGrezzo === undefined || Number(minGrezzo) === 0) ? 0 : Number(minGrezzo);
@@ -2870,6 +2883,55 @@
       }
     } catch (e) {
       messaggioEl.textContent = "Preferiti: richiesta non riuscita. Controlla la connessione e riprova.";
+      messaggioEl.className = "messaggio-errore";
+    } finally {
+      bottone.disabled = false;
+    }
+  }
+
+  // «Ricontrolla N aste» (14/10/2026): avvia lo scanner in modalità solo ricontrollo (tutte le aste future del
+  // registro ancora lette dall'avviso, al massimo 50 per avvio, perizie trovate in batch Claude o Gemini).
+  // N = ricontrollo_da_fare in config, scritto dallo scanner alla fine di ogni giro (non è in tempo reale).
+  function etichettaRicontrollo() {
+    const n = ricontrolloDaFare;
+    if (n === null) return "🔁 Ricontrolla le aste";
+    if (n === 0) return "🔁 Nessuna asta da ricontrollare";
+    return `🔁 Ricontrolla ${n >= 1000 ? "1000+" : n} ast${n === 1 ? "a" : "e"}`;
+  }
+  function aggiornaBottoneRicontrollo(valore) {
+    const numero = Number(valore);
+    ricontrolloDaFare = valore === undefined || valore === null || valore === "" || !Number.isFinite(numero) ? null : numero;
+    if (!confermaRicontrolloInCorso) document.getElementById("bottone-ricontrollo").textContent = etichettaRicontrollo();
+  }
+  let ricontrolloDaFare = null, confermaRicontrolloInCorso = false, timeoutConfermaRicontrollo = null;
+  async function avviaRicontrollo() {
+    const bottone = document.getElementById("bottone-ricontrollo");
+    const messaggioEl = document.getElementById("messaggio-azioni-principali");
+    const provider = document.getElementById("provider-ricontrollo").value === "gemini" ? "gemini" : "claude";
+    const nomeProvider = provider === "gemini" ? "Gemini" : "Claude";
+    if (!confermaRicontrolloInCorso) {
+      confermaRicontrolloInCorso = true;
+      bottone.textContent = `Confermi il ricontrollo (batch ${nomeProvider})?`;
+      timeoutConfermaRicontrollo = setTimeout(() => { confermaRicontrolloInCorso = false; bottone.textContent = etichettaRicontrollo(); }, 4000);
+      return;
+    }
+    clearTimeout(timeoutConfermaRicontrollo);
+    confermaRicontrolloInCorso = false;
+    bottone.textContent = etichettaRicontrollo();
+    bottone.disabled = true;   // niente doppio avvio mentre la richiesta è in corso
+    messaggioEl.textContent = "Ricontrollo: avvio in corso…";
+    messaggioEl.className = "messaggio-attesa";
+    try {
+      const risultato = await avviaWorkflowGitHub("scheduler.yml", {solo_ricontrollo: "true", provider_ricontrollo: provider});
+      if (risultato.result === "success") {
+        messaggioEl.innerHTML = "Ricontrollo: " + escapeHtml(risultato.message || "Ricontrollo avviato.") + " Il riepilogo arriva su Telegram." + (risultato.url ? ` <a href="${escapeHtml(risultato.url)}" target="_blank" rel="noopener">Apri esecuzione</a>` : "");
+        messaggioEl.className = "messaggio-ok";
+      } else {
+        messaggioEl.innerHTML = "Ricontrollo: " + escapeHtml(risultato.message || "Errore sconosciuto durante l'avvio.") + (risultato.url ? ` <a href="${escapeHtml(risultato.url)}" target="_blank" rel="noopener">Apri esecuzione</a>` : "");
+        messaggioEl.className = "messaggio-errore";
+      }
+    } catch (e) {
+      messaggioEl.textContent = "Ricontrollo: richiesta non riuscita. Controlla la connessione e riprova.";
       messaggioEl.className = "messaggio-errore";
     } finally {
       bottone.disabled = false;
