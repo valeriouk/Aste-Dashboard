@@ -1473,6 +1473,12 @@
         tocco (conferma entro 4 secondi); "Controlla batch ora" parte al primo tocco, perché non spende token (né Gemini né Claude). Il messaggio sotto i pulsanti dice
         di quale azione parla ("Scanner: …", "Controllo batch: …", "Preferiti: …", "Ricontrollo: …"). Mentre una richiesta è in corso il pulsante resta
         disattivato: un tocco in più non avvia una seconda esecuzione.</li>
+      <li><strong>Stato del giro</strong> (dal 15/10/2026), sotto i pulsanti: "⏳ Giro in corso da N min", "✓ Ultimo giro finito oggi alle HH:MM
+        (durata)", "⚠️ Ultimo giro interrotto…" o "⏸️ Ultimo giro fermato prima di iniziare…" (il motivo è su Telegram), con il tipo: giro normale o
+        solo ricontrollo. Lo scrive lo scanner in <code>config</code> (<code>stato_giro</code>) quando parte e quando finisce, anche dopo un errore; la
+        pagina lo rilegge ogni minuto e quando torni sulla scheda. Limiti: un giro in coda non si vede finché non parte; se GitHub lo ferma di colpo
+        al limite dei 150 minuti la fine manca, e dopo 2 ore e mezza la riga dice "probabilmente fermato da GitHub"; mostra solo lo scanner, non il
+        controllo dei batch né i preferiti.</li>
       <li>Se il salvataggio di una card non riesce, i valori tornano quelli di prima (non vengono spediti col salvataggio di un'altra card).</li>
     </ul>
   </section>

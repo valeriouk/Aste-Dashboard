@@ -264,6 +264,9 @@
   #messaggio-azioni-principali { grid-column: 1 / -1; font-size: .85rem; }
   #messaggio-azioni-principali:empty { display: none; }
   .bottone-avvia.in-evidenza { outline: 3px solid var(--secondary); outline-offset: 3px; }
+  .stato-giro { font-size: .85rem; color: var(--ink-faint); margin: -4px 0 14px; }
+  .stato-giro.in-corso { color: var(--primary); font-weight: 600; }
+  .stato-giro.problema { color: var(--danger); }
   /* «Ricontrolla N aste»: il batch scelto nella card «Ricerca della perizia», sotto il testo, solo da leggere */
   .bottone-avvia .sotto-bottone { display: block; font-size: .72rem; font-weight: 500; opacity: .85; margin-top: 2px; }
   /* Telefono: due per riga, sempre alti uguali */
@@ -580,6 +583,8 @@
         <button type="button" class="bottone-avvia secondario" id="bottone-ricontrollo" onclick="avviaRicontrollo()" title="Cerca la perizia nelle aste future di tutto il registro ancora lette dall'avviso, fino a 50 per avvio; le perizie trovate vanno in batch (Claude o Gemini: si sceglie nella card «Ricerca della perizia»)">🔁 Ricontrolla le aste<span class="sotto-bottone">batch Claude</span></button>
         <span id="messaggio-azioni-principali"></span>
       </div>
+      <!-- Stato del giro dello scanner (stato_giro in config, scritto da app.py): riletto ogni minuto -->
+      <p id="stato-giro" class="stato-giro nascosto" aria-live="polite"></p>
 
       <nav class="schede-config" role="tablist" aria-label="Sezioni della configurazione">
         <button type="button" role="tab" data-scheda-bottone="ricerca" onclick="mostraSchedaConfig('ricerca')">🔍 Ricerca</button>
@@ -1610,6 +1615,7 @@
       ricercaPeriziaAttuale.provider_ricontrollo = String(config.provider_ricontrollo ?? "").trim().toLowerCase() === "gemini" ? "gemini" : "claude";
       providerRicontrolloSalvato = ricercaPeriziaAttuale.provider_ricontrollo;
       aggiornaBottoneRicontrollo(config.ricontrollo_da_fare);   // numero e batch sul pulsante «Ricontrolla N aste»
+      mostraStatoGiro(config.stato_giro);
 
       statoEl.classList.add("nascosto");
       document.getElementById("contenuto-config").classList.remove("nascosto");
@@ -2919,6 +2925,64 @@
       bottone.disabled = false;
     }
   }
+
+  // Stato del giro (15/10/2026): stato_giro in config, JSON {inizio, fine, tipo, esito} scritto da app.py all'inizio
+  // e alla fine di ogni giro (main). Riletto ogni minuto e al ritorno sulla scheda; la pagina legge soltanto.
+  // Limiti: un giro in coda non si vede (scrive quando parte); se GitHub lo ferma di colpo la fine manca, e dopo
+  // MINUTI_TETTO_GIRO la riga lo dice. Solo lo scanner, non il controllo batch né i preferiti.
+  const MINUTI_TETTO_GIRO = 150;   // timeout-minutes del job in scheduler.yml
+  let statoGiroLetto = null, timerStatoGiro = null;
+  function quandoBreve(data) {
+    const ora = data.toLocaleTimeString("it-IT", {hour: "2-digit", minute: "2-digit"});
+    const oggi = new Date(), ieri = new Date(Date.now() - 864e5);
+    if (data.toDateString() === oggi.toDateString()) return `oggi alle ${ora}`;
+    if (data.toDateString() === ieri.toDateString()) return `ieri alle ${ora}`;
+    return `il ${data.toLocaleDateString("it-IT", {day: "2-digit", month: "2-digit"})} alle ${ora}`;
+  }
+  function mostraStatoGiro(valore) {
+    if (valore !== undefined) statoGiroLetto = valore;
+    const el = document.getElementById("stato-giro");
+    let s = null;
+    try { s = statoGiroLetto ? JSON.parse(statoGiroLetto) : null; } catch (e) { s = null; }
+    const inizio = s && s.inizio ? new Date(s.inizio) : null;
+    if (!inizio || isNaN(inizio)) { el.classList.add("nascosto"); return; }
+    const tipo = s.tipo === "ricontrollo" ? "solo ricontrollo" : "giro normale";
+    const fine = s.fine ? new Date(s.fine) : null;
+    const minuti = Math.max(0, Math.round(((fine || new Date()) - inizio) / 60000));
+    let testo, classe = "";
+    if (!fine && minuti > MINUTI_TETTO_GIRO) {
+      testo = `⚠️ Giro iniziato ${quandoBreve(inizio)} (${tipo}): nessuna fine dopo 2 ore e mezza, probabilmente fermato da GitHub.`;
+      classe = "problema";
+    } else if (!fine) {
+      testo = `⏳ Giro in corso da ${minuti} min (${tipo}).`;
+      classe = "in-corso";
+    } else if (s.esito === "interrotto") {
+      testo = `⚠️ Ultimo giro interrotto ${quandoBreve(fine)} (${tipo}, dopo ${minuti} min): il motivo è su Telegram.`;
+      classe = "problema";
+    } else if (s.esito === "fermato") {
+      testo = `⏸️ Ultimo giro fermato ${quandoBreve(fine)} prima di iniziare (${tipo}): il motivo è su Telegram.`;
+    } else {
+      testo = `✓ Ultimo giro finito ${quandoBreve(fine)} (${tipo}, ${minuti} min).`;
+    }
+    el.textContent = testo;
+    el.className = "stato-giro " + classe;
+  }
+  async function aggiornaStatoGiro() {
+    if (!passwordCorrente || document.hidden) return;
+    try {
+      const risposta = await fetch(`${SUPABASE_URL}/rest/v1/rpc/leggi_config?select=parametro,valore&parametro=eq.stato_giro`, {
+        method: "POST",
+        headers: {"apikey": SUPABASE_ANON_KEY, "Authorization": `Bearer ${SUPABASE_ANON_KEY}`, "Content-Type": "application/json"},
+        body: JSON.stringify({password_tentativo: passwordCorrente})
+      });
+      const righe = await risposta.json();
+      if (!Array.isArray(righe)) { mostraStatoGiro(); return; }   // risposta d'errore: resta l'ultimo stato letto
+      const riga = righe.find(r => r.parametro === "stato_giro");
+      mostraStatoGiro(riga ? riga.valore : null);
+    } catch (e) { mostraStatoGiro(); }   // rete assente: resta l'ultimo stato letto, con i minuti aggiornati
+  }
+  if (!timerStatoGiro) timerStatoGiro = setInterval(aggiornaStatoGiro, 60000);
+  document.addEventListener("visibilitychange", () => { if (!document.hidden) aggiornaStatoGiro(); });
 
   // «Ricontrolla N aste» (14/10/2026): avvia lo scanner in modalità solo ricontrollo (tutte le aste future del
   // registro ancora lette dall'avviso, al massimo 50 per avvio, perizie trovate in batch Claude o Gemini).
