@@ -686,7 +686,7 @@
 
       <div class="barra-ripristino" data-scheda="ricerca">
         <button type="button" class="bottone-secondario" id="bottone-ripristina-predefiniti" onclick="confermaRipristinaPredefiniti()">↺ Ripristina tutti i valori predefiniti</button>
-        <p class="nota-campo">Riporta ai valori predefiniti le schede Ricerca, Analisi e Orari. Attenzione: riaccende la scansione automatica (lun-ven alle 10:00) e il ricontrollo delle perizie a fine giro, spegne "vendita vicina", le esclusioni e "Solo conteggio" e rimette il tetto di lettura a 300 pagine. Non cambia chi legge le perizie né il batch di Claude, la scheda Conti, i set di filtri salvati, Dispositivo e Sicurezza. Salva subito.</p>
+        <p class="nota-campo">Riporta ai valori predefiniti le schede Ricerca, Analisi e Orari. Attenzione: riaccende la scansione automatica (lun-ven alle 10:00), accende "Solo conteggio" (i giri contano soltanto, senza analizzare), spegne il ricontrollo delle perizie a fine giro, "vendita vicina" e le esclusioni e rimette il tetto di lettura a 300 pagine. Non cambia chi legge le perizie né il batch di Claude, la scheda Conti, i set di filtri salvati, Dispositivo e Sicurezza. Salva subito.</p>
         <p id="messaggio-ripristina-predefiniti" class="messaggio-salvataggio-card"></p>
       </div>
 
@@ -2344,7 +2344,7 @@
     venditaGiorniMin: 2,
     venditaGiorniMax: 15,
     pagineMassime: 300,
-    soloConteggio: false,
+    soloConteggio: true,     // dal 15/10/2026: dopo un ripristino il primo giro conta soltanto, niente analisi a sorpresa
     cascataModelli: ["gemini-3.8-flash", "gemini-3.6-flash", "gemini-3.5-flash", "gemini-3.5-flash-lite"],
     usaBatchGemini: true,
     scannerAttivo: true,
@@ -2354,7 +2354,7 @@
     // Ricerca della perizia: sempre utile (la perizia a volte è solo tra gli
     // allegati PVP o su siti diversi da astegiudiziarie, e spesso viene
     // pubblicata dopo l'avviso), quindi attiva anche nei predefiniti.
-    ricontrolloAttivo: true,
+    ricontrolloAttivo: false,   // dal 15/10/2026: il ricontrollo si fa dal pulsante «Ricontrolla N aste»
     ricontrolloGiorni: 2,
     ricontrolloMax: 15
   };
