@@ -219,11 +219,16 @@
     margin: 0 0 16px;
   }
 
+  /* Quattro pulsanti sulla stessa riga, larghi e alti uguali (14/10/2026; prima flex a capo, altezze diverse) */
   .azioni-principali {
-    display: flex;
-    gap: 12px;
-    flex-wrap: wrap;
+    display: grid;
+    grid-template-columns: repeat(4, 1fr);
+    gap: 10px;
     margin-bottom: 14px;
+  }
+  .azioni-principali .bottone-avvia {
+    display: flex; flex-direction: column; align-items: center; justify-content: center;
+    padding: 11px 10px; line-height: 1.25; text-align: center;
   }
   /* Avvisi ben visibili: nota fissa in cima e avviso sotto la mappa */
   .avvisi-config { background: var(--danger-soft); color: var(--danger); border: 1px solid var(--danger); border-radius: 12px; padding: 10px 14px; margin-bottom: 14px; font-size: .9rem; font-weight: 500; }
@@ -256,17 +261,15 @@
   .bottone-avvia.secondario { background: var(--primary); }
   .bottone-avvia.secondario:hover { filter: brightness(.88); }
   .bottone-avvia:disabled { opacity: .55; cursor: default; }   /* richiesta in corso: si vede che il tocco è stato preso */
-  #messaggio-azioni-principali { flex-basis: 100%; font-size: .85rem; }
+  #messaggio-azioni-principali { grid-column: 1 / -1; font-size: .85rem; }
   #messaggio-azioni-principali:empty { display: none; }
   .bottone-avvia.in-evidenza { outline: 3px solid var(--secondary); outline-offset: 3px; }
-  /* «Ricontrolla N aste»: pulsante, scelta del batch e nota sulla stessa riga */
-  .gruppo-ricontrollo { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; }
-  .gruppo-ricontrollo select { background: var(--bg); color: var(--ink); border: 1px solid var(--border); border-radius: 8px; padding: 10px 8px; font-family: var(--font-body); font-size: .85rem; }
-  .gruppo-ricontrollo .nota-ricontrollo { font-size: .8rem; color: var(--ink-faint); }
-  /* Telefono: «Avvia scanner ora» a tutta larghezza, gli altri due affiancati sotto (107 px invece di 160 sopra le schede) */
+  /* «Ricontrolla N aste»: il batch scelto nella card «Ricerca della perizia», sotto il testo, solo da leggere */
+  .bottone-avvia .sotto-bottone { display: block; font-size: .72rem; font-weight: 500; opacity: .85; margin-top: 2px; }
+  /* Telefono: due per riga, sempre alti uguali */
   @media (max-width: 640px) {
-    .azioni-principali { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; }
-    #bottone-avvia-scanner, #messaggio-azioni-principali, .gruppo-ricontrollo { grid-column: 1 / -1; }
+    /* le due righe di pulsanti alte uguali; il messaggio sotto va su una riga sua, alta quanto serve */
+    .azioni-principali { grid-template-columns: 1fr 1fr; grid-template-rows: 1fr 1fr; gap: 8px; }
     .azioni-principali .bottone-avvia { padding: 11px 8px; }
   }
 
@@ -574,14 +577,7 @@
         <button type="button" class="bottone-avvia" id="bottone-avvia-scanner" onclick="avviaScanner()">▶ Avvia scanner ora</button>
         <button type="button" class="bottone-avvia secondario" id="bottone-verifica-batch" onclick="avviaVerificaBatch()">🔄 Controlla batch ora</button>
         <button type="button" class="bottone-avvia secondario" id="bottone-controlla-preferiti" onclick="avviaControllaPreferiti()" title="Notifica subito su Telegram i preferiti in scadenza entro 30 giorni, ignorando le soglie già inviate oggi">⭐ Controlla preferiti ora</button>
-        <div class="gruppo-ricontrollo">
-          <button type="button" class="bottone-avvia secondario" id="bottone-ricontrollo" onclick="avviaRicontrollo()" title="Cerca la perizia nelle aste future di tutto il registro ancora lette dall'avviso; le perizie trovate vanno in batch">🔁 Ricontrolla le aste</button>
-          <select id="provider-ricontrollo" aria-label="Batch del ricontrollo">
-            <option value="claude" selected>Claude</option>
-            <option value="gemini">Gemini</option>
-          </select>
-          <span class="nota-ricontrollo">fino a 50 per avvio, in batch</span>
-        </div>
+        <button type="button" class="bottone-avvia secondario" id="bottone-ricontrollo" onclick="avviaRicontrollo()" title="Cerca la perizia nelle aste future di tutto il registro ancora lette dall'avviso, fino a 50 per avvio; le perizie trovate vanno in batch (Claude o Gemini: si sceglie nella card «Ricerca della perizia»)">🔁 Ricontrolla le aste<span class="sotto-bottone">batch Claude</span></button>
         <span id="messaggio-azioni-principali"></span>
       </div>
 
@@ -1015,7 +1011,7 @@
           <option value="claude">Claude (Anthropic): credito mensile</option>
         </select>
         <p class="nota-campo">Lo scanner non passa mai da solo dall'uno all'altro. Vale dal prossimo giro.</p>
-        <p class="nota-campo" id="nota-ricontrollo-claude">Con Claude il ricontrollo delle perizie resta fermo.</p>
+        <p class="nota-campo" id="nota-ricontrollo-claude">Con Claude il ricontrollo a fine giro resta fermo: per ricontrollare c'è il pulsante «Ricontrolla N aste», in batch.</p>
       </div>
       <!-- Sotto il menu si vedono solo i comandi di chi è scelto (aggiornaFinestraProvider). Le due caselle del batch
            restano due impostazioni distinte: usa_batch_claude e usa_batch_gemini. -->
@@ -1110,6 +1106,14 @@
         <input type="number" id="campo-ricontrollo-max" min="1" max="100" step="1" oninput="aggiornaAvvisoBatchRicontrollo()">
         <p class="nota-campo">Circa 15-30 secondi per asta, più l'analisi quando compare una perizia (fino a 15 aste per giro, a prezzo pieno). Più alto: arretrato smaltito prima, ma giri più lunghi.</p>
         <p class="nota-campo" id="avviso-batch-ricontrollo" hidden><strong>Oltre 15 aste per giro il ricontrollo usa sempre la modalità batch di Gemini</strong>, anche se il batch è spento: costo ridotto, ma le analisi arrivano fino a 24 ore dopo.</p>
+      </div>
+      <div class="campo-form">
+        <label for="campo-provider-ricontrollo">Pulsante «Ricontrolla N aste»: batch di</label>
+        <select id="campo-provider-ricontrollo">
+          <option value="claude">Claude</option>
+          <option value="gemini">Gemini</option>
+        </select>
+        <p class="nota-campo">Il pulsante sopra le schede ricontrolla tutto il registro, fino a 50 aste per avvio, sempre in batch. Vale solo per il pulsante, non per i giri normali.</p>
       </div>
       <div class="finestra-modale-azioni">
         <button type="button" class="bottone-salva-card" id="bottone-salva-ricercaPerizia" onclick="confermaSalvaCard('ricercaPerizia')">Salva</button>
@@ -1451,7 +1455,9 @@
 
   let configAttuale = {};
   let pianificazioneAttuale = {};
-  let ricercaPeriziaAttuale = {ricontrollo_attivo: true, ricontrollo_giorni: 2, ricontrollo_max: 15};
+  // provider_ricontrollo: batch del pulsante «Ricontrolla N aste» (14/10/2026), salvato a parte (sql/provider_ricontrollo.sql)
+  let ricercaPeriziaAttuale = {ricontrollo_attivo: true, ricontrollo_giorni: 2, ricontrollo_max: 15, provider_ricontrollo: "claude"};
+  let providerRicontrolloSalvato = "claude";   // com'è nel database: la funzione SQL si chiama solo se cambia
   // Letti dal database a ogni caricamento, fuori da configAttuale: non entrano nei salvataggi né nei set di filtri.
   let providerNonValidoNelDatabase = false;   // provider_analisi scritto male (a mano): lo scanner non parte finché non lo riscrivi
   let astegiudiziarieSpentaNelDatabase = false;   // usa_astegiudiziarie_perizia non «true» (messo a mano): la perizia non viene cercata su astegiudiziarie.it
@@ -1490,7 +1496,6 @@
       // Stesse regole di carica_configurazione in app.py: vuoto = gemini, ogni altro valore ferma il giro.
       providerNonValidoNelDatabase = !["", "gemini", "claude"].includes(String(config.provider_analisi ?? "").trim().toLowerCase());
       usaClaudeRicontrollo = ["true", "vero", "1", "si", "sì"].includes(String(config.usa_claude_ricontrollo ?? "").trim().toLowerCase());
-      aggiornaBottoneRicontrollo(config.ricontrollo_da_fare);   // numero sul pulsante «Ricontrolla N aste»
 
       const minGrezzo = config.prezzo_base_min;
       configAttuale.prezzo_base_min = (minGrezzo === undefined || Number(minGrezzo) === 0) ? 0 : Number(minGrezzo);
@@ -1598,6 +1603,10 @@
       ricercaPeriziaAttuale.ricontrollo_attivo = String(config.ricontrollo_perizie_attivo ?? true).toLowerCase() !== "false";
       ricercaPeriziaAttuale.ricontrollo_giorni = Number(config.ricontrollo_perizie_giorni ?? 2) || 2;
       ricercaPeriziaAttuale.ricontrollo_max = Number(config.ricontrollo_perizie_max ?? 15) || 15;
+      // stesso predefinito dello scanner (PROVIDER_RICONTROLLO in app.py): claude se il parametro manca
+      ricercaPeriziaAttuale.provider_ricontrollo = String(config.provider_ricontrollo ?? "").trim().toLowerCase() === "gemini" ? "gemini" : "claude";
+      providerRicontrolloSalvato = ricercaPeriziaAttuale.provider_ricontrollo;
+      aggiornaBottoneRicontrollo(config.ricontrollo_da_fare);   // numero e batch sul pulsante «Ricontrolla N aste»
 
       statoEl.classList.add("nascosto");
       document.getElementById("contenuto-config").classList.remove("nascosto");
@@ -2069,14 +2078,16 @@
     // Con Claude lo scanner non esegue il ricontrollo (_esegui_ricontrollo_perizie in app.py), salvo
     // usa_claude_ricontrollo: in quel caso al massimo SOGLIA_BATCH_RICONTROLLO aste per giro, mai in batch.
     const conClaude = configAttuale.provider_analisi === "claude";
+    // il pulsante «Ricontrolla N aste» ha il suo batch (provider_ricontrollo), indipendente da chi legge le perizie nei giri
+    const pulsante = ` · pulsante: batch ${providerRicontrolloSalvato === "gemini" ? "Gemini" : "Claude"}`;
     if (conClaude && r.ricontrollo_attivo && !usaClaudeRicontrollo) {
-      el.textContent = "Ricerca estesa · ricontrollo fermo finché le perizie le legge Claude";
+      el.textContent = "Ricerca estesa · ricontrollo a fine giro fermo con Claude" + pulsante;
       return;
     }
     el.textContent = "Ricerca estesa · " + (r.ricontrollo_attivo
       ? `ricontrollo ogni ${r.ricontrollo_giorni} ${r.ricontrollo_giorni === 1 ? "giorno" : "giorni"}, max ${r.ricontrollo_max} aste per giro`
         + (r.ricontrollo_max > SOGLIA_BATCH_RICONTROLLO ? (conClaude ? ` (con Claude al massimo ${SOGLIA_BATCH_RICONTROLLO})` : " (in batch)") : "")
-      : "ricontrollo spento");
+      : "ricontrollo a fine giro spento") + pulsante;
   }
 
   function aggiornaAvvisoBatchRicontrollo() {
@@ -2085,6 +2096,21 @@
   }
 
   async function salvaRicercaPeriziaSulServer() {
+    if (ricercaPeriziaAttuale.provider_ricontrollo !== providerRicontrolloSalvato) {
+      // Batch del pulsante «Ricontrolla N aste»: funzione a parte (sql/provider_ricontrollo.sql in aste-immobiliari),
+      // PRIMA del resto e solo se è cambiato: se manca non viene salvato nulla e il messaggio lo dice. Il pulsante
+      // mostra e usa providerRicontrolloSalvato, cioè sempre quello del database.
+      const esitoProvider = await chiamaRpc("imposta_provider_ricontrollo", {
+        password_tentativo: passwordCorrente, valore: ricercaPeriziaAttuale.provider_ricontrollo
+      });
+      if (!esitoProvider || esitoProvider.result !== "success") {
+        return {result: "error", message: "Non salvato: " + (!esitoProvider || esitoProvider.code === "PGRST202"
+          ? "manca la funzione nel database (va eseguito una volta sql/provider_ricontrollo.sql nell'SQL Editor di Supabase)"
+          : (esitoProvider.message || "errore sconosciuto")) + "."};
+      }
+      providerRicontrolloSalvato = ricercaPeriziaAttuale.provider_ricontrollo;
+      aggiornaBottoneRicontrollo(ricontrolloDaFare);
+    }
     const esito = await chiamaRpc("imposta_ricerca_perizia", {
       password_tentativo: passwordCorrente,
       // Sempre true, scritto fisso: la ricerca «Come prima» non si sceglie più (12/10/2026). Il parametro va
@@ -2182,6 +2208,7 @@
       document.getElementById("campo-ricontrollo-attivo").checked = ricercaPeriziaAttuale.ricontrollo_attivo;
       document.getElementById("campo-ricontrollo-giorni").value = ricercaPeriziaAttuale.ricontrollo_giorni;
       document.getElementById("campo-ricontrollo-max").value = ricercaPeriziaAttuale.ricontrollo_max;
+      document.getElementById("campo-provider-ricontrollo").value = ricercaPeriziaAttuale.provider_ricontrollo;
       aggiornaAvvisoBatchRicontrollo();
     } else if (nome === "pianificazioneScanner") {
       document.getElementById("campo-scanner-attivo").checked = pianificazioneAttuale.scanner_attivo;
@@ -2693,6 +2720,7 @@
       ricercaPeriziaAttuale.ricontrollo_attivo = document.getElementById("campo-ricontrollo-attivo").checked;
       ricercaPeriziaAttuale.ricontrollo_giorni = giorni;
       ricercaPeriziaAttuale.ricontrollo_max = massimo;
+      ricercaPeriziaAttuale.provider_ricontrollo = document.getElementById("campo-provider-ricontrollo").value === "gemini" ? "gemini" : "claude";
     } else if (nomeCard === "pianificazioneScanner") {
       const giorni = [...document.querySelectorAll(".checkbox-giorno-scanner:checked")].map(cb => cb.value);
       const orari = [];
@@ -2892,32 +2920,34 @@
   // «Ricontrolla N aste» (14/10/2026): avvia lo scanner in modalità solo ricontrollo (tutte le aste future del
   // registro ancora lette dall'avviso, al massimo 50 per avvio, perizie trovate in batch Claude o Gemini).
   // N = ricontrollo_da_fare in config, scritto dallo scanner alla fine di ogni giro (non è in tempo reale).
+  // Il batch si sceglie nella card «Ricerca della perizia» (provider_ricontrollo): qui solo mostrato, sotto il testo.
   function etichettaRicontrollo() {
     const n = ricontrolloDaFare;
-    if (n === null) return "🔁 Ricontrolla le aste";
-    if (n === 0) return "🔁 Nessuna asta da ricontrollare";
-    return `🔁 Ricontrolla ${n >= 1000 ? "1000+" : n} ast${n === 1 ? "a" : "e"}`;
+    const testo = n === null ? "🔁 Ricontrolla le aste"
+      : n === 0 ? "🔁 Nessuna asta da ricontrollare"
+      : `🔁 Ricontrolla ${n >= 1000 ? "1000+" : n} ast${n === 1 ? "a" : "e"}`;
+    return `${testo}<span class="sotto-bottone">batch ${providerRicontrolloSalvato === "gemini" ? "Gemini" : "Claude"}</span>`;
   }
   function aggiornaBottoneRicontrollo(valore) {
     const numero = Number(valore);
     ricontrolloDaFare = valore === undefined || valore === null || valore === "" || !Number.isFinite(numero) ? null : numero;
-    if (!confermaRicontrolloInCorso) document.getElementById("bottone-ricontrollo").textContent = etichettaRicontrollo();
+    if (!confermaRicontrolloInCorso) document.getElementById("bottone-ricontrollo").innerHTML = etichettaRicontrollo();
   }
   let ricontrolloDaFare = null, confermaRicontrolloInCorso = false, timeoutConfermaRicontrollo = null;
   async function avviaRicontrollo() {
     const bottone = document.getElementById("bottone-ricontrollo");
     const messaggioEl = document.getElementById("messaggio-azioni-principali");
-    const provider = document.getElementById("provider-ricontrollo").value === "gemini" ? "gemini" : "claude";
+    const provider = providerRicontrolloSalvato === "gemini" ? "gemini" : "claude";
     const nomeProvider = provider === "gemini" ? "Gemini" : "Claude";
     if (!confermaRicontrolloInCorso) {
       confermaRicontrolloInCorso = true;
-      bottone.textContent = `Confermi il ricontrollo (batch ${nomeProvider})?`;
-      timeoutConfermaRicontrollo = setTimeout(() => { confermaRicontrolloInCorso = false; bottone.textContent = etichettaRicontrollo(); }, 4000);
+      bottone.innerHTML = `Confermi il ricontrollo?<span class="sotto-bottone">batch ${nomeProvider}</span>`;
+      timeoutConfermaRicontrollo = setTimeout(() => { confermaRicontrolloInCorso = false; bottone.innerHTML = etichettaRicontrollo(); }, 4000);
       return;
     }
     clearTimeout(timeoutConfermaRicontrollo);
     confermaRicontrolloInCorso = false;
-    bottone.textContent = etichettaRicontrollo();
+    bottone.innerHTML = etichettaRicontrollo();
     bottone.disabled = true;   // niente doppio avvio mentre la richiesta è in corso
     messaggioEl.textContent = "Ricontrollo: avvio in corso…";
     messaggioEl.className = "messaggio-attesa";

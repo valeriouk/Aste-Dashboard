@@ -576,7 +576,8 @@
         ogni giro, normale o di solo ricontrollo: non è in tempo reale. Dopo un avvio scende (le aste senza perizia vengono segnate, quelle con la
         perizia vanno in batch); dopo N giorni le aste ancora senza perizia tornano nel conto. Prima del primo giro con questa funzione il
         pulsante dice solo "Ricontrolla le aste".</li>
-      <li><strong>Batch Claude o Gemini</strong>, a scelta accanto al pulsante (Claude in partenza), anche se le perizie dei giri normali le legge
+      <li><strong>Batch Claude o Gemini</strong>, scelto nella card <a href="#config-perizia">«Ricerca della perizia»</a> (voce «Pulsante
+        Ricontrolla N aste: batch di», Claude in partenza) e mostrato sotto il testo del pulsante, dove non si può cambiare per sbaglio; vale anche se le perizie dei giri normali le legge
         l'altro: le perizie trovate vanno <strong>sempre in batch</strong> (metà prezzo, risultati di solito entro 1-2 ore, al massimo 24, ritirati da
         "Controlla batch ora"). Con Claude prima una prova leggera: se Claude non è utilizzabile, o se in coda c'è un batch Claude fermo da ore, il
         ricontrollo non parte e arriva un messaggio; Gemini non viene mai usato al posto di Claude. Un documento che Claude non può mettere nella
@@ -1468,7 +1469,7 @@
       <li>Lo scanner rilegge la configurazione all'inizio di ogni giro: le modifiche valgono dal <strong>giro successivo</strong>.</li>
       <li>I <strong>pulsanti di avvio</strong> ("▶ Avvia scanner ora", "🔄 Controlla batch ora", "⭐ Controlla preferiti ora",
         <a href="#orari-ricontrollo-pulsante">"🔁 Ricontrolla N aste"</a>) stanno sopra le
-        schede, sotto gli eventuali avvisi rossi: si vedono da ogni scheda. "Avvia scanner ora", "Controlla preferiti ora" e "Ricontrolla N aste" funzionano con doppio
+        schede, sotto gli eventuali avvisi rossi: si vedono da ogni scheda. Tutti e quattro sulla stessa riga, larghi e alti uguali (sul telefono due per riga). "Avvia scanner ora", "Controlla preferiti ora" e "Ricontrolla N aste" funzionano con doppio
         tocco (conferma entro 4 secondi); "Controlla batch ora" parte al primo tocco, perché non spende token (né Gemini né Claude). Il messaggio sotto i pulsanti dice
         di quale azione parla ("Scanner: …", "Controllo batch: …", "Preferiti: …", "Ricontrollo: …"). Mentre una richiesta è in corso il pulsante resta
         disattivato: un tocco in più non avvia una seconda esecuzione.</li>
@@ -1763,6 +1764,10 @@
       <li><strong>Aste ricontrollate al massimo per giro</strong>: 1-100 (predefinito 15). Circa 15-30 secondi per asta più l'analisi. <strong>Oltre 15</strong>
         il ricontrollo usa sempre il batch (anche con il batch spento): costa meno ma i risultati arrivano fino a 24 ore dopo. Fino a 15 le analisi sono
         immediate, a prezzo pieno.</li>
+      <li><strong>Pulsante «Ricontrolla N aste»: batch di</strong>: Claude (predefinito) o Gemini, solo per il
+        <a href="#orari-ricontrollo-pulsante">pulsante</a>, non per i giri normali. Si salva con una funzione a parte del database
+        (<code>sql/provider_ricontrollo.sql</code> nel repository privato, da eseguire una volta nell'SQL Editor): se manca, il salvataggio
+        della card non va a buon fine e il messaggio lo dice. Il riepilogo della card lo mostra ("pulsante: batch …").</li>
     </ul>
   </section>
 
