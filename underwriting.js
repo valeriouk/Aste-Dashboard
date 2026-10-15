@@ -646,20 +646,31 @@
   // ===========================================================================
   // 7. CLASSE DELL'OPERAZIONE — pensata per chi vuole iniziare con operazioni pulite
   // ===========================================================================
+  // Pesi a carico dell'acquirente (15/10/2026): «Da scartare» solo quelli gravi, riconosciuti dal testo
+  // della perizia; gli altri (servitù di passaggio, oneri e spese condominiali, accessi, vecchi atti d'obbligo…)
+  // passano a «Gestibile» con il loro testo nei motivi, da leggere. Misura sul database: con la regola di prima
+  // 200 abitazioni su 558 erano Da scartare, quasi sempre per pesi innocui. Un peso grave scritto con parole
+  // non elencate qui finisce in Gestibile: l'elenco si allunga quando serve.
+  const PESI_GRAVI = /abitazione|usufrutt|superficie|convenzion|residenziale pubblica|edilizia (economica|popolare|agevolata)|peep|prezzo massimo|riscatto|locazion|affitt|comodato|assegnazion|casa familiare|beni culturali|prelazion|promessa|prelimin|domanda giudiziale|sequestr/i;
+
   function classificaOperazione(d, occupazione, qualita, reg, params) {
     const eta = qualita.etaPeriziaAnni;
     const diff = d.urbanistica.difformita;
     const scarta = [];
     const complessa = [];
     const gestibile = [];
+    const pesiGravi = d.formalitaNonCancellabili.filter((p) => PESI_GRAVI.test(String(p)));
+    const pesiAltri = d.formalitaNonCancellabili.filter((p) => !PESI_GRAVI.test(String(p)));
 
     if (diff.some((x) => x.tipo === 'non_sanabile')) scarta.push('difformità dichiarate non sanabili');
-    if (d.formalitaNonCancellabili.length) scarta.push(`pesi a carico dell'acquirente: ${d.formalitaNonCancellabili.join('; ')}`);
+    if (pesiGravi.length) scarta.push(`pesi a carico dell'acquirente: ${pesiGravi.join('; ')}`);
     if (occupazione === 'locato_opponibile') scarta.push('locazione opponibile: non vendibile libero fino a scadenza');
     if (qualita.livello === 'D') scarta.push(`documentazione insufficiente (${qualita.motivi.join('; ')})`);
 
     if (d.urbanistica.condono.presente || diff.some((x) => x.tipo === 'condono_pendente')) complessa.push('condono/sanatoria pendente');
-    if (['occupato_terzi_senza_titolo', 'locato_non_opponibile', 'altro'].includes(occupazione)) complessa.push('occupato da terzi');
+    // Occupato da terzi senza titolo o con locazione non opponibile (15/10/2026): li libera il custode come per il
+    // debitore, e i mesi in più sono già nel conto (tempi di liberazione); resta Complessa solo «altro».
+    if (occupazione === 'altro') complessa.push('occupato da terzi');
     if (reg.nonDeterminato) complessa.push('costo di regolarizzazione non determinato');
     if (diff.some((x) => x.tipo === 'non_determinato')) complessa.push('difformità senza giudizio di sanabilità');
     if (diff.some((x) => x.prospetti === true)) complessa.push('difformità su prospetti o parti comuni');
@@ -668,6 +679,9 @@
     if (d.statoManutentivo === 'E_degrado') complessa.push('stato di degrado');
 
     if (occupazione === 'occupato_debitore') gestibile.push('occupato dal debitore (liberazione a cura del custode)');
+    if (occupazione === 'occupato_terzi_senza_titolo') gestibile.push('occupato da terzi senza titolo (liberazione a cura del custode)');
+    if (occupazione === 'locato_non_opponibile') gestibile.push('locazione non opponibile (liberazione a cura del custode)');
+    if (pesiAltri.length) gestibile.push(`pesi a carico da verificare: ${pesiAltri.join('; ')}`);
     if (diff.some((x) => x.tipo === 'da_rimuovere')) gestibile.push('opere da rimuovere/ripristinare');
     if (reg.baseCtu > params.maxCostoRegolarizzazionePulita) gestibile.push(`regolarizzazione CTU €${reg.baseCtu}`);
     if (eta != null && eta > params.maxEtaPeriziaAnni && eta <= 7) gestibile.push(`perizia di ${eta.toFixed(1)} anni`);
