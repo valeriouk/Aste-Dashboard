@@ -2800,8 +2800,8 @@
         </div>
       </div>
       <div class="gruppo-pillole" id="gruppo-occupazione">
-        <button type="button" class="pillola" data-stato="libero" onclick="attivaFiltroOccupazione('libero')">Libero</button>
-        <button type="button" class="pillola" data-stato="occupato" onclick="attivaFiltroOccupazione('occupato')" title="Occupato"><span class="testo-pillola-desktop">Occ.</span><span class="testo-pillola-mobile">Occupato</span></button>
+        <button type="button" class="pillola" data-stato="libero" onclick="attivaFiltroOccupazione('libero')" title="Libero: libero secondo la perizia (il dato più dettagliato, ma fermo alla data della perizia; per includere anche il PVP usa Lib.+)">Libero</button>
+        <button type="button" class="pillola" data-stato="occupato" onclick="attivaFiltroOccupazione('occupato')" title="Occupato: occupato secondo la perizia (dal debitore, da terzi o con contratto)"><span class="testo-pillola-desktop">Occ.</span><span class="testo-pillola-mobile">Occupato</span></button>
         <button type="button" class="pillola" data-stato="liberabile" onclick="attivaFiltroOccupazione('liberabile')" title="Libero o in liberazione: libero secondo la perizia, oppure Libero o In corso di liberazione secondo il PVP (più recente della perizia)"><span class="testo-pillola-desktop">Lib.+</span><span class="testo-pillola-mobile">Libero o in liberazione</span></button>
         <button type="button" class="pillola" data-stato="nonchiaro" onclick="attivaFiltroOccupazione('nonchiaro')" title="Occupazione non chiara: la perizia non dice se è libero o occupato, o lo dice in modo ambiguo (vale anche se il PVP dà un codice)"><span class="testo-pillola-desktop">?</span><span class="testo-pillola-mobile">Occupazione non chiara</span></button>
       </div>
