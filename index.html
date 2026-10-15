@@ -2803,6 +2803,7 @@
         <button type="button" class="pillola" data-stato="libero" onclick="attivaFiltroOccupazione('libero')">Libero</button>
         <button type="button" class="pillola" data-stato="occupato" onclick="attivaFiltroOccupazione('occupato')" title="Occupato"><span class="testo-pillola-desktop">Occ.</span><span class="testo-pillola-mobile">Occupato</span></button>
         <button type="button" class="pillola" data-stato="liberabile" onclick="attivaFiltroOccupazione('liberabile')" title="Libero o in liberazione: libero secondo la perizia, oppure Libero o In corso di liberazione secondo il PVP (più recente della perizia)"><span class="testo-pillola-desktop">Lib.+</span><span class="testo-pillola-mobile">Libero o in liberazione</span></button>
+        <button type="button" class="pillola" data-stato="nonchiaro" onclick="attivaFiltroOccupazione('nonchiaro')" title="Occupazione non chiara: la perizia non dice se è libero o occupato, o lo dice in modo ambiguo (vale anche se il PVP dà un codice)"><span class="testo-pillola-desktop">?</span><span class="testo-pillola-mobile">Occupazione non chiara</span></button>
       </div>
       <div class="gruppo-pillole" id="gruppo-preferiti">
         <button type="button" class="pillola" data-stato-pref="preferito" onclick="attivaFiltroPreferitiScartati('preferito')" title="Preferiti" aria-label="Preferite">⭐<span class="testo-pillola-mobile"> Preferite</span></button>
@@ -7057,7 +7058,7 @@
     document.getElementById("ricerca").value = typeof f.ricerca === "string" ? f.ricerca : "";
     categorieTipologiaAttive = new Set(Array.isArray(f.tipologie) ? f.tipologie : []);
     giudiziAttivi = new Set((Array.isArray(f.giudizi) ? f.giudizi : []).filter(g => VOCI_GIUDIZIO.some(([k]) => k === g)));
-    filtroOccupazioneAttivo = ["libero", "occupato", "liberabile"].includes(f.occupazione) ? f.occupazione : null;
+    filtroOccupazioneAttivo = ["libero", "occupato", "liberabile", "nonchiaro"].includes(f.occupazione) ? f.occupazione : null;
     filtroPreferitiScartatiAttivo = f.preferiti === "preferito" || f.preferiti === "scartato" ? f.preferiti : null;
     mostraConcluse = !!f.concluse;
     filtroSoloAggiornateAttivo = !!f.aggiornate;
@@ -7161,6 +7162,7 @@
         || categorieDiAsta(a.tipologia).some(c => categorieTipologiaAttive.has(c));
       const passaOccupazione = !filtroOccupazioneAttivo
         || (filtroOccupazioneAttivo === "liberabile" ? liberaOInLiberazione(a)
+            : filtroOccupazioneAttivo === "nonchiaro" ? classificaOccupazione(a.statoOccupazione) === null
             : classificaOccupazione(a.statoOccupazione) === filtroOccupazioneAttivo);
       const passaConcluse = idEsatto || (filtroSoloOperazioniAttivo && operazioneInCorso(a))
         || (mostraConcluse ? astaConclusa(a.dataVendita) : !astaConclusa(a.dataVendita));

@@ -793,13 +793,13 @@
   </section>
 
   <section class="voce" id="registro-filtro-occupazione">
-    <h3>Filtri "Libero" / "Occ." (occupato) / "Lib.+" (libero o in liberazione)</h3>
-    <p>Su PC i pulsanti sono abbreviati in "Occ." e "Lib.+", nel pannello "Filtri" del telefono si leggono "Occupato" e "Libero o in liberazione".</p>
+    <h3>Filtri "Libero" / "Occ." (occupato) / "Lib.+" (libero o in liberazione) / "?" (occupazione non chiara)</h3>
+    <p>Su PC i pulsanti sono abbreviati in "Occ.", "Lib.+" e "?", nel pannello "Filtri" del telefono si leggono "Occupato", "Libero o in liberazione" e "Occupazione non chiara".</p>
     <p>Si escludono a vicenda; ricliccare quello attivo lo spegne. "Libero" e "Occupato" si basano sul testo dello stato di occupazione <strong>letto nella perizia</strong>, con una regola prudente:</p>
     <ul>
       <li><strong>Libero</strong>: il testo <em>inizia</em> con "libero" e non contiene "occupat";</li>
       <li><strong>Occupato</strong>: il testo contiene "occupat" e non inizia con "libero";</li>
-      <li>testi misti, vuoti o "N/D" non passano nessuno dei due filtri (si vedono solo senza filtro).</li>
+      <li>testi misti, vuoti o "N/D" non passano nessuno dei due filtri: li mostra il filtro <strong>"?"</strong> (occupazione non chiara, dal 15/10/2026), qualunque sia il codice del PVP.</li>
     </ul>
     <p><strong>Libero o in liberazione</strong> (dal 15/10/2026): libero secondo la perizia <em>oppure</em>, secondo la "Disponibilità" del PVP (aggiornata più spesso della perizia), almeno un bene "Libero" o "In corso di liberazione". Con stati misti (es. un appartamento occupato e un box libero) l'asta passa: va controllata nella scheda. Serve a non perdere le aste con la perizia vecchia; "Libero" resta il filtro più stretto. Per un'asta in liberazione il conto usa i mesi dell'occupazione indicata nella perizia, quindi lo spazio può essere più basso.</p>
   </section>
