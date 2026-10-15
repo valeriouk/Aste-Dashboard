@@ -6157,10 +6157,27 @@
     }
     if (segmenti.length) {
       const tono = esiti.every(Boolean) ? "ok" : "ko";
-      return `<p class="lotto-offerta-riga riga-perito ${tono}">Col perito: ${segmenti.join(" · ")}</p>`;
+      return `<p class="lotto-offerta-riga riga-perito ${tono}" title="${escapeAttributo(spiegazioneRigaPerito(pc, tono))}">Col perito: ${segmenti.join(" · ")}</p>`;
     }
     const motivo = !pc.etaOk ? etichettaEtaPerizia(pc) : !pc.statoOk ? motivoStatoPerito(pc) : "dati del perito insufficienti";
     return `<p class="lotto-offerta-riga riga-perito">${pc.quotazioni || pc.valore ? `Perito: confronto non valido (${motivo})` : "Nessun confronto col perito"}</p>`;
+  }
+
+  // Spiegazione semplice della riga «Col perito» al passaggio del mouse (15/10/2026). Solo testo: i numeri sono gli stessi della riga.
+  function spiegazioneRigaPerito(pc, tono) {
+    const righe = ["Controllo col perito: lo stesso conto rifatto usando, come prezzo di rivendita, i numeri della perizia invece dell'OMI."];
+    const esito = r => r.offertaMassima === null ? "l'utile richiesto non si raggiunge a nessun prezzo"
+      : r.spazio >= 0 ? `regge: spazio +${formattaEuro(r.spazio)}` : `non regge: mancano ${formattaEuro(-r.spazio)} all'offerta minima`;
+    if (pc.quotazioni && pc.quotazioni.spazio !== null) {
+      righe.push(`• Quotazioni: con i €/mq citati dal perito → ${esito(pc.quotazioni)}.`);
+    }
+    if (pc.statoOk && pc.valore && pc.valore.spazio !== null) {
+      righe.push(`• Valore: rivendendo al valore di mercato del perito (${formattaEuro(pc.valore.valore)}) → ${esito(pc.valore)}.`);
+    }
+    righe.push(tono === "ok"
+      ? "Verde: il conto regge anche con i numeri del perito."
+      : "Rossa: con i numeri del perito il conto non regge. L'occasione dipende dal prezzo di rivendita: verificalo con 3-6 comparabili veri nella Superanalisi.");
+    return righe.join("\n");
   }
 
   // Guardia "fuori scala": una riga rossa sulla card (al posto di "Col perito") e una voce in "Da controllare" nella scheda.
