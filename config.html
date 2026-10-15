@@ -2967,7 +2967,7 @@
     try { s = statoGiroLetto ? JSON.parse(statoGiroLetto) : null; } catch (e) { s = null; }
     const inizio = s && s.inizio ? new Date(s.inizio) : null;
     if (!inizio || isNaN(inizio)) { el.classList.add("nascosto"); return; }
-    const tipo = s.tipo === "ricontrollo" ? "solo ricontrollo" : "giro normale";
+    const tipo = s.tipo === "ricontrollo" ? "solo ricontrollo" : s.tipo === "rianalisi" ? "rianalisi v2" : "giro normale";
     const fine = s.fine ? new Date(s.fine) : null;
     const minuti = Math.max(0, Math.round(((fine || new Date()) - inizio) / 60000));
     let testo, classe = "";

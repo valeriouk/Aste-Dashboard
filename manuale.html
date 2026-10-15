@@ -590,6 +590,26 @@
     </ul>
   </section>
 
+  <section class="voce" id="orari-rianalisi-v2">
+    <h3>Rianalisi v2 (a mano, da GitHub)</h3>
+    <p>Dal 15/10/2026. Rianalizza con il prompt attuale (v2) le aste future <strong>già lette dalla perizia</strong> ma con un'analisi vecchia:
+      il ricontrollo non le riprende, perché ha già la perizia. Non c'è un pulsante nella pagina: si avvia da GitHub → Actions → «Scanner
+      aste» → «Run workflow», mettendo la spunta su <code>solo_rianalisi_v2</code>.</p>
+    <ul>
+      <li><strong>Opzioni</strong>: <code>solo_abitazioni</code> (spuntata in partenza: solo abitazioni e appartamenti; togli la spunta per tutte le
+        tipologie) e <code>provider_ricontrollo</code> (claude o gemini, Claude in partenza).</li>
+      <li><strong>Quali aste</strong>: vendita da oggi in poi, documento «Perizia…», analisi non v2, non scartate, senza un batch in corso;
+        dalla vendita più vicina, al massimo 50 per avvio (per le altre si rilancia).</li>
+      <li><strong>Come</strong>: come il <a href="#orari-ricontrollo-pulsante">ricontrollo dal pulsante</a>: rilegge la pagina del PVP, riusa
+        gratis un'analisi v2 già fatta della stessa perizia e dello stesso lotto, altrimenti la manda in batch. Al ritiro l'asta prende
+        l'analisi nuova solo se riesce; se no resta com'era e il motivo arriva su Telegram.</li>
+      <li><strong>Messaggi</strong>: solo il riepilogo «🔁 Rianalisi v2» e quello del ritiro, niente notifica per ogni asta. La riga dello
+        stato del giro in Configurazione dice «rianalisi v2».</li>
+      <li><strong>Costo</strong>: un'analisi in batch per perizia (indicativamente pochi centesimi l'una con Claude, di più per le perizie molto
+        grandi).</li>
+    </ul>
+  </section>
+
   <section class="voce" id="orari-storico">
     <h3>Storico delle aste (dopo ogni giro dello scanner)</h3>
     <p>Cerca sul PVP le aste precedenti dello stesso immobile, per mostrare nel registro il <a href="#registro-tentativo">tentativo e i ribassi veri</a>.
@@ -2821,7 +2841,7 @@
           vengono riprovate al giro successivo. Se dice "annullamento non riuscito", il batch potrebbe essere addebitato senza che i risultati vengano letti.</td></tr>
         <tr><td>📄 Perizia trovata al ricontrollo</td><td>Il <a href="#orari-ricontrollo">ricontrollo</a> ha trovato la perizia e aggiornato l'analisi. In fondo il link all'annuncio PVP e quello alla scheda nel registro.</td></tr>
         <tr><td>🔁 Ricontrollo perizie</td><td>Riepilogo del ricontrollo: controllate, trovate, aggiornate, solo fonte, in batch, errori.</td></tr>
-        <tr><td>🔁 Ricontrollo perizie (tutto il registro) / ⛔ Ricontrollo perizie non avviato</td><td>Dopo <a href="#orari-ricontrollo-pulsante">"Ricontrolla N aste"</a>: lo stesso riepilogo (anche "nessuna asta da ricontrollare"), con il batch usato e, se l'invio a Claude non è riuscito, la causa. "Non avviato": Claude non era utilizzabile, nessun costo e Gemini non usato.</td></tr>
+        <tr><td>🔁 Ricontrollo perizie (tutto il registro) / 🔁 Rianalisi v2 / ⛔ … non avviato</td><td>Dopo <a href="#orari-ricontrollo-pulsante">"Ricontrolla N aste"</a> o la <a href="#orari-rianalisi-v2">rianalisi v2</a>: lo stesso riepilogo (anche "nessuna asta da ricontrollare"), con il batch usato e, se l'invio a Claude non è riuscito, la causa. "Non avviato": Claude non era utilizzabile, nessun costo e Gemini non usato.</td></tr>
         <tr><td>⛔ Scanner aste non avviato: la fotografia dei filtri n. N … non è nel database</td><td>Il giro avviato da "Avvia scanner ora" non trova la copia dei filtri presa al tocco (più vecchia di 7 giorni, o <code>sql/avvii_scanner.sql</code> non eseguito): si ferma senza costi invece di usare i filtri di adesso. Rilancialo dalla pagina.</td></tr>
         <tr><td>🔁 Ricontrollo perizie: N perizie non aggiornate</td><td>Al ritiro di un batch del ricontrollo, se alcune analisi non sono state usate: per ogni asta il motivo (errore dell'analisi, oppure analisi senza stima, superficie né punteggio, con la nota dell'analisi). L'asta resta com'era e torna nel ricontrollo dopo N giorni.</td></tr>
         <tr><td>🗺️ Nuove quotazioni OMI</td><td>Il lunedì, se è uscito un semestre OMI non ancora caricato.</td></tr>
