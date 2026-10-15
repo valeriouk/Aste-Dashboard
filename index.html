@@ -2800,6 +2800,7 @@
       <div class="gruppo-pillole" id="gruppo-occupazione">
         <button type="button" class="pillola" data-stato="libero" onclick="attivaFiltroOccupazione('libero')">Libero</button>
         <button type="button" class="pillola" data-stato="occupato" onclick="attivaFiltroOccupazione('occupato')" title="Occupato"><span class="testo-pillola-desktop">Occ.</span><span class="testo-pillola-mobile">Occupato</span></button>
+        <button type="button" class="pillola" data-stato="liberabile" onclick="attivaFiltroOccupazione('liberabile')" title="Libero o in liberazione: libero secondo la perizia, oppure Libero o In corso di liberazione secondo il PVP (più recente della perizia)"><span class="testo-pillola-desktop">Lib.+</span><span class="testo-pillola-mobile">Libero o in liberazione</span></button>
       </div>
       <div class="gruppo-pillole" id="gruppo-preferiti">
         <button type="button" class="pillola" data-stato-pref="preferito" onclick="attivaFiltroPreferitiScartati('preferito')" title="Preferiti" aria-label="Preferite">⭐<span class="testo-pillola-mobile"> Preferite</span></button>
@@ -6745,6 +6746,17 @@
     return null;
   }
 
+  // Pillola «Libero o in liberazione» (15/10/2026): libera secondo la perizia OPPURE, sul PVP (più recente della
+  // perizia), almeno un bene Libero (LIBER) o In corso di liberazione (INCOR). Con stati misti ("OCCUP,LIBER")
+  // passa: meglio un'asta in più da controllare nella scheda che un'occasione persa.
+  function liberaOInLiberazione(a) {
+    if (classificaOccupazione(a.statoOccupazione) === "libero") return true;
+    const testo = String(a.disponibilita || "").toUpperCase();
+    const codici = testo.split(/[\s,;]+/);
+    // codici del PVP (LIBER, INCOR) o, se un giorno arrivasse il testo esteso, "Libero" / "In corso di liberazione"
+    return codici.includes("LIBER") || codici.includes("INCOR") || codici.includes("LIBERO") || testo.includes("LIBERAZIONE");
+  }
+
   function attivaFiltroOccupazione(stato) {
     filtroOccupazioneAttivo = (filtroOccupazioneAttivo === stato) ? null : stato;
     document.querySelectorAll("#gruppo-occupazione .pillola").forEach(p => {
@@ -7021,7 +7033,7 @@
     document.getElementById("ricerca").value = typeof f.ricerca === "string" ? f.ricerca : "";
     categorieTipologiaAttive = new Set(Array.isArray(f.tipologie) ? f.tipologie : []);
     giudiziAttivi = new Set((Array.isArray(f.giudizi) ? f.giudizi : []).filter(g => VOCI_GIUDIZIO.some(([k]) => k === g)));
-    filtroOccupazioneAttivo = f.occupazione === "libero" || f.occupazione === "occupato" ? f.occupazione : null;
+    filtroOccupazioneAttivo = ["libero", "occupato", "liberabile"].includes(f.occupazione) ? f.occupazione : null;
     filtroPreferitiScartatiAttivo = f.preferiti === "preferito" || f.preferiti === "scartato" ? f.preferiti : null;
     mostraConcluse = !!f.concluse;
     filtroSoloAggiornateAttivo = !!f.aggiornate;
@@ -7123,7 +7135,9 @@
       ].some(campo => campo && campo.toLowerCase().includes(ricerca));
       const passaTipologia = idEsatto || vistaPersonale || categorieTipologiaAttive.size === 0
         || categorieDiAsta(a.tipologia).some(c => categorieTipologiaAttive.has(c));
-      const passaOccupazione = !filtroOccupazioneAttivo || classificaOccupazione(a.statoOccupazione) === filtroOccupazioneAttivo;
+      const passaOccupazione = !filtroOccupazioneAttivo
+        || (filtroOccupazioneAttivo === "liberabile" ? liberaOInLiberazione(a)
+            : classificaOccupazione(a.statoOccupazione) === filtroOccupazioneAttivo);
       const passaConcluse = idEsatto || (filtroSoloOperazioniAttivo && operazioneInCorso(a))
         || (mostraConcluse ? astaConclusa(a.dataVendita) : !astaConclusa(a.dataVendita));
       const passaPreferiti = !filtroPreferitiScartatiAttivo
