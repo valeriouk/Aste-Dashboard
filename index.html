@@ -2419,6 +2419,8 @@
      sopra senza doverle toccare una per una.
   ============================================================ */
   .testo-pillola-desktop { display: inline; }
+  /* Da computer «🏁 Concluse» e «🔄 Aggiornate» stanno nel menu 📅 «In corso» (MENU_IN_CORSO_ESTESO): filtri su una riga */
+  @media (min-width: 641px) { #gruppo-concluse, #pillola-aggiornate { display: none; } }
   .etichetta-foglio, .mostra-risultati-foglio { display: none; }
   /* Card: badge e riga "km · vendita" a tutta larghezza sotto l'intestazione */
   .lotto-sotto-testata { margin: -6px 0 10px; }
@@ -6790,16 +6792,25 @@
   let filtroSoloVisiteAttivo = false;
   let filtroSoloOperazioniAttivo = false;
 
+  // Da computer (15/10/2026) «🏁 Concluse» e «🔄 Aggiornate» stanno in coda a questo menu, per tenere i filtri su una
+  // riga sola (le loro pillole sono nascoste dal CSS sopra i 640 px); sul telefono restano pillole nel pannello Filtri.
+  const MENU_IN_CORSO_ESTESO = window.matchMedia("(min-width: 641px)");
   function popolaMenuInCorso() {
     const voce = (chiave, testo, attiva) => `<label class="voce-menu-tipologia"><input type="checkbox" value="${chiave}" ${attiva ? "checked" : ""} onchange="aggiornaFiltroInCorso()"><span>${testo}</span></label>`;
     document.getElementById("menu-in-corso").innerHTML =
-      voce("visite", "📅 Visite in corso", filtroSoloVisiteAttivo) + voce("operazioni", "🧭 Operazioni in corso", filtroSoloOperazioniAttivo);
+      voce("visite", "📅 Visite in corso", filtroSoloVisiteAttivo) + voce("operazioni", "🧭 Operazioni in corso", filtroSoloOperazioniAttivo)
+      + (MENU_IN_CORSO_ESTESO.matches
+        ? voce("concluse", "🏁 Solo aste concluse", mostraConcluse) + voce("aggiornate", "🔄 Perizie ricontrollate (24 ore)", filtroSoloAggiornateAttivo)
+        : "");
   }
   function mostraPillolaInCorso() {
     const bottone = document.getElementById("pillola-visite");
-    const icona = filtroSoloOperazioniAttivo ? (filtroSoloVisiteAttivo ? "📅🧭" : "🧭") : "📅";
+    const esteso = MENU_IN_CORSO_ESTESO.matches;
+    const attivi = [filtroSoloVisiteAttivo && "📅", filtroSoloOperazioniAttivo && "🧭",
+      esteso && mostraConcluse && "🏁", esteso && filtroSoloAggiornateAttivo && "🔄"].filter(Boolean);
+    const icona = attivi.length ? attivi.join("") : "📅";
     bottone.innerHTML = `${icona}<span class="testo-pillola-mobile"> In corso</span>`;
-    bottone.classList.toggle("attiva", filtroSoloVisiteAttivo || filtroSoloOperazioniAttivo);
+    bottone.classList.toggle("attiva", attivi.length > 0);
   }
   function alternaMenuInCorso(evento) {
     if (evento) evento.stopPropagation();
@@ -6819,6 +6830,12 @@
     const scelte = new Set([...document.querySelectorAll('#menu-in-corso input[type="checkbox"]:checked')].map(c => c.value));
     filtroSoloVisiteAttivo = scelte.has("visite");
     filtroSoloOperazioniAttivo = scelte.has("operazioni");
+    if (MENU_IN_CORSO_ESTESO.matches) {   // da computer anche concluse e aggiornate stanno in questo menu
+      mostraConcluse = scelte.has("concluse");
+      filtroSoloAggiornateAttivo = scelte.has("aggiornate");
+      document.getElementById("pillola-concluse").classList.toggle("attiva", mostraConcluse);
+      document.getElementById("pillola-aggiornate").classList.toggle("attiva", filtroSoloAggiornateAttivo);
+    }
     mostraPillolaInCorso();
     applicaFiltri();
   }
