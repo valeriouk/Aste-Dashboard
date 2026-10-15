@@ -6441,6 +6441,8 @@
 
   const VOCE_TUTTE_TIPOLOGIE = "__tutte";
   const TIPOLOGIA_PREDEFINITA = "Abitazioni";   // filtro Tipo all'apertura (una voce di MACROCATEGORIE_TIPOLOGIA)
+  const GIUDIZI_PREDEFINITI = ["PULITA", "GESTIBILE"];   // filtro Giudizio all'apertura (15/10/2026)
+  const OCCUPAZIONE_PREDEFINITA = "liberabile";            // filtro occupazione all'apertura: «Lib.+» (15/10/2026)
   // Testo del pulsante "Tipo": con una sola categoria scelta ne mostra il nome,
   // così il filtro attivo all'apertura (Abitazioni) non resta nascosto. Solo se il
   // nome è corto: con "Garage e posti auto" la barra dei filtri andrebbe su due righe.
@@ -7068,6 +7070,10 @@
       // Prima apertura della sessione: parte con "Abitazioni" (si vede nel pulsante
       // "Tipo"; "Tutte" nel suo menu, o "Azzera filtri", la toglie).
       categorieTipologiaAttive = new Set([TIPOLOGIA_PREDEFINITA]);
+      // Dal 15/10/2026 anche giudizio Pulita/Gestibile e occupazione «Libero o in liberazione» (scelta dell'utente);
+      // si tolgono dai loro pulsanti o con "Azzera filtri".
+      giudiziAttivi = new Set(GIUDIZI_PREDEFINITI);
+      filtroOccupazioneAttivo = OCCUPAZIONE_PREDEFINITA;
       mostraStatoFiltri();
       aggiornaBadgeFiltri();
       return;
