@@ -6808,10 +6808,17 @@
     const esteso = MENU_IN_CORSO_ESTESO.matches;
     const attivi = [filtroSoloVisiteAttivo && "📅", filtroSoloOperazioniAttivo && "🧭",
       esteso && mostraConcluse && "🏁", esteso && filtroSoloAggiornateAttivo && "🔄"].filter(Boolean);
-    const icona = attivi.length ? attivi.join("") : "📅";
+    // da computer il menu ha quattro voci diverse: a riposo un'icona generica (⋯) e un titolo che le elenca;
+    // sul telefono resta il 📅 delle sole visite e operazioni
+    const icona = attivi.length ? attivi.join("") : (esteso ? "⋯" : "📅");
+    const titolo = esteso ? "Altri filtri: visite, operazioni, aste concluse, perizie ricontrollate" : "Visite e operazioni in corso";
     bottone.innerHTML = `${icona}<span class="testo-pillola-mobile"> In corso</span>`;
+    bottone.title = titolo;
+    bottone.setAttribute("aria-label", titolo);
     bottone.classList.toggle("attiva", attivi.length > 0);
   }
+  mostraPillolaInCorso();   // icona e titolo giusti subito, e di nuovo se la finestra passa da stretta a larga
+  MENU_IN_CORSO_ESTESO.addEventListener("change", mostraPillolaInCorso);
   function alternaMenuInCorso(evento) {
     if (evento) evento.stopPropagation();
     const menu = document.getElementById("menu-in-corso");
