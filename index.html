@@ -2450,6 +2450,15 @@
   .giudizio-GESTIBILE { background: var(--primary-soft); color: var(--primary); }
   .giudizio-COMPLESSA { background: var(--secondary-soft); color: var(--secondary); }
   .giudizio-DA_SCARTARE { background: var(--danger-soft); color: var(--danger); }
+  /* Gate flipping (offerta massima a margine fisso): 4 colori dello stato, più n.d. e quota */
+  .badge-gate { display: inline-block; font-size: .72rem; font-weight: 600; padding: 3px 9px; border-radius: 999px; margin: 4px 6px 6px 0;
+    white-space: nowrap; }
+  .gate-regge { background: rgba(63, 107, 74, .12); color: #3f6b4a; }
+  .gate-base { background: var(--primary-soft); color: var(--primary); }
+  .gate-minima { background: var(--secondary-soft); color: var(--secondary); }
+  .gate-nonpassa { background: var(--danger-soft); color: var(--danger); }
+  .gate-nd { background: var(--surface-2); color: var(--ink-muted); }
+  .gate-quota { background: transparent; color: var(--danger); box-shadow: inset 0 0 0 1px var(--danger); }
   .nota-margine { font-size: .74rem; color: var(--ink-faint); margin: 2px 0 0; }
   .nota-margine a { color: var(--secondary); }
   /* Offerta massima su card e dettagli (04/10/2026): il numero che decide l'acquisto.
@@ -2799,6 +2808,9 @@
           </button>
         </div>
       </div>
+      <div class="gruppo-pillole" id="gruppo-gate">
+        <button type="button" class="pillola" id="pillola-gate" onclick="alternaFiltroGate()" title="Gate flipping: tocca per passare da «passano» (offerta massima ≥ minima) a «reggono la gara» (≥ base × moltiplicatore gara) a «tutte». Le aste n.d. restano sempre visibili.">🚪 <span id="testo-pillola-gate">Passano</span></button>
+      </div>
       <div class="gruppo-pillole" id="gruppo-occupazione">
         <button type="button" class="pillola" data-stato="libero" onclick="attivaFiltroOccupazione('libero')" title="Libero: libero secondo la perizia (il dato più dettagliato, ma fermo alla data della perizia; per includere anche il PVP usa Lib.+)">Libero</button>
         <button type="button" class="pillola" data-stato="occupato" onclick="attivaFiltroOccupazione('occupato')" title="Occupato: occupato secondo la perizia (dal debitore, da terzi o con contratto)"><span class="testo-pillola-desktop">Occ.</span><span class="testo-pillola-mobile">Occupato</span></button>
@@ -2829,7 +2841,7 @@
         <p class="etichetta-foglio">Ordina per</p>
         <div class="gruppo-pillole">
           <button type="button" class="pillola" id="bottone-ordinamento" onclick="alternaMenuOrdinamento(event)" aria-expanded="false" aria-haspopup="true" title="Ordina per">
-            <span id="etichetta-ordinamento-corrente">Spazio</span> <span class="freccia-direzione" id="freccia-direzione-ordinamento">↓</span>
+            <span id="etichetta-ordinamento-corrente">Max/base</span> <span class="freccia-direzione" id="freccia-direzione-ordinamento">↓</span>
           </button>
         </div>
       </div>
@@ -3308,6 +3320,9 @@
   // Regime fiscale, aliquote e sconto sui comparabili (Configurazione → Conti), con i dati personali.
   let PARAMETRI_CONTI = window.Operazioni ? Operazioni.parametriConti(null)
     : {regimeFiscale: "privato", aliquotaImpresa: 0.279, registroImpresa: 0.09, scontoTrattativaComparabili: 0.05};
+  // Parametri del gate flipping (Configurazione → Conti → Gate flipping, parametri gate_* della tabella config),
+  // arrivano con i dati personali insieme a quelli dei conti; predefiniti se mancano.
+  let PARAMETRI_GATE = parametriGate(null);
   // id_annuncio -> [risultati di superanalisi con AI esterne, senza il
   // testo] (sql/superanalisi_esterne.sql nel repo privato): un risultato di
   // gruppo compare sotto ciascuna delle sue aste. Letto con i dati personali;
@@ -5532,6 +5547,7 @@
   // usate da applicaStatoPreferito. Usata all'avvio e da aggiornaAstaDalDatabase.
   function impostaDatiPersonali(righePreferiti, righeLinkUtili, righeVisite, righeSuperanalisi, righeOperazioni = [], modelloChecklist = null, parametriConti = null) {
     if (window.Operazioni) PARAMETRI_CONTI = Operazioni.parametriConti(parametriConti);
+    PARAMETRI_GATE = parametriGate(parametriConti);
     OPERAZIONI = {};
     righeOperazioni.forEach(o => { if (o && o.id_annuncio !== null && o.id_annuncio !== undefined) OPERAZIONI[String(o.id_annuncio)] = o; });
     if (window.Operazioni) CHECKLIST_MODELLO = Operazioni.modelloChecklist(modelloChecklist);
@@ -5585,9 +5601,9 @@
       if (!asta) return;
       // giudizio e spazio sull'offerta si ricalcolano sempre: fuori dal confronto,
       // altrimenti la scheda si ridisegnava anche senza nessun cambiamento
-      const firma = () => JSON.stringify({...asta, _giudizio: undefined, _sintesi: undefined});
+      const firma = () => JSON.stringify({...asta, _giudizio: undefined, _sintesi: undefined, _gate: undefined});
       const prima = firma();
-      const contiPrima = JSON.stringify(PARAMETRI_CONTI);
+      const contiPrima = JSON.stringify([PARAMETRI_CONTI, PARAMETRI_GATE]);
       impostaDatiPersonali(personali.preferiti || [], personali.link_utili || [], personali.visite || [], personali.superanalisi_esterne || [],
         personali.operazioni || [], personali.checklist_modello || null, personali.parametri_conti || null);
       Object.assign(asta, normalizzaRiga(righe[0]));
@@ -5595,7 +5611,7 @@
       applicaStatoPreferito(asta);
       // Regime fiscale o aliquote cambiati altrove (Configurazione → Conti): i conti di TUTTE le aste in
       // memoria erano fatti col regime vecchio, si rifanno (e la griglia si ridisegna).
-      const contiCambiati = JSON.stringify(PARAMETRI_CONTI) !== contiPrima;
+      const contiCambiati = JSON.stringify([PARAMETRI_CONTI, PARAMETRI_GATE]) !== contiPrima;
       if (contiCambiati) { ASTE.forEach(azzeraCalcoliAsta); applicaFiltri(); }
       if (contiCambiati || firma() !== prima) {
         // Mentre scrivi in un campo della scheda non si ridisegna (il testo
@@ -5930,6 +5946,134 @@
   const VALORE_GIUDIZIO = {PULITA: 4, GESTIBILE: 3, COMPLESSA: 2, DA_SCARTARE: 1};
   function valoreGiudizio(a) { const g = giudizioSuperanalisi(a); return g ? (VALORE_GIUDIZIO[g.classe] || 0) : 0; }
 
+  // ==========================================================
+  // GATE FLIPPING — offerta massima con un margine fisso in euro, calcolo
+  // aggiuntivo e indipendente dalla Superanalisi e dalle stime di costi e
+  // lavori qui sotto (che restano come sono). Parametri gate_* della tabella
+  // config (Configurazione → Conti → Gate flipping), predefiniti se mancano.
+  // ==========================================================
+  // grezzi: {parametro: valore} come arriva dalla tabella config (testo); i valori assenti o non numerici restano i predefiniti.
+  // I predefiniti stanno qui dentro: la funzione si usa già nella dichiarazione di PARAMETRI_GATE, più in alto.
+  function parametriGate(grezzi) {
+    const d = {
+      margineTarget: 20000, coeffIncasso: 0.92, contingenzaLavori: 1.2, lavoriMinimo: 5000,
+      tariffeLavori: {nessuna: 80, leggera: 250, media: 500, pesante: 900},
+      fissi: 4900, registro: 0.09, moltRendita: 126, moltGara: 1.3,
+    };
+    const g = grezzi || {};
+    const n = (v, predefinito) => { const x = Number(v); return v === null || v === undefined || v === "" || !Number.isFinite(x) ? predefinito : x; };
+    let tariffe = g.gate_tariffe_lavori;
+    if (typeof tariffe === "string") { try { tariffe = JSON.parse(tariffe); } catch (e) { tariffe = null; } }
+    tariffe = tariffe && typeof tariffe === "object" ? tariffe : {};
+    return {
+      margineTarget: n(g.gate_margine_target, d.margineTarget), coeffIncasso: n(g.gate_coeff_incasso, d.coeffIncasso),
+      contingenzaLavori: n(g.gate_contingenza_lavori, d.contingenzaLavori), lavoriMinimo: n(g.gate_lavori_minimo, d.lavoriMinimo),
+      tariffeLavori: Object.fromEntries(Object.keys(d.tariffeLavori).map(k => [k, n(tariffe[k], d.tariffeLavori[k])])),
+      fissi: n(g.gate_fissi, d.fissi), registro: n(g.gate_registro, d.registro),
+      moltRendita: n(g.gate_molt_rendita, d.moltRendita), moltGara: n(g.gate_molt_gara, d.moltGara),
+    };
+  }
+  // Quote, nuda proprietà, usufrutto, diritto di abitazione: non si comprano per rivendere. "Quota pari a 1/1"
+  // (o 100/100, 100%) è la piena proprietà e non conta; nemmeno 1/1 o 100/100 da soli.
+  const REGEX_QUOTA_GATE = /quota indivisa|quota (del|di|pari)(?!\s+(a\s+)?(1\s*\/\s*1|100\s*\/\s*100|100\s*%))|\b[1-9]\/[2-9]\b|½|⅓|¼|nuda propriet|usufrutto|diritto di abitazione/i;
+  // Funzione pura: asta con i nomi delle colonne della tabella aste, p = parametriGate(...).
+  // nd (non determinabile): manca il valore di uscita (né rivendita tua, né perito, né OMI × superficie),
+  // oppure mancano sia l'importo lavori tuo sia la superficie per stimarli.
+  function calcolaGate(asta, p) {
+    const num = v => v === null || v === undefined || v === "" || !Number.isFinite(Number(v)) ? null : Number(v);
+    const positivo = v => { const x = num(v); return x !== null && x > 0 ? x : null; };
+    const prezzoBase = num(asta.prezzo_base) ?? 0;
+    const offertaMinima = num(asta.offerta_minima) ?? 0;
+    const mq = positivo(asta.superficie_mq);
+    const perito = positivo(asta.valore_stima_perito), omiMax = positivo(asta.omi_max_euro_mq);
+    const omi = mq !== null && omiMax !== null ? mq * omiMax : null;
+    const uscita = positivo(asta.valore_rivendita_utente) ?? (perito !== null && omi !== null ? Math.min(perito, omi) : (perito ?? omi));
+    const livello = asta.livello_lavori_utente ?? asta.livello_ristrutturazione_suggerito ?? "media";
+    const tariffa = p.tariffeLavori[livello] ?? p.tariffeLavori.media;
+    const importoLavori = num(asta.importo_lavori_utente);
+    const lavoriSenzaContingenza = importoLavori !== null ? importoLavori : mq !== null ? Math.max(p.lavoriMinimo, mq * tariffa) : null;
+    const lavori = lavoriSenzaContingenza === null ? null : lavoriSenzaContingenza * p.contingenzaLavori;
+    const rendita = num(asta.rendita_catastale_utente) ?? num(asta.rendita_catastale);
+    const fissi = p.registro * (rendita ? rendita * p.moltRendita : prezzoBase) + p.fissi;
+    const arretrati = num(asta.oneri_condominiali_utente) ?? num(asta.oneri_condominiali) ?? 0;
+    const sanatoria = num(asta.spese_sanatoria) ?? 0;
+    const nd = uscita === null || lavori === null;
+    const pareggio = nd ? null : uscita * p.coeffIncasso - lavori - fissi - arretrati - sanatoria;
+    const maxOfferta = nd ? null : pareggio - p.margineTarget;
+    const maxSuBase = nd || !(prezzoBase > 0) ? null : maxOfferta / prezzoBase;
+    let stato = nd ? "nd"
+      : maxOfferta < offertaMinima ? "non passa"
+      : maxOfferta < prezzoBase ? "solo a minima"
+      : maxOfferta < prezzoBase * p.moltGara ? "passa a base"
+      : "regge la gara";
+    const flagQuota = REGEX_QUOTA_GATE.test(String(asta.descrizione_lotto || ""));
+    if (flagQuota) stato = "non passa";
+    return {uscita, lavori, fissi, arretrati, sanatoria, pareggio, maxOfferta, maxSuBase, stato, flagQuota, nd};
+  }
+  // Gate di un'asta del registro (campi già normalizzati → nomi delle colonne), tenuto in memoria
+  // finché azzeraCalcoliAsta non lo cancella (correzioni salvate, asta riletta, parametri cambiati).
+  function gateAsta(a) {
+    if (a._gate === undefined) {
+      a._gate = calcolaGate({
+        valore_rivendita_utente: a.valoreRivenditaUtente, valore_stima_perito: a.valoreStima, superficie_mq: a.superficieMq,
+        omi_max_euro_mq: a.omi ? a.omi.max : null, livello_lavori_utente: a.livelloLavoriUtente,
+        livello_ristrutturazione_suggerito: a.livelloRistrutturazioneSuggerito, importo_lavori_utente: a.importoLavoriUtente,
+        rendita_catastale_utente: a.renditaCatastaleUtente, rendita_catastale: a.renditaCatastale, prezzo_base: a.prezzoBase,
+        oneri_condominiali_utente: a.oneriCondominialiUtente, oneri_condominiali: a.oneriCondominiali,
+        spese_sanatoria: a.speseSanatoria, offerta_minima: a.offertaMinima, descrizione_lotto: a.descrizione,
+      }, PARAMETRI_GATE);
+    }
+    return a._gate;
+  }
+  const STATI_GATE = {
+    "regge la gara": {classe: "gate-regge", testo: "Regge la gara"},
+    "passa a base": {classe: "gate-base", testo: "Passa a base"},
+    "solo a minima": {classe: "gate-minima", testo: "Solo a minima"},
+    "non passa": {classe: "gate-nonpassa", testo: "Non passa"},
+    "nd": {classe: "gate-nd", testo: "n.d."},
+  };
+  function formattaMaxSuBase(x) { return x === null || x === undefined || !Number.isFinite(x) ? "—" : x.toLocaleString("it-IT", {minimumFractionDigits: 2, maximumFractionDigits: 2}) + "×"; }
+  // Badge dello stato (più "quota" se la descrizione parla di quote o diritti parziali). conMax: aggiunge Max/base.
+  function badgeGate(a, conMax) {
+    const g = gateAsta(a), s = STATI_GATE[g.stato];
+    const titolo = g.nd ? "Gate flipping: offerta massima non calcolabile (manca il valore di uscita o la superficie per i lavori)"
+      : `Gate flipping: offerta massima ${formattaEuro(g.maxOfferta)} (pareggio ${formattaEuro(g.pareggio)} − margine ${formattaEuro(PARAMETRI_GATE.margineTarget)}), ${formattaMaxSuBase(g.maxSuBase)} il prezzo base`;
+    return `<span class="badge-gate ${s.classe}" title="${escapeAttributo(titolo)}">🚪 ${s.testo}${conMax && !g.nd && g.maxSuBase !== null ? " · " + formattaMaxSuBase(g.maxSuBase) : ""}</span>`
+      + (g.flagQuota ? `<span class="badge-gate gate-quota" title="La descrizione parla di una quota, di nuda proprietà, usufrutto o diritto di abitazione: per il gate non passa">quota</span>` : "")
+      + (g.nd && g.flagQuota ? `<span class="badge-gate gate-nd">n.d.</span>` : "");
+  }
+  // Riquadro nella scheda: si ridisegna con la scheda, quindi segue subito le correzioni (rendita, arretrati) e
+  // i dati riletti dal database (livello o importo lavori e rivendita tua, dalla Superanalisi).
+  function bloccoGate(a) {
+    const g = gateAsta(a), p = PARAMETRI_GATE;
+    const riga = (etichetta, valore) => `<div class="dettaglio-riga"><span>${etichetta}</span><span>${valore}</span></div>`;
+    return `<div class="sezione-costi">
+          <h3 class="sezione-costi-titolo">🚪 Gate flipping</h3>
+          <div class="riga-badge-dettagli">${badgeGate(a, false)}</div>
+          <div class="lotto-cifre">
+            <div>
+              <p class="cifra-etichetta">Offerta massima</p>
+              <p class="cifra-valore">${g.nd ? "—" : formattaEuro(g.maxOfferta)}</p>
+            </div>
+            <div>
+              <p class="cifra-etichetta">Pareggio</p>
+              <p class="cifra-valore">${g.nd ? "—" : formattaEuro(g.pareggio)}</p>
+            </div>
+            <div>
+              <p class="cifra-etichetta">Max/base</p>
+              <p class="cifra-valore">${formattaMaxSuBase(g.maxSuBase)}</p>
+            </div>
+          </div>
+          ${riga("Uscita (rivendita)", formattaEuro(g.uscita))}
+          ${riga(`Lavori (+${Math.round((p.contingenzaLavori - 1) * 100)}% imprevisti)`, formattaEuro(g.lavori))}
+          ${riga("Costi fissi e registro", formattaEuro(g.fissi))}
+          ${riga("Arretrati condominiali", formattaEuro(g.arretrati))}
+          ${riga("Sanatoria", formattaEuro(g.sanatoria))}
+          <p class="sezione-costi-nota">Pareggio = uscita × ${String(p.coeffIncasso).replace(".", ",")} − lavori − fissi − arretrati − sanatoria;
+            offerta massima = pareggio − margine di ${formattaEuro(p.margineTarget)}. «Regge la gara» da ${String(p.moltGara).replace(".", ",")}× il prezzo base.</p>
+        </div>`;
+  }
+
   // "Spazio sull'offerta": offerta massima − offerta minima dal conto completo
   // della Superanalisi (underwriting.js), con gli stessi parametri che imposti
   // in Superanalisi (salvati nel browser, superanalisi_parametri_v1) e le tue
@@ -6226,7 +6370,7 @@
     return titolo + elenco(righe);
   }
   // Azzera i calcoli tenuti in memoria di un'asta (giudizio e sintesi).
-  function azzeraCalcoliAsta(a) { a._giudizio = undefined; a._sintesi = undefined; }
+  function azzeraCalcoliAsta(a) { a._giudizio = undefined; a._sintesi = undefined; a._gate = undefined; }
   // Firma dei numeri del conto e firma di quelli che la scheda aperta sta mostrando (riquadroPerche): al ritorno
   // con Indietro la scheda si ridisegna solo se il conto è cambiato (non si perdono i campi non salvati).
   const CONTO_MOSTRATO = new Map();
@@ -6669,6 +6813,10 @@
   // da criterio a criterio (per la data "vicina → lontana" ha più senso
   // di "basso → alto").
   const DEFINIZIONI_ORDINAMENTO = {
+    // Gate flipping: offerta massima / prezzo base. In fondo le quote (1) e le aste non calcolabili, n.d. (2).
+    maxbase:   { etichetta: "Max/base", ascLabel: "basso → alto", descLabel: "alto → basso", direzioneDefault: "desc",
+                 inFondo: a => { const g = gateAsta(a); return g.maxSuBase === null ? 2 : g.flagQuota ? 1 : 0; },
+                 comparatore: (a, b) => ((gateAsta(a).maxSuBase ?? 0) - (gateAsta(b).maxSuBase ?? 0)) || (a.punteggio - b.punteggio) },
     punteggio: { etichetta: "Punteggio AI", ascLabel: "basso → alto", descLabel: "alto → basso", direzioneDefault: "desc",
                  comparatore: (a, b) => a.punteggio - b.punteggio },
     margine:   { etichetta: "Margine lordo", etichettaBreve: "Margine", ascLabel: "basso → alto", descLabel: "alto → basso", direzioneDefault: "desc",
@@ -6692,7 +6840,8 @@
   };
   // Predefinito dal 04/10/2026: "Spazio sull'offerta" (offerta massima − minima), il numero
   // che decide l'acquisto; prima era il punteggio AI. Il menu "Ordina per" resta com'era.
-  let criterioOrdinamento = "spazio";
+  // Dal gate flipping il predefinito è "Max/base" (offerta massima del gate / prezzo base).
+  let criterioOrdinamento = "maxbase";
   let direzioneOrdinamento = "desc";
 
   function popolaMenuOrdinamento() {
@@ -6867,6 +7016,28 @@
     applicaFiltri();
   }
 
+  // Filtro del gate flipping, tre stati: "tutti", "passano" (offerta massima ≥ minima, quote escluse), "reggono"
+  // (offerta massima ≥ base × moltiplicatore gara). Le aste n.d. restano visibili in tutti e tre.
+  const VOCI_FILTRO_GATE = {tutti: "Tutte", passano: "Passano", reggono: "Reggono la gara"};
+  const GATE_PREDEFINITO = "passano";   // filtro gate all'apertura
+  let filtroGate = GATE_PREDEFINITO;
+  function passaFiltroGate(a) {
+    if (filtroGate === "tutti") return true;
+    const g = gateAsta(a);
+    if (g.stato === "nd") return true;
+    return filtroGate === "reggono" ? g.stato === "regge la gara" : g.stato !== "non passa";
+  }
+  function mostraPillolaGate() {
+    document.getElementById("pillola-gate").classList.toggle("attiva", filtroGate !== "tutti");
+    document.getElementById("testo-pillola-gate").textContent = VOCI_FILTRO_GATE[filtroGate];
+  }
+  function alternaFiltroGate() {
+    const voci = Object.keys(VOCI_FILTRO_GATE);
+    filtroGate = voci[(voci.indexOf(filtroGate) + 1) % voci.length];
+    mostraPillolaGate();
+    applicaFiltri();
+  }
+
   function alternaSoloAggiornate() {
     filtroSoloAggiornateAttivo = !filtroSoloAggiornateAttivo;
     document.getElementById("pillola-aggiornate").classList.toggle("attiva", filtroSoloAggiornateAttivo);
@@ -6979,6 +7150,7 @@
     let conteggio = 0;
     if (categorieTipologiaAttive.size > 0 && !vistaPersonaleAttiva()) conteggio++;   // sospeso con ⭐/🚫/In corso
     if (giudiziAttivi.size > 0) conteggio++;
+    if (filtroGate !== "tutti") conteggio++;
     if (filtroOccupazioneAttivo) conteggio++;
     if (filtroPreferitiScartatiAttivo) conteggio++;
     if (mostraConcluse) conteggio++;
@@ -7031,6 +7203,7 @@
         ricerca: document.getElementById("ricerca").value,
         tipologie: [...categorieTipologiaAttive],
         giudizi: [...giudiziAttivi],
+        gate: filtroGate,
         occupazione: filtroOccupazioneAttivo,
         preferiti: filtroPreferitiScartatiAttivo,
         concluse: mostraConcluse,
@@ -7057,6 +7230,7 @@
     mostraPulsanteTipo();
     document.querySelectorAll('#menu-tipologia input[type="checkbox"]').forEach(c => { c.checked = c.value === VOCE_TUTTE_TIPOLOGIE ? categorieTipologiaAttive.size === 0 : categorieTipologiaAttive.has(c.value); });
     mostraPillolaGiudizio();
+    mostraPillolaGate();
     document.getElementById("valore-punteggio-minimo").textContent = document.getElementById("punteggio-minimo").value;
     document.getElementById("valore-punteggio-massimo").textContent = document.getElementById("punteggio-massimo").value;
     aggiornaRiempimentoPunteggio();
@@ -7074,6 +7248,7 @@
       // si tolgono dai loro pulsanti o con "Azzera filtri".
       giudiziAttivi = new Set(GIUDIZI_PREDEFINITI);
       filtroOccupazioneAttivo = OCCUPAZIONE_PREDEFINITA;
+      filtroGate = GATE_PREDEFINITO;
       mostraStatoFiltri();
       aggiornaBadgeFiltri();
       return;
@@ -7082,6 +7257,7 @@
     categorieTipologiaAttive = new Set(Array.isArray(f.tipologie) ? f.tipologie : []);
     giudiziAttivi = new Set((Array.isArray(f.giudizi) ? f.giudizi : []).filter(g => VOCI_GIUDIZIO.some(([k]) => k === g)));
     filtroOccupazioneAttivo = ["libero", "occupato", "liberabile", "nonchiaro"].includes(f.occupazione) ? f.occupazione : null;
+    filtroGate = VOCI_FILTRO_GATE[f.gate] ? f.gate : GATE_PREDEFINITO;
     filtroPreferitiScartatiAttivo = f.preferiti === "preferito" || f.preferiti === "scartato" ? f.preferiti : null;
     mostraConcluse = !!f.concluse;
     filtroSoloAggiornateAttivo = !!f.aggiornate;
@@ -7105,6 +7281,7 @@
     document.getElementById("ricerca").value = "";
     categorieTipologiaAttive = new Set();
     giudiziAttivi = new Set();
+    filtroGate = "tutti";
     filtroOccupazioneAttivo = null;
     filtroPreferitiScartatiAttivo = null;
     mostraConcluse = false;
@@ -7196,7 +7373,9 @@
       const passaVisite = (!filtroSoloVisiteAttivo && !filtroSoloOperazioniAttivo)
         || (filtroSoloVisiteAttivo && visitaInCorso(a)) || (filtroSoloOperazioniAttivo && operazioneInCorso(a));
       const passaGiudizio = giudiziAttivi.size === 0 || giudiziAttivi.has(classeGiudizioFiltro(a));
-      return passaRicerca && passaTipologia && passaOccupazione && passaConcluse && passaPreferiti && passaPunteggio && passaAggiornate && passaVisite && passaGiudizio;
+      // Gate: come il Tipo, non nasconde le TUE aste (⭐/🚫, In corso) né un ID scritto per intero.
+      const passaGate = idEsatto || vistaPersonale || passaFiltroGate(a);
+      return passaRicerca && passaTipologia && passaOccupazione && passaConcluse && passaPreferiti && passaPunteggio && passaAggiornate && passaVisite && passaGiudizio && passaGate;
     });
 
     // Comparatore SEMPRE in ordine crescente per il criterio scelto — la
@@ -7718,6 +7897,7 @@
           ${conclusa ? `<span class="badge-conclusa">🏁 Conclusa</span>` : ""}
           ${a.zonaSegnalata ? `<span class="badge-zona">🚩 ${escapeHtml(a.zonaSegnalata)}</span>` : ""}
           ${badgeGiudizio(a)}
+          ${badgeGate(a, true)}
           ${badgeTentativo(a.storico)}
           ${badgeAggiudicata(a.storico)}
           ${(a.superanalisiEsterne || []).length ? `<span class="badge-ai" title="Risultati di superanalisi con AI esterne salvati: aprili dalla scheda">🧠 ${(a.superanalisiEsterne || []).length}</span>` : ""}
@@ -9457,6 +9637,7 @@ ${bloccoOffertaMassima(a, {motivo: true, lordo: true})}
     const nRisultatiAi = (a.superanalisiEsterne || []).length;
     const sezioni = [
       ["sez-perche", "Perché", riquadroPerche(a)],
+      ["sez-gate", "Gate", bloccoGate(a)],
       ["sez-cifre", "Cifre", `
         <div class="lotto-margine">
           <p class="cifra-etichetta">Margine lordo</p>

@@ -370,6 +370,11 @@
     display: block;
   }
   .nota-campo { font-size: .78rem; color: var(--ink-faint); margin: 6px 0 0; line-height: 1.4; }
+  /* Gate flipping: le quattro tariffe lavori affiancate (due per riga sul telefono) */
+  .griglia-tariffe-gate { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 8px; }
+  .griglia-tariffe-gate label { margin-bottom: 0; }
+  .griglia-tariffe-gate input { margin-top: 4px; }
+  @media (max-width: 520px) { .griglia-tariffe-gate { grid-template-columns: repeat(2, minmax(0, 1fr)); } }
   /* Conteggio in attesa: riga in cima alla pagina ed elenco delle aste da scegliere */
   .riga-conteggio { display: block; width: 100%; text-align: left; background: var(--secondary-soft); color: inherit; border: 1px solid var(--secondary); border-radius: 12px; padding: 10px 14px; margin-bottom: 14px; font: inherit; font-size: .9rem; font-weight: 600; cursor: pointer; }
   .lista-conteggio { display: flex; flex-direction: column; gap: 6px; max-height: 52vh; overflow-y: auto; margin-top: 6px; }
@@ -705,6 +710,14 @@
             <p class="card-riepilogo-valore" id="riepilogo-checklist">—</p>
           </div>
           <button type="button" class="card-riepilogo-modifica" onclick="apriModaleChecklist()">Modifica</button>
+        </div>
+
+        <div class="card-riepilogo" data-scheda="conti">
+          <div class="card-riepilogo-testo">
+            <p class="card-riepilogo-titolo">Gate flipping</p>
+            <p class="card-riepilogo-valore" id="riepilogo-gate">—</p>
+          </div>
+          <button type="button" class="card-riepilogo-modifica" onclick="apriModaleGate()">Modifica</button>
         </div>
       </div>
 
@@ -1169,6 +1182,75 @@
   </div>
 </div>
 
+<div id="modale-gate" class="overlay-modale" onclick="if(event.target===this) chiudiModale('gate')">
+  <div class="finestra-modale">
+    <div class="finestra-modale-intestazione">
+      <h2>Gate flipping</h2>
+      <button type="button" class="finestra-modale-chiudi" onclick="chiudiModale('gate')" aria-label="Chiudi">×</button>
+    </div>
+    <div class="finestra-modale-corpo">
+      <p class="nota-campo">Offerta massima di ogni asta nel registro, con un margine fisso in euro: pareggio = uscita × coefficiente d'incasso
+        − lavori − costi fissi − arretrati − sanatoria; offerta massima = pareggio − margine. Il filtro «🚪» e l'ordinamento «Max/base» del
+        registro usano questi valori. È un calcolo a parte: non cambia la Superanalisi né le stime di costi e lavori.</p>
+      <div class="campo-form">
+        <label for="campo-gate-margine-target">Margine minimo (€)</label>
+        <input type="number" id="campo-gate-margine-target" min="0" step="500">
+        <p class="nota-campo">Predefinito € 20.000.</p>
+      </div>
+      <div class="campo-form">
+        <label for="campo-gate-coeff-incasso">Coefficiente d'incasso sulla rivendita</label>
+        <input type="number" id="campo-gate-coeff-incasso" min="0" max="1" step="0.01">
+        <p class="nota-campo">Quota del prezzo di rivendita che resta dopo agenzia e spese di vendita. Predefinito 0,92.</p>
+      </div>
+      <div class="campo-form">
+        <label for="campo-gate-contingenza-lavori">Moltiplicatore imprevisti sui lavori</label>
+        <input type="number" id="campo-gate-contingenza-lavori" min="1" max="3" step="0.05">
+        <p class="nota-campo">Predefinito 1,2 (+20%).</p>
+      </div>
+      <div class="campo-form">
+        <label for="campo-gate-lavori-minimo">Lavori minimi (€)</label>
+        <input type="number" id="campo-gate-lavori-minimo" min="0" step="500">
+        <p class="nota-campo">Quando non c'è un importo tuo, i lavori sono almeno questa cifra. Predefinito € 5.000.</p>
+      </div>
+      <div class="campo-form">
+        <label>Tariffe lavori (€/mq)</label>
+        <div class="griglia-tariffe-gate">
+          <label for="campo-gate-tariffa-nessuna">Nessuna <input type="number" id="campo-gate-tariffa-nessuna" min="0" step="10"></label>
+          <label for="campo-gate-tariffa-leggera">Leggera <input type="number" id="campo-gate-tariffa-leggera" min="0" step="10"></label>
+          <label for="campo-gate-tariffa-media">Media <input type="number" id="campo-gate-tariffa-media" min="0" step="10"></label>
+          <label for="campo-gate-tariffa-pesante">Pesante <input type="number" id="campo-gate-tariffa-pesante" min="0" step="10"></label>
+        </div>
+        <p class="nota-campo">Per livello di ristrutturazione (il tuo, se l'hai scelto, altrimenti quello suggerito dalla perizia, altrimenti media).
+          Predefinite 80 / 250 / 500 / 900.</p>
+      </div>
+      <div class="campo-form">
+        <label for="campo-gate-fissi">Costi fissi (€)</label>
+        <input type="number" id="campo-gate-fissi" min="0" step="100">
+        <p class="nota-campo">Delegato, notaio, ipotecaria e catastale, tecnico… Predefinito € 4.900.</p>
+      </div>
+      <div class="campo-form">
+        <label for="campo-gate-registro">Aliquota imposta di registro</label>
+        <input type="number" id="campo-gate-registro" min="0" max="1" step="0.01">
+        <p class="nota-campo">Sul valore catastale (rendita × moltiplicatore) o, senza rendita, sul prezzo base. Predefinito 0,09.</p>
+      </div>
+      <div class="campo-form">
+        <label for="campo-gate-molt-rendita">Moltiplicatore della rendita catastale</label>
+        <input type="number" id="campo-gate-molt-rendita" min="0" step="0.1">
+        <p class="nota-campo">Predefinito 126 (seconda casa, prezzo-valore).</p>
+      </div>
+      <div class="campo-form">
+        <label for="campo-gate-molt-gara">Moltiplicatore gara</label>
+        <input type="number" id="campo-gate-molt-gara" min="1" max="5" step="0.05">
+        <p class="nota-campo">«Regge la gara» se l'offerta massima arriva ad almeno questo multiplo del prezzo base. Predefinito 1,3.</p>
+      </div>
+      <div class="finestra-modale-azioni">
+        <button type="button" class="bottone-salva-card" onclick="salvaParametriGate()">Salva</button>
+        <span id="messaggio-parametri-gate" class="messaggio-salvataggio-card"></span>
+      </div>
+    </div>
+  </div>
+</div>
+
 <div id="modale-checklist" class="overlay-modale" onclick="if(event.target===this) chiudiModale('checklist')">
   <div class="finestra-modale">
     <div class="finestra-modale-intestazione">
@@ -1556,6 +1638,9 @@
       const chiaviConti = ["regime_fiscale", "aliquota_impresa", "registro_impresa", "sconto_trattativa_comparabili"];
       configAttuale.parametri_conti = chiaviConti.some(k => config[k] !== undefined)
         ? Object.fromEntries(chiaviConti.filter(k => config[k] !== undefined).map(k => [k, config[k]])) : null;
+      // Gate flipping: come i conti, null finché non li salvi (valgono i predefiniti).
+      configAttuale.parametri_gate = CHIAVI_GATE.some(k => config[k] !== undefined)
+        ? Object.fromEntries(CHIAVI_GATE.filter(k => config[k] !== undefined).map(k => [k, config[k]])) : null;
 
       configAttuale.occupazioni_escluse = [];
       if (config.occupazioni_escluse) {
@@ -2142,6 +2227,7 @@
     mostraSetFiltri();
     mostraChecklist();
     mostraParametriConti();
+    mostraParametriGate();
     renderizzaRiepilogoEsclusioni();
     renderizzaRiepilogoRicercaPerizia();
     renderizzaRiepilogoArea();
@@ -2314,6 +2400,7 @@
         esclusione_quote: String(configAttuale.esclusione_quote !== false),
         parole_esclusione: JSON.stringify(configAttuale.parole_esclusione || []),
         ...(configAttuale.parametri_conti || {}),
+        ...(configAttuale.parametri_gate || {}),
         ...(configAttuale.checklist_modello ? {checklist_modello: JSON.stringify(configAttuale.checklist_modello)} : {}),
         ...(configAttuale.set_filtri ? {set_filtri: JSON.stringify(configAttuale.set_filtri)} : {}),
         solo_aste_future: "true",   // la scelta non c'è più (12/10/2026) e lo scanner non la legge: nel database resta "true"
@@ -3132,6 +3219,89 @@
       }
     } catch (e) {
       configAttuale.parametri_conti = precedente;
+      msgEl.textContent = "Richiesta non riuscita. Controlla la connessione e riprova.";
+      msgEl.className = "messaggio-salvataggio-card messaggio-errore";
+      window.Feedback && Feedback.errore();
+    }
+  }
+
+  // Gate flipping (config: gate_margine_target, gate_coeff_incasso, gate_contingenza_lavori, gate_lavori_minimo,
+  // gate_tariffe_lavori in JSON, gate_fissi, gate_registro, gate_molt_rendita, gate_molt_gara), letti dal registro
+  // con i dati personali. Stessi predefiniti di parametriGate in index.html.
+  const CHIAVI_GATE = ["gate_margine_target", "gate_coeff_incasso", "gate_contingenza_lavori", "gate_lavori_minimo",
+    "gate_tariffe_lavori", "gate_fissi", "gate_registro", "gate_molt_rendita", "gate_molt_gara"];
+  const GATE_PREDEFINITI = {gate_margine_target: 20000, gate_coeff_incasso: 0.92, gate_contingenza_lavori: 1.2, gate_lavori_minimo: 5000,
+    gate_tariffe_lavori: {nessuna: 80, leggera: 250, media: 500, pesante: 900}, gate_fissi: 4900, gate_registro: 0.09,
+    gate_molt_rendita: 126, gate_molt_gara: 1.3};
+  const LIVELLI_GATE = ["nessuna", "leggera", "media", "pesante"];
+  function valoriGate() {
+    const g = configAttuale.parametri_gate || {};
+    const n = (v, predefinito) => { const x = Number(v); return v === null || v === undefined || v === "" || !Number.isFinite(x) ? predefinito : x; };
+    let tariffe = g.gate_tariffe_lavori;
+    if (typeof tariffe === "string") { try { tariffe = JSON.parse(tariffe); } catch (e) { tariffe = null; } }
+    tariffe = tariffe && typeof tariffe === "object" ? tariffe : {};
+    const v = {};
+    CHIAVI_GATE.filter(k => k !== "gate_tariffe_lavori").forEach(k => { v[k] = n(g[k], GATE_PREDEFINITI[k]); });
+    v.gate_tariffe_lavori = Object.fromEntries(LIVELLI_GATE.map(l => [l, n(tariffe[l], GATE_PREDEFINITI.gate_tariffe_lavori[l])]));
+    return v;
+  }
+  function mostraParametriGate() {
+    const v = valoriGate();
+    const campo = k => document.getElementById("campo-" + k.replace(/_/g, "-"));
+    CHIAVI_GATE.filter(k => k !== "gate_tariffe_lavori").forEach(k => { campo(k).value = v[k]; });
+    LIVELLI_GATE.forEach(l => { document.getElementById("campo-gate-tariffa-" + l).value = v.gate_tariffe_lavori[l]; });
+    const virgola = x => String(x).replace(".", ",");
+    document.getElementById("riepilogo-gate").textContent =
+      `Margine € ${formattaEuro(v.gate_margine_target)} · incasso ${virgola(v.gate_coeff_incasso)} · lavori ×${virgola(v.gate_contingenza_lavori)} · gara ×${virgola(v.gate_molt_gara)}`
+      + (configAttuale.parametri_gate ? "" : " (predefiniti)");
+  }
+  function apriModaleGate() {
+    mostraParametriGate();
+    document.getElementById("messaggio-parametri-gate").textContent = "";
+    apriModale("gate");
+  }
+  async function salvaParametriGate() {
+    const msgEl = document.getElementById("messaggio-parametri-gate");
+    const leggi = (id, min, max) => { const el = document.getElementById(id), x = Number(el.value); return el.value !== "" && Number.isFinite(x) && x >= min && x <= max ? x : null; };
+    const valori = {
+      gate_margine_target: leggi("campo-gate-margine-target", 0, 5000000),
+      gate_coeff_incasso: leggi("campo-gate-coeff-incasso", 0, 1),
+      gate_contingenza_lavori: leggi("campo-gate-contingenza-lavori", 1, 3),
+      gate_lavori_minimo: leggi("campo-gate-lavori-minimo", 0, 1000000),
+      gate_fissi: leggi("campo-gate-fissi", 0, 1000000),
+      gate_registro: leggi("campo-gate-registro", 0, 1),
+      gate_molt_rendita: leggi("campo-gate-molt-rendita", 0, 1000),
+      gate_molt_gara: leggi("campo-gate-molt-gara", 1, 5),
+    };
+    const tariffe = Object.fromEntries(LIVELLI_GATE.map(l => [l, leggi("campo-gate-tariffa-" + l, 0, 10000)]));
+    if (Object.values(valori).some(x => x === null) || Object.values(tariffe).some(x => x === null)) {
+      msgEl.textContent = "Valori non validi: coefficiente d'incasso e registro tra 0 e 1, imprevisti tra 1 e 3, gara tra 1 e 5, gli altri numeri non negativi.";
+      msgEl.className = "messaggio-salvataggio-card messaggio-errore";
+      return;
+    }
+    const precedente = configAttuale.parametri_gate;
+    configAttuale.parametri_gate = {
+      ...Object.fromEntries(Object.entries(valori).map(([k, x]) => [k, String(x)])),
+      gate_tariffe_lavori: JSON.stringify(tariffe),
+    };
+    msgEl.textContent = "Salvataggio in corso…";
+    msgEl.className = "messaggio-salvataggio-card messaggio-attesa";
+    try {
+      const risultato = await salvaConfigCompletaSulServer();
+      if (risultato && risultato.result === "success") {
+        msgEl.textContent = "Salvato. Vale da subito nelle pagine che apri o ricarichi.";
+        msgEl.className = "messaggio-salvataggio-card messaggio-ok";
+        window.Feedback && Feedback.salvato();
+        mostraParametriGate();
+        setTimeout(() => chiudiModale("gate"), 700);
+      } else {
+        configAttuale.parametri_gate = precedente;
+        msgEl.textContent = (risultato && risultato.message) || "Errore sconosciuto durante il salvataggio.";
+        msgEl.className = "messaggio-salvataggio-card messaggio-errore";
+        window.Feedback && Feedback.errore();
+      }
+    } catch (e) {
+      configAttuale.parametri_gate = precedente;
       msgEl.textContent = "Richiesta non riuscita. Controlla la connessione e riprova.";
       msgEl.className = "messaggio-salvataggio-card messaggio-errore";
       window.Feedback && Feedback.errore();
