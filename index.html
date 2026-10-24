@@ -5974,8 +5974,36 @@
     };
   }
   // Quote, nuda proprietà, usufrutto, diritto di abitazione: non si comprano per rivendere. "Quota pari a 1/1"
-  // (o 100/100, 100%) è la piena proprietà e non conta; nemmeno 1/1 o 100/100 da soli.
-  const REGEX_QUOTA_GATE = /quota indivisa|quota (del|di|pari)(?!\s+(a\s+)?(1\s*\/\s*1|100\s*\/\s*100|100\s*%))|\b[1-9]\/[2-9]\b|½|⅓|¼|nuda propriet|usufrutto|diritto di abitazione/i;
+  // (o 100/100, 1000/1000, 100%, "all'intero") è la piena proprietà e non conta; nemmeno 1/1 o 100/100 da soli.
+  const REGEX_QUOTA_GATE = /quota indivisa|quota (del|di|pari)(?!\s+(a\s+|al\s+|all['’]\s*)?(1\s*\/\s*1|100\s*\/\s*100|1000\s*\/\s*1000|100\s*%|intero|intera))|\b[1-9]\/[2-9]\b|½|⅓|¼|nuda propriet|usufrutto|diritto di abitazione/i;
+  // Una quota che riguarda solo una parte accessoria ("2/9 del lastrico solare", "per ½ … la strada di accesso") non
+  // conta: l'immobile principale resta in piena proprietà. Per ogni quota trovata si guarda il seguito della frase
+  // (fino a 80 caratteri, fino al primo punto, punto e virgola o a capo): se nomina una parte accessoria prima
+  // dell'immobile principale, quella quota si ignora (se il seguito non nomina nessuno dei due, si guarda poco prima,
+  // nella stessa frase: "cantina 1/2"). Basta una quota non accessoria per il badge. Se la descrizione non nomina
+  // nessun immobile principale (il lotto è solo un box, un garage, un terreno…), ogni quota conta.
+  const ACCESSORI_QUOTA_GATE = /lastrico|strad|accesso|cortil|\bcorte\b|\barea\b|viale|passaggio|androne|parti comuni|terren|\bbox\b|garage|autorimess|posti? auto|cantin|soffitt|sottotett/i;
+  // Per dire se il lotto comprende una casa servono parole precise: "immobile", "unità immobiliare" e "fabbricato"
+  // compaiono anche nelle descrizioni di un solo box o posto auto. Accanto alla quota invece contano anche loro
+  // ("5/8 di immobile … in parte terreno" è una quota dell'immobile).
+  const PRINCIPALI_QUOTA_GATE = /appartament|abitazion|villa|villett|\bcasa\b|alloggi|negozi|uffici|magazzin/i;
+  const PRINCIPALI_VICINO_QUOTA_GATE = new RegExp(PRINCIPALI_QUOTA_GATE.source + "|immobil|unit[àa] immobiliare|fabbricat", "i");
+  function quotaSulBenePrincipale(testo) {
+    const conPrincipale = PRINCIPALI_QUOTA_GATE.test(testo);
+    for (const m of testo.matchAll(new RegExp(REGEX_QUOTA_GATE.source, "gi"))) {
+      if (!conPrincipale) return true;
+      const seguito = testo.slice(m.index + m[0].length, m.index + m[0].length + 80).split(/[.;\n]/)[0];
+      const accessorio = seguito.search(ACCESSORI_QUOTA_GATE), principale = seguito.search(PRINCIPALI_VICINO_QUOTA_GATE);
+      if (accessorio === -1 && principale === -1) {
+        // il seguito non dice di cosa ("… cantina 1/2"): decidono le parole subito prima, nella stessa frase
+        const prima = testo.slice(Math.max(0, m.index - 40), m.index).split(/[.;\n,]/).pop();
+        if (prima.search(ACCESSORI_QUOTA_GATE) === -1 || prima.search(PRINCIPALI_VICINO_QUOTA_GATE) !== -1) return true;
+        continue;
+      }
+      if (accessorio === -1 || (principale !== -1 && principale < accessorio)) return true;
+    }
+    return false;
+  }
   // Funzione pura: asta con i nomi delle colonne della tabella aste, p = parametriGate(...).
   // nd (non determinabile): manca il valore di uscita (né rivendita tua, né perito, né OMI × superficie),
   // oppure mancano sia l'importo lavori tuo sia la superficie per stimarli.
@@ -6006,7 +6034,7 @@
       : maxOfferta < prezzoBase ? "solo a minima"
       : maxOfferta < prezzoBase * p.moltGara ? "passa a base"
       : "regge la gara";
-    const flagQuota = REGEX_QUOTA_GATE.test(String(asta.descrizione_lotto || ""));
+    const flagQuota = quotaSulBenePrincipale(String(asta.descrizione_lotto || ""));
     if (flagQuota) stato = "non passa";
     return {uscita, lavori, fissi, arretrati, sanatoria, pareggio, maxOfferta, maxSuBase, stato, flagQuota, nd};
   }
