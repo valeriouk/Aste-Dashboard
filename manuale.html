@@ -840,6 +840,7 @@
     <div class="tabella-scroll"><table>
       <thead><tr><th>Criterio</th><th>Ordina per</th><th>Direzione iniziale</th></tr></thead>
       <tbody>
+        <tr><td>Max/base (predefinito dal gate flipping)</td><td>offerta massima del <a href="#registro-gate">gate flipping</a> ÷ prezzo base; in fondo le quote e poi le n.d.</td><td>alto → basso</td></tr>
         <tr><td>Punteggio AI</td><td>punteggio AI (il voto dell'AI sulla perizia)</td><td>alto → basso</td></tr>
         <tr><td>Margine lordo</td><td><a href="#registro-margine">margine lordo</a>: valore del perito − offerta minima − sanatoria (mancante = in fondo)</td><td>alto → basso</td></tr>
         <tr><td>Giudizio</td><td><a href="#superanalisi-classe">giudizio della Superanalisi</a> (Pulita, Gestibile, Complessa, Da scartare); a parità, il punteggio</td><td>Pulita → Da scartare</td></tr>
@@ -851,7 +852,7 @@
     </table></div>
     <p>Cliccare il criterio già attivo inverte la direzione. Le aste <strong>scartate vanno sempre in fondo</strong>, qualunque criterio. Con "Giudizio" vanno
       in fondo, in tutte e due le direzioni, anche le aste <strong>senza analisi v2</strong> (non hanno giudizio né conto).</p>
-    <p><strong>"Spazio sull'offerta"</strong> (l'ordine con cui si apre il registro) mette in <strong>tre gruppi</strong>, in tutte e due le direzioni: prima le
+    <p><strong>"Spazio sull'offerta"</strong> (fino al gate flipping l'ordine con cui si apre il registro; ora è "Max/base") mette in <strong>tre gruppi</strong>, in tutte e due le direzioni: prima le
       aste con un numero valido; poi quelle col giudizio <strong>Da scartare</strong> o con la rivendita <a href="#registro-offerta-massima">fuori scala</a> rispetto al valore del perito (il numero c'è, ma non conta); in fondo quelle senza numero, cioè
       senza analisi v2, o per cui il conto non si può fare (per esempio una quota parziale o senza valore di rivendita), o con l'offerta minima non letta
       dal PVP (lo spazio non si calcola), che restano in ordine di punteggio AI. Tra le aste con un numero valido l'ordine segue la cifra "spazio" (offerta massima − offerta minima), anche per i "non raggiungibile": lì
@@ -866,14 +867,14 @@
   <section class="voce" id="registro-filtri-ricordati">
     <h3>Filtri ricordati e "✕ Azzera filtri"</h3>
     <ul>
-      <li><strong>Ricordati</strong>: ricerca, tipologie, libero/occupato, preferite/scartate, concluse, aggiornate, visite e operazioni in corso, fascia di punteggio, ordinamento e
+      <li><strong>Ricordati</strong>: ricerca, tipologie, <a href="#registro-gate">filtro "🚪"</a>, libero/occupato, preferite/scartate, concluse, aggiornate, visite e operazioni in corso, fascia di punteggio, ordinamento e
         vista (griglia o mappa) restano come li hai lasciati quando torni al registro da un'altra pagina (Superanalisi, risultati AI, Configurazione…), anche se
         il browser ricarica il registro.</li>
       <li><strong>Fino a quando</strong>: finché resta aperta la scheda del browser (o l'app). Chiudendola e riaprendo il registro si riparte puliti, così
         un filtro dimenticato non nasconde aste il giorno dopo. "Puliti" vuol dire con le due scelte di partenza: <a href="#registro-filtro-tipo">Tipo = Abitazioni</a>
-        e ordine "Spazio sull'offerta".</li>
+        e ordine "Spazio sull'offerta". Dal gate flipping l'ordine di partenza è "Max/base" e si aggiunge il filtro <a href="#registro-gate">"🚪 Passano"</a>.</li>
       <li><strong>"✕ Azzera filtri"</strong>: compare solo se c'è almeno un filtro attivo o un testo cercato, accanto a "N di M aste mostrate", nel pannello
-        "Filtri" del telefono (accanto al titolo) e in "Nessuna corrispondenza". Toglie filtri e ricerca, compreso "Abitazioni" (resta "Tutte"); ordinamento e vista restano.</li>
+        "Filtri" del telefono (accanto al titolo) e in "Nessuna corrispondenza". Toglie filtri e ricerca, compreso "Abitazioni" (resta "Tutte"); ordinamento e vista restano. Il filtro "🚪" torna su "Tutte".</li>
     </ul>
   </section>
 
@@ -946,6 +947,8 @@
         l'offerta massima, la riga "Perché …" riporta il primo motivo anche sul telefono (<a href="#registro-offerta-massima">dettagli</a>). Compare anche in alto nei
         dettagli e come riga "Giudizio Superanalisi" nel confronto. Solo per le aste con analisi v2. È <strong>diverso dal punteggio AI del sigillo</strong>,
         che è il voto dell'AI sulla perizia: i due possono non coincidere (es. 82 e "Complessa").</li>
+      <li><strong>🚪 Regge la gara / Passa a base / Solo a minima / Non passa / n.d.</strong> (verde, blu, terracotta, rosso, grigio) con il Max/base, e
+        <strong>quota</strong> (bordo rosso): lo stato del <a href="#registro-gate">gate flipping</a>.</li>
     </ul>
   </section>
 
@@ -1019,6 +1022,47 @@
       non negativo, qualità dei dati A o B, rivendita non a bassa affidabilità e non "fuori scala" (l'altra condizione del motore, "in zona", oggi non filtra nulla perché non c'è
       un elenco di comuni obiettivo); e il link al conto completo. Le aste senza analisi v2 mostrano "Perché nessun giudizio": giudizio e offerta massima si
       calcolano solo con l'analisi v2 della perizia. La sezione compare anche nella scheda stampata o salvata in PDF.</p>
+  </section>
+
+  <section class="voce" id="registro-gate">
+    <h3>🚪 Gate flipping: offerta massima a margine fisso, filtro "🚪" e ordine "Max/base"</h3>
+    <p>Un secondo conto, <strong>semplice e indipendente</strong> dalla <a href="#registro-offerta-massima">offerta massima della Superanalisi</a> e dalle
+      stime di <a href="#registro-costi-trasferimento">costi di trasferimento</a> e lavori (che restano come sono): quanto puoi offrire al massimo per
+      rivendere tenendo un margine fisso in euro. Si calcola per tutte le aste, anche senza analisi v2, con i parametri di
+      <a href="#config-gate">Configurazione → Conti → Gate flipping</a>.</p>
+    <div class="tabella-scroll"><table>
+      <thead><tr><th>Voce</th><th>Come si calcola</th></tr></thead>
+      <tbody>
+        <tr><td>Uscita (rivendita)</td><td>il tuo valore di rivendita (Superanalisi), se c'è; altrimenti il più basso tra valore del perito e superficie × OMI massimo;
+          se ce n'è uno solo, quello</td></tr>
+        <tr><td>Lavori</td><td>il tuo importo lavori, se c'è; altrimenti superficie × tariffa del livello (il tuo, se l'hai scelto, poi quello suggerito dalla perizia,
+          poi "media"), almeno i lavori minimi; il tutto × il moltiplicatore imprevisti (1,2 di partenza)</td></tr>
+        <tr><td>Costi fissi e registro</td><td>aliquota di registro × (rendita × moltiplicatore, oppure il prezzo base se la rendita non c'è) + costi fissi;
+          la rendita è la tua correzione, se c'è, poi quella della perizia</td></tr>
+        <tr><td>Arretrati condominiali</td><td>la tua correzione, se c'è, poi quelli della perizia (qui senza il tetto delle 2 annualità dei costi di trasferimento)</td></tr>
+        <tr><td>Sanatoria</td><td>spese di sanatoria della perizia</td></tr>
+        <tr><td>Pareggio</td><td>uscita × coefficiente d'incasso (0,92) − lavori − fissi − arretrati − sanatoria</td></tr>
+        <tr><td>Offerta massima</td><td>pareggio − margine minimo (€ 20.000 di partenza)</td></tr>
+        <tr><td>Max/base</td><td>offerta massima ÷ prezzo base (due decimali, es. "1,12×")</td></tr>
+      </tbody>
+    </table></div>
+    <p><strong>Stato</strong>, con badge a quattro colori: <strong>🚪 Regge la gara</strong> (verde) se l'offerta massima arriva ad almeno prezzo base ×
+      moltiplicatore gara (1,3); <strong>Passa a base</strong> (blu) se arriva almeno al prezzo base; <strong>Solo a minima</strong> (terracotta) se arriva
+      almeno all'offerta minima; <strong>Non passa</strong> (rosso) sotto l'offerta minima. <strong>n.d.</strong> (grigio) quando non si può calcolare:
+      manca il valore di uscita (né tuo valore, né perito, né OMI con superficie) oppure mancano sia il tuo importo lavori sia la superficie.
+      Il badge <strong>quota</strong> (bordo rosso) compare se la descrizione del lotto parla di quota indivisa, una frazione (1/2, 1/3, ½…), nuda
+      proprietà, usufrutto o diritto di abitazione: l'asta "non passa" in ogni caso. "Quota pari a 1/1" (o 100/100, 100%) è la piena proprietà e non conta.</p>
+    <ul>
+      <li><strong>Card</strong>: il badge con lo stato e il Max/base (es. "🚪 Passa a base · 1,12×"); passandoci sopra col mouse si leggono offerta massima e pareggio.</li>
+      <li><strong>Dettagli</strong>: la sezione "🚪 Gate", subito dopo "Perché", con offerta massima, pareggio, Max/base, stato e le voci del conto. Si
+        ricalcola da sola quando correggi <a href="#registro-rendita">rendita</a> o spese condominiali, e quando cambi in Superanalisi livello o importo
+        dei lavori o il valore di rivendita (al ritorno nel registro).</li>
+      <li><strong>Filtro "🚪"</strong>: tocca la pillola per passare da <strong>Passano</strong> (offerta massima ≥ offerta minima, quote escluse; è il
+        filtro con cui si apre il registro) a <strong>Reggono la gara</strong> (≥ prezzo base × moltiplicatore gara) a <strong>Tutte</strong>. Le aste
+        <strong>n.d.</strong> restano visibili in tutti e tre, col loro badge. Come il filtro Tipo, non nasconde le tue aste nelle viste ⭐/🚫 e "In corso",
+        né un ID scritto per intero. Ricordato con gli altri filtri; "✕ Azzera filtri" lo mette su "Tutte".</li>
+      <li><strong>Ordine "Max/base"</strong> (predefinito): dal più alto al più basso; in fondo, in tutte e due le direzioni, prima le quote e poi le n.d.</li>
+    </ul>
   </section>
 
   <section class="voce" id="registro-tentativo">
@@ -1483,7 +1527,7 @@
       <li><strong>Schede</strong> in alto (una riga su PC, due righe da tre sul telefono), ognuna con la sua parte della pagina; l'ultima scelta resta
         su questo dispositivo: <strong>🔍 Ricerca</strong> (area, prezzo, tipologia, altri filtri, esclusioni, ripristino dei predefiniti),
         <strong>🧠 Analisi</strong> (provider e modelli, ricerca della perizia), <strong>⏱️ Orari</strong> (pianificazione),
-        <strong>💶 Conti</strong> (regime fiscale e conti, checklist), <strong>📱 Dispositivo</strong> (tema, suoni e vibrazione),
+        <strong>💶 Conti</strong> (regime fiscale e conti, checklist, gate flipping), <strong>📱 Dispositivo</strong> (tema, suoni e vibrazione),
         <strong>🔐 Sicurezza</strong> (manutenzione, password).</li>
       <li>Serve la password di scrittura. Ogni riquadro ("card") mostra il valore attuale; "Modifica" apre una finestra; "Salva" salva al primo
         tocco ("Salvato.", la finestra si chiude da sola). Chiede conferma con un secondo tocco entro 4 secondi solo quando in "Provider e modelli"
@@ -1633,7 +1677,7 @@
         <tr><td>Provider e modelli</td><td>Analisi</td><td>sì (non la scelta tra Gemini e Claude, né "Con Claude: analisi in batch")</td><td>no</td></tr>
         <tr><td>Ricerca della perizia</td><td>Analisi</td><td>sì</td><td>no</td></tr>
         <tr><td>Pianificazione scansione</td><td>Orari</td><td>sì</td><td>no</td></tr>
-        <tr><td>Regime fiscale e conti, Checklist delle aste</td><td>Conti</td><td>no</td><td>no</td></tr>
+        <tr><td>Regime fiscale e conti, Checklist delle aste, Gate flipping</td><td>Conti</td><td>no</td><td>no</td></tr>
         <tr><td>Tema, suoni, manutenzione, password, dispositivi</td><td>Dispositivo, Sicurezza</td><td>no</td><td>no</td></tr>
       </tbody>
     </table></div>
@@ -1844,6 +1888,25 @@
       "↺ Voci predefinite" rimette nei campi quelle iniziali, da salvare. Se togli o rinomini una voce, le spunte già date restano salvate ma non si
       vedono più (rimettendo la voce uguale ricompaiono). "Visita fatta" non si scrive qui: c'è sempre ed è spuntata dalla visita. Non fa parte dei
       valori ripristinati da "Ripristina tutti i valori predefiniti".</p>
+  </section>
+
+  <section class="voce" id="config-gate">
+    <h3>Gate flipping (scheda Conti)</h3>
+    <p>Parametri del <a href="#registro-gate">gate flipping</a> del registro (offerta massima a margine fisso, filtro "🚪", ordine "Max/base").
+      La card mostra margine, incasso, imprevisti e gara ("(predefiniti)" finché non salvi); "Modifica" apre la finestra e "Salva" li rende validi da
+      subito nelle pagine che apri o ricarichi. Non cambiano la Superanalisi né le stime di costi e lavori.</p>
+    <ul>
+      <li><strong>Margine minimo</strong>: € 20.000.</li>
+      <li><strong>Coefficiente d'incasso sulla rivendita</strong>: 0,92 (quello che resta dopo agenzia e spese di vendita).</li>
+      <li><strong>Moltiplicatore imprevisti sui lavori</strong>: 1,2 (+20%).</li>
+      <li><strong>Lavori minimi</strong>: € 5.000, quando non c'è un tuo importo.</li>
+      <li><strong>Tariffe lavori</strong> (€/mq): nessuna 80, leggera 250, media 500, pesante 900.</li>
+      <li><strong>Costi fissi</strong>: € 4.900 (delegato, notaio, ipotecaria e catastale, tecnico…).</li>
+      <li><strong>Aliquota imposta di registro</strong>: 0,09, sul valore catastale o, senza rendita, sul prezzo base.</li>
+      <li><strong>Moltiplicatore della rendita catastale</strong>: 126.</li>
+      <li><strong>Moltiplicatore gara</strong>: 1,3 ("Regge la gara" da 1,3 volte il prezzo base).</li>
+    </ul>
+    <p>Salvati nella tabella config (parametri gate_*; le tariffe in un solo parametro, in JSON). Non fanno parte dei valori ripristinati da "Ripristina tutti i valori predefiniti".</p>
   </section>
 
   <section class="voce" id="config-tema">
