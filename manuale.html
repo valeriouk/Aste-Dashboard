@@ -211,7 +211,7 @@
         pagina e citazione. Vedi il capitolo <a href="#analisi">Analisi della perizia</a>.</li>
       <li><strong>Calcoli e scrittura nel database</strong>: margine lordo, €/mq, livello di ristrutturazione, punteggio; l'asta compare nel
         registro e arriva una <a href="#notifiche">notifica Telegram</a>.</li>
-      <li><strong>Dopo il giro</strong>: <a href="#orari-ricontrollo">ricontrollo delle perizie</a> per le aste ancora senza perizia,
+      <li><strong>Dopo il giro</strong>: <a href="#orari-ricontrollo">ricontrollo delle perizie</a> per le aste ancora senza perizia (se acceso in Configurazione),
         <a href="#orari-storico">storico delle aste</a> dal PVP, <a href="#omi-assegnazione">assegnazione dei valori OMI</a>, e il <a href="#orari-promemoria-omi">promemoria OMI</a> quando esce un nuovo semestre.</li>
     </ol>
     <p>Poi ci sei tu: nel registro filtri, metti le stelle alle aste interessanti, apri la <a href="#superanalisi">Superanalisi</a> per il conto
@@ -365,11 +365,9 @@
             <a href="#config-modelli">«Con Claude: analisi in batch»</a> (punto qui sotto); «cerca su tutta Italia»
             funziona come le altre ricerche (dal 12/10/2026: prima con Claude non partiva), in batch con la casella accesa e una per
             una, a prezzo pieno ed entro il tetto di tempo, con la casella spenta (in quel caso la pagina di Configurazione lo ricorda in
-            alto, in rosso: fino a 100 aste partono senza chiedere e un giro può durare due ore); il ricontrollo delle perizie a fine giro non si esegue (si può attivare solo aggiungendo a mano nella
-            tabella <code>config</code> il parametro <code>usa_claude_ricontrollo</code> con valore <code>true</code>: le perizie trovate
-            si analizzano una per una dentro il giro, a prezzo pieno e allungandolo; si paga solo per le perizie nuove, non per le pagine
-            del PVP ricontrollate a vuoto). Per ricontrollare con Claude in batch c'è il pulsante
-            <a href="#orari-ricontrollo-pulsante">«Ricontrolla N aste»</a>.</li>
+            alto, in rosso: fino a 100 aste partono senza chiedere e un giro può durare due ore); il
+            <a href="#orari-ricontrollo">ricontrollo delle perizie</a> (pulsante «Ricontrolla N aste» e, se acceso, fine giro) non dipende
+            da questa scelta: va sempre in batch con il provider scelto nella card «Ricerca della perizia».</li>
           <li><em>Claude in batch</em> (casella «Con Claude: analisi in batch», spenta in partenza): lo scanner analizza subito la prima
             asta, come prova che Claude funziona, poi cerca i documenti delle altre, li invia in uno o più batch ed esce. Le analisi in batch
             costano la metà (la prova è a prezzo pieno) e il giro dura meno, perché la lettura delle perizie non avviene più dentro il giro. I risultati li ritira il
@@ -419,8 +417,7 @@
       <thead><tr><th>Processo</th><th>Quando parte</th><th>Durata tipica</th><th>Costo di analisi (Gemini o Claude)</th></tr></thead>
       <tbody>
         <tr><td><a href="#orari-scanner">Scanner</a></td><td>Agli orari scelti in <a href="#config-pianificazione">Configurazione → Pianificazione</a> (10:00 e/o 16:00, ora italiana, nei giorni scelti; predefinito lun-ven alle 10:00). A mano con "Avvia scanner ora".</td><td>minuti (dipende dalle aste nuove)</td><td>sì, per le aste nuove</td></tr>
-        <tr><td><a href="#orari-ricontrollo">Ricontrollo perizie</a></td><td>Alla fine di ogni giro dello scanner</td><td>15-30 s per asta</td><td>solo se trova una perizia nuova</td></tr>
-        <tr><td><a href="#orari-ricontrollo-pulsante">Ricontrollo di tutto il registro</a></td><td>A mano con "Ricontrolla N aste"</td><td>15-30 s per asta, al massimo 50 (stima non misurata)</td><td>solo per le perizie nuove, in batch (Claude o Gemini)</td></tr>
+        <tr><td><a href="#orari-ricontrollo">Ricontrollo perizie</a> (tutto il registro)</td><td>A mano con "Ricontrolla N aste"; da solo alla fine di ogni giro dello scanner se la casella della card «Ricerca della perizia» è accesa (spenta in partenza)</td><td>15-30 s per asta, fino al massimo per avvio scelto nella card (predefinito 50; stima non misurata)</td><td>solo per le perizie nuove, in batch (Claude o Gemini)</td></tr>
         <tr><td><a href="#orari-storico">Storico delle aste</a></td><td>Alla fine di ogni giro dello scanner</td><td>al massimo 4 minuti per giro (circa 3-8 s per asta); di solito meno di un minuto</td><td>no</td></tr>
         <tr><td><a href="#omi-assegnazione">Assegnazione OMI</a></td><td>Alla fine di ogni giro dello scanner; dopo un controllo batch che ha trovato batch; dopo un'importazione OMI</td><td>secondi</td><td>no</td></tr>
         <tr><td><a href="#orari-promemoria-omi">Promemoria OMI</a></td><td>A ogni giro dello scanner (una sola notifica per semestre)</td><td>—</td><td>no</td></tr>
@@ -491,12 +488,12 @@
         ripartono al giro successivo (se venivano da una scelta dopo il conteggio vanno scelte di nuovo). Costa circa la metà; i risultati arrivano
         di solito in 20-30 minuti, al massimo entro 24 ore, e li raccoglie il <a href="#orari-batch">controllo batch</a>. Si usa se è attiva
         "<a href="#config-modelli">Usa il batch anche in ricerca locale</a>" (predefinito), <strong>sempre</strong> con "tutta Italia", e nel
-        <a href="#orari-ricontrollo">ricontrollo</a> con più di 15 aste per giro (lì senza blocchi né tetto di tempo: un solo batch a fine
+        <a href="#orari-ricontrollo">ricontrollo delle perizie</a> quando il suo batch è Gemini (lì senza blocchi né tetto di tempo: un solo batch a fine
         ricontrollo). Nel batch si usa solo il primo modello della cascata: se la
         risposta è vuota, l'asta torna "da riprovare" e viene ritentata a un giro successivo (al massimo <strong>3 tentativi</strong>: se anche il terzo non riesce l'asta resta nel registro "senza analisi" e lo scanner non la ripaga più
         (il <a href="#orari-ricontrollo">ricontrollo</a> può ancora trovare la perizia e aggiornarla)).</li>
-      <li><strong>Sincrono</strong> (una alla volta, subito): prezzo pieno, notifica immediata. Si usa con batch e tutta Italia spenti, e nel
-        ricontrollo fino a 15 aste per giro. Se un modello fallisce si passa al successivo della <a href="#config-modelli">cascata</a>: per il resto
+      <li><strong>Sincrono</strong> (una alla volta, subito): prezzo pieno, notifica immediata. Si usa con batch e tutta Italia spenti; mai nel
+        ricontrollo delle perizie. Se un modello fallisce si passa al successivo della <a href="#config-modelli">cascata</a>: per il resto
         del giro solo se la quota è finita, il modello non esiste o resta sovraccarico; un errore su una sola perizia vale solo per quella. Ogni
         chiamata a Gemini ha un tempo massimo di 10 minuti.</li>
       <li>Un batch inviato a Gemini ma non registrato nel database viene annullato (così non si paga) e arriva un avviso; lo stesso per i batch
@@ -541,49 +538,53 @@
   </section>
 
   <section class="voce" id="orari-ricontrollo">
-    <h3>Ricontrollo delle perizie (dopo ogni giro dello scanner)</h3>
+    <h3>Ricontrollo delle perizie (tutto il registro: a mano o a fine giro)</h3>
     <p>Spesso la perizia viene pubblicata dopo l'annuncio. Il ricontrollo riprova a trovarla per le aste che sono state analizzate
-      <em>dall'avviso</em> o senza documento.</p>
+      <em>dall'avviso</em> o senza documento. È un solo meccanismo con due avvii: a mano dal pulsante
+      <a href="#orari-ricontrollo-pulsante">«Ricontrolla N aste»</a> e, dal 27/10/2026, da solo alla fine di ogni giro dello scanner se in
+      <a href="#config-perizia">Configurazione → Ricerca della perizia</a> la casella «A fine giro ricontrolla da solo…» è accesa (spenta in
+      partenza). Prima il fine giro era un ricontrollo a parte: solo le aste dentro i filtri, analisi una per una a prezzo pieno, fermo con
+      Claude; non esiste più.</p>
     <ul>
-      <li><strong>Quando</strong>: alla fine di ogni giro dello scanner, solo se in <a href="#config-perizia">Configurazione → Ricerca della perizia</a>
-        il ricontrollo è acceso, e non in modalità "solo conteggio". Se le perizie le legge Claude
-        (<a href="#config-modelli">Provider e modelli</a>) il ricontrollo resta fermo: lo dice anche il riepilogo della card. Con Gemini non
-        parte se il giro è già in corso da più di 80 minuti (un giro grande): le sue aste aspettano il giro successivo. Non parte nemmeno
-        se le ultime 5 letture di annunci del giro sono rimaste senza risposta dal PVP: riaprirebbe le sue pagine a vuoto.</li>
-      <li><strong>Quali aste</strong>: vendita da oggi in poi; documento attuale "Avviso (PVP)", "Primo allegato disponibile (PVP)" o nessuno; non
-        ricontrollate negli ultimi N giorni (predefinito 2); non in un batch in corso; non scartate; dentro l'area e il prezzo attuali (l'area si controlla sulla distanza vera tra l'immobile e il centro di
-        ricerca di oggi, non su quella salvata quando l'asta è entrata; con "solo questi comuni" acceso, anche sul comune). Ordinate dalla
-        vendita più vicina, al massimo M per giro (predefinito 15).</li>
-      <li><strong>Per ciascuna</strong>: rifà la ricerca del documento (gratis). Se non trova una perizia, segna l'asta come ricontrollata. Se la trova:
-        stesso file già analizzato → aggiorna solo la fonte; perizia già analizzata altrove → riusa l'analisi; altrimenti la analizza (sincrono fino a
-        15 aste per giro, batch oltre). L'asta viene aggiornata solo se la nuova analisi è riuscita.</li>
-      <li><strong>Notifiche</strong>: "📄 Perizia trovata al ricontrollo" per ogni asta aggiornata e un riepilogo "🔁 Ricontrollo perizie".</li>
+      <li><strong>Quali aste</strong>: tutte le aste future del registro ancora lette dall'avviso, in tutta Italia (documento attuale "Avviso (PVP)",
+        "Primo allegato disponibile (PVP)" o nessuno): niente filtri di area, comuni o prezzo. Non ricontrollate negli ultimi N giorni
+        (campo «Non rileggere la stessa asta prima di», predefinito 2); non in un batch in corso; non scartate. Ordinate dalla vendita più
+        vicina, al massimo M per avvio (campo «Aste ricontrollate al massimo per avvio», predefinito 50): le altre aspettano l'avvio dopo.</li>
+      <li><strong>Per ciascuna</strong>: rifà la ricerca del documento (gratis). Se non trova una perizia, segna l'asta come ricontrollata (per N
+        giorni non torna nel conto). Se la trova: stesso file già analizzato → aggiorna solo la fonte; perizia già analizzata altrove → riusa
+        l'analisi; altrimenti la manda in batch. Al ritiro del batch l'asta viene aggiornata solo se la nuova analisi è riuscita.</li>
+      <li><strong>Batch Claude o Gemini</strong>, scelto nella card «Ricerca della perizia» (voce «Batch del ricontrollo», Claude in partenza):
+        vale per il pulsante e per il fine giro, anche se le perizie dei giri normali le legge l'altro. Le perizie trovate vanno
+        <strong>sempre in batch</strong> (metà prezzo, risultati di solito entro 1-2 ore, al massimo 24, ritirati da "Controlla batch ora").
+        Con Claude prima una prova leggera: se Claude non è utilizzabile, o se in coda c'è un batch Claude fermo da ore, il ricontrollo non
+        parte e arriva un messaggio; Gemini non viene mai usato al posto di Claude. Un documento che Claude non può mettere nella richiesta
+        (troppo grande) viene segnato e riprovato dopo N giorni.</li>
+      <li><strong>A fine giro</strong> (casella accesa): parte dopo ogni giro normale, anche di solo conteggio (il giro è breve e le aste del
+        registro sono già passate dal conteggio). Non parte nel giro che analizza le aste scelte dal conteggio, se il giro non è stato avviato,
+        se il giro è già in corso da più di 80 minuti (le sue aste aspettano il giro successivo) o se le ultime 5 letture di annunci del giro sono
+        rimaste senza risposta dal PVP (riaprirebbe le sue pagine a vuoto). Se Claude si è fermato durante il giro non parte e non manda un
+        secondo messaggio. Il riepilogo "🔁 Ricontrollo perizie (fine giro)" arriva su Telegram solo se c'era qualcosa da ricontrollare.</li>
+      <li><strong>Notifiche</strong>: al ritiro del batch "📄 Perizia trovata al ricontrollo" per ogni asta aggiornata; a fine ricontrollo il riepilogo
+        con quante aste sono state ricontrollate e quante perizie sono andate in batch.</li>
+      <li><strong>Costo</strong>: le pagine del PVP ricontrollate a vuoto sono gratis; si paga solo l'analisi delle perizie nuove trovate (quelle già
+        analizzate per un'altra asta vengono riusate).</li>
       <li><strong>Limite</strong>: le aste che hanno <em>già</em> una perizia non vengono ricontrollate; se su PVP compare un'integrazione della perizia,
         il sistema non se ne accorge.</li>
     </ul>
   </section>
 
   <section class="voce" id="orari-ricontrollo-pulsante">
-    <h3>"🔁 Ricontrolla N aste" (a mano, tutto il registro)</h3>
+    <h3>"🔁 Ricontrolla N aste" (a mano)</h3>
     <p>Pulsante sopra le schede di Configurazione (dal 14/10/2026). Avvia lo scanner in una modalità che <strong>non cerca aste nuove</strong> e fa
-      solo il <a href="#orari-ricontrollo">ricontrollo delle perizie</a>, con queste differenze rispetto a quello di fine giro:</p>
+      solo il <a href="#orari-ricontrollo">ricontrollo delle perizie</a> descritto sopra, con le stesse regole (stesso tetto per avvio, stessi N
+      giorni, stesso batch). Parte anche con la casella del fine giro spenta o in modalità "solo conteggio": è un avvio voluto.</p>
     <ul>
-      <li><strong>Quali aste</strong>: tutte le aste future del registro ancora lette dall'avviso, in tutta Italia: niente filtri di area, comuni
-        o prezzo. Valgono le altre regole (non ricontrollate negli ultimi N giorni, predefinito 2; non in un batch in corso; non scartate),
-        dalla vendita più vicina, al massimo <strong>50 per avvio</strong>. Parte anche con il ricontrollo spento nella card o in modalità
-        "solo conteggio": è un avvio voluto.</li>
       <li><strong>Il numero sul pulsante</strong> è quante aste prenderebbe adesso (oltre 1000 mostra "1000+"). Lo scrive lo scanner alla fine di
         ogni giro, normale o di solo ricontrollo: non è in tempo reale. Dopo un avvio scende (le aste senza perizia vengono segnate, quelle con la
         perizia vanno in batch); dopo N giorni le aste ancora senza perizia tornano nel conto. Prima del primo giro con questa funzione il
         pulsante dice solo "Ricontrolla le aste".</li>
-      <li><strong>Batch Claude o Gemini</strong>, scelto nella card <a href="#config-perizia">«Ricerca della perizia»</a> (voce «Pulsante
-        Ricontrolla N aste: batch di», Claude in partenza) e mostrato sotto il testo del pulsante, dove non si può cambiare per sbaglio; vale anche se le perizie dei giri normali le legge
-        l'altro: le perizie trovate vanno <strong>sempre in batch</strong> (metà prezzo, risultati di solito entro 1-2 ore, al massimo 24, ritirati da
-        "Controlla batch ora"). Con Claude prima una prova leggera: se Claude non è utilizzabile, o se in coda c'è un batch Claude fermo da ore, il
-        ricontrollo non parte e arriva un messaggio; Gemini non viene mai usato al posto di Claude. Un documento che Claude non può mettere nella
-        richiesta (troppo grande) viene segnato e riprovato dopo N giorni.</li>
-      <li><strong>Costo</strong>: le pagine del PVP ricontrollate a vuoto sono gratis; si paga solo l'analisi delle perizie nuove trovate (quelle già
-        analizzate per un'altra asta vengono riusate).</li>
+      <li><strong>Batch</strong>: quello della card «Ricerca della perizia», mostrato sotto il testo del pulsante, dove non si può cambiare per
+        sbaglio.</li>
       <li><strong>Avvio</strong>: doppio tocco (conferma entro 4 secondi), come "Avvia scanner ora". Se lo scanner sta già girando l'avvio viene
         rifiutato: riprova a giro finito. Il riepilogo "🔁 Ricontrollo perizie (tutto il registro)" arriva su Telegram, anche quando non c'è niente
         da ricontrollare.</li>
@@ -599,7 +600,7 @@
       <li><strong>Opzioni</strong>: <code>solo_abitazioni</code> (spuntata in partenza: solo abitazioni e appartamenti; togli la spunta per tutte le
         tipologie) e <code>provider_ricontrollo</code> (claude o gemini, Claude in partenza).</li>
       <li><strong>Quali aste</strong>: vendita da oggi in poi, documento «Perizia…», analisi non v2, non scartate, senza un batch in corso;
-        dalla vendita più vicina, al massimo 50 per avvio (per le altre si rilancia).</li>
+        dalla vendita più vicina, al massimo il tetto per avvio della card «Ricerca della perizia» (predefinito 50; per le altre si rilancia).</li>
       <li><strong>Come</strong>: come il <a href="#orari-ricontrollo-pulsante">ricontrollo dal pulsante</a>: rilegge la pagina del PVP, riusa
         gratis un'analisi v2 già fatta della stessa perizia e dello stesso lotto, altrimenti la manda in batch. Al ritiro l'asta prende
         l'analisi nuova solo se riesce; se no resta com'era e il motivo arriva su Telegram.</li>
@@ -1803,9 +1804,9 @@
         gli altri restano com'erano.</li>
       <li><strong>"Chi legge le perizie"</strong>: Gemini (predefinito) oppure Claude. Lo scegli tu: lo scanner non passa mai da solo
         dall'uno all'altro. Vale dal giro successivo e non torna ai predefiniti con "Ripristina". Con Claude la cascata e il batch di Gemini
-        non si usano, il
-        <a href="#orari-ricontrollo">ricontrollo delle perizie</a> resta fermo (lo dice il riepilogo della card "Ricerca della perizia") e, se
-        Claude ha un problema, il giro si ferma con un avviso su Telegram senza usare Gemini. Costi e dettagli in
+        non si usano e, se
+        Claude ha un problema, il giro si ferma con un avviso su Telegram senza usare Gemini. Il
+        <a href="#orari-ricontrollo">ricontrollo delle perizie</a> ha il suo batch, scelto nella card "Ricerca della perizia". Costi e dettagli in
         <a href="#sistema-costi">Costi</a>. Se nel database c'è un valore non valido (per esempio scritto a mano), lo scanner non parte e la
         pagina lo segnala in alto, in rosso: scegli di nuovo Gemini o Claude e salva. Se il provider si salva ma il resto della card no, il
         messaggio lo dice ("Provider salvato…"). La prima volta serve
@@ -1842,15 +1843,16 @@
         (allegati PVP, astegiudiziarie, altri siti collegati all'annuncio, poi avviso; si leggono insieme anche le
         <a href="#analisi-perizie-aggiuntive">integrazioni</a>) e il prompt v2. Dettagli in <a href="#analisi-ricerca-perizia">Come si trova la perizia</a>
         e <a href="#analisi-versioni">Versioni del prompt</a>, dove c'è anche il ritorno d'emergenza ai vecchi valori.</li>
-      <li><strong>"Ricontrolla le aste future ancora lette dall'avviso"</strong>: vedi <a href="#orari-ricontrollo">Ricontrollo</a>.</li>
-      <li><strong>Ricontrolla ogni (giorni)</strong>: 1-30 (predefinito 2), ogni asta al massimo una volta ogni N giorni.</li>
-      <li><strong>Aste ricontrollate al massimo per giro</strong>: 1-100 (predefinito 15). Circa 15-30 secondi per asta più l'analisi. <strong>Oltre 15</strong>
-        il ricontrollo usa sempre il batch (anche con il batch spento): costa meno ma i risultati arrivano fino a 24 ore dopo. Fino a 15 le analisi sono
-        immediate, a prezzo pieno.</li>
-      <li><strong>Pulsante «Ricontrolla N aste»: batch di</strong>: Claude (predefinito) o Gemini, solo per il
-        <a href="#orari-ricontrollo-pulsante">pulsante</a>, non per i giri normali. Si salva con una funzione a parte del database
+      <li><strong>"A fine giro ricontrolla da solo le aste future ancora lette dall'avviso"</strong> (spenta in partenza): lo stesso
+        <a href="#orari-ricontrollo">ricontrollo</a> del pulsante «Ricontrolla N aste», avviato da solo alla fine di ogni giro.</li>
+      <li><strong>Non rileggere la stessa asta prima di (giorni)</strong>: 1-30 (predefinito 2). Vale per il pulsante e per il fine giro: un'asta
+        ricontrollata resta fuori dal conto e dagli avvii per N giorni.</li>
+      <li><strong>Aste ricontrollate al massimo per avvio</strong>: 1-100 (predefinito 50), per il pulsante e per il fine giro. Circa 15-30 secondi
+        per asta; le perizie trovate vanno sempre in batch.</li>
+      <li><strong>Batch del ricontrollo</strong>: Claude (predefinito) o Gemini, per il pulsante e per il fine giro, indipendente da chi legge le
+        perizie nei giri normali. Si salva con una funzione a parte del database
         (<code>sql/provider_ricontrollo.sql</code> nel repository privato, da eseguire una volta nell'SQL Editor): se manca, il salvataggio
-        della card non va a buon fine e il messaggio lo dice. Il riepilogo della card lo mostra ("pulsante: batch …").</li>
+        della card non va a buon fine e il messaggio lo dice. Il riepilogo della card lo mostra ("batch …").</li>
     </ul>
   </section>
 
@@ -2880,7 +2882,7 @@
         <tr><td>✋ Scanner aste: N aste da analizzare, non parto da solo</td><td>Le aste da analizzare sono più di 100: lo scanner non ne ha analizzata nessuna e aspetta la tua scelta. Stessi numeri e stesso link del solo conteggio; l'elenco vale 6 ore. Quelle che non scegli restano da analizzare. Finché restano più di 100, ogni giro si ferma lì e manda di nuovo questo messaggio. Se la pagina dice che un giro è in corso, riprova dopo qualche minuto: il giro che ha mandato il messaggio sta finendo ricontrollo e storico.</td></tr>
         <tr><td>✅ completato / ⚠️ completato con errori</td><td>Fine di un giro con analisi subito (sincrono): quante aste analizzate e quante con errori, seguito dal <strong>riepilogo di tutte le aste del giro</strong> (una riga ciascuna: indirizzo con link all'annuncio PVP, link alla scheda nel registro, prezzo base, margine, punteggio; ⭐ = notifica singola già inviata). Se non sta in un messaggio, il riepilogo continua nel successivo.</td></tr>
         <tr><td>⛔ Scanner aste non avviato</td><td>Il giro non è partito e non ha speso nulla: in «Chi legge le perizie» c'è un valore non valido, che va scelto di nuovo. Il messaggio dice cosa fare; vedi <a href="#config-modelli">Provider e modelli</a>.</td></tr>
-        <tr><td>🤖 Credito Claude esaurito / ⚠️ Claude non utilizzabile / ⚠️ Claude non risponde / ⚠️ Claude senza risultati utilizzabili</td><td>Solo con Claude: il giro si è fermato, o non è partito, per un problema di Claude. Dice la causa, quante aste sono state analizzate e quante restano in attesa, che Gemini <strong>non</strong> è stato usato e dove sceglierlo, se lo vuoi. Può arrivare anche dopo il ricontrollo delle perizie, se Claude si ferma lì. Vedi <a href="#sistema-costi">Costi</a>.</td></tr>
+        <tr><td>🤖 Credito Claude esaurito / ⚠️ Claude non utilizzabile / ⚠️ Claude non risponde / ⚠️ Claude senza risultati utilizzabili</td><td>Solo con Claude: il giro si è fermato, o non è partito, per un problema di Claude. Dice la causa, quante aste sono state analizzate e quante restano in attesa, che Gemini <strong>non</strong> è stato usato e dove sceglierlo, se lo vuoi. Vedi <a href="#sistema-costi">Costi</a>.</td></tr>
         <tr><td>⏱️ Giro Claude chiuso per tempo</td><td>Solo con Claude: raggiunto il tetto di circa due ore. Le aste rimaste ripartono al giro successivo (se il giro veniva da una scelta dopo il conteggio vanno scelte di nuovo).</td></tr>
         <tr><td>⛔ Scanner aste: giro chiuso, il PVP non risponde / ⛔ Giro Claude chiuso: il PVP non risponde / ⛔ Ricerca … chiusa, il PVP non risponde</td><td>Il PVP non ha dato i dati dell'annuncio per più letture di fila (5 aste mai fallite prima, oppure 15 in tutto: il messaggio dice quante) e il giro ha smesso di cercare. Il primo titolo arriva nei giri con analisi subito, seguito dall'elenco delle aste elaborate prima dello stop; gli altri due nei giri in batch (con Claude e con Gemini) quando nessun batch è partito. Se invece un batch è partito, il titolo resta quello solito e il motivo è nella riga «⏸️ Rimaste fuori». Le aste senza risposta sono segnate come guasto del PVP: non consumano uno dei 3 tentativi e vengono riprovate. Quelle rimaste fuori ripartono al giro successivo (se venivano da una scelta dopo il conteggio vanno scelte di nuovo). Un caso isolato si risolve da solo; se si ripete per più giri, il PVP potrebbe essere fermo, bloccare lo scanner o aver cambiato le sue pagine. Se invece il messaggio dice «quasi tutti di aste già da riprovare» e torna uguale a ogni giro, sono quegli annunci a non farsi leggere, non il PVP: dopo 10 guasti lo scanner smette di riprovarli.</td></tr>
         <tr><td>🤖 Claude — riepilogo del giro</td><td>Solo con Claude, a giro finito senza stop (o chiuso perché il PVP non risponde: in quel caso arriva subito prima del messaggio dello stop) e solo se c'è qualcosa da dire: aste rimaste indietro riprovate, perizie che Claude non può leggere, oppure aste scelte da te dal conteggio e saltate perché già note come non leggibili. Riporta anche quante aste già note sono state saltate e il consumo stimato. Subito dopo arriva il solito messaggio di fine giro.</td></tr>
@@ -2908,7 +2910,7 @@
         <tr><td>⚠️ Batch Gemini non registrato</td><td>Un batch è partito ma non è stato registrato nel database: viene annullato (così non si paga) e le aste
           vengono riprovate al giro successivo. Se dice "annullamento non riuscito", il batch potrebbe essere addebitato senza che i risultati vengano letti.</td></tr>
         <tr><td>📄 Perizia trovata al ricontrollo</td><td>Il <a href="#orari-ricontrollo">ricontrollo</a> ha trovato la perizia e aggiornato l'analisi. In fondo il link all'annuncio PVP e quello alla scheda nel registro.</td></tr>
-        <tr><td>🔁 Ricontrollo perizie</td><td>Riepilogo del ricontrollo: controllate, trovate, aggiornate, solo fonte, in batch, errori.</td></tr>
+        <tr><td>🔁 Ricontrollo perizie (fine giro)</td><td>Riepilogo del <a href="#orari-ricontrollo">ricontrollo</a> partito da solo a fine giro (casella accesa nella card "Ricerca della perizia"): controllate, trovate, aggiornate, solo fonte, in batch, errori. Non arriva se non c'era niente da ricontrollare. "⛔ Ricontrollo perizie a fine giro non avviato": Claude non era utilizzabile; "⏸️ … non avviato": in coda c'è un batch Claude fermo da ore. In entrambi i casi nessun costo e Gemini non usato.</td></tr>
         <tr><td>🔁 Ricontrollo perizie (tutto il registro) / 🔁 Rianalisi v2 / ⛔ … non avviato</td><td>Dopo <a href="#orari-ricontrollo-pulsante">"Ricontrolla N aste"</a> o la <a href="#orari-rianalisi-v2">rianalisi v2</a>: lo stesso riepilogo (anche "nessuna asta da ricontrollare"), con il batch usato e, se l'invio a Claude non è riuscito, la causa. "Non avviato": Claude non era utilizzabile, nessun costo e Gemini non usato.</td></tr>
         <tr><td>⛔ Scanner aste non avviato: la fotografia dei filtri n. N … non è nel database</td><td>Il giro avviato da "Avvia scanner ora" non trova la copia dei filtri presa al tocco (più vecchia di 7 giorni, o <code>sql/avvii_scanner.sql</code> non eseguito): si ferma senza costi invece di usare i filtri di adesso. Rilancialo dalla pagina.</td></tr>
         <tr><td>🔁 Ricontrollo perizie: N perizie non aggiornate</td><td>Al ritiro di un batch del ricontrollo, se alcune analisi non sono state usate: per ogni asta il motivo (errore dell'analisi, oppure analisi senza stima, superficie né punteggio, con la nota dell'analisi). L'asta resta com'era e torna nel ricontrollo dopo N giorni.</td></tr>
@@ -3230,8 +3232,8 @@
 
   <section class="voce" id="faq-avviso">
     <h3>Perché un'asta è stata analizzata dall'avviso e non dalla perizia?</h3>
-    <p>Quando lo scanner l'ha trovata la perizia non era disponibile o non era riconoscibile. Il <a href="#orari-ricontrollo">ricontrollo</a> riproverà ogni pochi
-      giorni fino alla vendita; quando la trova, l'asta risulta "Aggiornata" e arriva "📄 Perizia trovata al ricontrollo".</p>
+    <p>Quando lo scanner l'ha trovata la perizia non era disponibile o non era riconoscibile. Il <a href="#orari-ricontrollo">ricontrollo</a> (dal pulsante
+      «Ricontrolla N aste», o da solo a fine giro se la casella è accesa) riproverà ogni pochi giorni fino alla vendita; quando la trova, l'asta risulta "Aggiornata" e arriva "📄 Perizia trovata al ricontrollo".</p>
   </section>
 
   <section class="voce" id="faq-da-riprovare">
@@ -3255,7 +3257,7 @@
       <li>Lascia attivo il <a href="#config-modelli">batch</a> (circa metà prezzo).</li>
       <li>Restringi area, prezzo e tipologie: meno aste nuove, meno analisi.</li>
       <li>Usa "<a href="#config-altri-filtri">Solo conteggio</a>" per provare nuovi filtri senza spendere.</li>
-      <li>Tieni il ricontrollo a 15 aste per giro o meno (oltre va in batch, più economico ma più lento).</li>
+      <li>Il ricontrollo delle perizie va sempre in batch (metà prezzo): spendi solo per le perizie nuove che trova.</li>
     </ul>
   </section>
 
