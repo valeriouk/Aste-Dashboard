@@ -421,9 +421,9 @@
         <tr><td><a href="#orari-storico">Storico delle aste</a></td><td>Alla fine di ogni giro dello scanner</td><td>al massimo 4 minuti per giro (circa 3-8 s per asta); di solito meno di un minuto</td><td>no</td></tr>
         <tr><td><a href="#omi-assegnazione">Assegnazione OMI</a></td><td>Alla fine di ogni giro dello scanner; dopo un controllo batch che ha trovato batch; dopo un'importazione OMI</td><td>secondi</td><td>no</td></tr>
         <tr><td><a href="#orari-promemoria-omi">Promemoria OMI</a></td><td>A ogni giro dello scanner (una sola notifica per semestre)</td><td>—</td><td>no</td></tr>
-        <tr><td><a href="#orari-batch">Controllo batch</a></td><td>Circa ogni ora, tutto il giorno; a mano con "Controlla batch ora"</td><td>meno di 1 minuto se non c'è nulla</td><td>no (i batch sono già pagati all'invio)</td></tr>
-        <tr><td><a href="#orari-visite">Promemoria delle visite</a></td><td>A ogni controllo batch orario: 3 giorni e 1 giorno prima dalle 9:00, il giorno stesso dalle 7:00, circa 2 ore prima; solleciti dalle 9:00</td><td>secondi</td><td>no</td></tr>
-        <tr><td><a href="#orari-operazioni">Promemoria delle operazioni</a></td><td>A ogni controllo batch orario: termine delle offerte, giorno dell'asta, esito, scadenza del saldo</td><td>secondi</td><td>no</td></tr>
+        <tr><td><a href="#orari-batch">Controllo batch</a></td><td>Ogni ora solo se serve (batch in sospeso, alle 7 e alle 9, attorno a una visita confermata); a mano con "Controlla batch ora"</td><td>meno di 1 minuto se non c'è nulla</td><td>no (i batch sono già pagati all'invio)</td></tr>
+        <tr><td><a href="#orari-visite">Promemoria delle visite</a></td><td>A ogni controllo batch (sempre alle 7 e alle 9): 3 giorni e 1 giorno prima dalle 9:00, il giorno stesso dalle 7:00, circa 2 ore prima; solleciti dalle 9:00</td><td>secondi</td><td>no</td></tr>
+        <tr><td><a href="#orari-operazioni">Promemoria delle operazioni</a></td><td>A ogni controllo batch (sempre alle 7 e alle 9): termine delle offerte, giorno dell'asta, esito, scadenza del saldo</td><td>secondi</td><td>no</td></tr>
         <tr><td><a href="#orari-preferiti">Promemoria preferiti</a></td><td>Ogni giorno alle 10:30 (ora italiana); a mano con "Controlla preferiti ora"</td><td>meno di 1 minuto</td><td>no</td></tr>
       </tbody>
     </table></div>
@@ -504,9 +504,13 @@
   </section>
 
   <section class="voce" id="orari-batch">
-    <h3>Controllo batch (ogni ora)</h3>
+    <h3>Controllo batch (solo quando serve)</h3>
     <ul>
-      <li>Parte circa ogni ora dal cron esterno, oppure con "🔄 Controlla batch ora". Tra due controlli automatici devono passare almeno 15 minuti
+      <li>Ogni ora il cron esterno chiama un "cancello" su Supabase (gratis), che avvia il controllo su GitHub solo se c'è qualcosa da fare: batch in
+        sospeso (ogni ora finché la coda non si svuota), le 7 e le 9 italiane (promemoria), una visita confermata tra 2 ore o passata da meno di 5
+        (promemoria "tra 2 ore" e chiusura automatica). Altrimenti non parte nulla e non si consumano minuti GitHub. Se un controllo è già in corso
+        non ne avvia un altro.</li>
+      <li>A mano parte sempre, con "🔄 Controlla batch ora". Tra due controlli automatici devono passare almeno 15 minuti
         (il controllo manuale ignora questo limite).</li>
       <li>Se non ci sono batch in sospeso, esce subito ("Nessun batch in sospeso").</li>
       <li>Per ogni batch in sospeso:
@@ -648,8 +652,9 @@
   </section>
 
   <section class="voce" id="orari-visite">
-    <h3>Promemoria delle visite (ogni ora)</h3>
-    <p>Girano dentro il <a href="#orari-batch">controllo batch orario</a>, quindi senza costi in più. Per ogni visita con appuntamento confermato
+    <h3>Promemoria delle visite (alle 7, alle 9 e attorno alla visita)</h3>
+    <p>Girano dentro il <a href="#orari-batch">controllo batch</a>, che per loro parte sempre alle 7 e alle 9 e ogni ora attorno a una visita
+      confermata, quindi senza costi in più. Per ogni visita con appuntamento confermato
       (vedi <a href="#registro-visite">Gestione delle visite</a>):</p>
     <ul>
       <li><strong>3 giorni prima</strong>, dalle 9:00: "📅 Visita tra 3 giorni" con data, ora, dettagli dell'appuntamento, indirizzo, tribunale, data
@@ -668,8 +673,8 @@
   </section>
 
   <section class="voce" id="orari-operazioni">
-    <h3>Promemoria delle operazioni (ogni ora)</h3>
-    <p>Girano nel <a href="#orari-batch">controllo batch orario</a>, dopo quelli delle visite, per le aste con un'<a href="#registro-operazione">operazione</a>:</p>
+    <h3>Promemoria delle operazioni (alle 7 e alle 9)</h3>
+    <p>Girano nel <a href="#orari-batch">controllo batch</a> (che per loro parte sempre alle 7 e alle 9), dopo quelli delle visite, per le aste con un'<a href="#registro-operazione">operazione</a>:</p>
     <ul>
       <li><strong>In valutazione</strong>: la prima volta legge dal dettaglio PVP il <strong>termine per presentare le offerte</strong> (una lettura per
         asta, al massimo 20 per giro) e avvisa 3 giorni prima e il giorno prima (dalle 9:00) e il giorno stesso (dalle 7:00, finché il termine non è
