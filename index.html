@@ -5670,7 +5670,38 @@
     // (stesso motivo di supabase_select_tutte nello scanner). Con una richiesta sola, superate le 1000
     // aste, le ultime non comparivano nel registro. Si legge finché arriva una pagina vuota, avanzando
     // di quante righe sono arrivate davvero: funziona qualunque sia quel tetto.
-    const leggiTutteLeAste = async () => {
+    // 31/10/2026: prima a pagine vere con leggi_aste_pagina (sql/registro_a_pagine.sql), 4 alla volta in
+    // parallelo. leggi_aste preparava TUTTE le aste a ogni pagina e le pagine andavano una dopo l'altra:
+    // con oltre 3000 aste arrivava «Tempo scaduto». Se la funzione nuova non c'è (o non risponde come
+    // previsto) si torna alla lettura di prima, qui sotto.
+    const PAGINA = 1000, IN_PARALLELO = 4;
+    const leggiAPagine = async () => {
+      const righe = [], visti = new Set();
+      const leggiPagina = n => leggiProtetto("leggi_aste_pagina", {password_tentativo: passwordLettura, tipo: "lettura",
+        p_limite: PAGINA, p_offset: n * PAGINA});
+      // la prima da sola: con la password sbagliata conta UN tentativo (limite di 5 in 15 minuti), non quattro
+      const prima = await leggiPagina(0);
+      if (!Array.isArray(prima)) throw new Error("risposta inattesa da leggi_aste_pagina");
+      if (prima.length < PAGINA) return prima;
+      prima.forEach(r => { visti.add(r.id_annuncio); righe.push(r); });
+      for (let gruppo = 0; gruppo < 50; gruppo++) {     // tetto di sicurezza: 200 pagine, come sotto
+        const pagine = await Promise.all(Array.from({length: IN_PARALLELO}, (_, i) =>
+          leggiPagina(1 + gruppo * IN_PARALLELO + i)));
+        if (!pagine.every(Array.isArray)) throw new Error("risposta inattesa da leggi_aste_pagina");
+        for (const pagina of pagine) {
+          pagina.forEach(r => {
+            if (r.id_annuncio === null || r.id_annuncio === undefined || !visti.has(r.id_annuncio)) {
+              visti.add(r.id_annuncio);
+              righe.push(r);
+            }
+          });
+        }
+        if (pagine.some(p => p.length < PAGINA)) return righe;   // una pagina non piena: era l'ultima
+      }
+      return righe;
+    };
+    const leggiTutteLeAste = () => leggiAPagine().catch(() => leggiTutteLeAsteComePrima());
+    const leggiTutteLeAsteComePrima = async () => {
       const righe = [], visti = new Set();
       let lette = 0;
       for (let pagine = 0; pagine < 200; pagine++) {   // tetto di sicurezza: mai un ciclo senza fine
@@ -5723,7 +5754,7 @@
     // lui: aggiungere un return non cambia il comportamento di chi non
     // lo usa.
     return Promise.all([
-      conTimeoutRigetta(promessaAste, 20000),
+      conTimeoutRigetta(promessaAste, 60000),   // era 20 s: con oltre 3000 aste (~31 MB) non bastava su rete lenta (31/10/2026)
       conTimeoutRipiego(promessaPreferiti, 8000, []),
       conTimeoutRipiego(promessaLinkUtili, 8000, []),
       conTimeoutRipiego(promessaVisite, 8000, []),
