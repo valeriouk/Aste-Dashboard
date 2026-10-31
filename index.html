@@ -5670,33 +5670,22 @@
     // (stesso motivo di supabase_select_tutte nello scanner). Con una richiesta sola, superate le 1000
     // aste, le ultime non comparivano nel registro. Si legge finché arriva una pagina vuota, avanzando
     // di quante righe sono arrivate davvero: funziona qualunque sia quel tetto.
-    // 31/10/2026: prima a pagine vere con leggi_aste_pagina (sql/registro_a_pagine.sql), 4 alla volta in
-    // parallelo. leggi_aste preparava TUTTE le aste a ogni pagina e le pagine andavano una dopo l'altra:
-    // con oltre 3000 aste arrivava «Tempo scaduto». Se la funzione nuova non c'è (o non risponde come
-    // previsto) si torna alla lettura di prima, qui sotto.
-    const PAGINA = 1000, IN_PARALLELO = 4;
+    // 31/10/2026: a pagine da 500 con leggi_aste_dopo (sql/registro_a_pagine.sql), ripartendo ogni volta
+    // dall'ultimo id_annuncio letto. Le chiamate della pagina hanno un tempo massimo di 3 s nel database
+    // (ruolo anon): leggi_aste preparava TUTTE le aste a ogni pagina, e anche con "offset" il database
+    // rilegge le righe saltate (4 s per l'ultima pagina) → HTTP 500 e registro che non si apriva. Così
+    // ogni pagina costa ~0,3 s. Se la funzione nuova non c'è si torna alla lettura di prima, qui sotto.
+    const PAGINA = 500;
     const leggiAPagine = async () => {
-      const righe = [], visti = new Set();
-      const leggiPagina = n => leggiProtetto("leggi_aste_pagina", {password_tentativo: passwordLettura, tipo: "lettura",
-        p_limite: PAGINA, p_offset: n * PAGINA});
-      // la prima da sola: con la password sbagliata conta UN tentativo (limite di 5 in 15 minuti), non quattro
-      const prima = await leggiPagina(0);
-      if (!Array.isArray(prima)) throw new Error("risposta inattesa da leggi_aste_pagina");
-      if (prima.length < PAGINA) return prima;
-      prima.forEach(r => { visti.add(r.id_annuncio); righe.push(r); });
-      for (let gruppo = 0; gruppo < 50; gruppo++) {     // tetto di sicurezza: 200 pagine, come sotto
-        const pagine = await Promise.all(Array.from({length: IN_PARALLELO}, (_, i) =>
-          leggiPagina(1 + gruppo * IN_PARALLELO + i)));
-        if (!pagine.every(Array.isArray)) throw new Error("risposta inattesa da leggi_aste_pagina");
-        for (const pagina of pagine) {
-          pagina.forEach(r => {
-            if (r.id_annuncio === null || r.id_annuncio === undefined || !visti.has(r.id_annuncio)) {
-              visti.add(r.id_annuncio);
-              righe.push(r);
-            }
-          });
-        }
-        if (pagine.some(p => p.length < PAGINA)) return righe;   // una pagina non piena: era l'ultima
+      const righe = [];
+      let ultimo = null;
+      for (let pagine = 0; pagine < 400; pagine++) {   // tetto di sicurezza: mai un ciclo senza fine
+        const pagina = await leggiProtetto("leggi_aste_dopo", {password_tentativo: passwordLettura, tipo: "lettura",
+          p_dopo_id: ultimo, p_limite: PAGINA});
+        if (!Array.isArray(pagina)) throw new Error("risposta inattesa da leggi_aste_dopo");
+        righe.push(...pagina);
+        if (pagina.length < PAGINA) return righe;      // pagina non piena (o password sbagliata): fine
+        ultimo = pagina[pagina.length - 1].id_annuncio;
       }
       return righe;
     };
