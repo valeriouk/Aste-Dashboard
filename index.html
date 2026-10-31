@@ -2421,6 +2421,23 @@
   .testo-pillola-desktop { display: inline; }
   /* Da computer «🏁 Concluse» e «🔄 Aggiornate» stanno nel menu 📅 «In corso» (MENU_IN_CORSO_ESTESO): filtri su una riga */
   @media (min-width: 641px) { #gruppo-concluse, #pillola-aggiornate { display: none; } }
+  /* Barra su PC in due righe volute (31/10/2026): su una riga sola non ci stava (circa 1220 px di controlli
+     in 1110 utili, il riquadro della pagina è largo al massimo 1180) e «Ordina per» andava a capo da solo,
+     a sinistra. Ora: in alto ricerca larga, Griglia/Mappa e Ordina per; sotto i filtri, centrati, con testo
+     un po' più grande e "Giudizio" e "Punteggio AI" scritti per intero. ::after fa da a capo (::before è già
+     usato dallo sfondo della barra). Sotto i 641 px non cambia nulla: lì c'è il foglio Filtri. */
+  @media (min-width: 641px) {
+    .controlli { row-gap: 0; justify-content: center; }
+    .controlli::after { content: ""; flex: 0 0 100%; order: 2; height: 10px; }
+    .controlli #ricerca { order: 1; flex: 1 1 240px; font-size: .95rem; }
+    .controlli #gruppo-vista { order: 1; }
+    .controlli-estesi > * { order: 3; }
+    .controlli-estesi > .contenitore-filtro-tipologia:has(#bottone-ordinamento) { order: 1; }
+    .controlli .pillola { font-size: .92rem; padding: 10px 13px; }
+    .controlli .filtro-punteggio { font-size: .88rem; padding: 10px 14px; }
+    .controlli .filtro-punteggio .testo-punteggio-lungo,
+    .controlli #bottone-filtro-giudizio .testo-pillola-mobile { display: inline; }
+  }
   .etichetta-foglio, .mostra-risultati-foglio { display: none; }
   /* Card: badge e riga "km · vendita" a tutta larghezza sotto l'intestazione */
   .lotto-sotto-testata { margin: -6px 0 10px; }
