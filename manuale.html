@@ -386,7 +386,10 @@
             eccezioni: l'asta su cui Claude ha smesso di rispondere viene salvata come «da riprovare» (se al giro dopo succede di nuovo
             passa tra le «non leggibili», così non ferma più i giri); una risposta arrivata ma inutilizzabile conta nei 3 tentativi
             dell'asta, come per Gemini.</li>
-          <li><em>Perizie che Claude non può leggere</em> (troppo grandi o con troppe pagine): l'asta è salvata come «non leggibile da Claude»,
+          <li><em>Perizie che Claude non può leggere</em> (troppo grandi o con troppe pagine). Dal 31/10/2026 un PDF più pesante di quanto
+            Claude accetta per un singolo file (circa 24 MB) viene diviso per pagine in più parti, inviate insieme nella stessa analisi:
+            restano «non leggibili» solo le perizie che non si riescono a dividere, quelle oltre circa 90 MB in tutto o oltre 600 pagine.
+            In questi casi l'asta è salvata come «non leggibile da Claude»,
             compare nel messaggio di fine giro e nei giri successivi viene saltata senza rifare ricerca e download; passando a Gemini viene
             ripresa normalmente. La nota riporta il modello usato: cambiando modello di Claude quelle aste vengono riprovate. Una perizia
             che Claude non può leggere, se è condivisa da più lotti, viene inviata una volta sola per giro (nel batch invece ogni lotto è
